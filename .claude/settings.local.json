@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 10s npm run dev)",
+      "Bash(mkdir:*)",
+      "Bash(npm run tauri build:*)",
+      "Bash(cargo check:*)",
+      "Bash(grep:*)",
+      "Bash(env)",
+      "Bash(ls:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run tauri:dev:*)",
+      "Bash(mv:*)",
+      "Bash(timeout 5s npm run dev)",
+      "Bash(rm:*)",
+      "Bash(source:*)",
+      "Bash(rustc --version)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(pkg-config:*)",
+      "Bash(timeout 60s npm run tauri:dev)",
+      "Bash(apt search:*)",
+      "Bash(timeout 120s npm run tauri:dev)",
+      "Bash(curl:*)",
+      "Bash(hostname:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(git init:*)"
+    ],
+    "deny": []
+  }
+}

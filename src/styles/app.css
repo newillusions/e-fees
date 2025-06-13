@@ -1,0 +1,311 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Emittiv CSS Custom Properties */
+:root {
+  /* Colors */
+  --emittiv-black: #000;
+  --emittiv-darker: #333;
+  --emittiv-dark: #666;
+  --emittiv-light: #999;
+  --emittiv-lighter: #ccc;
+  --emittiv-white: #fff;
+  --emittiv-splash: #f90;
+  
+  /* Typography */
+  --font-heading: 'Ubuntu', system-ui, sans-serif;
+  --font-body: 'Montserrat', sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  
+  /* Transitions */
+  --transition-smooth: all 0.3s ease-in-out;
+  --transition-fast: all 0.15s ease-in-out;
+  
+  /* Shadows */
+  --shadow-glow: 0 0 20px rgba(255, 153, 0, 0.3);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 25px rgba(255, 153, 0, 0.1);
+  
+  /* Gradients */
+  --gradient-main: linear-gradient(135deg, var(--emittiv-black), var(--emittiv-darker));
+  --gradient-content: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(51, 51, 51, 0.3));
+  --gradient-sidebar: linear-gradient(180deg, var(--emittiv-black), rgba(0, 0, 0, 0.95));
+}
+
+@layer base {
+  html {
+    background-color: var(--emittiv-black);
+    color: var(--emittiv-white);
+    font-size: 16px;
+    font-family: var(--font-body);
+  }
+  
+  body {
+    font-family: var(--font-body);
+    min-height: 100vh;
+    background: var(--gradient-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Focus styles */
+  *:focus {
+    outline: none;
+  }
+  
+  *:focus-visible {
+    outline: 2px solid var(--emittiv-splash);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  
+  /* Custom Scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--emittiv-black);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--emittiv-dark);
+    border-radius: 4px;
+    transition: var(--transition-smooth);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--emittiv-light);
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: var(--emittiv-black);
+  }
+  
+  /* Firefox scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--emittiv-dark) var(--emittiv-black);
+  }
+}
+
+@layer components {
+  /* Emittiv Design Patterns */
+  .emittiv-card {
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 8px;
+    padding: var(--spacing-lg);
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-card);
+  }
+  
+  .emittiv-card:hover {
+    border-color: var(--emittiv-splash);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  .emittiv-button-primary {
+    background-color: var(--emittiv-splash);
+    color: var(--emittiv-black);
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: 8px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .emittiv-button-primary:hover {
+    background-color: #e68200;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .emittiv-button-primary:active {
+    transform: translateY(0);
+  }
+  
+  .emittiv-button-secondary {
+    background-color: transparent;
+    color: var(--emittiv-white);
+    border: 1px solid var(--emittiv-light);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: 8px;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .emittiv-button-secondary:hover {
+    background-color: var(--emittiv-lighter);
+    color: var(--emittiv-black);
+    border-color: var(--emittiv-lighter);
+  }
+  
+  .emittiv-input {
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    color: var(--emittiv-white);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    transition: var(--transition-smooth);
+    width: 100%;
+  }
+  
+  .emittiv-input::placeholder {
+    color: var(--emittiv-light);
+  }
+  
+  .emittiv-input:focus {
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
+  }
+  
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-fast {
+    transition: var(--transition-fast);
+  }
+  
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--emittiv-darker) 25%,
+      var(--emittiv-dark) 50%,
+      var(--emittiv-darker) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+  }
+  
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  
+  /* Page transitions */
+  .page-enter {
+    animation: pageEnter 0.3s ease-out;
+  }
+  
+  .page-exit {
+    animation: pageExit 0.3s ease-in;
+  }
+  
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes pageExit {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Status indicators */
+  .status-connected {
+    color: var(--emittiv-splash);
+    animation: pulse 2s infinite;
+  }
+  
+  .status-disconnected {
+    color: #ef4444;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  /* Hover effects */
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    transition: var(--transition-smooth);
+  }
+  
+  .hover-glow:hover {
+    box-shadow: var(--shadow-glow);
+    transition: var(--transition-smooth);
+  }
+  
+  /* Navigation active states */
+  .nav-active {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 153, 0, 0.1),
+      transparent
+    );
+    border-right: 2px solid var(--emittiv-splash);
+    color: var(--emittiv-splash);
+  }
+  
+  .nav-inactive {
+    color: var(--emittiv-lighter);
+    transition: var(--transition-smooth);
+  }
+  
+  .nav-inactive:hover {
+    color: var(--emittiv-white);
+    background-color: rgba(51, 51, 51, 0.5);
+  }
+}
