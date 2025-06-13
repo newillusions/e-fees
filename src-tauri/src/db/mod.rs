@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use surrealdb::engine::remote::ws::{Client, Ws};
-use surrealdb::opt::auth::Root;
+use surrealdb::engine::remote::http::{Client as HttpClient, Http};
+use surrealdb::opt::auth::{Root, Namespace, Database};
 use surrealdb::{Error, Surreal};
 use tokio::time::interval;
 use log::{error, info, warn};
@@ -102,12 +103,112 @@ pub struct Proposal {
     pub due_date: Option<String>,
 }
 
-// Database manager
+// Database manager - using HTTP client as primary, WS as fallback
 #[derive(Clone)]
 pub struct DatabaseManager {
-    pub client: Option<Surreal<Client>>,
+    pub client: Option<DatabaseClient>,
     pub status: Arc<Mutex<ConnectionStatus>>,
     pub config: DatabaseConfig,
+}
+
+// Enum to handle different connection types
+#[derive(Clone)]
+pub enum DatabaseClient {
+    Http(Surreal<HttpClient>),
+    WebSocket(Surreal<Client>),
+}
+
+impl DatabaseClient {
+    pub async fn health(&self) -> Result<(), Error> {
+        match self {
+            DatabaseClient::Http(client) => client.health().await,
+            DatabaseClient::WebSocket(client) => client.health().await,
+        }
+    }
+    
+    pub async fn signin_root(&self, username: &str, password: &str) -> Result<(), Error> {
+        match self {
+            DatabaseClient::Http(client) => {
+                client.signin(Root { username, password }).await?;
+                Ok(())
+            },
+            DatabaseClient::WebSocket(client) => {
+                client.signin(Root { username, password }).await?;
+                Ok(())
+            },
+        }
+    }
+    
+    pub async fn signin_namespace(&self, namespace: &str, username: &str, password: &str) -> Result<(), Error> {
+        match self {
+            DatabaseClient::Http(client) => {
+                client.signin(Namespace { namespace, username, password }).await?;
+                Ok(())
+            },
+            DatabaseClient::WebSocket(client) => {
+                client.signin(Namespace { namespace, username, password }).await?;
+                Ok(())
+            },
+        }
+    }
+    
+    pub async fn signin_database(&self, namespace: &str, database: &str, username: &str, password: &str) -> Result<(), Error> {
+        match self {
+            DatabaseClient::Http(client) => {
+                client.signin(Database { namespace, database, username, password }).await?;
+                Ok(())
+            },
+            DatabaseClient::WebSocket(client) => {
+                client.signin(Database { namespace, database, username, password }).await?;
+                Ok(())
+            },
+        }
+    }
+    
+    pub async fn use_ns_db(&self, namespace: &str, database: &str) -> Result<(), Error> {
+        match self {
+            DatabaseClient::Http(client) => client.use_ns(namespace).use_db(database).await,
+            DatabaseClient::WebSocket(client) => client.use_ns(namespace).use_db(database).await,
+        }
+    }
+    
+    pub async fn select<T>(&self, table: &str) -> Result<Vec<T>, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        match self {
+            DatabaseClient::Http(client) => client.select(table).await,
+            DatabaseClient::WebSocket(client) => client.select(table).await,
+        }
+    }
+    
+    pub async fn create_project(&self, project: Project) -> Result<Option<Project>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.create("projects").content(project).await,
+            DatabaseClient::WebSocket(client) => client.create("projects").content(project).await,
+        }
+    }
+    
+    pub async fn create_company(&self, company: Company) -> Result<Option<Company>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.create("companies").content(company).await,
+            DatabaseClient::WebSocket(client) => client.create("companies").content(company).await,
+        }
+    }
+    
+    pub async fn create_contact(&self, contact: Contact) -> Result<Option<Contact>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.create("contacts").content(contact).await,
+            DatabaseClient::WebSocket(client) => client.create("contacts").content(contact).await,
+        }
+    }
+    
+    pub async fn create_proposal(&self, proposal: Proposal) -> Result<Option<Proposal>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.create("proposals").content(proposal).await,
+            DatabaseClient::WebSocket(client) => client.create("proposals").content(proposal).await,
+        }
+    }
 }
 
 impl DatabaseManager {
@@ -179,33 +280,76 @@ impl DatabaseManager {
     async fn connect(&mut self) -> Result<(), Error> {
         info!("Attempting to connect to SurrealDB at {}", self.config.url);
         
-        let db = match Surreal::new::<Ws>(&self.config.url).await {
-            Ok(connection) => {
-                info!("Successfully established WebSocket connection to SurrealDB at {}", self.config.url);
-                connection
+        // Use WebSocket connection (preferred for SurrealDB)
+        let db = if self.config.url.starts_with("ws://") || self.config.url.starts_with("wss://") {
+            info!("Connecting to SurrealDB using WebSocket at {}", self.config.url);
+            
+            // Parse URL to remove protocol for Ws connection
+            let connection_address = self.config.url
+                .strip_prefix("ws://")
+                .or_else(|| self.config.url.strip_prefix("wss://"))
+                .unwrap_or(&self.config.url);
+            
+            match Surreal::new::<Ws>(connection_address).await {
+                Ok(connection) => {
+                    info!("Successfully established WebSocket connection to SurrealDB at {}", connection_address);
+                    DatabaseClient::WebSocket(connection)
+                }
+                Err(err) => {
+                    error!("Failed to establish WebSocket connection to {}: {}", connection_address, err);
+                    return Err(err);
+                }
             }
-            Err(e) => {
-                error!("Failed to establish WebSocket connection to {}: {}", self.config.url, e);
-                return Err(e);
+        } else {
+            // Fallback to HTTP if not a WebSocket URL
+            info!("Connecting to SurrealDB using HTTP at {}", self.config.url);
+            
+            match Surreal::new::<Http>(&self.config.url).await {
+                Ok(connection) => {
+                    info!("Successfully established HTTP connection to SurrealDB at {}", self.config.url);
+                    DatabaseClient::Http(connection)
+                }
+                Err(err) => {
+                    error!("Failed to establish HTTP connection to {}: {}", self.config.url, err);
+                    return Err(err);
+                }
             }
         };
         
-        // Sign in with provided credentials
+        // Try different authentication methods
         info!("Authenticating with username: {}", self.config.username);
-        match db.signin(Root {
-            username: &self.config.username,
-            password: &self.config.password,
-        }).await {
-            Ok(_) => info!("Successfully authenticated with SurrealDB"),
-            Err(e) => {
-                error!("Failed to authenticate with SurrealDB: {}", e);
-                return Err(e);
+        
+        // First try Root authentication
+        let auth_result = db.signin_root(&self.config.username, &self.config.password).await;
+        
+        if let Err(root_err) = auth_result {
+            warn!("Root authentication failed: {}, trying namespace authentication", root_err);
+            
+            // Try namespace authentication
+            let ns_auth_result = db.signin_namespace(&self.config.namespace, &self.config.username, &self.config.password).await;
+            
+            if let Err(ns_err) = ns_auth_result {
+                warn!("Namespace authentication failed: {}, trying database authentication", ns_err);
+                
+                // Try database authentication
+                match db.signin_database(&self.config.namespace, &self.config.database, &self.config.username, &self.config.password).await {
+                    Ok(_) => info!("Successfully authenticated with database-level credentials"),
+                    Err(db_err) => {
+                        error!("All authentication methods failed. Root: {}, Namespace: {}, Database: {}", 
+                               root_err, ns_err, db_err);
+                        return Err(db_err);
+                    }
+                }
+            } else {
+                info!("Successfully authenticated with namespace-level credentials");
             }
+        } else {
+            info!("Successfully authenticated with root-level credentials");
         }
         
         // Select namespace and database
         info!("Selecting namespace '{}' and database '{}'", self.config.namespace, self.config.database);
-        match db.use_ns(&self.config.namespace).use_db(&self.config.database).await {
+        match db.use_ns_db(&self.config.namespace, &self.config.database).await {
             Ok(_) => info!("Successfully selected namespace and database"),
             Err(e) => {
                 error!("Failed to select namespace/database: {}", e);
@@ -333,12 +477,7 @@ impl DatabaseManager {
     // Create a new project
     pub async fn create_project(&self, project: Project) -> Result<Project, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Project> = client
-                .create("projects")
-                .content(project)
-                .await?
-                .into_iter()
-                .next();
+            let created: Option<Project> = client.create_project(project).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create project".to_string())))
         } else {
@@ -349,12 +488,7 @@ impl DatabaseManager {
     // Create a new company
     pub async fn create_company(&self, company: Company) -> Result<Company, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Company> = client
-                .create("companies")
-                .content(company)
-                .await?
-                .into_iter()
-                .next();
+            let created: Option<Company> = client.create_company(company).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create company".to_string())))
         } else {
@@ -365,12 +499,7 @@ impl DatabaseManager {
     // Create a new contact
     pub async fn create_contact(&self, contact: Contact) -> Result<Contact, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Contact> = client
-                .create("contacts")
-                .content(contact)
-                .await?
-                .into_iter()
-                .next();
+            let created: Option<Contact> = client.create_contact(contact).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create contact".to_string())))
         } else {
@@ -381,12 +510,7 @@ impl DatabaseManager {
     // Create a new proposal
     pub async fn create_proposal(&self, proposal: Proposal) -> Result<Proposal, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Proposal> = client
-                .create("proposals")
-                .content(proposal)
-                .await?
-                .into_iter()
-                .next();
+            let created: Option<Proposal> = client.create_proposal(proposal).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create proposal".to_string())))
         } else {
