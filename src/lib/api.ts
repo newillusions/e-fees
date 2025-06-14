@@ -104,6 +104,45 @@ export class ApiClient {
       return null;
     }
   }
+  
+  static async updateCompany(id: string, company: Partial<Company>): Promise<Company | null> {
+    try {
+      console.log('API updateCompany called with:');
+      console.log('ID:', id);
+      console.log('Company data:', company);
+      
+      // Convert to the structure expected by backend
+      const companyUpdate = {
+        name: company.name || null,
+        name_short: company.name_short || null,
+        abbreviation: company.abbreviation || null,
+        city: company.city || null,
+        country: company.country || null,
+        reg_no: company.reg_no || null,
+        tax_no: company.tax_no || null
+      };
+      
+      console.log('Sending companyUpdate:', companyUpdate);
+      const updated = await invoke<Company>('update_company', { id, companyUpdate });
+      console.log('Update response:', updated);
+      return updated;
+    } catch (error) {
+      console.error('Failed to update company:', error);
+      throw error; // Throw instead of returning null so errors are properly caught
+    }
+  }
+  
+  static async deleteCompany(id: string): Promise<Company | null> {
+    try {
+      console.log('API deleteCompany called with ID:', id);
+      const deleted = await invoke<Company>('delete_company', { id });
+      console.log('Delete response:', deleted);
+      return deleted;
+    } catch (error) {
+      console.error('Failed to delete company:', error);
+      throw error; // Throw instead of returning null so errors are properly caught
+    }
+  }
 
   // Contact methods
   static async getContacts(): Promise<Contact[]> {
@@ -266,6 +305,8 @@ export const {
   createProject,
   getCompanies,
   createCompany,
+  updateCompany,
+  deleteCompany,
   getContacts,
   createContact,
   getRfps,

@@ -10,6 +10,7 @@ use tokio::time::interval;
 use log::{error, info, warn};
 use chrono;
 use std::env;
+use crate::commands::CompanyUpdate;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -236,6 +237,27 @@ impl DatabaseClient {
         match self {
             DatabaseClient::Http(client) => client.create("company").content(company).await,
             DatabaseClient::WebSocket(client) => client.create("company").content(company).await,
+        }
+    }
+    
+    pub async fn update_company(&self, id: &str, company: Company) -> Result<Option<Company>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.update(("company", id)).content(company).await,
+            DatabaseClient::WebSocket(client) => client.update(("company", id)).content(company).await,
+        }
+    }
+    
+    pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Option<Company>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.update(("company", id)).merge(company_update).await,
+            DatabaseClient::WebSocket(client) => client.update(("company", id)).merge(company_update).await,
+        }
+    }
+    
+    pub async fn delete_company(&self, id: &str) -> Result<Option<Company>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.delete(("company", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("company", id)).await,
         }
     }
     
@@ -637,6 +659,39 @@ impl DatabaseManager {
             let created: Option<Company> = client.create_company(company).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create company".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Update an existing company
+    pub async fn update_company(&self, id: &str, company: Company) -> Result<Company, Error> {
+        if let Some(client) = &self.client {
+            let updated: Option<Company> = client.update_company(id, company).await?;
+            
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update company".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Update an existing company with partial data
+    pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Company, Error> {
+        if let Some(client) = &self.client {
+            let updated: Option<Company> = client.update_company_partial(id, company_update).await?;
+            
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update company".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Delete a company
+    pub async fn delete_company(&self, id: &str) -> Result<Company, Error> {
+        if let Some(client) = &self.client {
+            let deleted: Option<Company> = client.delete_company(id).await?;
+            
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete company".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

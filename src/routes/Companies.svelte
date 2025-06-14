@@ -1,8 +1,11 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import CompanyModal from '$lib/components/CompanyModal.svelte';
+  import CompanyDetail from '$lib/components/CompanyDetail.svelte';
   import { companiesStore, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
+  import type { Company } from '../types';
   
   // Filter states
   let searchQuery = '';
@@ -36,8 +39,47 @@
   $: uniqueCountries = [...new Set($companiesStore.map(c => c.country).filter(Boolean))].sort();
   $: uniqueCities = [...new Set($companiesStore.map(c => c.city).filter(Boolean))].sort();
   
+  // Modal states
+  let isCompanyModalOpen = false;
+  let isCompanyDetailOpen = false;
+  let selectedCompany: Company | null = null;
+  let modalMode: 'create' | 'edit' = 'create';
+  
   function handleAddCompany() {
-    console.log('Add company clicked');
+    selectedCompany = null;
+    modalMode = 'create';
+    isCompanyModalOpen = true;
+  }
+  
+  function handleEditCompany(company: Company) {
+    selectedCompany = company;
+    modalMode = 'edit';
+    isCompanyModalOpen = true;
+  }
+  
+  function handleViewCompany(company: Company) {
+    selectedCompany = company;
+    isCompanyDetailOpen = true;
+  }
+  
+  function handleCloseModal() {
+    isCompanyModalOpen = false;
+    selectedCompany = null;
+    // Refresh companies list after modal closes
+    companiesActions.load();
+  }
+  
+  function handleCloseDetail() {
+    isCompanyDetailOpen = false;
+    selectedCompany = null;
+  }
+  
+  function handleEditFromDetail(event: CustomEvent) {
+    // Close detail view and open edit modal
+    isCompanyDetailOpen = false;
+    selectedCompany = event.detail;
+    modalMode = 'edit';
+    isCompanyModalOpen = true;
   }
   
   function clearFilters() {
@@ -177,16 +219,16 @@
           <div>
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-lg font-semibold text-emittiv-white truncate">{company.name}</h3>
-              <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
                 <span class="px-2 py-1 rounded-full text-xs font-medium text-blue-400 bg-blue-400/10">
                   {company.abbreviation}
                 </span>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="Edit company">
+                <button on:click={() => handleEditCompany(company)} class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="Edit company">
                   <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                 </button>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="View company details">
+                <button on:click={() => handleViewCompany(company)} class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="View company details">
                   <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
@@ -214,3 +256,19 @@
     </div>
   {/if}
 </div>
+
+<!-- Company Modal -->
+<CompanyModal 
+  bind:isOpen={isCompanyModalOpen}
+  company={selectedCompany}
+  mode={modalMode}
+  on:close={handleCloseModal}
+/>
+
+<!-- Company Detail View -->
+<CompanyDetail 
+  bind:isOpen={isCompanyDetailOpen}
+  company={selectedCompany}
+  on:close={handleCloseDetail}
+  on:edit={handleEditFromDetail}
+/>

@@ -14,6 +14,8 @@ import {
   getStats,
   createProject,
   createCompany,
+  updateCompany,
+  deleteCompany,
   createContact,
   createRfp
 } from './api';
@@ -226,6 +228,82 @@ export const companiesActions = {
       const errorMessage = error?.toString() || 'Failed to create company';
       companiesError.set(errorMessage);
       console.error('Failed to create company:', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, companyData: Partial<Company>) {
+    try {
+      console.log('Store update called with ID:', id);
+      const updatedCompany = await updateCompany(id, companyData);
+      if (updatedCompany) {
+        console.log('Update successful, updating store');
+        companiesStore.update(companies => 
+          companies.map(company => {
+            // Extract company ID for comparison
+            let companyId = '';
+            if (typeof company.id === 'string') {
+              companyId = company.id;
+            } else if (company.id && typeof company.id === 'object') {
+              const thingObj = company.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  companyId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  companyId = thingObj.id.String;
+                }
+              }
+            }
+            
+            console.log('Comparing:', companyId, 'with', id);
+            return companyId === id ? updatedCompany : company;
+          })
+        );
+        return updatedCompany;
+      }
+      throw new Error('Failed to update company');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to update company';
+      companiesError.set(errorMessage);
+      console.error('Failed to update company:', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      console.log('Store delete called with ID:', id);
+      const deletedCompany = await deleteCompany(id);
+      if (deletedCompany) {
+        console.log('Delete successful, updating store');
+        companiesStore.update(companies => 
+          companies.filter(company => {
+            // Extract company ID for comparison
+            let companyId = '';
+            if (typeof company.id === 'string') {
+              companyId = company.id;
+            } else if (company.id && typeof company.id === 'object') {
+              const thingObj = company.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  companyId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  companyId = thingObj.id.String;
+                }
+              }
+            }
+            
+            console.log('Delete filter comparing:', companyId, 'with', id);
+            return companyId !== id; // Keep companies that don't match the deleted ID
+          })
+        );
+        return deletedCompany;
+      }
+      throw new Error('Failed to delete company');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to delete company';
+      companiesError.set(errorMessage);
+      console.error('Failed to delete company:', error);
       throw error;
     }
   },

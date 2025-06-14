@@ -10,6 +10,18 @@ use tauri_plugin_dialog::DialogExt;
 // Application state that holds the database manager
 pub type AppState = Arc<Mutex<DatabaseManager>>;
 
+// Company update structure (partial fields)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompanyUpdate {
+    pub name: Option<String>,
+    pub name_short: Option<String>,
+    pub abbreviation: Option<String>,
+    pub city: Option<String>,
+    pub country: Option<String>,
+    pub reg_no: Option<String>,
+    pub tax_no: Option<String>,
+}
+
 // Settings structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
@@ -199,6 +211,50 @@ pub async fn create_company(company: Company, state: State<'_, AppState>) -> Res
         Err(e) => {
             error!("Failed to create company: {}", e);
             Err(format!("Failed to create company: {}", e))
+        }
+    }
+}
+
+// Update an existing company
+#[tauri::command]
+pub async fn update_company(id: String, companyUpdate: CompanyUpdate, state: State<'_, AppState>) -> Result<Company, String> {
+    info!("Updating company with id: {} with partial data: {:?}", id, companyUpdate);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    }; // Lock is automatically dropped here when manager goes out of scope
+    
+    match manager_clone.update_company_partial(&id, companyUpdate).await {
+        Ok(updated_company) => {
+            info!("Successfully updated company with id: {}", id);
+            Ok(updated_company)
+        }
+        Err(e) => {
+            error!("Failed to update company: {}", e);
+            Err(format!("Failed to update company: {}", e))
+        }
+    }
+}
+
+// Delete a company
+#[tauri::command]
+pub async fn delete_company(id: String, state: State<'_, AppState>) -> Result<Company, String> {
+    info!("Deleting company with id: {}", id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    }; // Lock is automatically dropped here when manager goes out of scope
+    
+    match manager_clone.delete_company(&id).await {
+        Ok(deleted_company) => {
+            info!("Successfully deleted company with id: {}", id);
+            Ok(deleted_company)
+        }
+        Err(e) => {
+            error!("Failed to delete company: {}", e);
+            Err(format!("Failed to delete company: {}", e))
         }
     }
 }
