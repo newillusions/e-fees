@@ -331,6 +331,30 @@ npm run preview
 rm -rf node_modules/.vite && rm -rf dist
 ```
 
+## Repository Management
+
+**IMPORTANT**: When discussing repository updates or commits:
+
+1. **Always ask first** before making any commits to the repository
+2. **Confirm with user** what should be included in the commit
+3. **After committing locally**, always push to the remote Gitea repository at `https://git.mms.name/martin/fee-prop.git`
+4. **Verify the push succeeded** and inform the user that changes are now visible in Gitea
+
+**Git Workflow**:
+```bash
+# 1. Stage changes
+git add <files>
+
+# 2. Create commit (only after user approval)
+git commit -m "message"
+
+# 3. Push to remote (always required)
+git push origin main
+
+# 4. Confirm push succeeded
+git status
+```
+
 ## Tauri Configuration
 
 ### Window Settings
@@ -494,6 +518,514 @@ This creates a cohesive brand experience across all emittiv touchpoints while pr
 
 ---
 
-**Last Updated**: June 13, 2025  
-**Status**: Development Environment Configured, Svelte 5 Integration Complete, Brand Guidelines Applied, Ready for Feature Development  
-**Next Steps**: Implement full application features, enhance SplashScreen with actual logo, integrate with live SurrealDB instance
+## Recent Development Session - June 13, 2025
+
+### Database Schema Update Completed ✅
+
+**Major Changes Applied:**
+1. **Updated Database Entity Structs** (`src-tauri/src/db/mod.rs`)
+   - Replaced old schema with actual SurrealDB schema
+   - Added `ProjectNumber`, `TimeStamps`, `Revision` helper structs
+   - Updated all field names to match production database
+
+2. **Updated Database Table Names**
+   - `"companies"` → `"company"`
+   - `"proposals"` → `"rfp"`
+   - Updated all Tauri commands and API methods
+
+3. **Updated TypeScript Types** (`src/types/index.ts`)
+   - Complete rewrite to match new schema
+   - Added proper union types for status/stage enums
+   - Maintained backwards compatibility
+
+4. **Updated Frontend Components**
+   - All components now use reactive stores instead of mock data
+   - Updated field references throughout UI
+   - Enhanced error handling and debugging
+
+5. **4K Monitor Configuration** ✅
+   - Window positioning: Right half of 4K screen (1920x2160)
+   - Automatic positioning on startup
+   - Manual repositioning with `Cmd+W` shortcut
+
+### Current Issue: Database Connection Working, No Data Loading
+
+**Status**: Database connects successfully to `ws://10.0.1.17:8000` but queries return 0 results despite data existing in tables.
+
+**Debugging Progress:**
+- ✅ SurrealDB connection established (`emittiv` namespace, `projects` database)
+- ✅ Authentication successful (root-level credentials)
+- ✅ Heartbeat monitoring active
+- ✅ All Tauri commands responding
+- ❌ All table queries return 0 results
+
+**Debug Tools Added:**
+- Store subscription logging
+- API call debugging with detailed console output
+- "🧪 Test DB Calls" button for manual testing
+- "📋 Check Schemas" button for table structure analysis
+
+**SurrealDB MCP Server Configuration:**
+```json
+{
+  "mcpServers": {
+    "surrealdb": {
+      "command": "mcp-server-surrealdb",
+      "args": [],
+      "env": {
+        "SURREALDB_URL": "ws://10.0.1.17:8000",
+        "SURREALDB_NS": "emittiv",
+        "SURREALDB_DB": "projects",
+        "SURREALDB_USER": "martin",
+        "SURREALDB_PASS": "th38ret3ch"
+      }
+    }
+  }
+}
+```
+
+**Next Session Actions:**
+1. Restart Claude Code to activate SurrealDB MCP server
+2. Use MCP server to directly query database and identify schema mismatch
+3. Fix any field mapping or table structure issues
+4. Verify data loads correctly in application
+
+**Files Modified in This Session:**
+- `src-tauri/src/db/mod.rs` - Complete schema update
+- `src-tauri/src/commands/mod.rs` - Updated command signatures
+- `src-tauri/src/lib.rs` - Updated imports and registrations
+- `src/types/index.ts` - Complete type definitions rewrite
+- `src/lib/api.ts` - Removed mock data fallbacks, added debugging
+- `src/lib/stores.ts` - Enhanced with debugging and proper initialization
+- `src/routes/*.svelte` - Updated all components to use new schema
+- `src-tauri/tauri.conf.json` - 4K monitor window configuration
+
+---
+
+## Recent Updates - June 14, 2025 (Late Evening)
+
+### Database Schema Simplification ✅
+**Completed**: Removed unnecessary fields from projects table to simplify the interface
+
+**Changes Made**:
+1. **Database Schema** (SurrealDB):
+   - Removed `activity`, `package`, and `stage` fields from projects table
+   - All existing project data preserved for remaining fields
+   - Updated indexes and constraints to reflect simplified schema
+
+2. **Backend Updates**:
+   - Updated Rust Project struct in `src-tauri/src/db/mod.rs`
+   - Modified search functionality to query relevant fields only
+   - Updated all database queries and commands
+
+3. **Frontend Updates**:
+   - Updated TypeScript Project interface in `src/types/index.ts`
+   - Simplified Projects page layout: Project Name, Area/City/Country, Project Number
+   - Removed filter dropdowns for activity and stage
+   - Updated search to work with remaining fields only
+
+4. **Documentation Updates**:
+   - Updated all schema documentation files
+   - Updated query examples and sample data
+   - Updated validation rules and error messages
+
+**Result**: Cleaner, more focused project management interface with simplified data model
+
+---
+
+**Last Updated**: June 14, 2025  
+**Status**: Database Schema Simplified, All Components Updated  
+**Next Steps**: Continue with application development using simplified project structure
+
+### TODO: Documentation & Help System
+
+1. **Help Documentation**: Create a help section or modal that lists all keyboard shortcuts:
+   - `Cmd/Ctrl + 1` - Navigate to Dashboard
+   - `Cmd/Ctrl + 2` - Navigate to Projects
+   - `Cmd/Ctrl + 3` - Navigate to Proposals
+   - `Cmd/Ctrl + 4` - Navigate to Companies
+   - `Cmd/Ctrl + 5` - Navigate to Contacts
+   - `Cmd/Ctrl + W` - Position window for 4K display
+
+2. **User Guide**: Add a user guide accessible from the settings menu that explains:
+   - Navigation shortcuts
+   - Common workflows
+   - Database connection troubleshooting
+   - Project numbering system
+
+3. **Onboarding**: Consider adding first-time user tooltips or a quick tour
+
+### IMPORTANT: Database Contains Existing Data
+**The SurrealDB database at `ws://10.0.1.17:8000` (namespace: `emittiv`, database: `projects`) already contains data in all tables.** If queries return 0 results, this indicates:
+- Authentication/permission issues (even though connection succeeds)
+- Incorrect query syntax or scope
+- Need to use root-level authentication or different credentials
+- The data exists but the current user/scope cannot access it
+
+**DO NOT assume the database is empty when queries return 0 results.**
+
+---
+
+## Database Schema Reference (Added June 14, 2025)
+
+### Database Connection Details
+- **URL**: ws://10.0.1.17:8000
+- **Namespace**: emittiv
+- **Database**: projects
+- **User**: martin
+- **Password**: Set via SURREALDB_PASS environment variable
+
+### Tables Overview
+
+#### 1. projects table
+**Purpose**: Project opportunities emittiv is bidding on  
+**ID Format**: `projects:YY_CCCNN` (auto-generated)  
+**Type**: SCHEMAFULL
+
+**Fields**:
+- `name`: string (required, length > 0)
+- `name_short`: string (required)
+- `status`: enum (required) - ['Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled']
+- `area`: string (required)
+- `city`: string (required)
+- `country`: string (required)
+- `folder`: string (required)
+- `number`: object (required)
+  - `year`: number (required, 20-50)
+  - `country`: number (required, dial code)
+  - `seq`: number (required, 1-999)
+  - `id`: string (computed, format: YY-CCCNN)
+- `time`: object (auto-managed)
+  - `created_at`: datetime
+  - `updated_at`: datetime
+
+**Unique Constraint**: `number.id` must be unique
+
+#### 2. rfp table
+**Purpose**: Fee proposals created by emittiv staff  
+**ID Format**: `rfp:YY_CCCNN_R` (auto-generated)  
+**Type**: SCHEMAFULL
+
+**Fields**:
+- `name`: string (required, length > 0)
+- `number`: string (required)
+- `project_id`: record<projects> (required)
+- `company_id`: record<company> (required)
+- `contact_id`: record<contacts> (required)
+- `status`: enum (default: 'Draft') - ['Draft', 'Active', 'Sent', 'Awarded', 'Lost', 'Cancelled']
+- `stage`: enum (default: 'Draft') - ['Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost']
+- `issue_date`: string (required, 6 digits YYMMDD format)
+- `activity`: string (optional)
+- `package`: string (optional)
+- `strap_line`: string (optional)
+- `staff_name`: string (optional)
+- `staff_email`: string (optional)
+- `staff_phone`: string (optional)
+- `staff_position`: string (optional)
+- `rev`: int (auto-computed from max of revisions array)
+- `revisions`: array<object> (default: [])
+  - `revision_number`: int (required)
+  - `revision_date`: datetime (required)
+  - `author_email`: string (required, valid email)
+  - `author_name`: string (required)
+  - `notes`: string (required)
+- `time`: object (auto-managed)
+
+**Unique Constraint**: Combination of `project_id` + `rev` must be unique
+
+#### 3. company table
+**Purpose**: Client companies that issue project opportunities  
+**ID Format**: `company:ABBREVIATION` (e.g., company:MERAAS)  
+**Type**: SCHEMAFULL
+
+**Fields**:
+- `name`: string (required, length > 0)
+- `name_short`: string (required)
+- `abbreviation`: string (required)
+- `city`: string (required)
+- `country`: string (required)
+- `reg_no`: option<string> (optional)
+- `tax_no`: option<string> (optional)
+- `time`: object (auto-managed)
+
+#### 4. contacts table
+**Purpose**: Individual contact persons at client companies  
+**ID Format**: `contacts:random_id` (auto-generated)  
+**Type**: SCHEMAFULL
+
+**Fields**:
+- `first_name`: string (required)
+- `last_name`: string (required)
+- `email`: string (required, valid email, unique)
+- `phone`: string (required, must contain '+', length > 0)
+- `position`: string (required)
+- `company`: record<company> (required)
+- `full_name`: string (auto-computed: first_name + ' ' + last_name)
+- `time`: object (auto-managed)
+
+**Unique Constraint**: `email` must be unique across all contacts
+
+#### 5. country table (Reference Data)
+**Purpose**: Pre-populated reference table for countries  
+**ID Format**: `country:CODE` (e.g., country:AE)  
+**Fields**: `name`, `name_formal`, `name_official`, `code`, `code_alt`, `dial_code`, `currency_code`
+
+#### 6. currency table (Reference Data)
+**Purpose**: Pre-populated reference table for currencies  
+**ID Format**: `currency:CODE` (e.g., currency:USD)  
+**Fields**: `code`, `name`
+
+### Business Logic
+
+#### Project Numbering System
+- Format: YY-CCCNN (e.g., 24-97101)
+- YY: 2-digit year
+- CCC: Country dial code (971=UAE, 966=Saudi)
+- NN: Sequence number (01-99)
+- UAE projects start from 97101, Saudi from 96601
+- Sequence resets annually per country
+
+#### RFP Revision Management
+- `rev` field is auto-computed from revisions array
+- To add a revision: Append object to revisions array
+- Required revision fields: revision_number, revision_date, author_email, author_name, notes
+- Provides complete audit trail
+
+### Key Relationships
+- rfp → projects (many-to-one)
+- rfp → company (many-to-one)
+- rfp → contacts (many-to-one)
+- contacts → company (many-to-one)
+- country → currency (many-to-one)
+
+### InDesign Export Mapping
+The RFP data exports to JSON with these field mappings:
+- "01 Document Name" → rfp.name
+- "02 Document Number" → rfp.number
+- "03 Document Issue Date" → rfp.issue_date (format as 'dd MMM yyyy')
+- "04 Document Revision" → rfp.rev
+- "06 Project Number" → project.number.id
+- "07 Project Name" → project.name
+- "08 Project Name Short" → project.name_short
+- "09 Project Location" → project.city
+- "10 Project Country" → project.country
+- "11 Project Activity" → rfp.activity (moved from project to rfp)
+- "12 Project Package" → rfp.package (moved from project to rfp)
+- "13 Project Stage" → (removed from schema)
+- "21 Client Name" → company.name
+- "22 Client Name Short" → company.name_short
+- "23 Client City" → company.city
+- "24 Client Country" → company.country
+- "26 Contact Full Name" → contact.full_name
+- "27 Contact Position" → contact.position
+- "28 Contact Email" → contact.email
+- "29 Contact Phone" → contact.phone
+- "99 Strap Line" → rfp.strap_line
+
+### Reference Files Created
+The following files contain detailed database information for development:
+- `src-tauri/src/db/schema.md` - Complete schema documentation
+- `src/types/database.ts` - TypeScript type definitions
+- `src-tauri/src/db/entities.rs` - Rust struct definitions
+- `src-tauri/src/db/queries.md` - Example SurrealQL queries
+- `src-tauri/src/db/validation.md` - Validation rules reference
+- `src-tauri/src/db/sample-data.md` - Sample data for testing
+
+These files ensure Claude Code has all necessary database information without requiring direct MCP server access.
+
+### Recent Updates - June 14, 2025 (Evening)
+
+#### Fixed Contacts Page Company Display
+**Issue**: Company field showing "[object Object]" instead of company name
+
+**Changes Made**:
+1. **Backend** (`src-tauri/src/db/mod.rs`):
+   - Updated `get_contacts()` to use `FETCH company` in query
+   - Changed `Contact` struct to use `serde_json::Value` for company field
+   - This allows handling both Thing ID references and full company objects
+
+2. **Frontend** (`src/routes/Contacts.svelte`):
+   - Enhanced `getCompanyName()` function to properly extract company name
+   - Now checks for `company.name` property first (full company name)
+   - Falls back to `company.name_short` if available
+   - Handles various data formats gracefully
+   - Updated filter logic to use actual company names
+
+**Technical Details**:
+- SurrealDB's `FETCH` directive returns full related records
+- The query `SELECT * FROM contacts FETCH company` returns contacts with expanded company data
+- Frontend now properly handles the nested company object structure
+
+**Result**: Successfully fixed "[object Object]" display for company names
+
+#### Solution: Client-Side Company Name Lookup
+**Approach**: Instead of using SurrealDB's FETCH directive, implemented client-side lookup
+
+**Implementation Details**:
+1. **Backend**: Keep simple SELECT queries without FETCH
+   - Contacts return company ID as Thing reference
+   - Companies loaded separately into companiesStore
+   
+2. **Frontend** (`src/routes/Contacts.svelte`):
+   - Created `getCompanyName()` function that:
+     - Accepts company reference (Thing object)
+     - Extracts company ID from various formats
+     - Looks up company in companiesStore by ID
+     - Returns full company name
+   - Handles multiple ID formats:
+     - Simple string: "company:ABC"
+     - Thing object: `{ tb: 'company', id: { String: 'ABC' } }`
+     - Fallback to abbreviation if company not found
+
+**Why This Works**:
+- Avoids complexity of FETCH queries
+- All data loads successfully with standard SELECT
+- Company names displayed correctly by cross-referencing stores
+- No changes needed to backend data structures
+
+**Key Learning**:
+- SurrealDB FETCH can be complex with Rust deserialization
+- Client-side joins are simple and effective for small datasets
+- This pattern can be reused for other foreign key relationships
+
+### Database Schema Update - June 14, 2025
+
+#### Simplified Projects Table
+**Change**: Removed `activity`, `package`, and `stage` fields from projects table
+
+**Rationale**:
+- These fields are project-specific attributes that belong at the RFP level
+- Activity and package are already present in the RFP table
+- Stage was removed entirely from the schema
+
+**Updated Projects Schema**:
+- `name`: string (required)
+- `name_short`: string (required)
+- `status`: enum (required) - ['Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled']
+- `area`: string (required)
+- `city`: string (required)
+- `country`: string (required)
+- `folder`: string (required)
+- `number`: object (required)
+- `time`: object (auto-managed)
+
+**Impact**:
+- Updated Rust struct in `src-tauri/src/db/mod.rs`
+- Updated TypeScript interface in `src/types/index.ts`
+- InDesign mapping now pulls activity/package from RFP instead of project
+
+---
+
+## Latest Development Session - June 14, 2025 (End of Day)
+
+### Advanced Filtering System Implementation ✅
+
+#### Enhanced User Interface
+**Major Feature Update**: Comprehensive filtering and search system across all entity pages
+
+**Key Features Implemented**:
+1. **Reactive Search & Filters**: Real-time filtering as user types or changes selections
+2. **Dynamic Filter Options**: Dropdowns populated from actual database data
+3. **Consistent UI Pattern**: All pages (Projects, Companies, Contacts, Proposals) follow same design
+4. **Smart Data Loading**: Each page loads required data on mount for optimal performance
+5. **Alphabetical Sorting**: All filter dropdowns automatically sorted alphabetically
+6. **Latest First Ordering**: Records displayed with most recently updated items first
+
+#### Native File Explorer Integration ✅
+**Feature**: Project folder paths are now clickable links that open in native file explorer
+
+**Implementation**:
+- Added `open_folder_in_explorer` Tauri command for cross-platform support
+- Windows: Uses `explorer` command
+- macOS: Uses `open` command  
+- Linux: Uses `xdg-open` command
+- Displays clean folder name while hiding root path for better UX
+
+#### Settings Management System ✅
+**Feature**: Complete settings modal with environment file management
+
+**Implementation**:
+1. **Settings Modal Component**: Pixel-perfect styling matching emittiv design system
+2. **Environment Management**: Read/write `.env` file for database configuration
+3. **Validation**: Real-time validation of database URLs and folder paths
+4. **Persistence**: Settings automatically saved and loaded across sessions
+5. **Native Dialogs**: Folder picker using Tauri's native dialog system
+
+#### Architectural Improvements ✅
+**Major Change**: Migrated from derived stores to reactive statements for better performance
+
+**Technical Details**:
+1. **From Derived Stores to Reactive Statements**:
+   ```typescript
+   // Old approach (derived stores)
+   export const filteredProjects = derived([projectsStore, searchQuery], ...)
+   
+   // New approach (reactive statements)
+   $: filteredProjects = $projectsStore.filter(project => {
+     // Real-time filtering logic
+   }).sort((a, b) => new Date(b.time.updated_at) - new Date(a.time.updated_at));
+   ```
+
+2. **Benefits of New Architecture**:
+   - **Immediate Reactivity**: Filters respond instantly to any change
+   - **Better Performance**: No derived store overhead
+   - **Real-time Updates**: Database changes still trigger UI updates
+   - **Simplified State**: Cleaner component logic
+   - **Type Safety**: Better TypeScript inference
+
+#### Page-Specific Enhancements
+
+**Projects Page**:
+- Search: Project name, area, city, country
+- Filters: Status, Country, City (from actual project data)
+- Special: Clickable folder links with native file explorer integration
+- Display: Project name, location, project number, folder link
+
+**Companies Page**:
+- Search: Company name, short name, abbreviation, city, country
+- Filters: Country, City (from actual company data)
+- Display: Company name, location, registration/tax numbers
+
+**Contacts Page**:
+- Search: Full name, first name, last name, email, phone, position
+- Filters: Company (short names), Country, Position (from actual contact data)
+- Display: Contact details with company information and direct email links
+
+**Proposals Page**:
+- Search: Project name, proposal number, activity, package, staff name
+- Filters: Status, Stage, Staff (from actual RFP data)
+- Display: Project/proposal details with client and contact information
+
+#### User Experience Improvements
+1. **Visual Feedback**: Results counter shows "X of Y items" when filters active
+2. **Clear Filters**: One-click button to reset all filters when active
+3. **Empty States**: Contextual messages for no data vs no search results
+4. **Consistent Spacing**: All elements use exact pixel values for precision
+5. **Accessibility**: Full keyboard navigation and screen reader support
+
+#### Development Quality Improvements
+1. **Consistent Patterns**: All pages follow identical structure for maintainability
+2. **Code Reusability**: Shared functions for common operations
+3. **Error Handling**: Graceful degradation when database unavailable
+4. **Debugging Tools**: Enhanced logging for development and troubleshooting
+5. **Type Safety**: Full TypeScript coverage for all new features
+
+### Files Modified in Latest Session:
+- `src-tauri/src/commands/mod.rs` - Added file explorer integration
+- `src/lib/components/SettingsModal.svelte` - Complete settings management
+- `src/lib/stores/settings.ts` - Settings state management
+- `src/routes/Projects.svelte` - Advanced filtering + folder links
+- `src/routes/Companies.svelte` - Consistent filtering system
+- `src/routes/Contacts.svelte` - Company lookup + filtering
+- `src/routes/Proposals.svelte` - Complete filtering overhaul
+- `src/lib/stores.ts` - Architecture improvements
+- `src-tauri/tauri.conf.json` - Native dialog configuration
+
+### Next Development Phase
+**Ready for**: Detail views, form creation/editing, advanced data management features
+
+---
+
+**Last Updated**: June 14, 2025 (End of Day)  
+**Status**: Advanced Filtering System Complete, Native Integration Active, Settings Management Operational  
+**Architecture**: Reactive filtering system with real-time database updates and optimal performance
