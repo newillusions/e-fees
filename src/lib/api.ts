@@ -3,7 +3,7 @@ import type {
   Project, 
   Company, 
   Contact, 
-  Proposal, 
+  Rfp, 
   ConnectionStatus 
 } from '../types';
 
@@ -27,7 +27,7 @@ export class ApiClient {
       console.error('Failed to get connection status:', error);
       return {
         is_connected: false,
-        last_check: null,
+        last_check: undefined,
         error_message: error?.toString() || 'Unknown error'
       };
     }
@@ -36,37 +36,41 @@ export class ApiClient {
   // Project methods
   static async getProjects(): Promise<Project[]> {
     try {
+      console.log('Invoking get_projects command...');
       const projects = await invoke<Project[]>('get_projects');
-      return projects.map(project => ({
-        ...project,
-        createdAt: new Date(project.created_at),
-        updatedAt: new Date(project.updated_at)
-      }));
+      console.log('get_projects response:', projects);
+      return projects;
     } catch (error) {
-      console.warn('Failed to fetch projects from database, using fallback data:', error);
-      // Return mock data as fallback
-      const { mockProjects } = await import('./stores/data');
-      return mockProjects;
+      console.error('Failed to fetch projects from database:', error);
+      throw error;
     }
   }
 
-  static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project | null> {
+  static async searchProjects(query: string): Promise<Project[]> {
+    try {
+      console.log('Searching projects with query:', query);
+      const projects = await invoke<Project[]>('search_projects', { query });
+      console.log('search_projects response:', projects);
+      return projects;
+    } catch (error) {
+      console.error('Failed to search projects:', error);
+      throw error;
+    }
+  }
+
+  static async createProject(project: Omit<Project, 'id'>): Promise<Project | null> {
     try {
       const newProject = {
+        ...project,
         id: null,
-        name: project.name,
-        description: project.description,
-        status: project.status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        time: {
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
       };
       
       const created = await invoke<Project>('create_project', { project: newProject });
-      return {
-        ...created,
-        createdAt: new Date(created.created_at),
-        updatedAt: new Date(created.updated_at)
-      };
+      return created;
     } catch (error) {
       console.error('Failed to create project:', error);
       return null;
@@ -76,37 +80,25 @@ export class ApiClient {
   // Company methods
   static async getCompanies(): Promise<Company[]> {
     try {
+      console.log('Invoking get_companies command...');
       const companies = await invoke<Company[]>('get_companies');
-      return companies.map(company => ({
-        ...company,
-        createdAt: new Date(company.created_at)
-      }));
+      console.log('get_companies response:', companies);
+      return companies;
     } catch (error) {
-      console.warn('Failed to fetch companies from database, using fallback data:', error);
-      // Return mock data as fallback
-      const { mockCompanies } = await import('./stores/data');
-      return mockCompanies;
+      console.error('Failed to fetch companies from database:', error);
+      throw error;
     }
   }
 
-  static async createCompany(company: Omit<Company, 'id' | 'createdAt'>): Promise<Company | null> {
+  static async createCompany(company: Omit<Company, 'id'>): Promise<Company | null> {
     try {
       const newCompany = {
-        id: null,
-        name: company.name,
-        industry: company.industry,
-        contact_count: company.contactCount,
-        address: company.address || null,
-        website: company.website || null,
-        created_at: new Date().toISOString()
+        ...company,
+        id: null
       };
       
       const created = await invoke<Company>('create_company', { company: newCompany });
-      return {
-        ...created,
-        contactCount: created.contact_count,
-        createdAt: new Date(created.created_at)
-      };
+      return created;
     } catch (error) {
       console.error('Failed to create company:', error);
       return null;
@@ -116,85 +108,59 @@ export class ApiClient {
   // Contact methods
   static async getContacts(): Promise<Contact[]> {
     try {
+      console.log('Invoking get_contacts command...');
       const contacts = await invoke<Contact[]>('get_contacts');
-      return contacts.map(contact => ({
-        ...contact,
-        companyId: contact.company_id,
-        createdAt: new Date(contact.created_at)
-      }));
+      console.log('get_contacts response:', contacts);
+      return contacts;
     } catch (error) {
-      console.warn('Failed to fetch contacts from database, using fallback data:', error);
-      // Return mock data as fallback
-      const { mockContacts } = await import('./stores/data');
-      return mockContacts;
+      console.error('Failed to fetch contacts from database:', error);
+      throw error;
     }
   }
 
-  static async createContact(contact: Omit<Contact, 'id' | 'createdAt'>): Promise<Contact | null> {
+  static async createContact(contact: Omit<Contact, 'id'>): Promise<Contact | null> {
     try {
       const newContact = {
-        id: null,
-        name: contact.name,
-        email: contact.email,
-        phone: contact.phone || null,
-        position: contact.position || null,
-        company_id: contact.companyId,
-        company: contact.company,
-        created_at: new Date().toISOString()
+        ...contact,
+        id: null
       };
       
       const created = await invoke<Contact>('create_contact', { contact: newContact });
-      return {
-        ...created,
-        companyId: created.company_id,
-        createdAt: new Date(created.created_at)
-      };
+      return created;
     } catch (error) {
       console.error('Failed to create contact:', error);
       return null;
     }
   }
 
-  // Proposal methods
-  static async getProposals(): Promise<Proposal[]> {
+  // RFP methods
+  static async getRfps(): Promise<Rfp[]> {
     try {
-      const proposals = await invoke<Proposal[]>('get_proposals');
-      return proposals.map(proposal => ({
-        ...proposal,
-        projectId: proposal.project_id,
-        createdAt: new Date(proposal.created_at),
-        dueDate: proposal.due_date ? new Date(proposal.due_date) : undefined
-      }));
+      console.log('Invoking get_rfps command...');
+      const rfps = await invoke<Rfp[]>('get_rfps');
+      console.log('get_rfps response:', rfps);
+      return rfps;
     } catch (error) {
-      console.warn('Failed to fetch proposals from database, using fallback data:', error);
-      // Return mock data as fallback
-      const { mockProposals } = await import('./stores/data');
-      return mockProposals;
+      console.error('Failed to fetch rfps from database:', error);
+      throw error;
     }
   }
 
-  static async createProposal(proposal: Omit<Proposal, 'id' | 'createdAt'>): Promise<Proposal | null> {
+  static async createRfp(rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
     try {
-      const newProposal = {
+      const newRfp = {
+        ...rfp,
         id: null,
-        title: proposal.title,
-        client: proposal.client,
-        amount: proposal.amount,
-        status: proposal.status,
-        project_id: proposal.projectId || null,
-        created_at: new Date().toISOString(),
-        due_date: proposal.dueDate ? proposal.dueDate.toISOString() : null
+        time: {
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
       };
       
-      const created = await invoke<Proposal>('create_proposal', { proposal: newProposal });
-      return {
-        ...created,
-        projectId: created.project_id,
-        createdAt: new Date(created.created_at),
-        dueDate: created.due_date ? new Date(created.due_date) : undefined
-      };
+      const created = await invoke<Rfp>('create_rfp', { rfp: newRfp });
+      return created;
     } catch (error) {
-      console.error('Failed to create proposal:', error);
+      console.error('Failed to create rfp:', error);
       return null;
     }
   }
@@ -202,24 +168,19 @@ export class ApiClient {
   // Statistics
   static async getStats(): Promise<{
     totalProjects: number;
-    activeProposals: number;
+    activeRfps: number;
     totalCompanies: number;
     totalContacts: number;
-    totalProposals: number;
+    totalRfps: number;
   }> {
     try {
-      return await invoke('get_stats');
+      console.log('Invoking get_stats command...');
+      const stats = await invoke('get_stats');
+      console.log('get_stats response:', stats);
+      return stats as any;
     } catch (error) {
-      console.warn('Failed to fetch stats from database, using fallback data:', error);
-      // Calculate stats from mock data as fallback
-      const { mockProjects, mockProposals, mockCompanies, mockContacts } = await import('./stores/data');
-      return {
-        totalProjects: mockProjects.length,
-        activeProposals: mockProposals.filter(p => p.status !== 'rejected').length,
-        totalCompanies: mockCompanies.length,
-        totalContacts: mockContacts.length,
-        totalProposals: mockProposals.length
-      };
+      console.error('Failed to fetch stats from database:', error);
+      throw error;
     }
   }
 
@@ -245,6 +206,55 @@ export class ApiClient {
       };
     }
   }
+
+  // Get table schema information
+  static async getTableSchema(tableName: string): Promise<any> {
+    try {
+      return await invoke('get_table_schema', { tableName });
+    } catch (error) {
+      console.error(`Failed to get schema for table ${tableName}:`, error);
+      return {
+        error: error?.toString() || 'Unknown error',
+        table: tableName,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // Position window for 4K monitor
+  static async positionWindow4K(): Promise<string> {
+    try {
+      return await invoke<string>('position_window_4k');
+    } catch (error) {
+      console.error('Failed to position window:', error);
+      return 'Failed to position window';
+    }
+  }
+
+  // File system operations
+  static async selectFolder(): Promise<string | null> {
+    try {
+      console.log('Opening folder picker dialog...');
+      const folder = await invoke<string | null>('select_folder');
+      console.log('Selected folder:', folder);
+      return folder;
+    } catch (error) {
+      console.error('Failed to open folder picker:', error);
+      return null;
+    }
+  }
+
+  static async openFolderInExplorer(folderPath: string): Promise<string> {
+    try {
+      console.log('Opening folder in explorer:', folderPath);
+      const result = await invoke<string>('open_folder_in_explorer', { folderPath });
+      console.log('Folder opened successfully');
+      return result;
+    } catch (error) {
+      console.error('Failed to open folder in explorer:', error);
+      return 'Failed to open folder';
+    }
+  }
 }
 
 // Export individual functions for convenience
@@ -252,16 +262,21 @@ export const {
   checkDbConnection,
   getConnectionStatus,
   getProjects,
+  searchProjects,
   createProject,
   getCompanies,
   createCompany,
   getContacts,
   createContact,
-  getProposals,
-  createProposal,
+  getRfps,
+  createRfp,
   getStats,
   healthCheck,
-  getDbInfo
+  getDbInfo,
+  getTableSchema,
+  positionWindow4K,
+  selectFolder,
+  openFolderInExplorer
 } = ApiClient;
 
 // Export default

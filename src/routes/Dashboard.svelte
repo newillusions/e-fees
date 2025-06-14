@@ -1,8 +1,61 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
-  import { statisticsStore, isLoadingStore, recentProposalsStore } from '$lib/stores';
+  import { statisticsStore, isLoadingStore, recentRfpsStore, loadAllData } from '$lib/stores';
+  import { getProjects, getCompanies, getContacts, getRfps, createProject, createCompany, createContact, createRfp, getTableSchema } from '$lib/api';
   import { onMount } from 'svelte';
+  
+  async function testDatabaseCalls() {
+    console.log('🧪 TESTING INDIVIDUAL DATABASE CALLS...');
+    
+    try {
+      console.log('Testing getProjects...');
+      const projects = await getProjects();
+      console.log('✅ Projects result:', projects);
+    } catch (error) {
+      console.error('❌ Projects failed:', error);
+    }
+    
+    try {
+      console.log('Testing getCompanies...');
+      const companies = await getCompanies();
+      console.log('✅ Companies result:', companies);
+    } catch (error) {
+      console.error('❌ Companies failed:', error);
+    }
+    
+    try {
+      console.log('Testing getContacts...');
+      const contacts = await getContacts();
+      console.log('✅ Contacts result:', contacts);
+    } catch (error) {
+      console.error('❌ Contacts failed:', error);
+    }
+    
+    try {
+      console.log('Testing getRfps...');
+      const rfps = await getRfps();
+      console.log('✅ RFPs result:', rfps);
+    } catch (error) {
+      console.error('❌ RFPs failed:', error);
+    }
+  }
+  
+  async function checkTableSchemas() {
+    console.log('🔍 CHECKING TABLE SCHEMAS...');
+    
+    const tables = ['projects', 'company', 'contacts', 'rfp'];
+    
+    for (const table of tables) {
+      try {
+        console.log(`📋 Checking schema for ${table}...`);
+        const schema = await getTableSchema(table);
+        console.log(`✅ ${table} schema:`, schema);
+      } catch (error) {
+        console.error(`❌ ${table} schema failed:`, error);
+      }
+    }
+  }
   
   const statCards = [
     {
@@ -12,8 +65,8 @@
       color: 'text-blue-400'
     },
     {
-      title: 'Active Proposals',
-      key: 'activeProposals',
+      title: 'Active RFPs',
+      key: 'activeRfps',
       icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       color: 'status-connected'
     },
@@ -49,7 +102,7 @@
             <svg class="w-8 h-8 {card.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={card.icon} />
             </svg>
-            <span class="text-2xl font-bold" style="color: var(--emittiv-white);">{$statisticsStore[card.key]}</span>
+            <span class="text-2xl font-bold" style="color: var(--emittiv-white);">{($statisticsStore as any)[card.key]}</span>
           </div>
           <h3 class="font-medium" style="color: var(--emittiv-lighter);">{card.title}</h3>
         {/if}
@@ -62,13 +115,13 @@
     <h2 class="text-xl font-heading font-semibold mb-4" style="color: var(--emittiv-white);">Recent Activity</h2>
     {#if $isLoadingStore}
       <LoadingSkeleton rows={4} />
-    {:else if $recentProposalsStore.length > 0}
+    {:else if $recentRfpsStore.length > 0}
       <div class="space-y-3">
-        {#each $recentProposalsStore.slice(0, 5) as proposal}
+        {#each $recentRfpsStore.slice(0, 5) as rfp}
           <div class="flex items-center space-x-3 py-2">
             <div class="w-2 h-2 rounded-full status-connected"></div>
-            <span style="color: var(--emittiv-lighter);">Proposal "{proposal.title}" for {proposal.client}</span>
-            <span class="text-sm ml-auto" style="color: var(--emittiv-light);">{proposal.createdAt.toLocaleDateString()}</span>
+            <span style="color: var(--emittiv-lighter);">RFP "{rfp.name}" - {rfp.number}</span>
+            <span class="text-sm ml-auto" style="color: var(--emittiv-light);">{new Date(rfp.time.created_at).toLocaleDateString()}</span>
           </div>
         {/each}
       </div>

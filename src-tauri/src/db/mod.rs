@@ -5,6 +5,7 @@ use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::engine::remote::http::{Client as HttpClient, Http};
 use surrealdb::opt::auth::{Root, Namespace, Database};
 use surrealdb::{Error, Surreal};
+use surrealdb::sql::Thing;
 use tokio::time::interval;
 use log::{error, info, warn};
 use chrono;
@@ -57,50 +58,91 @@ impl Default for ConnectionStatus {
     }
 }
 
-// Database entities
+// Database entities matching actual SurrealDB schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
-    pub id: Option<String>,
+    pub id: Option<Thing>,
     pub name: String,
-    pub description: String,
-    pub status: String, // 'active', 'completed', 'on-hold'
+    pub name_short: String,
+    pub status: String, // 'Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled'
+    pub area: String,
+    pub city: String,
+    pub country: String,
+    pub folder: String,
+    pub number: ProjectNumber,
+    pub time: TimeStamps,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectNumber {
+    pub year: i32,
+    pub country: i32,
+    pub seq: i32,
+    pub id: String, // The formatted number like "24-97101"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeStamps {
     pub created_at: String,
     pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Company {
-    pub id: Option<String>,
+    pub id: Option<Thing>,
     pub name: String,
-    pub industry: String,
-    pub contact_count: i32,
-    pub address: Option<String>,
-    pub website: Option<String>,
-    pub created_at: String,
+    pub name_short: String,
+    pub abbreviation: String,
+    pub city: String,
+    pub country: String,
+    pub reg_no: Option<String>,
+    pub tax_no: Option<String>,
+    pub time: TimeStamps,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contact {
-    pub id: Option<String>,
-    pub name: String,
+    pub id: Option<Thing>,
+    pub first_name: String,
+    pub last_name: String,
+    pub full_name: String, // Auto-computed
     pub email: String,
-    pub phone: Option<String>,
-    pub position: Option<String>,
-    pub company_id: String,
-    pub company: String,
-    pub created_at: String,
+    pub phone: String,
+    pub position: String,
+    pub company: Thing, // Reference to company record
+    pub time: TimeStamps,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Proposal {
-    pub id: Option<String>,
-    pub title: String,
-    pub client: String,
-    pub amount: f64,
-    pub status: String, // 'draft', 'sent', 'approved', 'rejected'
-    pub project_id: Option<String>,
-    pub created_at: String,
-    pub due_date: Option<String>,
+pub struct Rfp {
+    pub id: Option<Thing>,
+    pub name: String,
+    pub number: String,
+    pub rev: i32, // Auto-computed from revisions
+    pub status: String, // 'Draft', 'Active', 'Sent', 'Awarded', 'Lost', 'Cancelled'
+    pub stage: String, // 'Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost'
+    pub issue_date: String, // YYMMDD format
+    pub activity: String,
+    pub package: String,
+    pub project_id: Thing,
+    pub company_id: Thing,
+    pub contact_id: Thing,
+    pub staff_name: String,
+    pub staff_email: String,
+    pub staff_phone: String,
+    pub staff_position: String,
+    pub strap_line: String,
+    pub revisions: Vec<Revision>,
+    pub time: TimeStamps,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Revision {
+    pub revision_number: i32,
+    pub revision_date: String,
+    pub author_email: String,
+    pub author_name: String,
+    pub notes: String,
 }
 
 // Database manager - using HTTP client as primary, WS as fallback
@@ -125,6 +167,7 @@ impl DatabaseClient {
             DatabaseClient::WebSocket(client) => client.health().await,
         }
     }
+    
     
     pub async fn signin_root(&self, username: &str, password: &str) -> Result<(), Error> {
         match self {
@@ -191,8 +234,8 @@ impl DatabaseClient {
     
     pub async fn create_company(&self, company: Company) -> Result<Option<Company>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.create("companies").content(company).await,
-            DatabaseClient::WebSocket(client) => client.create("companies").content(company).await,
+            DatabaseClient::Http(client) => client.create("company").content(company).await,
+            DatabaseClient::WebSocket(client) => client.create("company").content(company).await,
         }
     }
     
@@ -203,10 +246,10 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn create_proposal(&self, proposal: Proposal) -> Result<Option<Proposal>, Error> {
+    pub async fn create_rfp(&self, rfp: Rfp) -> Result<Option<Rfp>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.create("proposals").content(proposal).await,
-            DatabaseClient::WebSocket(client) => client.create("proposals").content(proposal).await,
+            DatabaseClient::Http(client) => client.create("rfp").content(rfp).await,
+            DatabaseClient::WebSocket(client) => client.create("rfp").content(rfp).await,
         }
     }
 }
@@ -319,24 +362,24 @@ impl DatabaseManager {
         // Try different authentication methods
         info!("Authenticating with username: {}", self.config.username);
         
-        // First try Root authentication
-        let auth_result = db.signin_root(&self.config.username, &self.config.password).await;
+        // First try database authentication (which should work for the 'martin' user)
+        let db_auth_result = db.signin_database(&self.config.namespace, &self.config.database, &self.config.username, &self.config.password).await;
         
-        if let Err(root_err) = auth_result {
-            warn!("Root authentication failed: {}, trying namespace authentication", root_err);
+        if let Err(db_err) = db_auth_result {
+            warn!("Database authentication failed: {}, trying namespace authentication", db_err);
             
             // Try namespace authentication
             let ns_auth_result = db.signin_namespace(&self.config.namespace, &self.config.username, &self.config.password).await;
             
             if let Err(ns_err) = ns_auth_result {
-                warn!("Namespace authentication failed: {}, trying database authentication", ns_err);
+                warn!("Namespace authentication failed: {}, trying root authentication", ns_err);
                 
-                // Try database authentication
-                match db.signin_database(&self.config.namespace, &self.config.database, &self.config.username, &self.config.password).await {
-                    Ok(_) => info!("Successfully authenticated with database-level credentials"),
-                    Err(db_err) => {
-                        error!("All authentication methods failed. Root: {}, Namespace: {}, Database: {}", 
-                               root_err, ns_err, db_err);
+                // Try root authentication as last resort
+                match db.signin_root(&self.config.username, &self.config.password).await {
+                    Ok(_) => info!("Successfully authenticated with root-level credentials"),
+                    Err(root_err) => {
+                        error!("All authentication methods failed. Database: {}, Namespace: {}, Root: {}", 
+                               db_err, ns_err, root_err);
                         return Err(db_err);
                     }
                 }
@@ -344,7 +387,7 @@ impl DatabaseManager {
                 info!("Successfully authenticated with namespace-level credentials");
             }
         } else {
-            info!("Successfully authenticated with root-level credentials");
+            info!("Successfully authenticated with database-level credentials");
         }
         
         // Select namespace and database
@@ -355,6 +398,35 @@ impl DatabaseManager {
                 error!("Failed to select namespace/database: {}", e);
                 return Err(e);
             }
+        }
+        
+        // Debug: Check what user/permissions we have
+        info!("Testing authentication and permissions...");
+        let info_query_result = match &db {
+            DatabaseClient::Http(client) => {
+                client.query("INFO FOR DB").await
+            },
+            DatabaseClient::WebSocket(client) => {
+                client.query("INFO FOR DB").await
+            }
+        };
+        
+        match info_query_result {
+            Ok(mut result) => {
+                let info: Result<Vec<serde_json::Value>, _> = result.take(0);
+                match info {
+                    Ok(db_info) => {
+                        info!("Database info query successful");
+                        if let Some(first_result) = db_info.first() {
+                            if let Some(tables) = first_result.get("tables") {
+                                info!("Available tables: {}", tables);
+                            }
+                        }
+                    },
+                    Err(e) => error!("Failed to parse database info: {}", e),
+                }
+            },
+            Err(e) => error!("INFO FOR DB query failed: {}", e),
         }
         
         self.client = Some(db);
@@ -437,8 +509,66 @@ impl DatabaseManager {
     // Get all projects
     pub async fn get_projects(&self) -> Result<Vec<Project>, Error> {
         if let Some(client) = &self.client {
-            let projects: Vec<Project> = client.select("projects").await.unwrap_or_default();
-            Ok(projects)
+            info!("Attempting to query projects table");
+            
+            // Try both select() and raw query to debug
+            let select_result: Result<Vec<Project>, Error> = client.select("projects").await;
+            match &select_result {
+                Ok(projects) => info!("select('projects') returned {} records", projects.len()),
+                Err(e) => error!("select('projects') failed: {}", e),
+            }
+            
+            
+            select_result.or_else(|_| Ok(vec![]))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Search projects with fuzzy-like matching
+    pub async fn search_projects(&self, query: &str) -> Result<Vec<Project>, Error> {
+        if let Some(client) = &self.client {
+            info!("Searching projects with query: {}", query);
+            
+            // Escape the query to prevent SQL injection
+            let escaped_query = query.replace("'", "\\'");
+            
+            // Build a SurrealQL query that searches across multiple fields
+            let search_query = format!(
+                r#"SELECT * FROM projects WHERE 
+                   string::lowercase(name) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(name_short) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(number.id) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(city) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(area) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(country) CONTAINS string::lowercase('{}') OR
+                   string::lowercase(folder) CONTAINS string::lowercase('{}')
+                   ORDER BY time.created_at DESC"#,
+                escaped_query, escaped_query, escaped_query, escaped_query, 
+                escaped_query, escaped_query, escaped_query
+            );
+            
+            let result: Result<Vec<Project>, surrealdb::Error> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&search_query).await?;
+                    response.take(0)
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&search_query).await?;
+                    response.take(0)
+                }
+            };
+            
+            match result {
+                Ok(projects) => {
+                    info!("Search query returned {} projects", projects.len());
+                    Ok(projects)
+                },
+                Err(e) => {
+                    error!("Search query failed: {}", e);
+                    Err(e)
+                }
+            }
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -447,8 +577,16 @@ impl DatabaseManager {
     // Get all companies
     pub async fn get_companies(&self) -> Result<Vec<Company>, Error> {
         if let Some(client) = &self.client {
-            let companies: Vec<Company> = client.select("companies").await.unwrap_or_default();
-            Ok(companies)
+            info!("Attempting to query company table");
+            
+            // Try both select() and raw query to debug
+            let select_result: Result<Vec<Company>, Error> = client.select("company").await;
+            match &select_result {
+                Ok(companies) => info!("select('company') returned {} records", companies.len()),
+                Err(e) => error!("select('company') failed: {}", e),
+            }
+            
+            select_result.or_else(|_| Ok(vec![]))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -457,18 +595,26 @@ impl DatabaseManager {
     // Get all contacts
     pub async fn get_contacts(&self) -> Result<Vec<Contact>, Error> {
         if let Some(client) = &self.client {
+            info!("Attempting to query contacts table");
+            
             let contacts: Vec<Contact> = client.select("contacts").await.unwrap_or_default();
+            info!("Successfully fetched {} contacts", contacts.len());
+            
             Ok(contacts)
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
     }
 
-    // Get all proposals
-    pub async fn get_proposals(&self) -> Result<Vec<Proposal>, Error> {
+    // Get all rfps
+    pub async fn get_rfps(&self) -> Result<Vec<Rfp>, Error> {
         if let Some(client) = &self.client {
-            let proposals: Vec<Proposal> = client.select("proposals").await.unwrap_or_default();
-            Ok(proposals)
+            info!("Attempting to query rfp table");
+            
+            let rfps: Vec<Rfp> = client.select("rfp").await.unwrap_or_default();
+            info!("Successfully fetched {} rfps", rfps.len());
+            
+            Ok(rfps)
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -507,12 +653,29 @@ impl DatabaseManager {
         }
     }
 
-    // Create a new proposal
-    pub async fn create_proposal(&self, proposal: Proposal) -> Result<Proposal, Error> {
+    // Create a new rfp
+    pub async fn create_rfp(&self, rfp: Rfp) -> Result<Rfp, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Proposal> = client.create_proposal(proposal).await?;
+            let created: Option<Rfp> = client.create_rfp(rfp).await?;
             
-            created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create proposal".to_string())))
+            created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create rfp".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Get table schema information
+    pub async fn get_table_schema(&self, table_name: &str) -> Result<serde_json::Value, Error> {
+        if let Some(client) = &self.client {
+            let query = format!("INFO FOR TABLE {};", table_name);
+            
+            let mut result = match client {
+                DatabaseClient::Http(client) => client.query(&query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&query).await?,
+            };
+            
+            let schema: Option<serde_json::Value> = result.take(0)?;
+            Ok(schema.unwrap_or(serde_json::json!({})))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

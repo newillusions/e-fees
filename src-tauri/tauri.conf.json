@@ -14,12 +14,14 @@
       {
         "title": "Fee Proposal Management",
         "width": 1280,
-        "height": 800,
-        "minWidth": 1024,
-        "minHeight": 600,
+        "height": 1200,
+        "x": 1280,
+        "y": 50,
+        "minWidth": 1000,
+        "minHeight": 1000,
         "resizable": true,
         "fullscreen": false,
-        "center": true,
+        "center": false,
         "decorations": true,
         "alwaysOnTop": false,
         "skipTaskbar": false

@@ -2,6 +2,7 @@
   import type { NavItem } from '../../types';
   import { onMount } from 'svelte';
   import { location, push } from 'svelte-spa-router';
+  import { positionWindow4K } from '../api';
   
   const navItems: NavItem[] = [
     {
@@ -42,11 +43,24 @@
   
   function handleKeydown(event: KeyboardEvent) {
     if (event.ctrlKey || event.metaKey) {
-      const num = event.key;
-      const item = navItems.find(item => item.shortcut === num);
+      const key = event.key;
+      
+      // Handle navigation shortcuts
+      const item = navItems.find(item => item.shortcut === key);
       if (item) {
         event.preventDefault();
         handleNavClick(item.id);
+        return;
+      }
+      
+      // Handle window positioning shortcut (Cmd/Ctrl + W)
+      if (key === 'w' || key === 'W') {
+        event.preventDefault();
+        positionWindow4K().then(result => {
+          console.log('Window positioning result:', result);
+        }).catch(error => {
+          console.error('Failed to position window:', error);
+        });
       }
     }
   }
@@ -57,25 +71,22 @@
   });
 </script>
 
-<nav class="flex-1 py-4">
+<nav class="flex-1">
   <ul class="space-y-1">
     {#each navItems as item}
       <li>
         <button
           on:click={() => handleNavClick(item.id)}
-          class="w-full px-6 py-3 flex items-center justify-between text-left transition-smooth group"
+          class="w-full px-6 py-2 flex items-center text-left transition-smooth group"
           class:nav-active={$location === item.id}
           class:nav-inactive={$location !== item.id}
         >
-          <div class="flex items-center space-x-3">
+          <div class="flex items-center space-x-3 transition-transform group-hover:scale-105">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
             </svg>
             <span class="font-medium">{item.label}</span>
           </div>
-          <kbd class="hidden group-hover:block px-2 py-1 text-xs rounded opacity-60" style="background: var(--emittiv-dark);">
-            Cmd+{item.shortcut}
-          </kbd>
         </button>
       </li>
     {/each}

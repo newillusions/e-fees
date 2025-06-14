@@ -1,8 +1,16 @@
 <script lang="ts">
   import Navigation from './Navigation.svelte';
   import ConnectionStatus from './ConnectionStatus.svelte';
+  import SettingsModal from './SettingsModal.svelte';
   import { location } from 'svelte-spa-router';
   import { logoLight } from '../../assets';
+  
+  // Settings modal state
+  let isSettingsOpen = false;
+  
+  function openSettings() {
+    isSettingsOpen = true;
+  }
   
   // Dynamic page titles
   const pageTitles: Record<string, string> = {
@@ -16,12 +24,12 @@
   $: pageTitle = pageTitles[$location] || 'Dashboard';
 </script>
 
-<div class="flex h-screen overflow-hidden" style="background: var(--gradient-main);">
+<div class="flex h-screen overflow-hidden glass-container">
   <!-- Fixed Sidebar -->
-  <aside class="w-64 flex flex-col flex-shrink-0" style="background: var(--gradient-sidebar); border-right: 1px solid var(--emittiv-darker);">
+  <aside class="w-64 flex flex-col flex-shrink-0 glass-sidebar relative">
     <!-- Company Logo and Branding -->
-    <div class="p-6 border-b" style="border-color: var(--emittiv-darker);">
-      <div class="flex items-center space-x-3 mb-3">
+    <div class="h-20 px-6 border-b flex items-center flex-shrink-0" style="border-color: var(--emittiv-darker);">
+      <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
           <img 
             src={logoLight} 
@@ -36,14 +44,15 @@
           <p class="text-xs" style="color: var(--emittiv-light);">by emittiv</p>
         </div>
       </div>
-      <p class="text-sm" style="color: var(--emittiv-light);">Proposal Management System</p>
     </div>
     
     <!-- Navigation -->
-    <Navigation />
+    <div class="flex-1 overflow-y-auto pb-20">
+      <Navigation />
+    </div>
     
-    <!-- Connection Status -->
-    <div class="mt-auto p-4 border-t" style="border-color: var(--emittiv-darker);">
+    <!-- Connection Status - Fixed at bottom -->
+    <div class="absolute bottom-0 left-0 right-0 border-t glass-sidebar" style="border-color: var(--emittiv-darker);">
       <ConnectionStatus />
     </div>
   </aside>
@@ -51,27 +60,21 @@
   <!-- Main Content Area -->
   <main class="flex-1 flex flex-col overflow-hidden">
     <!-- Header -->
-    <header class="px-8 py-4 flex-shrink-0 backdrop-blur-md border-b" 
-            style="background: rgba(0, 0, 0, 0.5); border-color: var(--emittiv-darker);">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <h2 class="text-xl font-heading font-semibold" style="color: var(--emittiv-white);">
-            {pageTitle}
-          </h2>
-          <div class="w-1 h-6 rounded-full" style="background: var(--emittiv-splash);"></div>
+    <header class="h-20 px-8 flex-shrink-0 glass-content border-b flex items-center" 
+            style="border-color: rgba(255, 255, 255, 0.1);">
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-medium" style="color: var(--emittiv-white);">
+            24-97108
+          </span>
           <span class="text-sm" style="color: var(--emittiv-light);">
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            Museum of Future
           </span>
         </div>
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-1">
           <!-- Search button -->
           <button 
-            class="p-2 rounded-lg transition-smooth hover-lift" 
+            class="p-1 rounded-lg transition-smooth hover-lift" 
             style="color: var(--emittiv-light);"
             aria-label="Search"
           >
@@ -82,19 +85,20 @@
           
           <!-- Notifications button -->
           <button 
-            class="p-2 rounded-lg transition-smooth hover-lift" 
+            class="p-1 rounded-lg transition-smooth hover-lift" 
             style="color: var(--emittiv-light);"
             aria-label="Notifications"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM11 17H7l4 4v-4zM5.868 12A9.001 9.001 0 0012 3a9 9 0 005.132 8.868" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
           </button>
           
           <!-- Settings button -->
           <button 
-            class="p-2 rounded-lg transition-smooth hover-lift" 
+            class="p-1 rounded-lg transition-smooth hover-lift" 
             style="color: var(--emittiv-light);"
+            on:click={openSettings}
             aria-label="Settings"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,13 +111,16 @@
     </header>
     
     <!-- Content with enhanced gradient background -->
-    <div class="flex-1 overflow-auto" style="background: var(--gradient-content);">
+    <div class="flex-1 overflow-auto glass-content">
       <div class="page-enter">
         <slot />
       </div>
     </div>
   </main>
 </div>
+
+<!-- Settings Modal -->
+<SettingsModal bind:isOpen={isSettingsOpen} />
 
 <style>
   /* Custom hover effects for header buttons */

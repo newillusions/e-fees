@@ -10,16 +10,23 @@ use commands::{
     check_db_connection,
     get_connection_status,
     get_projects,
+    search_projects,
     get_companies,
     get_contacts,
-    get_proposals,
+    get_rfps,
     create_project,
     create_company,
     create_contact,
-    create_proposal,
+    create_rfp,
     health_check,
     get_stats,
     get_db_info,
+    get_table_schema,
+    position_window_4k,
+    get_settings,
+    save_settings,
+    select_folder,
+    open_folder_in_explorer,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -73,6 +80,20 @@ pub fn run() {
             // Set up the application state
             app.manage(app_state.clone());
             
+            // Position window on right half of screen after a slight delay
+            let window_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                if let Some(window) = window_handle.get_webview_window("main") {
+                    // Use logical position for proper scaling support
+                    // At 150% scaling: 2560x1440 logical pixels
+                    let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x: 1280.0, y: 50.0 }));
+                    // Also ensure the size is correct using logical size
+                    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1280.0, height: 1200.0 }));
+                    info!("Window positioned on right half of screen with scaling support");
+                }
+            });
+            
             // Initialize database connection in async context using Tauri's runtime
             let init_state = app_state.clone();
             
@@ -115,20 +136,28 @@ pub fn run() {
             info!("Application setup completed successfully");
             Ok(())
         })
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             check_db_connection,
             get_connection_status,
             get_projects,
+            search_projects,
             get_companies,
             get_contacts,
-            get_proposals,
+            get_rfps,
             create_project,
             create_company,
             create_contact,
-            create_proposal,
+            create_rfp,
             health_check,
             get_stats,
-            get_db_info
+            get_db_info,
+            get_table_schema,
+            position_window_4k,
+            get_settings,
+            save_settings,
+            select_folder,
+            open_folder_in_explorer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

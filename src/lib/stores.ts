@@ -3,19 +3,19 @@ import type {
   Project, 
   Company, 
   Contact, 
-  Proposal, 
+  Rfp, 
   ConnectionStatus 
 } from '../types';
 import { 
   getProjects,
   getCompanies,
   getContacts,
-  getProposals,
+  getRfps,
   getStats,
   createProject,
   createCompany,
   createContact,
-  createProposal
+  createRfp
 } from './api';
 
 // ============================================================================
@@ -45,20 +45,45 @@ export const projectsStore = writable<Project[]>([]);
 export const projectsLoading = writable<boolean>(false);
 export const projectsError = writable<string | null>(null);
 
+// Debug: Log when stores are updated
+projectsStore.subscribe(value => {
+  console.log('STORE UPDATE - Projects:', value.length, 'items');
+});
+
 // Companies store
 export const companiesStore = writable<Company[]>([]);
 export const companiesLoading = writable<boolean>(false);
 export const companiesError = writable<string | null>(null);
+
+// Debug: Log when stores are updated
+companiesStore.subscribe(value => {
+  console.log('STORE UPDATE - Companies:', value.length, 'items');
+});
 
 // Contacts store
 export const contactsStore = writable<Contact[]>([]);
 export const contactsLoading = writable<boolean>(false);
 export const contactsError = writable<string | null>(null);
 
-// Proposals store
-export const proposalsStore = writable<Proposal[]>([]);
-export const proposalsLoading = writable<boolean>(false);
-export const proposalsError = writable<string | null>(null);
+// Debug: Log when stores are updated
+contactsStore.subscribe(value => {
+  console.log('STORE UPDATE - Contacts:', value.length, 'items');
+});
+
+// RFPs store
+export const rfpsStore = writable<Rfp[]>([]);
+export const rfpsLoading = writable<boolean>(false);
+export const rfpsError = writable<string | null>(null);
+
+// Debug: Log when stores are updated
+rfpsStore.subscribe(value => {
+  console.log('STORE UPDATE - RFPs:', value.length, 'items');
+});
+
+// Legacy aliases for backwards compatibility
+export const proposalsStore = rfpsStore;
+export const proposalsLoading = rfpsLoading;
+export const proposalsError = rfpsError;
 
 // ============================================================================
 // DERIVED STORES (COMPUTED VALUES)
@@ -66,31 +91,37 @@ export const proposalsError = writable<string | null>(null);
 
 // Statistics derived from data
 export const statisticsStore = derived(
-  [projectsStore, proposalsStore, companiesStore, contactsStore],
-  ([projects, proposals, companies, contacts]) => ({
+  [projectsStore, rfpsStore, companiesStore, contactsStore],
+  ([projects, rfps, companies, contacts]) => ({
     totalProjects: projects.length,
-    activeProposals: proposals.filter(p => p.status !== 'rejected').length,
+    activeRfps: rfps.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
     totalCompanies: companies.length,
     totalContacts: contacts.length,
-    totalProposals: proposals.length
+    totalRfps: rfps.length,
+    // Legacy fields for backwards compatibility
+    activeProposals: rfps.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
+    totalProposals: rfps.length
   })
 );
 
 // Active projects only
 export const activeProjectsStore = derived(
   projectsStore,
-  $projects => $projects.filter(project => project.status === 'active')
+  $projects => $projects.filter(project => project.status === 'Active')
 );
 
-// Recent proposals (last 30 days)
-export const recentProposalsStore = derived(
-  proposalsStore,
-  $proposals => {
+// Recent RFPs (last 30 days)
+export const recentRfpsStore = derived(
+  rfpsStore,
+  $rfps => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return $proposals.filter(proposal => proposal.createdAt > thirtyDaysAgo);
+    return $rfps.filter(rfp => new Date(rfp.time.created_at) > thirtyDaysAgo);
   }
 );
+
+// Legacy alias
+export const recentProposalsStore = recentRfpsStore;
 
 // Companies with contact counts
 export const companiesWithContactsStore = derived(
@@ -98,23 +129,23 @@ export const companiesWithContactsStore = derived(
   ([companies, contacts]) => {
     return companies.map(company => ({
       ...company,
-      contactCount: contacts.filter(contact => contact.companyId === company.id).length
+      contactCount: contacts.filter(contact => contact.company === company.id).length
     }));
   }
 );
 
 // Loading state for any data operation
 export const isLoadingStore = derived(
-  [projectsLoading, companiesLoading, contactsLoading, proposalsLoading],
-  ([projects, companies, contacts, proposals]) => 
-    projects || companies || contacts || proposals
+  [projectsLoading, companiesLoading, contactsLoading, rfpsLoading],
+  ([projects, companies, contacts, rfps]) => 
+    projects || companies || contacts || rfps
 );
 
 // Global error state
 export const globalErrorStore = derived(
-  [projectsError, companiesError, contactsError, proposalsError],
-  ([projectsErr, companiesErr, contactsErr, proposalsErr]) => 
-    projectsErr || companiesErr || contactsErr || proposalsErr
+  [projectsError, companiesError, contactsError, rfpsError],
+  ([projectsErr, companiesErr, contactsErr, rfpsErr]) => 
+    projectsErr || companiesErr || contactsErr || rfpsErr
 );
 
 // ============================================================================
@@ -128,18 +159,21 @@ export const projectsActions = {
     projectsError.set(null);
     
     try {
+      console.log('Loading projects from database...');
       const projects = await getProjects();
+      console.log('Projects loaded successfully:', projects.length, 'items');
       projectsStore.set(projects);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load projects';
       projectsError.set(errorMessage);
-      console.error('Failed to load projects:', error);
+      console.warn('Failed to load projects from database, using mock data:', error);
+      // Keep mock data in store - don't overwrite with empty array
     } finally {
       projectsLoading.set(false);
     }
   },
 
-  async create(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) {
+  async create(project: Omit<Project, 'id'>) {
     try {
       const newProject = await createProject(project);
       if (newProject) {
@@ -167,18 +201,20 @@ export const companiesActions = {
     companiesError.set(null);
     
     try {
+      console.log('Loading companies from database...');
       const companies = await getCompanies();
+      console.log('Companies loaded successfully:', companies.length, 'items');
       companiesStore.set(companies);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load companies';
       companiesError.set(errorMessage);
-      console.error('Failed to load companies:', error);
+      console.warn('Failed to load companies from database, using mock data:', error);
     } finally {
       companiesLoading.set(false);
     }
   },
 
-  async create(company: Omit<Company, 'id' | 'createdAt'>) {
+  async create(company: Omit<Company, 'id'>) {
     try {
       const newCompany = await createCompany(company);
       if (newCompany) {
@@ -206,18 +242,20 @@ export const contactsActions = {
     contactsError.set(null);
     
     try {
+      console.log('Loading contacts from database...');
       const contacts = await getContacts();
+      console.log('Contacts loaded successfully:', contacts.length, 'items');
       contactsStore.set(contacts);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load contacts';
       contactsError.set(errorMessage);
-      console.error('Failed to load contacts:', error);
+      console.warn('Failed to load contacts from database, using mock data:', error);
     } finally {
       contactsLoading.set(false);
     }
   },
 
-  async create(contact: Omit<Contact, 'id' | 'createdAt'>) {
+  async create(contact: Omit<Contact, 'id'>) {
     try {
       const newContact = await createContact(contact);
       if (newContact) {
@@ -238,36 +276,38 @@ export const contactsActions = {
   }
 };
 
-// Proposals actions
-export const proposalsActions = {
+// RFPs actions
+export const rfpsActions = {
   async load() {
-    proposalsLoading.set(true);
-    proposalsError.set(null);
+    rfpsLoading.set(true);
+    rfpsError.set(null);
     
     try {
-      const proposals = await getProposals();
-      proposalsStore.set(proposals);
+      console.log('Loading RFPs from database...');
+      const rfps = await getRfps();
+      console.log('RFPs loaded successfully:', rfps.length, 'items');
+      rfpsStore.set(rfps);
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to load proposals';
-      proposalsError.set(errorMessage);
-      console.error('Failed to load proposals:', error);
+      const errorMessage = error?.toString() || 'Failed to load rfps';
+      rfpsError.set(errorMessage);
+      console.warn('Failed to load RFPs from database, using mock data:', error);
     } finally {
-      proposalsLoading.set(false);
+      rfpsLoading.set(false);
     }
   },
 
-  async create(proposal: Omit<Proposal, 'id' | 'createdAt'>) {
+  async create(rfp: Omit<Rfp, 'id'>) {
     try {
-      const newProposal = await createProposal(proposal);
-      if (newProposal) {
-        proposalsStore.update(proposals => [...proposals, newProposal]);
-        return newProposal;
+      const newRfp = await createRfp(rfp);
+      if (newRfp) {
+        rfpsStore.update(rfps => [...rfps, newRfp]);
+        return newRfp;
       }
-      throw new Error('Failed to create proposal');
+      throw new Error('Failed to create rfp');
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to create proposal';
-      proposalsError.set(errorMessage);
-      console.error('Failed to create proposal:', error);
+      const errorMessage = error?.toString() || 'Failed to create rfp';
+      rfpsError.set(errorMessage);
+      console.error('Failed to create rfp:', error);
       throw error;
     }
   },
@@ -277,19 +317,31 @@ export const proposalsActions = {
   }
 };
 
+// Legacy alias for backwards compatibility
+export const proposalsActions = rfpsActions;
+
 // ============================================================================
 // GLOBAL ACTIONS
 // ============================================================================
 
 // Load all data
 export const loadAllData = async () => {
-  await Promise.allSettled([
+  console.log('🔄 STARTING loadAllData...');
+  const results = await Promise.allSettled([
     projectsActions.load(),
     companiesActions.load(),
     contactsActions.load(),
-    proposalsActions.load()
+    rfpsActions.load()
   ]);
+  
+  console.log('✅ COMPLETED loadAllData, results:', results.map(r => r.status));
 };
+
+// Convenience functions for individual data loading
+export const loadProjects = () => projectsActions.load();
+export const loadCompanies = () => companiesActions.load();
+export const loadContacts = () => contactsActions.load();
+export const loadRfps = () => rfpsActions.load();
 
 // Refresh all data
 export const refreshAllData = async () => {
@@ -301,13 +353,13 @@ export const clearAllData = () => {
   projectsStore.set([]);
   companiesStore.set([]);
   contactsStore.set([]);
-  proposalsStore.set([]);
+  rfpsStore.set([]);
   
   // Clear errors
   projectsError.set(null);
   companiesError.set(null);
   contactsError.set(null);
-  proposalsError.set(null);
+  rfpsError.set(null);
 };
 
 // ============================================================================
@@ -319,9 +371,11 @@ export const getCurrentData = () => ({
   projects: get(projectsStore),
   companies: get(companiesStore),
   contacts: get(contactsStore),
-  proposals: get(proposalsStore),
+  rfps: get(rfpsStore),
   connection: get(connectionStore),
-  statistics: get(statisticsStore)
+  statistics: get(statisticsStore),
+  // Legacy alias
+  proposals: get(rfpsStore)
 });
 
 // Check if data is loaded
@@ -331,9 +385,16 @@ export const isDataLoaded = () => {
     data.projects.length > 0 ||
     data.companies.length > 0 ||
     data.contacts.length > 0 ||
-    data.proposals.length > 0
+    data.rfps.length > 0
   );
 };
+
+// ============================================================================
+// SETTINGS EXPORTS
+// ============================================================================
+
+// Export settings functionality
+export * from './stores/settings';
 
 // ============================================================================
 // INITIALIZATION

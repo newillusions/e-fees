@@ -1,10 +1,29 @@
-use crate::db::{DatabaseManager, ConnectionStatus, Project, Company, Contact, Proposal};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, Company, Contact, Rfp};
 use std::sync::{Arc, Mutex};
+use std::fs;
+use std::path::Path;
 use tauri::State;
 use log::{error, info};
+use serde::{Serialize, Deserialize};
+use tauri_plugin_dialog::DialogExt;
 
 // Application state that holds the database manager
 pub type AppState = Arc<Mutex<DatabaseManager>>;
+
+// Settings structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppSettings {
+    pub surrealdb_url: Option<String>,
+    pub surrealdb_ns: Option<String>,
+    pub surrealdb_db: Option<String>,
+    pub surrealdb_user: Option<String>,
+    pub surrealdb_pass: Option<String>,
+    pub staff_name: Option<String>,
+    pub staff_email: Option<String>,
+    pub staff_phone: Option<String>,
+    pub staff_position: Option<String>,
+    pub project_folder_path: Option<String>,
+}
 
 // Check database connection status
 #[tauri::command]
@@ -48,6 +67,28 @@ pub async fn get_projects(state: State<'_, AppState>) -> Result<Vec<Project>, St
         Err(e) => {
             error!("Failed to fetch projects: {}", e);
             Err(format!("Failed to fetch projects: {}", e))
+        }
+    }
+}
+
+// Search projects with fuzzy-like matching
+#[tauri::command]
+pub async fn search_projects(query: String, state: State<'_, AppState>) -> Result<Vec<Project>, String> {
+    info!("Searching projects with query: {}", query);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.search_projects(&query).await {
+        Ok(projects) => {
+            info!("Search returned {} projects", projects.len());
+            Ok(projects)
+        }
+        Err(e) => {
+            error!("Failed to search projects: {}", e);
+            Err(format!("Failed to search projects: {}", e))
         }
     }
 }
@@ -96,24 +137,24 @@ pub async fn get_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, St
     }
 }
 
-// Get all proposals from database
+// Get all rfps from database
 #[tauri::command]
-pub async fn get_proposals(state: State<'_, AppState>) -> Result<Vec<Proposal>, String> {
-    info!("Fetching proposals from database");
+pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
+    info!("Fetching rfps from database");
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
         manager.clone()
     }; // Lock is automatically dropped here when manager goes out of scope
     
-    match manager_clone.get_proposals().await {
-        Ok(proposals) => {
-            info!("Successfully fetched {} proposals", proposals.len());
-            Ok(proposals)
+    match manager_clone.get_rfps().await {
+        Ok(rfps) => {
+            info!("Successfully fetched {} rfps", rfps.len());
+            Ok(rfps)
         }
         Err(e) => {
-            error!("Failed to fetch proposals: {}", e);
-            Err(format!("Failed to fetch proposals: {}", e))
+            error!("Failed to fetch rfps: {}", e);
+            Err(format!("Failed to fetch rfps: {}", e))
         }
     }
 }
@@ -165,7 +206,7 @@ pub async fn create_company(company: Company, state: State<'_, AppState>) -> Res
 // Create a new contact
 #[tauri::command]
 pub async fn create_contact(contact: Contact, state: State<'_, AppState>) -> Result<Contact, String> {
-    info!("Creating new contact: {}", contact.name);
+    info!("Creating new contact: {} {}", contact.first_name, contact.last_name);
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
@@ -184,24 +225,24 @@ pub async fn create_contact(contact: Contact, state: State<'_, AppState>) -> Res
     }
 }
 
-// Create a new proposal
+// Create a new rfp
 #[tauri::command]
-pub async fn create_proposal(proposal: Proposal, state: State<'_, AppState>) -> Result<Proposal, String> {
-    info!("Creating new proposal: {}", proposal.title);
+pub async fn create_rfp(rfp: Rfp, state: State<'_, AppState>) -> Result<Rfp, String> {
+    info!("Creating new rfp: {}", rfp.name);
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
         manager.clone()
     }; // Lock is automatically dropped here when manager goes out of scope
     
-    match manager_clone.create_proposal(proposal).await {
-        Ok(created_proposal) => {
-            info!("Successfully created proposal with id: {:?}", created_proposal.id);
-            Ok(created_proposal)
+    match manager_clone.create_rfp(rfp).await {
+        Ok(created_rfp) => {
+            info!("Successfully created rfp with id: {:?}", created_rfp.id);
+            Ok(created_rfp)
         }
         Err(e) => {
-            error!("Failed to create proposal: {}", e);
-            Err(format!("Failed to create proposal: {}", e))
+            error!("Failed to create rfp: {}", e);
+            Err(format!("Failed to create rfp: {}", e))
         }
     }
 }
@@ -254,20 +295,289 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
     let projects = manager_clone.get_projects().await.unwrap_or_default();
     let companies = manager_clone.get_companies().await.unwrap_or_default();
     let contacts = manager_clone.get_contacts().await.unwrap_or_default();
-    let proposals = manager_clone.get_proposals().await.unwrap_or_default();
+    let rfps = manager_clone.get_rfps().await.unwrap_or_default();
     
-    let active_proposals = proposals.iter()
-        .filter(|p| p.status != "rejected")
+    let active_rfps = rfps.iter()
+        .filter(|r| r.status != "Lost" && r.status != "Cancelled")
         .count();
     
     let stats = serde_json::json!({
         "totalProjects": projects.len(),
-        "activeProposals": active_proposals,
+        "activeRfps": active_rfps,
         "totalCompanies": companies.len(),
         "totalContacts": contacts.len(),
-        "totalProposals": proposals.len()
+        "totalRfps": rfps.len()
     });
     
     info!("Successfully calculated statistics");
     Ok(stats)
 }
+
+// Get table schema information
+#[tauri::command]
+pub async fn get_table_schema(table_name: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    info!("Getting schema for table: {}", table_name);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.get_table_schema(&table_name).await {
+        Ok(schema) => {
+            info!("Successfully retrieved schema for table: {}", table_name);
+            Ok(schema)
+        }
+        Err(e) => {
+            error!("Failed to get schema for table {}: {}", table_name, e);
+            Err(format!("Failed to get schema for table {}: {}", table_name, e))
+        }
+    }
+}
+
+// Position window on right half of 4K monitor
+#[tauri::command]
+pub async fn position_window_4k(window: tauri::Window) -> Result<String, String> {
+    info!("Positioning window for 4K monitor");
+    
+    // Set position to right half of 4K screen
+    window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x: 1920, y: 0 }))
+        .map_err(|e| format!("Failed to set position: {}", e))?;
+    
+    // Set size to half width, full height
+    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 1920, height: 2160 }))
+        .map_err(|e| format!("Failed to set size: {}", e))?;
+    
+    info!("Window positioned successfully on right half of 4K monitor");
+    Ok("Window positioned successfully".to_string())
+}
+
+// Get current settings from .env file
+#[tauri::command]
+pub async fn get_settings() -> Result<AppSettings, String> {
+    info!("Reading settings from .env file");
+    
+    let env_path = "../.env"; // Go up one level from src-tauri to project root
+    let mut settings = AppSettings {
+        surrealdb_url: None,
+        surrealdb_ns: None,
+        surrealdb_db: None,
+        surrealdb_user: None,
+        surrealdb_pass: None,
+        staff_name: None,
+        staff_email: None,
+        staff_phone: None,
+        staff_position: None,
+        project_folder_path: None,
+    };
+    
+    if Path::new(env_path).exists() {
+        match fs::read_to_string(env_path) {
+            Ok(content) => {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    
+                    if let Some((key, value)) = line.split_once('=') {
+                        let key = key.trim();
+                        let value = value.trim().trim_matches('"');
+                        
+                        match key {
+                            "SURREALDB_URL" => settings.surrealdb_url = Some(value.to_string()),
+                            "SURREALDB_NS" => settings.surrealdb_ns = Some(value.to_string()),
+                            "SURREALDB_DB" => settings.surrealdb_db = Some(value.to_string()),
+                            "SURREALDB_USER" => settings.surrealdb_user = Some(value.to_string()),
+                            "SURREALDB_PASS" => settings.surrealdb_pass = Some(value.to_string()),
+                            "STAFF_NAME" => settings.staff_name = Some(value.to_string()),
+                            "STAFF_EMAIL" => settings.staff_email = Some(value.to_string()),
+                            "STAFF_PHONE" => settings.staff_phone = Some(value.to_string()),
+                            "STAFF_POSITION" => settings.staff_position = Some(value.to_string()),
+                            "PROJECT_FOLDER_PATH" => settings.project_folder_path = Some(value.to_string()),
+                            _ => {}
+                        }
+                    }
+                }
+                info!("Successfully loaded settings from .env file");
+            }
+            Err(e) => {
+                error!("Failed to read .env file: {}", e);
+                return Err(format!("Failed to read .env file: {}", e));
+            }
+        }
+    } else {
+        info!("No .env file found, returning empty settings");
+    }
+    
+    Ok(settings)
+}
+
+// Save settings to .env file
+#[tauri::command]
+pub async fn save_settings(settings: AppSettings) -> Result<String, String> {
+    info!("Saving settings to .env file");
+    
+    let env_path = "../.env"; // Go up one level from src-tauri to project root
+    let mut lines = Vec::new();
+    
+    // Read existing .env file to preserve other variables
+    if Path::new(env_path).exists() {
+        match fs::read_to_string(env_path) {
+            Ok(content) => {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        lines.push(line.to_string());
+                        continue;
+                    }
+                    
+                    if let Some((key, _)) = line.split_once('=') {
+                        let key = key.trim();
+                        
+                        // Skip our managed settings - we'll add them back
+                        match key {
+                            "SURREALDB_URL" | "SURREALDB_NS" | "SURREALDB_DB" | 
+                            "SURREALDB_USER" | "SURREALDB_PASS" |
+                            "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
+                            "PROJECT_FOLDER_PATH" => continue,
+                            _ => lines.push(line.to_string()),
+                        }
+                    } else {
+                        lines.push(line.to_string());
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to read existing .env file: {}", e);
+                return Err(format!("Failed to read existing .env file: {}", e));
+            }
+        }
+    }
+    
+    // Add our settings
+    lines.push("".to_string()); // Empty line for separation
+    lines.push("# SurrealDB Configuration".to_string());
+    
+    if let Some(url) = &settings.surrealdb_url {
+        lines.push(format!("SURREALDB_URL=\"{}\"", url));
+    }
+    if let Some(ns) = &settings.surrealdb_ns {
+        lines.push(format!("SURREALDB_NS=\"{}\"", ns));
+    }
+    if let Some(db) = &settings.surrealdb_db {
+        lines.push(format!("SURREALDB_DB=\"{}\"", db));
+    }
+    if let Some(user) = &settings.surrealdb_user {
+        lines.push(format!("SURREALDB_USER=\"{}\"", user));
+    }
+    if let Some(pass) = &settings.surrealdb_pass {
+        lines.push(format!("SURREALDB_PASS=\"{}\"", pass));
+    }
+    
+    lines.push("".to_string());
+    lines.push("# Staff Information".to_string());
+    
+    if let Some(name) = &settings.staff_name {
+        lines.push(format!("STAFF_NAME=\"{}\"", name));
+    }
+    if let Some(email) = &settings.staff_email {
+        lines.push(format!("STAFF_EMAIL=\"{}\"", email));
+    }
+    if let Some(phone) = &settings.staff_phone {
+        lines.push(format!("STAFF_PHONE=\"{}\"", phone));
+    }
+    if let Some(position) = &settings.staff_position {
+        lines.push(format!("STAFF_POSITION=\"{}\"", position));
+    }
+    
+    lines.push("".to_string());
+    lines.push("# Project Configuration".to_string());
+    
+    if let Some(folder_path) = &settings.project_folder_path {
+        lines.push(format!("PROJECT_FOLDER_PATH=\"{}\"", folder_path));
+    }
+    
+    // Write to file
+    let content = lines.join("\n");
+    match fs::write(env_path, content) {
+        Ok(_) => {
+            info!("Successfully saved settings to .env file");
+            Ok("Settings saved successfully".to_string())
+        }
+        Err(e) => {
+            error!("Failed to write .env file: {}", e);
+            Err(format!("Failed to write .env file: {}", e))
+        }
+    }
+}
+
+// Open folder picker dialog
+#[tauri::command]
+pub async fn select_folder(app_handle: tauri::AppHandle) -> Result<Option<String>, String> {
+    info!("Opening folder picker dialog");
+    
+    use std::sync::mpsc;
+    use std::time::Duration;
+    
+    let (tx, rx) = mpsc::channel();
+    
+    app_handle.dialog()
+        .file()
+        .set_title("Select Project Folder")
+        .pick_folder(move |folder_path| {
+            let _ = tx.send(folder_path);
+        });
+    
+    // Wait for the dialog result with a timeout
+    match rx.recv_timeout(Duration::from_secs(30)) {
+        Ok(Some(path)) => {
+            let path_str = path.to_string();
+            info!("Selected folder: {}", path_str);
+            Ok(Some(path_str))
+        }
+        Ok(None) => {
+            info!("No folder selected");
+            Ok(None)
+        }
+        Err(_) => {
+            error!("Folder selection timed out");
+            Err("Folder selection timed out".to_string())
+        }
+    }
+}
+
+// Open folder in native file explorer
+#[tauri::command]
+pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, String> {
+    info!("Opening folder in explorer: {}", folder_path);
+    
+    use std::process::Command;
+    
+    let result = if cfg!(target_os = "windows") {
+        Command::new("explorer")
+            .arg(&folder_path)
+            .spawn()
+    } else if cfg!(target_os = "macos") {
+        Command::new("open")
+            .arg(&folder_path)
+            .spawn()
+    } else {
+        // Linux and other Unix-like systems
+        Command::new("xdg-open")
+            .arg(&folder_path)
+            .spawn()
+    };
+    
+    match result {
+        Ok(_) => {
+            info!("Successfully opened folder: {}", folder_path);
+            Ok("Folder opened successfully".to_string())
+        }
+        Err(e) => {
+            error!("Failed to open folder {}: {}", folder_path, e);
+            Err(format!("Failed to open folder: {}", e))
+        }
+    }
+}
+
