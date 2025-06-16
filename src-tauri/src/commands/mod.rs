@@ -1,4 +1,4 @@
-use crate::db::{DatabaseManager, ConnectionStatus, Project, Company, Contact, Rfp};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, Contact, Rfp};
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::path::Path;
@@ -217,15 +217,15 @@ pub async fn create_company(company: Company, state: State<'_, AppState>) -> Res
 
 // Update an existing company
 #[tauri::command]
-pub async fn update_company(id: String, companyUpdate: CompanyUpdate, state: State<'_, AppState>) -> Result<Company, String> {
-    info!("Updating company with id: {} with partial data: {:?}", id, companyUpdate);
+pub async fn update_company(id: String, company_update: CompanyUpdate, state: State<'_, AppState>) -> Result<Company, String> {
+    info!("Updating company with id: {} with partial data: {:?}", id, company_update);
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
         manager.clone()
     }; // Lock is automatically dropped here when manager goes out of scope
     
-    match manager_clone.update_company_partial(&id, companyUpdate).await {
+    match manager_clone.update_company_partial(&id, company_update).await {
         Ok(updated_company) => {
             info!("Successfully updated company with id: {}", id);
             Ok(updated_company)
@@ -633,6 +633,255 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, Stri
         Err(e) => {
             error!("Failed to open folder {}: {}", folder_path, e);
             Err(format!("Failed to open folder: {}", e))
+        }
+    }
+}
+
+// Investigate specific database record
+#[tauri::command]
+pub async fn investigate_record(record_id: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    info!("Investigating record: {}", record_id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.investigate_record(&record_id).await {
+        Ok(result) => {
+            info!("Successfully investigated record: {}", record_id);
+            Ok(result)
+        }
+        Err(e) => {
+            error!("Failed to investigate record {}: {}", record_id, e);
+            Err(format!("Failed to investigate record: {}", e))
+        }
+    }
+}
+
+// Search countries with fuzzy matching
+#[tauri::command]
+pub async fn search_countries(query: String, state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    info!("Searching countries with query: {}", query);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.search_countries(&query).await {
+        Ok(countries) => {
+            info!("Search returned {} countries", countries.len());
+            Ok(countries)
+        }
+        Err(e) => {
+            error!("Failed to search countries: {}", e);
+            Err(format!("Failed to search countries: {}", e))
+        }
+    }
+}
+
+// Generate next project number for given country name and year
+#[tauri::command]
+pub async fn generate_next_project_number(country_name: String, year: Option<u8>, state: State<'_, AppState>) -> Result<String, String> {
+    info!("Generating next project number for country: {}, year: {:?}", country_name, year);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.generate_next_project_number(&country_name, year).await {
+        Ok(number) => {
+            info!("Generated project number: {}", number);
+            Ok(number)
+        }
+        Err(e) => {
+            error!("Failed to generate project number: {}", e);
+            Err(format!("Failed to generate project number: {}", e))
+        }
+    }
+}
+
+// Validate project number doesn't already exist
+#[tauri::command]
+pub async fn validate_project_number(project_number: String, state: State<'_, AppState>) -> Result<bool, String> {
+    info!("Validating project number: {}", project_number);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.validate_project_number(&project_number).await {
+        Ok(is_valid) => {
+            info!("Project number {} is valid: {}", project_number, is_valid);
+            Ok(is_valid)
+        }
+        Err(e) => {
+            error!("Failed to validate project number: {}", e);
+            Err(format!("Failed to validate project number: {}", e))
+        }
+    }
+}
+
+// Create project with template folder copy
+#[tauri::command]
+pub async fn create_project_with_template(project: NewProject, state: State<'_, AppState>) -> Result<Project, String> {
+    info!("Creating project with template: {}", project.name);
+    info!("Project data: {:?}", project);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    // First create the project in database
+    info!("About to create project in database...");
+    match manager_clone.create_new_project(project.clone()).await {
+        Ok(created_project) => {
+            info!("Successfully created project in database: {:?}", created_project.id);
+            
+            // Get project folder path from settings
+            info!("Getting settings for project folder path...");
+            let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+            
+            info!("Settings loaded - project_folder_path: {:?}", settings.project_folder_path);
+            
+            if let Some(base_path) = settings.project_folder_path {
+                // Copy template folder
+                let template_path = format!("{}\\01 RFPs\\_yy-cccnn Project Name", base_path);
+                let project_number = created_project.number.id.clone();
+                let dest_folder_name = format!("{} {}", project_number, created_project.name_short);
+                let dest_path = format!("{}\\01 RFPs\\{}", base_path, dest_folder_name);
+                
+                info!("Copying template from {} to {}", template_path, dest_path);
+                
+                // Use Windows xcopy for robust folder copying
+                use std::process::Command;
+                let result = Command::new("xcopy")
+                    .args(&[&template_path, &dest_path, "/E", "/I", "/Q"])
+                    .output();
+                
+                match result {
+                    Ok(output) => {
+                        if output.status.success() {
+                            info!("Successfully copied template folder");
+                            
+                            // Rename files within the copied folder
+                            if let Err(e) = rename_template_files(&dest_path, "yy-cccnn", &project_number) {
+                                error!("Failed to rename template files: {}", e);
+                                // Don't fail the entire operation just because rename failed
+                            }
+                        } else {
+                            error!("Failed to copy template folder: {}", String::from_utf8_lossy(&output.stderr));
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to execute xcopy: {}", e);
+                    }
+                }
+            } else {
+                info!("No project_folder_path configured in settings - skipping template folder creation");
+            }
+            
+            Ok(created_project)
+        }
+        Err(e) => {
+            error!("Failed to create project: {}", e);
+            Err(format!("Failed to create project: {}", e))
+        }
+    }
+}
+
+// Helper function to rename template files
+fn rename_template_files(dir_path: &str, old_pattern: &str, new_pattern: &str) -> Result<(), String> {
+    use std::path::Path;
+    
+    let path = Path::new(dir_path);
+    
+    if !path.exists() {
+        return Err(format!("Directory does not exist: {}", dir_path));
+    }
+    
+    // Walk through all files and folders recursively
+    visit_dirs(path, old_pattern, new_pattern)?;
+    
+    Ok(())
+}
+
+fn visit_dirs(dir: &Path, old_pattern: &str, new_pattern: &str) -> Result<(), String> {
+    use std::fs;
+    
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))? {
+            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                // Recurse into subdirectories
+                visit_dirs(&path, old_pattern, new_pattern)?;
+            }
+            
+            // Check if filename contains the pattern
+            if let Some(file_name) = path.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    if file_name_str.contains(old_pattern) {
+                        let new_name = file_name_str.replace(old_pattern, new_pattern);
+                        let new_path = path.with_file_name(new_name);
+                        
+                        info!("Renaming {:?} to {:?}", path, new_path);
+                        fs::rename(&path, &new_path)
+                            .map_err(|e| format!("Failed to rename file: {}", e))?;
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+// Get area suggestions for a country
+#[tauri::command]
+pub async fn get_area_suggestions(country: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    info!("Getting area suggestions for country: {}", country);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.get_area_suggestions(&country).await {
+        Ok(areas) => {
+            info!("Found {} area suggestions", areas.len());
+            Ok(areas)
+        }
+        Err(e) => {
+            error!("Failed to get area suggestions: {}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+// Get city suggestions for a country  
+#[tauri::command]
+pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    info!("Getting city suggestions for country: {}", country);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.get_city_suggestions(&country).await {
+        Ok(cities) => {
+            info!("Found {} city suggestions", cities.len());
+            Ok(cities)
+        }
+        Err(e) => {
+            error!("Failed to get city suggestions: {}", e);
+            Err(e.to_string())
         }
     }
 }

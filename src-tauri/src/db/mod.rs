@@ -4,11 +4,11 @@ use std::time::Duration;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::engine::remote::http::{Client as HttpClient, Http};
 use surrealdb::opt::auth::{Root, Namespace, Database};
-use surrealdb::{Error, Surreal};
+use surrealdb::{Error, Surreal, Value};
 use surrealdb::sql::Thing;
 use tokio::time::interval;
 use log::{error, info, warn};
-use chrono;
+use chrono::{self, Datelike};
 use std::env;
 use crate::commands::CompanyUpdate;
 
@@ -72,6 +72,19 @@ pub struct Project {
     pub folder: String,
     pub number: ProjectNumber,
     pub time: TimeStamps,
+}
+
+// Project creation struct without auto-managed fields
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewProject {
+    pub name: String,
+    pub name_short: String,
+    pub status: String,
+    pub area: String,
+    pub city: String,
+    pub country: String,
+    pub folder: String,
+    pub number: ProjectNumber,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,6 +243,40 @@ impl DatabaseClient {
         match self {
             DatabaseClient::Http(client) => client.create("projects").content(project).await,
             DatabaseClient::WebSocket(client) => client.create("projects").content(project).await,
+        }
+    }
+    
+    pub async fn create_new_project(&self, project: NewProject) -> Result<Option<Project>, Error> {
+        // Use a custom query to let database auto-manage the time field
+        // Create ID in format yy_cccnn (e.g., 25_97106)
+        let project_id = project.number.id.replace("-", "_");
+        let query = format!(
+            "CREATE projects:{} SET name = '{}', name_short = '{}', status = '{}', area = '{}', city = '{}', country = '{}', folder = '{}', number = {{ year: {}, country: {}, seq: {}, id: '{}' }}",
+            project_id,
+            project.name.replace("'", "''"),
+            project.name_short.replace("'", "''"), 
+            project.status.replace("'", "''"),
+            project.area.replace("'", "''"),
+            project.city.replace("'", "''"),
+            project.country.replace("'", "''"),
+            project.folder.replace("'", "''"),
+            project.number.year,
+            project.number.country,
+            project.number.seq,
+            project.number.id.replace("'", "''")
+        );
+        
+        info!("Executing project creation query: {}", query);
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Project>, _> = response.take(0);
+        match result {
+            Ok(mut projects) => Ok(projects.pop()),
+            Err(e) => Err(e),
         }
     }
     
@@ -653,6 +700,17 @@ impl DatabaseManager {
         }
     }
 
+    // Create a new project from NewProject struct (time auto-managed by database)
+    pub async fn create_new_project(&self, project: NewProject) -> Result<Project, Error> {
+        if let Some(client) = &self.client {
+            let created: Option<Project> = client.create_new_project(project).await?;
+            
+            created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create project".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
     // Create a new company
     pub async fn create_company(&self, company: Company) -> Result<Company, Error> {
         if let Some(client) = &self.client {
@@ -731,6 +789,403 @@ impl DatabaseManager {
             
             let schema: Option<serde_json::Value> = result.take(0)?;
             Ok(schema.unwrap_or(serde_json::json!({})))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Investigate a specific database record
+    pub async fn investigate_record(&self, record_id: &str) -> Result<serde_json::Value, Error> {
+        if let Some(client) = &self.client {
+            info!("Investigating record: {}", record_id);
+            
+            let mut queries = Vec::new();
+            let mut results = serde_json::json!({
+                "record_id": record_id,
+                "investigation": {}
+            });
+            
+            // Try different approaches to query the record
+            
+            // 1. Try direct selection if it looks like a record ID
+            if record_id.contains(":") {
+                queries.push(format!("SELECT * FROM {};", record_id));
+            }
+            
+            // 2. Try selecting from table if it looks like a table name
+            if !record_id.contains(":") {
+                queries.push(format!("SELECT * FROM {} LIMIT 5;", record_id));
+            }
+            
+            // 3. Try to get info about the table/record
+            let table_part = if record_id.contains(":") {
+                record_id.split(":").next().unwrap_or("")
+            } else {
+                record_id
+            };
+            
+            if !table_part.is_empty() {
+                queries.push(format!("INFO FOR TABLE {};", table_part));
+                queries.push(format!("SELECT count() FROM {} GROUP ALL;", table_part));
+            }
+            
+            // 4. If it's an RFP record, also search for similar patterns
+            if record_id.starts_with("rfp:") {
+                queries.push("SELECT * FROM rfp WHERE string::contains(string(id), '23_966') LIMIT 10;".to_string());
+                queries.push("SELECT * FROM rfp WHERE string::contains(string(id), '⟨') LIMIT 10;".to_string());
+            }
+            
+            // Execute each query and collect results
+            for (i, query) in queries.iter().enumerate() {
+                info!("Executing query {}: {}", i + 1, query);
+                
+                let query_result = match client {
+                    DatabaseClient::Http(client) => {
+                        match client.query(query).await {
+                            Ok(mut response) => {
+                                let result: Result<Value, _> = response.take(0);
+                                match result {
+                                    Ok(value) => {
+                                        let json_value = serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
+                                        serde_json::json!({
+                                            "status": "success",
+                                            "data": json_value
+                                        })
+                                    },
+                                    Err(e) => serde_json::json!({
+                                        "status": "error",
+                                        "error": e.to_string()
+                                    })
+                                }
+                            },
+                            Err(e) => serde_json::json!({
+                                "status": "error",
+                                "error": e.to_string()
+                            })
+                        }
+                    },
+                    DatabaseClient::WebSocket(client) => {
+                        match client.query(query).await {
+                            Ok(mut response) => {
+                                let result: Result<Value, _> = response.take(0);
+                                match result {
+                                    Ok(value) => {
+                                        let json_value = serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
+                                        serde_json::json!({
+                                            "status": "success",
+                                            "data": json_value
+                                        })
+                                    },
+                                    Err(e) => serde_json::json!({
+                                        "status": "error",
+                                        "error": e.to_string()
+                                    })
+                                }
+                            },
+                            Err(e) => serde_json::json!({
+                                "status": "error",
+                                "error": e.to_string()
+                            })
+                        }
+                    }
+                };
+                
+                results["investigation"][format!("query_{}", i + 1)] = serde_json::json!({
+                    "query": query,
+                    "result": query_result
+                });
+            }
+            
+            Ok(results)
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+    
+    // Generate next project number for given country name and year
+    pub async fn generate_next_project_number(&self, country_name: &str, year: Option<u8>) -> Result<String, Error> {
+        info!("Generating next project number for country: {}, year: {:?}", country_name, year);
+        
+        if let Some(client) = &self.client {
+            // First, look up the dial code from the country name  
+            let country_lookup_query = format!(
+                "SELECT dial_code FROM country WHERE name = '{}' LIMIT 1",
+                country_name
+            );
+            
+            info!("Looking up country code for: {}", country_name);
+            
+            let mut country_response = match client {
+                DatabaseClient::Http(client) => client.query(&country_lookup_query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&country_lookup_query).await?,
+            };
+            
+            let country_result: Result<Vec<serde_json::Value>, _> = country_response.take(0);
+            let country_code = match country_result {
+                Ok(records) => {
+                    if let Some(first) = records.first() {
+                        if let Some(dial_code_value) = first.get("dial_code") {
+                            if let Some(dial_code) = dial_code_value.as_u64() {
+                                dial_code as u16
+                            } else {
+                                return Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest(
+                                    format!("Dial code is not a number for country: {}", country_name)
+                                )));
+                            }
+                        } else {
+                            return Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest(
+                                format!("No dial_code field found for country: {}", country_name)
+                            )));
+                        }
+                    } else {
+                        return Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest(
+                            format!("Country not found: {}", country_name)
+                        )));
+                    }
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+            
+            info!("Found country code {} for country {}", country_code, country_name);
+            
+            // Get current year if not provided
+            let year = year.unwrap_or_else(|| {
+                let current_year = (chrono::Utc::now().year() % 100) as u8;
+                current_year
+            });
+            
+            // Query to find the max sequence number for the given year and country
+            let query = format!(
+                "SELECT number.seq FROM projects WHERE number.year = {} AND number.country = {} AND number.seq >= 1 AND number.seq <= 99 ORDER BY number.seq DESC LIMIT 1",
+                year, country_code
+            );
+            
+            info!("Executing query: {}", query);
+            
+            let mut response = match client {
+                DatabaseClient::Http(client) => client.query(&query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&query).await?,
+            };
+            
+            let result: Result<Vec<serde_json::Value>, _> = response.take(0);
+            let next_seq = match result {
+                Ok(records) => {
+                    info!("Query result records: {:?}", records);
+                    if let Some(first) = records.first() {
+                        info!("First record: {:?}", first);
+                        // The query returns the full object structure, so we need to navigate to number.seq
+                        if let Some(number_obj) = first.get("number") {
+                            if let Some(seq_value) = number_obj.get("seq") {
+                                info!("Seq value found: {:?}", seq_value);
+                                if let Some(seq) = seq_value.as_u64() {
+                                    info!("Current max seq: {}, next will be: {}", seq, seq + 1);
+                                    (seq + 1) as u8
+                                } else {
+                                    info!("Seq value is not a number, defaulting to 1");
+                                    1
+                                }
+                            } else {
+                                info!("No 'seq' field found in number object, defaulting to 1");
+                                1
+                            }
+                        } else {
+                            info!("No 'number' field found in record, defaulting to 1");
+                            1
+                        }
+                    } else {
+                        info!("No records found, starting with sequence 1");
+                        1
+                    }
+                }
+                Err(e) => {
+                    error!("Query failed: {}", e);
+                    1
+                },
+            };
+            
+            // Check if sequence would exceed 99 (business rule limit)
+            if next_seq > 99 {
+                error!("Sequence number {} exceeds limit of 99 for year {} country {}", next_seq, year, country_code);
+                return Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest(
+                    format!("Maximum of 99 projects per year per country reached for year {} country {}", year, country_code)
+                )));
+            }
+            
+            // Format the project number: YY-CCCNN (sequence always 2 digits)
+            let project_number = format!("{:02}-{}{:02}", year, country_code, next_seq);
+            info!("Generated project number: {}", project_number);
+            
+            Ok(project_number)
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+    
+    // Validate project number doesn't already exist
+    pub async fn validate_project_number(&self, project_number: &str) -> Result<bool, Error> {
+        info!("Validating project number: {}", project_number);
+        
+        if let Some(client) = &self.client {
+            // Parse the project number format YY-CCCNN
+            let parts: Vec<&str> = project_number.split('-').collect();
+            if parts.len() != 2 || parts[0].len() != 2 || parts[1].len() != 5 {
+                return Ok(false); // Invalid format
+            }
+            
+            let year = parts[0].parse::<u8>().map_err(|_| {
+                surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Invalid year format".to_string()))
+            })?;
+            
+            let country = parts[1][..3].parse::<u16>().map_err(|_| {
+                surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Invalid country code".to_string()))
+            })?;
+            
+            let seq = parts[1][3..].parse::<u8>().map_err(|_| {
+                surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Invalid sequence number".to_string()))
+            })?;
+            
+            // Check if a project with this number already exists
+            let query = format!(
+                "SELECT count() FROM projects WHERE number.year = {} AND number.country = {} AND number.seq = {}",
+                year, country, seq
+            );
+            
+            let mut response = match client {
+                DatabaseClient::Http(client) => client.query(&query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&query).await?,
+            };
+            
+            let result: Result<Value, _> = response.take(0);
+            match result {
+                Ok(value) => {
+                    // Convert Value to JSON to extract count
+                    let json_value = serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
+                    let count = if let Some(count_value) = json_value.as_u64() {
+                        count_value
+                    } else if let Some(obj) = json_value.as_object() {
+                        obj.get("count").and_then(|v| v.as_u64()).unwrap_or(0)
+                    } else {
+                        0
+                    };
+                    
+                    let is_valid = count == 0;
+                    info!("Project number {} validation - count: {}, is_valid: {}", project_number, count, is_valid);
+                    Ok(is_valid)
+                }
+                Err(e) => {
+                    error!("Failed to validate project number: {}", e);
+                    Err(e)
+                }
+            }
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+    
+    // Search countries with fuzzy matching
+    pub async fn search_countries(&self, query: &str) -> Result<Vec<serde_json::Value>, Error> {
+        info!("Searching countries with query: {}", query);
+        
+        if let Some(client) = &self.client {
+            let search_query = format!(
+                "SELECT name, name_formal, name_official, code, code_alt, dial_code FROM country WHERE (name IS NOT NONE AND string::lowercase(name) CONTAINS string::lowercase('{}')) OR (name_formal IS NOT NONE AND string::lowercase(name_formal) CONTAINS string::lowercase('{}')) OR (name_official IS NOT NONE AND string::lowercase(name_official) CONTAINS string::lowercase('{}')) OR (code IS NOT NONE AND string::lowercase(code) CONTAINS string::lowercase('{}')) OR (code_alt IS NOT NONE AND string::lowercase(code_alt) CONTAINS string::lowercase('{}')) OR (dial_code IS NOT NONE AND string::contains(<string>dial_code, '{}')) ORDER BY name ASC LIMIT 15",
+                query, query, query, query, query, query
+            );
+            
+            info!("Executing country search query: {}", search_query);
+            
+            let mut response = match client {
+                DatabaseClient::Http(client) => client.query(&search_query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&search_query).await?,
+            };
+            
+            let result: Result<Vec<serde_json::Value>, _> = response.take(0);
+            match result {
+                Ok(countries) => {
+                    info!("Found {} countries matching '{}'", countries.len(), query);
+                    Ok(countries)
+                }
+                Err(e) => {
+                    error!("Failed to search countries: {}", e);
+                    Err(e)
+                }
+            }
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Get area suggestions for a country
+    pub async fn get_area_suggestions(&self, country: &str) -> Result<Vec<String>, Error> {
+        info!("Getting area suggestions for country: {}", country);
+        
+        if let Some(client) = &self.client {
+            let query = format!(
+                "SELECT area FROM projects WHERE country = '{}' AND area IS NOT NONE GROUP BY area ORDER BY area ASC LIMIT 20",
+                country.replace("'", "''") // Escape single quotes
+            );
+            
+            info!("Executing area suggestions query: {}", query);
+            
+            let mut response = match client {
+                DatabaseClient::Http(client) => client.query(&query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&query).await?,
+            };
+            
+            let result: Result<Vec<serde_json::Value>, _> = response.take(0);
+            match result {
+                Ok(areas) => {
+                    let area_strings: Vec<String> = areas
+                        .into_iter()
+                        .filter_map(|area| area.get("area").and_then(|a| a.as_str()).map(|s| s.to_string()))
+                        .collect();
+                    info!("Found {} area suggestions for '{}'", area_strings.len(), country);
+                    Ok(area_strings)
+                }
+                Err(e) => {
+                    error!("Failed to get area suggestions: {}", e);
+                    Err(e)
+                }
+            }
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Get city suggestions for a country
+    pub async fn get_city_suggestions(&self, country: &str) -> Result<Vec<String>, Error> {
+        info!("Getting city suggestions for country: {}", country);
+        
+        if let Some(client) = &self.client {
+            let query = format!(
+                "SELECT city FROM projects WHERE country = '{}' AND city IS NOT NONE GROUP BY city ORDER BY city ASC LIMIT 20",
+                country.replace("'", "''") // Escape single quotes
+            );
+            
+            info!("Executing city suggestions query: {}", query);
+            
+            let mut response = match client {
+                DatabaseClient::Http(client) => client.query(&query).await?,
+                DatabaseClient::WebSocket(client) => client.query(&query).await?,
+            };
+            
+            let result: Result<Vec<serde_json::Value>, _> = response.take(0);
+            match result {
+                Ok(cities) => {
+                    let city_strings: Vec<String> = cities
+                        .into_iter()
+                        .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                        .collect();
+                    info!("Found {} city suggestions for '{}'", city_strings.len(), country);
+                    Ok(city_strings)
+                }
+                Err(e) => {
+                    error!("Failed to get city suggestions: {}", e);
+                    Err(e)
+                }
+            }
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

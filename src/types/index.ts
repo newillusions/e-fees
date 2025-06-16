@@ -17,8 +17,14 @@ export interface ConnectionStatus {
   error_message?: string;
 }
 
+// SurrealDB Thing object type
+export interface SurrealThing {
+  tb: string;
+  id: string | { String: string };
+}
+
 export interface Project {
-  id?: string;
+  id?: string | SurrealThing;
   name: string;
   name_short: string;
   status: 'Draft' | 'RFP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
@@ -39,7 +45,7 @@ export interface Project {
 }
 
 export interface Company {
-  id?: string;
+  id?: string | SurrealThing;
   name: string;
   name_short: string;
   abbreviation: string;
@@ -54,14 +60,14 @@ export interface Company {
 }
 
 export interface Contact {
-  id?: string;
+  id?: string | SurrealThing;
   first_name: string;
   last_name: string;
   full_name: string;
   email: string;
   phone: string;
   position: string;
-  company: string;
+  company: string | SurrealThing;
   time: {
     created_at: string;
     updated_at: string;
@@ -69,7 +75,7 @@ export interface Contact {
 }
 
 export interface Rfp {
-  id?: string;
+  id?: string | SurrealThing;
   name: string;
   number: string;
   rev: number;
@@ -78,9 +84,9 @@ export interface Rfp {
   issue_date: string;
   activity: string;
   package: string;
-  project_id: string;
-  company_id: string;
-  contact_id: string;
+  project_id: string | SurrealThing;
+  company_id: string | SurrealThing;
+  contact_id: string | SurrealThing;
   staff_name: string;
   staff_email: string;
   staff_phone: string;

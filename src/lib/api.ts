@@ -294,6 +294,90 @@ export class ApiClient {
       return 'Failed to open folder';
     }
   }
+
+  // Project number generation
+  static async generateNextProjectNumber(countryName: string, year?: number): Promise<string> {
+    try {
+      console.log('Generating next project number for country:', countryName, 'year:', year);
+      const projectNumber = await invoke<string>('generate_next_project_number', { 
+        countryName, 
+        year: year || null 
+      });
+      console.log('Generated project number:', projectNumber);
+      return projectNumber;
+    } catch (error) {
+      console.error('Failed to generate project number:', error);
+      throw error;
+    }
+  }
+
+  static async validateProjectNumber(projectNumber: string): Promise<boolean> {
+    try {
+      console.log('Validating project number:', projectNumber);
+      const isValid = await invoke<boolean>('validate_project_number', { projectNumber });
+      console.log('Project number is valid:', isValid);
+      return isValid;
+    } catch (error) {
+      console.error('Failed to validate project number:', error);
+      throw error;
+    }
+  }
+
+  static async createProjectWithTemplate(project: Partial<Project>): Promise<Project> {
+    try {
+      console.log('Creating project with template:', project);
+      const created = await invoke<Project>('create_project_with_template', { project });
+      console.log('Project created successfully:', created);
+      return created;
+    } catch (error) {
+      console.error('Failed to create project with template:', error);
+      throw error;
+    }
+  }
+
+  static async searchCountries(query: string): Promise<any[]> {
+    try {
+      console.log('Searching countries with query:', query);
+      const countries = await invoke<any[]>('search_countries', { query });
+      console.log('Search returned countries:', countries);
+      return countries;
+    } catch (error) {
+      console.error('Failed to search countries:', error);
+      throw error;
+    }
+  }
+
+  static async investigateRecord(recordId: string): Promise<any> {
+    try {
+      console.log('Investigating database record:', recordId);
+      const result = await invoke('investigate_record', { recordId });
+      console.log('Investigation result:', result);
+      return result;
+    } catch (error) {
+      console.error('Failed to investigate record:', error);
+      throw error;
+    }
+  }
+
+  static async getAreaSuggestions(country: string): Promise<string[]> {
+    try {
+      const suggestions = await invoke('get_area_suggestions', { country });
+      return suggestions as string[];
+    } catch (error) {
+      console.error('Failed to get area suggestions:', error);
+      throw error;
+    }
+  }
+
+  static async getCitySuggestions(country: string): Promise<string[]> {
+    try {
+      const suggestions = await invoke('get_city_suggestions', { country });
+      return suggestions as string[];
+    } catch (error) {
+      console.error('Failed to get city suggestions:', error);
+      throw error;
+    }
+  }
 }
 
 // Export individual functions for convenience
@@ -317,7 +401,14 @@ export const {
   getTableSchema,
   positionWindow4K,
   selectFolder,
-  openFolderInExplorer
+  openFolderInExplorer,
+  searchCountries,
+  generateNextProjectNumber,
+  validateProjectNumber,
+  createProjectWithTemplate,
+  investigateRecord,
+  getAreaSuggestions,
+  getCitySuggestions
 } = ApiClient;
 
 // Export default
