@@ -1,3 +1,65 @@
+//! # Database Operations Module
+//! 
+//! This module provides comprehensive database connectivity and operations for the
+//! Fee Proposal Management System using SurrealDB as the backend database.
+//! 
+//! ## Overview
+//! 
+//! The database module implements a robust connection management system with support
+//! for both WebSocket and HTTP connections to SurrealDB. It provides CRUD operations
+//! for all business entities including projects, companies, contacts, and RFPs.
+//! 
+//! ## Key Features
+//! 
+//! - **Dual Connection Support**: Automatic fallback from WebSocket to HTTP
+//! - **Connection Monitoring**: Real-time health checks and status tracking
+//! - **Flexible Authentication**: Support for Root, Namespace, and Database level auth
+//! - **Comprehensive Error Handling**: User-friendly error messages and logging
+//! - **Business Logic**: Project numbering, country lookup, and data validation
+//! - **Performance Optimization**: Connection pooling and query optimization
+//! 
+//! ## Architecture
+//! 
+//! ```text
+//! ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+//! │   Tauri Commands │◄──►│ DatabaseManager │◄──►│   SurrealDB     │
+//! │                 │    │                 │    │                 │
+//! │ - create_project│    │ - Connection    │    │ - Projects      │
+//! │ - get_companies │    │ - Health Check  │    │ - Companies     │
+//! │ - search_rfps   │    │ - CRUD Ops      │    │ - Contacts      │
+//! └─────────────────┘    └─────────────────┘    └─────────────────┘
+//! ```
+//! 
+//! ## Database Schema
+//! 
+//! The module works with the following primary entities:
+//! - **Projects**: Core business projects with auto-generated numbering
+//! - **Companies**: Client organizations with contact information
+//! - **Contacts**: Individual contacts linked to companies
+//! - **RFPs**: Request for Proposals with revision tracking
+//! - **Countries**: Reference data for project numbering and location
+//! 
+//! ## Connection Management
+//! 
+//! The DatabaseManager handles connection lifecycle:
+//! 1. **Initialization**: Establish connection using environment configuration
+//! 2. **Authentication**: Multi-level auth with graceful fallback
+//! 3. **Monitoring**: Continuous health checks with automatic reconnection
+//! 4. **Cleanup**: Proper resource management and connection cleanup
+//! 
+//! ## Error Handling
+//! 
+//! All database operations implement comprehensive error handling:
+//! - Network connectivity issues
+//! - Authentication failures  
+//! - Query syntax errors
+//! - Data validation failures
+//! - Business rule violations
+//! 
+//! @fileoverview Database connectivity and CRUD operations for SurrealDB
+//! @author Fee Proposal Management System
+//! @version 2.0.0
+
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -12,19 +74,75 @@ use chrono::{self, Datelike};
 use std::env;
 use crate::commands::CompanyUpdate;
 
+/// Interval for database connection health checks (30 seconds)
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 
-// Database configuration structure
+// ============================================================================
+// CONFIGURATION STRUCTURES
+// ============================================================================
+
+/// Database configuration structure loaded from environment variables.
+/// 
+/// This structure contains all necessary connection parameters for SurrealDB
+/// and implements automatic loading from environment variables with sensible
+/// defaults for development environments.
+/// 
+/// # Environment Variables
+/// 
+/// - `SURREALDB_URL`: Database connection URL (default: ws://10.0.1.17:8000)
+/// - `SURREALDB_NS`: Namespace name (default: emittiv)
+/// - `SURREALDB_DB`: Database name (default: projects)
+/// - `SURREALDB_USER`: Username (default: martin)
+/// - `SURREALDB_PASS`: Password (required, no default)
+/// 
+/// # Examples
+/// 
+/// ```rust
+/// let config = DatabaseConfig::from_env()?;
+/// println!("Connecting to: {}", config.url);
+/// ```
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
+    /// Database connection URL (WebSocket or HTTP)
     pub url: String,
+    /// SurrealDB namespace name
     pub namespace: String,
+    /// SurrealDB database name within the namespace
     pub database: String,
+    /// Authentication username
     pub username: String,
+    /// Authentication password
     pub password: String,
 }
 
 impl DatabaseConfig {
+    /// Creates a new DatabaseConfig from environment variables.
+    /// 
+    /// This method reads database configuration from environment variables,
+    /// providing sensible defaults for development while requiring the password
+    /// to be explicitly set for security.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(DatabaseConfig)`: Successfully loaded configuration
+    /// - `Err(String)`: Missing required SURREALDB_PASS environment variable
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// // Set environment variables first
+    /// std::env::set_var("SURREALDB_PASS", "your_password");
+    /// 
+    /// match DatabaseConfig::from_env() {
+    ///     Ok(config) => println!("Config loaded: {}", config.url),
+    ///     Err(e) => eprintln!("Config error: {}", e),
+    /// }
+    /// ```
+    /// 
+    /// # Security Note
+    /// 
+    /// The password is the only required environment variable to prevent
+    /// accidental connections with default credentials in production.
     pub fn from_env() -> Result<Self, String> {
         Ok(DatabaseConfig {
             url: env::var("SURREALDB_URL")
@@ -41,11 +159,29 @@ impl DatabaseConfig {
     }
 }
 
-// Connection status tracking
+/// Connection status tracking structure for real-time monitoring.
+/// 
+/// This structure provides detailed information about the current database
+/// connection state and is used by the frontend ConnectionStatus component
+/// to display real-time connectivity information to users.
+/// 
+/// # Fields
+/// 
+/// - `is_connected`: Current connection state (true/false)
+/// - `last_check`: ISO 8601 timestamp of last connectivity check
+/// - `error_message`: Human-readable error description if disconnected
+/// 
+/// # Serialization
+/// 
+/// This structure is automatically serialized to JSON for frontend consumption
+/// through the Tauri command system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionStatus {
+    /// Whether the database connection is currently active
     pub is_connected: bool,
+    /// ISO 8601 timestamp of the last connection check
     pub last_check: Option<String>,
+    /// Human-readable error message if connection failed
     pub error_message: Option<String>,
 }
 
@@ -59,18 +195,58 @@ impl Default for ConnectionStatus {
     }
 }
 
-// Database entities matching actual SurrealDB schema
+// ============================================================================
+// DATABASE ENTITY STRUCTURES
+// ============================================================================
+
+/// Project entity representing core business projects.
+/// 
+/// Projects are the central entity in the Fee Proposal Management System,
+/// representing architectural or engineering projects for clients. Each project
+/// has a unique auto-generated number and tracks location, status, and metadata.
+/// 
+/// # Project Numbering
+/// 
+/// Projects use the format YY-CCCNN where:
+/// - YY: 2-digit year (25 = 2025)
+/// - CCC: Country dial code (971 = UAE)
+/// - NN: Sequential number (01-99 per year/country)
+/// 
+/// # Status Values
+/// 
+/// - `Draft`: Initial state, project being defined
+/// - `RFP`: Request for Proposal stage
+/// - `Active`: Project is ongoing
+/// - `On Hold`: Temporarily suspended
+/// - `Completed`: Project finished successfully
+/// - `Cancelled`: Project terminated
+/// 
+/// # File System Integration
+/// 
+/// The `folder` field contains the absolute path to the project's file
+/// directory, enabling direct integration with template systems and
+/// file management operations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
+    /// SurrealDB record identifier (auto-generated)
     pub id: Option<Thing>,
+    /// Full project name for display and documentation
     pub name: String,
+    /// Abbreviated name for folder structures and internal use
     pub name_short: String,
+    /// Current project status (see status values above)
     pub status: String, // 'Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled'
+    /// Project area/district within the city
     pub area: String,
+    /// City where the project is located
     pub city: String,
+    /// Country where the project is located
     pub country: String,
+    /// Absolute file system path to project folder
     pub folder: String,
+    /// Structured project number (see ProjectNumber)
     pub number: ProjectNumber,
+    /// Creation and modification timestamps
     pub time: TimeStamps,
 }
 
@@ -87,11 +263,39 @@ pub struct NewProject {
     pub number: ProjectNumber,
 }
 
+/// Project number structure implementing the YY-CCCNN numbering system.
+/// 
+/// This structure stores both the individual components and the formatted
+/// string representation of project numbers. The numbering system ensures
+/// unique identification while encoding temporal and geographical information.
+/// 
+/// # Format Specification
+/// 
+/// - **Year**: 2-digit year (2025 → 25)
+/// - **Country**: 3-digit dial code (UAE → 971, Saudi → 966)
+/// - **Sequence**: 2-digit sequential number (01-99)
+/// - **ID**: Formatted string "YY-CCCNN" (e.g., "25-97105")
+/// 
+/// # Business Rules
+/// 
+/// - Maximum 99 projects per country per year
+/// - Year range: 20-50 (2020-2050)
+/// - Country codes must exist in countries table
+/// - Sequential numbering starts at 01
+/// 
+/// # Examples
+/// 
+/// - "25-97105": 2025, UAE (971), 5th project
+/// - "24-96601": 2024, Saudi Arabia (966), 1st project
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectNumber {
+    /// 2-digit year component (20-50)
     pub year: i32,
+    /// 3-digit country dial code
     pub country: i32,
+    /// 2-digit sequential number (1-99)
     pub seq: i32,
+    /// Formatted project number string (YY-CCCNN)
     pub id: String, // The formatted number like "24-97101"
 }
 
@@ -101,16 +305,48 @@ pub struct TimeStamps {
     pub updated_at: String,
 }
 
+/// Company entity representing client organizations.
+/// 
+/// Companies are organizations that engage the firm for projects. Each company
+/// record contains identification information, location details, and optional
+/// registration numbers for legal compliance and documentation.
+/// 
+/// # Naming Convention
+/// 
+/// - `name`: Full legal company name
+/// - `name_short`: Display name for UI and reports
+/// - `abbreviation`: Short code for quick reference (2-4 characters)
+/// 
+/// # Registration Information
+/// 
+/// Optional fields for legal compliance:
+/// - `reg_no`: Company registration number
+/// - `tax_no`: Tax identification number
+/// 
+/// # Relationships
+/// 
+/// Companies are referenced by:
+/// - Contacts (one-to-many)
+/// - RFPs (project proposals)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Company {
+    /// SurrealDB record identifier (auto-generated)
     pub id: Option<Thing>,
+    /// Full legal company name
     pub name: String,
+    /// Display name for UI and reports
     pub name_short: String,
+    /// Short code for quick reference (e.g., "CHE", "DMCC")
     pub abbreviation: String,
+    /// City where company headquarters is located
     pub city: String,
+    /// Country where company is incorporated
     pub country: String,
+    /// Company registration number (optional)
     pub reg_no: Option<String>,
+    /// Tax identification number (optional)
     pub tax_no: Option<String>,
+    /// Creation and modification timestamps
     pub time: TimeStamps,
 }
 
