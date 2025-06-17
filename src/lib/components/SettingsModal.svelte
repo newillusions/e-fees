@@ -119,11 +119,11 @@
     <!-- Modal Content -->
     <div 
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 16px; max-width: 600px;"
+      style="padding: 24px; max-width: 700px;"
       on:click|stopPropagation
     >
       <!-- Header -->
-      <div class="flex items-center justify-between" style="margin-bottom: 12px;">
+      <div class="flex items-center justify-between" style="margin-bottom: 20px;">
         <h2 id="settings-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">Application Settings</h2>
         <button 
           on:click={closeModal}
@@ -142,12 +142,12 @@
           <span class="ml-2 text-emittiv-light">Loading settings...</span>
         </div>
       {:else}
-        <form on:submit|preventDefault={saveSettingsForm} style="display: flex; flex-direction: column; gap: 16px;">
+        <form on:submit|preventDefault={saveSettingsForm} style="display: flex; flex-direction: column; gap: 24px;">
           
           <!-- SurrealDB Connection Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 8px;">SurrealDB Connection</h3>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">SurrealDB Connection</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
               <div>
                 <label for="surrealdb_url" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                   Database URL *
@@ -159,11 +159,11 @@
                   placeholder="ws://10.0.1.17:8000"
                   required
                   class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
                 />
               </div>
               
-              <div class="grid grid-cols-2" style="gap: 8px;">
+              <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
                   <label for="surrealdb_ns" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                     Namespace *
@@ -175,7 +175,7 @@
                     placeholder="emittiv"
                     required
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
                 
@@ -190,12 +190,12 @@
                     placeholder="projects"
                     required
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
               </div>
               
-              <div class="grid grid-cols-2" style="gap: 8px;">
+              <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
                   <label for="surrealdb_user" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                     Username
@@ -206,7 +206,7 @@
                     bind:value={settings.surrealdb_user}
                     placeholder="martin"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
                 
@@ -220,7 +220,7 @@
                     bind:value={settings.surrealdb_pass}
                     placeholder="••••••••"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
               </div>
@@ -229,10 +229,10 @@
 
           <!-- Staff Information Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 4px;">Staff Information</h3>
-            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 8px;">Used for RFP generation and signatures</p>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div class="grid grid-cols-2" style="gap: 8px;">
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Staff Information</h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Used for RFP generation and signatures</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
                   <label for="staff_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                     Full Name
@@ -243,7 +243,7 @@
                     bind:value={settings.staff_name}
                     placeholder="John Smith"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
                 
@@ -257,12 +257,12 @@
                     bind:value={settings.staff_position}
                     placeholder="Senior Designer"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
               </div>
               
-              <div class="grid grid-cols-2" style="gap: 8px;">
+              <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
                   <label for="staff_email" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                     Email
@@ -273,7 +273,7 @@
                     bind:value={settings.staff_email}
                     placeholder="john@emittiv.com"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
                 
@@ -287,7 +287,7 @@
                     bind:value={settings.staff_phone}
                     placeholder="+971501234567"
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
               </div>
@@ -296,22 +296,22 @@
 
           <!-- Project Folder Path Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 4px;">Project Folder Path</h3>
-            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 8px;">Root folder where project files are stored</p>
-            <div class="flex" style="gap: 8px;">
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Project Folder Path</h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Root folder where project files are stored</p>
+            <div class="flex" style="gap: 12px;">
               <input
                 id="project_folder_path"
                 type="text"
                 bind:value={settings.project_folder_path}
                 placeholder="/Users/username/Projects"
                 class="flex-1 bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                style="padding: 6px 8px; font-size: 12px; height: 28px;"
+                style="padding: 8px 12px; font-size: 12px; height: 32px;"
               />
               <button
                 type="button"
                 on:click={selectFolder}
                 class="bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-                style="padding: 6px 12px; font-size: 12px; height: 28px;"
+                style="padding: 8px 16px; font-size: 12px; height: 32px;"
               >
                 Browse
               </button>
@@ -326,12 +326,12 @@
           {/if}
 
           <!-- Action Buttons -->
-          <div class="flex justify-end border-t border-emittiv-dark" style="gap: 8px; padding-top: 8px;">
+          <div class="flex justify-end border-t border-emittiv-dark" style="gap: 12px; padding-top: 16px; margin-top: 8px;">
             <button
               type="button"
               on:click={closeModal}
               class="border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-light transition-all"
-              style="padding: 4px 8px; font-size: 11px; height: 24px;"
+              style="padding: 6px 12px; font-size: 12px; height: 28px;"
               disabled={isSaving}
             >
               Cancel
@@ -339,7 +339,7 @@
             <button
               type="submit"
               class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              style="padding: 4px 8px; font-size: 11px; height: 24px; gap: 4px;"
+              style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 4px;"
               disabled={isSaving}
             >
               {#if isSaving}

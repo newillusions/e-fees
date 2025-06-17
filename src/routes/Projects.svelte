@@ -1,61 +1,58 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import NewProjectModal from '$lib/components/NewProjectModal.svelte';
   import { projectsStore, projectsActions } from '$lib/stores';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
-  import { derived, writable } from 'svelte/store';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import type { Project } from '../types';
   import { onMount } from 'svelte';
   
+  // Modal state
+  let showNewProjectModal = $state(false);
+  
   // Filter states
-  let searchQuery = '';
-  let statusFilter = '';
-  let countryFilter = '';
-  let cityFilter = '';
+  let searchQuery = $state('');
+  let filters = $state({
+    status: '',
+    country: '',
+    city: ''
+  });
   
-  // Search state
-  // const isSearching = writable(false);
   
-  // Reactive filtered projects - updates when any filter changes
-  $: filteredProjects = $projectsStore.filter(project => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        project.name.toLowerCase().includes(query) ||
-        project.name_short.toLowerCase().includes(query) ||
-        project.area.toLowerCase().includes(query) ||
-        project.city.toLowerCase().includes(query) ||
-        project.country.toLowerCase().includes(query) ||
-        project.number.id.toLowerCase().includes(query) ||
-        project.folder.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
-    
-    // Status filter
-    if (statusFilter && project.status !== statusFilter) return false;
-    
-    // Country filter
-    if (countryFilter && project.country !== countryFilter) return false;
-    
-    // City filter
-    if (cityFilter && project.city !== cityFilter) return false;
-    
-    return true;
-  }).sort((a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime());
+  // Filter configuration for projects
+  const filterConfig: FilterConfig<Project> = {
+    searchFields: ['name', 'name_short', 'area', 'city', 'country', 'folder'],
+    filterFields: {
+      status: (project) => project.status,
+      country: (project) => project.country,
+      city: (project) => project.city
+    },
+    searchTransform: (project, field) => {
+      if (field === 'folder') return project.folder;
+      if (field === 'number') return project.number.id;
+      return (project as any)[field];
+    },
+    sortFunction: (a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime()
+  };
+
+  // Reactive filtered projects using optimized filter function
+  const filteredProjects = $derived(createFilterFunction($projectsStore, searchQuery, filters, filterConfig));
   
 
   
   function handleNewProject() {
-    console.log('New project clicked');
-    // In a real app, this would open a modal or navigate to a form
+    showNewProjectModal = true;
+  }
+  
+  function handleProjectCreated(project: any) {
+    // Reload projects to ensure the new one appears
+    projectsActions.load();
   }
   
   function clearFilters() {
-    searchQuery = '';
-    statusFilter = '';
-    countryFilter = '';
-    cityFilter = '';
+    searchQuery = clearAllFilters(filters);
   }
   
   // Load projects and settings on mount
@@ -77,16 +74,12 @@
   }
   
   // Check if any filters are active
-  $: hasActiveFilters = searchQuery || statusFilter || countryFilter || cityFilter;
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
   
-  // Get unique countries from actual project data
-  $: uniqueCountries = [...new Set($projectsStore.map(project => project.country))].sort();
-  
-  // Get unique cities from actual project data
-  $: uniqueCities = [...new Set($projectsStore.map(project => project.city))].sort();
-  
-  // Get unique statuses from actual project data
-  $: uniqueStatuses = [...new Set($projectsStore.map(project => project.status))].sort();
+  // Get unique values for filters using optimized functions
+  const uniqueStatuses = $derived(getUniqueFieldValues($projectsStore, (project) => project.status));
+  const uniqueCountries = $derived(getUniqueFieldValues($projectsStore, (project) => project.country));
+  const uniqueCities = $derived(getUniqueFieldValues($projectsStore, (project) => project.city));
   
   // Function to get full project folder path
   function getFullProjectPath(project: any): string {
@@ -131,7 +124,6 @@
           />
         </div>
         <button 
-          on:click={() => console.log('Search triggered:', searchQuery)}
           class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
           aria-label="Search"
         >
@@ -143,7 +135,7 @@
     </div>
     <button
       class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
-      on:click={handleNewProject}
+      onclick={handleNewProject}
       aria-label="Add new project"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +148,7 @@
   <div class="flex flex-wrap items-center gap-2 mb-2">
     <!-- Status Filter -->
     <select 
-      bind:value={statusFilter} 
+      bind:value={filters.status} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Status</option>
@@ -167,7 +159,7 @@
     
     <!-- Country Filter -->
     <select 
-      bind:value={countryFilter} 
+      bind:value={filters.country} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Countries</option>
@@ -178,7 +170,7 @@
     
     <!-- City Filter -->
     <select 
-      bind:value={cityFilter} 
+      bind:value={filters.city} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Cities</option>
@@ -202,15 +194,15 @@
   <!-- Results count and Clear button -->
   <div class="flex justify-between items-center mb-2">
     <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
-      {#if hasActiveFilters}
+      {#if hasFiltersActive}
         Showing {filteredProjects.length} of {$projectsStore.length} projects
       {:else if $projectsStore.length > 0}
         {$projectsStore.length} project{$projectsStore.length === 1 ? '' : 's'}
       {/if}
     </div>
-    {#if hasActiveFilters}
+    {#if hasFiltersActive}
       <button 
-        on:click={clearFilters}
+        onclick={clearFilters}
         class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
       >
         <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +229,7 @@
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No projects found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
       <button 
-        on:click={clearFilters}
+        onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
         Clear all filters
@@ -250,7 +242,7 @@
           <div>
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-lg font-semibold text-emittiv-white truncate">{project.name}</h3>
-              <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
                 <span class="px-2 py-1 rounded-full text-xs font-medium {getStatusColor(project.status)}">
                   {project.status}
                 </span>
@@ -274,7 +266,7 @@
                 <span class="flex items-center space-x-1">
                   <span>Folder:</span>
                   <button 
-                    on:click={() => openProjectFolder(project)}
+                    onclick={() => openProjectFolder(project)}
                     class="text-emittiv-splash hover:text-orange-400 underline hover:no-underline transition-all"
                     title="Click to open in file explorer: {getFullProjectPath(project)}"
                   >
@@ -290,3 +282,10 @@
     </div>
   {/if}
 </div>
+
+<!-- New Project Modal -->
+<NewProjectModal 
+  bind:isOpen={showNewProjectModal}
+  onClose={() => showNewProjectModal = false}
+  onSuccess={handleProjectCreated}
+/>

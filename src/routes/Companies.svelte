@@ -4,40 +4,33 @@
   import CompanyModal from '$lib/components/CompanyModal.svelte';
   import CompanyDetail from '$lib/components/CompanyDetail.svelte';
   import { companiesStore, companiesActions } from '$lib/stores';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
   import type { Company } from '../types';
   
   // Filter states
   let searchQuery = '';
-  let countryFilter = '';
-  let cityFilter = '';
+  let filters = {
+    country: '',
+    city: ''
+  };
   
-  // Reactive filtered companies - updates when any filter changes
-  $: filteredCompanies = $companiesStore.filter(company => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        company.name.toLowerCase().includes(query) ||
-        company.name_short.toLowerCase().includes(query) ||
-        company.abbreviation.toLowerCase().includes(query) ||
-        company.city.toLowerCase().includes(query) ||
-        company.country.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
-    
-    // Country filter
-    if (countryFilter && company.country !== countryFilter) return false;
-    
-    // City filter
-    if (cityFilter && company.city !== cityFilter) return false;
-    
-    return true;
-  }).sort((a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime());
+  // Filter configuration for companies
+  const filterConfig: FilterConfig<Company> = {
+    searchFields: ['name', 'name_short', 'abbreviation', 'city', 'country'],
+    filterFields: {
+      country: (company) => company.country,
+      city: (company) => company.city
+    },
+    sortFunction: (a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime()
+  };
+
+  // Reactive filtered companies using optimized filter function
+  $: filteredCompanies = createFilterFunction($companiesStore, searchQuery, filters, filterConfig);
   
-  // Get unique countries and cities from actual company data
-  $: uniqueCountries = [...new Set($companiesStore.map(c => c.country).filter(Boolean))].sort();
-  $: uniqueCities = [...new Set($companiesStore.map(c => c.city).filter(Boolean))].sort();
+  // Get unique values for filters using optimized functions
+  $: uniqueCountries = getUniqueFieldValues($companiesStore, (company) => company.country).filter(Boolean);
+  $: uniqueCities = getUniqueFieldValues($companiesStore, (company) => company.city).filter(Boolean);
   
   // Modal states
   let isCompanyModalOpen = false;
@@ -83,9 +76,7 @@
   }
   
   function clearFilters() {
-    searchQuery = '';
-    countryFilter = '';
-    cityFilter = '';
+    searchQuery = clearAllFilters(filters);
   }
   
   // Load companies on mount
@@ -94,7 +85,7 @@
   });
   
   // Check if any filters are active
-  $: hasActiveFilters = searchQuery || countryFilter || cityFilter;
+  $: hasFiltersActive = hasActiveFilters(filters, searchQuery);
 </script>
 
 <div class="p-8">
@@ -111,7 +102,6 @@
           />
         </div>
         <button 
-          on:click={() => console.log('Search triggered:', searchQuery)}
           class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
           aria-label="Search"
         >
@@ -136,7 +126,7 @@
   <div class="flex flex-wrap items-center gap-2 mb-2">
     <!-- Country Filter -->
     <select 
-      bind:value={countryFilter} 
+      bind:value={filters.country} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Countries</option>
@@ -147,7 +137,7 @@
     
     <!-- City Filter -->
     <select 
-      bind:value={cityFilter} 
+      bind:value={filters.city} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Cities</option>
@@ -171,13 +161,13 @@
   <!-- Results count and Clear button -->
   <div class="flex justify-between items-center mb-2">
     <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
-      {#if hasActiveFilters}
+      {#if hasFiltersActive}
         Showing {filteredCompanies.length} of {$companiesStore.length} companies
       {:else if $companiesStore.length > 0}
         {$companiesStore.length} compan{$companiesStore.length === 1 ? 'y' : 'ies'}
       {/if}
     </div>
-    {#if hasActiveFilters}
+    {#if hasFiltersActive}
       <button 
         on:click={clearFilters}
         class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"

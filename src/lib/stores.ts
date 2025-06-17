@@ -47,40 +47,24 @@ export const projectsStore = writable<Project[]>([]);
 export const projectsLoading = writable<boolean>(false);
 export const projectsError = writable<string | null>(null);
 
-// Debug: Log when stores are updated
-projectsStore.subscribe(value => {
-  console.log('STORE UPDATE - Projects:', value.length, 'items');
-});
 
 // Companies store
 export const companiesStore = writable<Company[]>([]);
 export const companiesLoading = writable<boolean>(false);
 export const companiesError = writable<string | null>(null);
 
-// Debug: Log when stores are updated
-companiesStore.subscribe(value => {
-  console.log('STORE UPDATE - Companies:', value.length, 'items');
-});
 
 // Contacts store
 export const contactsStore = writable<Contact[]>([]);
 export const contactsLoading = writable<boolean>(false);
 export const contactsError = writable<string | null>(null);
 
-// Debug: Log when stores are updated
-contactsStore.subscribe(value => {
-  console.log('STORE UPDATE - Contacts:', value.length, 'items');
-});
 
 // RFPs store
 export const rfpsStore = writable<Rfp[]>([]);
 export const rfpsLoading = writable<boolean>(false);
 export const rfpsError = writable<string | null>(null);
 
-// Debug: Log when stores are updated
-rfpsStore.subscribe(value => {
-  console.log('STORE UPDATE - RFPs:', value.length, 'items');
-});
 
 // Legacy aliases for backwards compatibility
 export const proposalsStore = rfpsStore;

@@ -28,31 +28,49 @@
     if (typeof window !== 'undefined') {
       const content = document.querySelector('.route-content');
       if (content) {
+        // Remove the class first to reset the animation
         content.classList.remove('page-enter');
-        requestAnimationFrame(() => {
-          content.classList.add('page-enter');
-        });
+        // Force a reflow to ensure the animation restarts
+        void (content as HTMLElement).offsetWidth;
+        // Add the class back to trigger the animation
+        content.classList.add('page-enter');
       }
     }
   }
   
-  function handleSplashComplete() {
+  async function handleSplashComplete() {
     showSplash = false;
     appReady = true;
     
-    // Load data after splash is complete
-    setTimeout(() => {
-      loadAllData().catch(error => {
+    // Test database connection first
+    setTimeout(async () => {
+      try {
+        console.log('Testing database connection...');
+        const { checkDbConnection, getDbInfo } = await import('$lib/api');
+        
+        const isConnected = await checkDbConnection();
+        console.log('Database connection status:', isConnected);
+        
+        if (isConnected) {
+          console.log('Database is connected, fetching info...');
+          const dbInfo = await getDbInfo();
+          console.log('Database info:', dbInfo);
+        } else {
+          console.warn('Database is not connected');
+        }
+        
+        // Load data regardless
+        console.log('Loading all data...');
+        await loadAllData();
+        console.log('Data loading completed');
+      } catch (error) {
         console.error('Failed to load initial data:', error);
-        // App will still work with empty data - the UI will show empty states
-      });
+      }
     }, 500);
   }
   
   onMount(() => {
     // Initialize app-wide logic
-    console.log('Fee Proposal Management App initialized with Svelte 5');
-    console.log('Show splash:', showSplash);
     
     // The splash screen will handle the initialization timing
     // Data loading will happen after splash completes
