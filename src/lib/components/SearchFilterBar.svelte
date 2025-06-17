@@ -1,20 +1,32 @@
 <script lang="ts">
   import { hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   
-  // Props
-  export let searchQuery: string = '';
-  export let filters: Record<string, string> = {};
-  export let filterOptions: Array<{
-    key: string;
-    label: string;
-    options: string[];
-  }> = [];
-  export let placeholder: string = 'Search...';
-  export let onAdd: (() => void) | null = null;
-  export let addLabel: string = 'Add Item';
-  export let resultCount: number = 0;
-  export let totalCount: number = 0;
-  export let itemName: string = 'items';
+  // Props using Svelte 5 syntax
+  let {
+    searchQuery = $bindable(''),
+    filters = $bindable({}),
+    filterOptions = [],
+    placeholder = 'Search...',
+    onAdd = null,
+    addLabel = 'Add Item',
+    resultCount = 0,
+    totalCount = 0,
+    itemName = 'items'
+  }: {
+    searchQuery: string;
+    filters: Record<string, string>;
+    filterOptions?: Array<{
+      key: string;
+      label: string;
+      options: string[];
+    }>;
+    placeholder?: string;
+    onAdd?: (() => void) | null;
+    addLabel?: string;
+    resultCount?: number;
+    totalCount?: number;
+    itemName?: string;
+  } = $props();
   
   // Internal state
   let hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
@@ -50,7 +62,7 @@
     {#if onAdd}
       <button
         class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
-        on:click={onAdd}
+        onclick={onAdd}
         aria-label={addLabel}
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +100,7 @@
     </div>
     {#if hasFiltersActive}
       <button 
-        on:click={clearFilters}
+        onclick={clearFilters}
         class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
       >
         <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -121,7 +121,15 @@
     
     try {
       if (mode === 'create') {
-        await companiesActions.create(formData);
+        // Add required time field for new companies
+        const companyData = {
+          ...formData,
+          time: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+        await companiesActions.create(companyData);
         saveMessage = 'Company created successfully!';
       } else {
         const companyId = getCompanyId(company);
@@ -140,7 +148,7 @@
         closeModal();
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       saveMessage = `Error: ${error?.message || error}`;
     } finally {
       isSaving = false;
@@ -164,7 +172,7 @@
         closeModal();
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       saveMessage = `Error: ${error?.message || error}`;
     } finally {
       isDeleting = false;

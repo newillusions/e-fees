@@ -4,7 +4,7 @@
   import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
   import { contactsStore, companiesStore, contactsActions, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { createFilterFunction, getUniqueFieldValues, type FilterConfig } from '$lib/utils/filters';
+  import { createFilterFunction, getUniqueFieldValues, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import type { Contact } from '../types';
   
@@ -64,6 +64,10 @@
   
   function handleAddContact() {
     // TODO: Implement add contact functionality
+  }
+  
+  function clearFilters() {
+    searchQuery = clearAllFilters(filters);
   }
   
   // Load contacts and companies on mount
