@@ -109,3 +109,150 @@ export interface Revision {
 
 // Legacy alias for backwards compatibility during transition
 export interface Proposal extends Rfp {}
+
+// ============================================================================
+// API RESPONSE TYPES
+// ============================================================================
+
+/**
+ * Database statistics response structure.
+ * 
+ * Returned by the getStats API endpoint to provide dashboard metrics.
+ */
+export interface DatabaseStats {
+  /** Total number of projects in the database */
+  totalProjects: number;
+  /** Number of RFPs with status 'Active' or 'Sent' */
+  activeRfps: number;
+  /** Total number of company records */
+  totalCompanies: number;
+  /** Total number of contact records */
+  totalContacts: number;
+  /** Total number of RFP records regardless of status */
+  totalRfps: number;
+}
+
+/**
+ * Database connection information structure.
+ * 
+ * Provides detailed information about the current database connection
+ * for debugging and monitoring purposes.
+ */
+export interface DatabaseInfo {
+  /** Database connection URL (sanitized for security) */
+  url?: string;
+  /** SurrealDB namespace name */
+  namespace?: string;
+  /** SurrealDB database name */
+  database?: string;
+  /** Timestamp when connection was established */
+  connected_at?: string;
+  /** Number of queries executed in this session */
+  query_count?: number;
+  /** Connection duration in milliseconds */
+  connection_duration?: number;
+  /** Error message if connection failed */
+  error?: string;
+  /** Connection status details */
+  status?: 'connected' | 'disconnected' | 'error';
+}
+
+/**
+ * Database table schema information structure.
+ * 
+ * Provides detailed schema information for a specific table
+ * including fields, relationships, and constraints.
+ */
+export interface TableSchema {
+  /** Name of the table */
+  table: string;
+  /** Array of field definitions */
+  fields: Array<{
+    /** Field name */
+    name: string;
+    /** Field data type */
+    type: string;
+    /** Whether the field is required */
+    required: boolean;
+    /** Default value if any */
+    default?: any;
+    /** Additional constraints */
+    constraints?: string[];
+  }>;
+  /** Foreign key relationships */
+  relationships: Array<{
+    /** Field name that contains the foreign key */
+    field: string;
+    /** Table and field being referenced */
+    references: string;
+    /** Type of relationship (one-to-one, one-to-many, etc.) */
+    type?: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
+  }>;
+  /** Indexes defined on the table */
+  indexes?: Array<{
+    /** Index name */
+    name: string;
+    /** Fields included in the index */
+    fields: string[];
+    /** Whether the index is unique */
+    unique: boolean;
+  }>;
+  /** Error message if schema retrieval failed */
+  error?: string;
+  /** Timestamp when schema was retrieved */
+  retrieved_at?: string;
+}
+
+/**
+ * Country search result structure.
+ * 
+ * Returned by country search API for autocomplete functionality.
+ */
+export interface CountrySearchResult {
+  /** Primary country name */
+  name: string;
+  /** Formal country name */
+  name_formal?: string;
+  /** Official country name */
+  name_official?: string;
+  /** ISO country code */
+  code: string;
+  /** Alternative country codes */
+  code_alt?: string;
+  /** International dialing code */
+  dial_code: number;
+}
+
+/**
+ * Project creation result structure.
+ * 
+ * Returned when creating a project with template folder operations.
+ */
+export interface ProjectCreationResult {
+  /** The created project object */
+  project: Project;
+  /** Path to the created project folder */
+  folder_path: string;
+  /** List of files that were copied */
+  copied_files: string[];
+  /** Any warnings during the creation process */
+  warnings?: string[];
+}
+
+/**
+ * File operation result structure.
+ * 
+ * Returned by file system operations like folder creation and file copying.
+ */
+export interface FileOperationResult {
+  /** Whether the operation was successful */
+  success: boolean;
+  /** Result message */
+  message: string;
+  /** Path that was operated on */
+  path?: string;
+  /** List of files affected */
+  files?: string[];
+  /** Error details if operation failed */
+  error?: string;
+}

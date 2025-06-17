@@ -3,76 +3,51 @@
   import EmptyState from '$lib/components/EmptyState.svelte';
   import { contactsStore, companiesStore, contactsActions, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { createCompanyLookup } from '$lib/utils/companyLookup';
+  import type { Contact } from '../types';
   
   // Filter states  
   let searchQuery = '';
-  let companyFilter = '';
-  let countryFilter = '';
-  let positionFilter = '';
+  let filters = {
+    company: '',
+    country: '',
+    position: ''
+  };
   
-  // Filter option arrays
-  let uniqueCompanies: string[] = [];
-  let uniqueCountries: string[] = [];
-  let uniquePositions: string[] = [];
+  // Create optimized company lookup when companies data changes
+  $: companyLookup = createCompanyLookup($companiesStore);
   
-  // Reactive filtered contacts - updates when any filter changes
-  $: filteredContacts = $contactsStore.filter(contact => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        contact.full_name.toLowerCase().includes(query) ||
-        contact.first_name.toLowerCase().includes(query) ||
-        contact.last_name.toLowerCase().includes(query) ||
-        contact.email.toLowerCase().includes(query) ||
-        contact.phone.toLowerCase().includes(query) ||
-        contact.position.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
+  // Filter configuration for contacts
+  const filterConfig: FilterConfig<Contact> = {
+    searchFields: ['full_name', 'first_name', 'last_name', 'email', 'phone', 'position'],
+    filterFields: {
+      company: (contact) => companyLookup.getCompanyShortName(contact.company),
+      country: (contact) => companyLookup.getCompanyCountry(contact.company),
+      position: (contact) => contact.position
     }
-    
-    // Company filter - compare using the company short name
-    if (companyFilter && getCompanyShortName(contact.company) !== companyFilter) {
-      return false;
-    }
-    
-    // Country filter - get country from company data
-    if (countryFilter) {
-      const companyCountry = getCompanyCountry(contact.company);
-      if (companyCountry !== countryFilter) return false;
-    }
-    
-    // Position filter
-    if (positionFilter && contact.position !== positionFilter) return false;
-    
-    return true;
-  }).sort((a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime());
+  };
   
-  // Get unique values for filters from actual contact data
-  $: {
-    const companyNames = $contactsStore
-      .map(c => getCompanyShortName(c.company))
-      .filter(company => company && company !== 'N/A');
-    uniqueCompanies = [...new Set(companyNames)].sort((a, b) => a.localeCompare(b));
-  }
+  // Reactive filtered contacts using optimized filter function
+  $: filteredContacts = createFilterFunction($contactsStore, searchQuery, filters, filterConfig);
   
-  $: {
-    const countryNames = $contactsStore
-      .map(c => getCompanyCountry(c.company))
-      .filter(country => country && country !== 'N/A');
-    uniqueCountries = [...new Set(countryNames)].sort((a, b) => a.localeCompare(b));
-  }
+  // Get unique values for filters using optimized functions
+  $: uniqueCompanies = getUniqueFieldValues($contactsStore, (contact) => 
+    companyLookup.getCompanyShortName(contact.company)
+  ).filter(name => name !== 'N/A');
   
-  $: uniquePositions = [...new Set($contactsStore.map(c => c.position).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  $: uniqueCountries = getUniqueFieldValues($contactsStore, (contact) => 
+    companyLookup.getCompanyCountry(contact.company)
+  ).filter(country => country !== 'N/A');
+  
+  $: uniquePositions = getUniqueFieldValues($contactsStore, (contact) => contact.position);
   
   function handleAddContact() {
     console.log('Add contact clicked');
   }
   
   function clearFilters() {
-    searchQuery = '';
-    companyFilter = '';
-    countryFilter = '';
-    positionFilter = '';
+    searchQuery = clearAllFilters(filters);
   }
   
   // Load contacts and companies on mount
@@ -385,7 +360,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-2">
                 <h3 class="text-lg font-semibold text-emittiv-white truncate">{contact.full_name}</h3>
-                <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+                <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
                   <span class="px-2 py-1 rounded-full text-xs font-medium text-purple-400 bg-purple-400/10">
                     {contact.position}
                   </span>
