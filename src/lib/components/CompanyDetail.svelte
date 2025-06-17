@@ -146,6 +146,7 @@
   <div 
     class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 transition-opacity"
     on:click={closeDetail}
+    on:keydown={(e) => e.key === 'Escape' && closeDetail()}
     role="button"
     tabindex="-1"
     aria-label="Close detail view"
