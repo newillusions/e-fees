@@ -27,14 +27,6 @@
  * - Updates reactive stores for UI consistency
  * 
  * @component
- * @example
- * ```svelte
- * <NewProjectModal 
- *   bind:isOpen={showModal} 
- *   onClose={handleClose}
- *   onSuccess={handleProjectCreated}
- * />
- * ```
  */
 <script lang="ts">
   import { onMount } from 'svelte';

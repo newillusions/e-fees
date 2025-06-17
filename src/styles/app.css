@@ -37,14 +37,15 @@
   --shadow-card-hover: 0 10px 25px rgba(255, 153, 0, 0.1);
   
   /* Gradients */
-  --gradient-main: linear-gradient(135deg, var(--emittiv-black), var(--emittiv-darker));
+  --gradient-main: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(51, 51, 51, 0.85));
   --gradient-content: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(51, 51, 51, 0.3));
-  --gradient-sidebar: linear-gradient(180deg, var(--emittiv-black), rgba(0, 0, 0, 0.95));
+  --gradient-sidebar: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
+  --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
 }
 
 @layer base {
   html {
-    background-color: var(--emittiv-black);
+    background: transparent;
     color: var(--emittiv-white);
     font-size: 16px;
     font-family: var(--font-body);
@@ -77,6 +78,22 @@
     outline: 2px solid var(--emittiv-splash);
     outline-offset: 2px;
     border-radius: 4px;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  .glass-container {
+    background: var(--gradient-main);
+  }
+  
+  .glass-sidebar {
+    background: var(--gradient-sidebar);
+    border-right: 1px solid var(--emittiv-darker);
+  }
+  
+  .glass-content {
+    background: var(--gradient-content);
   }
   
   /* Custom Scrollbars */
@@ -228,32 +245,28 @@
   
   /* Page transitions */
   .page-enter {
-    animation: pageEnter 0.3s ease-out;
+    animation: pageEnter 0.5s ease-out;
   }
   
   .page-exit {
-    animation: pageExit 0.3s ease-in;
+    animation: pageExit 0.5s ease-in;
   }
   
   @keyframes pageEnter {
     from {
       opacity: 0;
-      transform: translateY(10px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
   
   @keyframes pageExit {
     from {
       opacity: 1;
-      transform: translateY(0);
     }
     to {
       opacity: 0;
-      transform: translateY(-10px);
     }
   }
   

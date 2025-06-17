@@ -1,61 +1,32 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
-  import { statisticsStore, isLoadingStore, recentRfpsStore, loadAllData } from '$lib/stores';
-  import { getProjects, getCompanies, getContacts, getRfps, createProject, createCompany, createContact, createRfp, getTableSchema } from '$lib/api';
+  import { statisticsStore, isLoadingStore, recentRfpsStore, loadAllData, projectsStore, companiesStore } from '$lib/stores';
   import { onMount } from 'svelte';
+  import { extractId, findEntityById, getEntityDisplayName } from '$lib/utils';
   
-  async function testDatabaseCalls() {
-    console.log('🧪 TESTING INDIVIDUAL DATABASE CALLS...');
+  // Helper functions for activity display
+  function getProjectName(projectId: any): string {
+    console.log('🔍 Looking for project with ID:', projectId);
     
-    try {
-      console.log('Testing getProjects...');
-      const projects = await getProjects();
-      console.log('✅ Projects result:', projects);
-    } catch (error) {
-      console.error('❌ Projects failed:', error);
-    }
+    const project = findEntityById($projectsStore, projectId);
+    const result = getEntityDisplayName(project) || 'Unknown Project';
     
-    try {
-      console.log('Testing getCompanies...');
-      const companies = await getCompanies();
-      console.log('✅ Companies result:', companies);
-    } catch (error) {
-      console.error('❌ Companies failed:', error);
-    }
-    
-    try {
-      console.log('Testing getContacts...');
-      const contacts = await getContacts();
-      console.log('✅ Contacts result:', contacts);
-    } catch (error) {
-      console.error('❌ Contacts failed:', error);
-    }
-    
-    try {
-      console.log('Testing getRfps...');
-      const rfps = await getRfps();
-      console.log('✅ RFPs result:', rfps);
-    } catch (error) {
-      console.error('❌ RFPs failed:', error);
-    }
+    console.log('🔍 Found project:', result);
+    return result;
   }
   
-  async function checkTableSchemas() {
-    console.log('🔍 CHECKING TABLE SCHEMAS...');
+  function getCompanyName(companyId: any): string {
+    console.log('🔍 Looking for company with ID:', companyId);
     
-    const tables = ['projects', 'company', 'contacts', 'rfp'];
+    const company = findEntityById($companiesStore, companyId);
+    const result = getEntityDisplayName(company) || 'Unknown Company';
     
-    for (const table of tables) {
-      try {
-        console.log(`📋 Checking schema for ${table}...`);
-        const schema = await getTableSchema(table);
-        console.log(`✅ ${table} schema:`, schema);
-      } catch (error) {
-        console.error(`❌ ${table} schema failed:`, error);
-      }
-    }
+    console.log('🔍 Found company:', result);
+    return result;
   }
+  
+  
   
   const statCards = [
     {
@@ -89,6 +60,7 @@
   <div class="mb-8">
     <h1 class="text-3xl font-heading font-bold text-emittiv-white mb-2">Dashboard</h1>
     <p class="text-emittiv-lighter">Welcome to your Fee Proposal Management System</p>
+    
   </div>
   
   <!-- Stats Grid -->
@@ -116,12 +88,35 @@
     {#if $isLoadingStore}
       <LoadingSkeleton rows={4} />
     {:else if $recentRfpsStore.length > 0}
-      <div class="space-y-3">
+      <div class="space-y-1">
         {#each $recentRfpsStore.slice(0, 5) as rfp}
-          <div class="flex items-center space-x-3 py-2">
-            <div class="w-2 h-2 rounded-full status-connected"></div>
-            <span style="color: var(--emittiv-lighter);">RFP "{rfp.name}" - {rfp.number}</span>
-            <span class="text-sm ml-auto" style="color: var(--emittiv-light);">{new Date(rfp.time.created_at).toLocaleDateString()}</span>
+          <div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-emittiv-darker/50 transition-colors cursor-pointer text-xs">
+            <!-- Status indicator -->
+            {#if rfp.status === 'Awarded'}
+              <div class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
+            {:else if rfp.status === 'Lost' || rfp.status === 'Cancelled'}
+              <div class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></div>
+            {:else if rfp.status === 'Active' || rfp.status === 'Sent'}
+              <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
+            {:else}
+              <div class="w-1.5 h-1.5 rounded-full bg-gray-500 flex-shrink-0"></div>
+            {/if}
+            
+            <!-- RFP number -->
+            <span class="text-emittiv-white font-medium">{rfp.number}</span>
+            
+            <!-- Status badge -->
+            <span class="px-1.5 py-0.5 rounded bg-emittiv-dark text-emittiv-lighter text-xs">{rfp.status}</span>
+            
+            <!-- Project and company -->
+            <span class="text-emittiv-light truncate flex-1">
+              {getProjectName(rfp.project_id)} • {getCompanyName(rfp.company_id)}
+            </span>
+            
+            <!-- Date -->
+            <span class="text-emittiv-light flex-shrink-0">
+              {new Date(rfp.time.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
           </div>
         {/each}
       </div>

@@ -42,7 +42,7 @@
   $: uniqueStaff = [...new Set($rfpsStore.map(rfp => rfp.staff_name).filter(Boolean))].sort();
   
   function handleNewRfp() {
-    console.log('New RFP clicked');
+    // TODO: Implement new RFP functionality
   }
   
   function clearFilters() {
@@ -279,7 +279,6 @@
           />
         </div>
         <button 
-          on:click={() => console.log('Search triggered:', searchQuery)}
           class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
           aria-label="Search"
         >
@@ -405,7 +404,7 @@
                   {/if}
                 </h3>
               </div>
-              <div class="flex items-center space-x-2 ml-4 flex-shrink-0">
+              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
                 <span class="px-2 py-1 rounded-full text-xs font-medium {getStatusColor(rfp.status)}">
                   {rfp.status}
                 </span>

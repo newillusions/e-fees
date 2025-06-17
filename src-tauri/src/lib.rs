@@ -16,6 +16,8 @@ use commands::{
     get_rfps,
     create_project,
     create_company,
+    update_company,
+    delete_company,
     create_contact,
     create_rfp,
     health_check,
@@ -27,6 +29,13 @@ use commands::{
     save_settings,
     select_folder,
     open_folder_in_explorer,
+    investigate_record,
+    search_countries,
+    generate_next_project_number,
+    validate_project_number,
+    create_project_with_template,
+    get_area_suggestions,
+    get_city_suggestions,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -147,6 +156,8 @@ pub fn run() {
             get_rfps,
             create_project,
             create_company,
+            update_company,
+            delete_company,
             create_contact,
             create_rfp,
             health_check,
@@ -157,7 +168,14 @@ pub fn run() {
             get_settings,
             save_settings,
             select_folder,
-            open_folder_in_explorer
+            open_folder_in_explorer,
+            investigate_record,
+            search_countries,
+            generate_next_project_number,
+            validate_project_number,
+            create_project_with_template,
+            get_area_suggestions,
+            get_city_suggestions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

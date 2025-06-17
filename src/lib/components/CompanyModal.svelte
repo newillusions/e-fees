@@ -121,7 +121,15 @@
     
     try {
       if (mode === 'create') {
-        await companiesActions.create(formData);
+        // Add required time field for new companies
+        const companyData = {
+          ...formData,
+          time: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+        await companiesActions.create(companyData);
         saveMessage = 'Company created successfully!';
       } else {
         const companyId = getCompanyId(company);
@@ -140,7 +148,7 @@
         closeModal();
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       saveMessage = `Error: ${error?.message || error}`;
     } finally {
       isSaving = false;
@@ -164,7 +172,7 @@
         closeModal();
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       saveMessage = `Error: ${error?.message || error}`;
     } finally {
       isDeleting = false;
@@ -249,6 +257,7 @@
   <div 
     class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
     on:click={closeModal}
+    on:keydown={(e) => e.key === 'Escape' && closeModal()}
     role="dialog"
     aria-modal="true"
     aria-labelledby="company-modal-title"
@@ -259,6 +268,8 @@
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
       style="padding: 24px; max-width: 700px;"
       on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="presentation"
     >
       <!-- Header -->
       <div class="flex items-center justify-between" style="margin-bottom: 20px;">

@@ -4,8 +4,6 @@
   import { connectionStore } from '../stores';
   import { getConnectionStatus } from '../api';
   
-  // Debug logo import
-  console.log('Logo imported:', logo);
   
   export let onComplete: () => void;
   
@@ -35,7 +33,7 @@
     // Animate dots
     dotInterval = setInterval(() => {
       dots = dots.length >= 3 ? '' : dots + '.';
-    }, 500);
+    }, 500) as any;
     
     // Progress simulation
     progressInterval = setInterval(() => {
@@ -43,7 +41,7 @@
         progress += Math.random() * 15;
         if (progress > 90) progress = 90;
       }
-    }, 300);
+    }, 300) as any;
     
     // Cycle through connection messages
     const messageInterval = setInterval(() => {
@@ -85,7 +83,7 @@
           }, 1000);
         }
       }
-    }, 1000);
+    }, 1000) as any;
     
     // Fallback timeout to ensure splash screen doesn't hang
     setTimeout(() => {
@@ -185,12 +183,5 @@
 </div>
 
 <style>
-  /* Status indicator styles */
-  .status-connected {
-    background-color: var(--emittiv-splash);
-  }
-  
-  .status-disconnected {
-    background-color: var(--emittiv-light);
-  }
+  /* Component uses Tailwind classes for styling */
 </style>

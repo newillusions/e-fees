@@ -34,7 +34,13 @@ import type {
   Company, 
   Contact, 
   Rfp, 
-  ConnectionStatus 
+  ConnectionStatus,
+  DatabaseStats,
+  DatabaseInfo,
+  TableSchema,
+  CountrySearchResult,
+  ProjectCreationResult,
+  FileOperationResult
 } from '../types';
 
 /**
@@ -758,18 +764,12 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database connection or query errors
    */
-  static async getStats(): Promise<{
-    totalProjects: number;
-    activeRfps: number;
-    totalCompanies: number;
-    totalContacts: number;
-    totalRfps: number;
-  }> {
+  static async getStats(): Promise<DatabaseStats> {
     try {
       console.log('Invoking get_stats command...');
-      const stats = await invoke('get_stats');
+      const stats = await invoke<DatabaseStats>('get_stats');
       console.log('get_stats response:', stats);
-      return stats as any;
+      return stats;
     } catch (error) {
       console.error('Failed to fetch stats from database:', error);
       throw error;
@@ -845,14 +845,14 @@ export class ApiClient {
    * 
    * @throws Never throws - returns error object on failure
    */
-  static async getDbInfo(): Promise<any> {
+  static async getDbInfo(): Promise<DatabaseInfo> {
     try {
-      return await invoke('get_db_info');
+      return await invoke<DatabaseInfo>('get_db_info');
     } catch (error) {
       console.error('Failed to get database info:', error);
       return {
         error: error?.toString() || 'Unknown error',
-        timestamp: new Date().toISOString()
+        status: 'error'
       };
     }
   }
@@ -885,15 +885,17 @@ export class ApiClient {
    * 
    * @throws Never throws - returns error object on failure
    */
-  static async getTableSchema(tableName: string): Promise<any> {
+  static async getTableSchema(tableName: string): Promise<TableSchema> {
     try {
-      return await invoke('get_table_schema', { tableName });
+      return await invoke<TableSchema>('get_table_schema', { tableName });
     } catch (error) {
       console.error(`Failed to get schema for table ${tableName}:`, error);
       return {
-        error: error?.toString() || 'Unknown error',
         table: tableName,
-        timestamp: new Date().toISOString()
+        fields: [],
+        relationships: [],
+        error: error?.toString() || 'Unknown error',
+        retrieved_at: new Date().toISOString()
       };
     }
   }
@@ -1206,10 +1208,10 @@ export class ApiClient {
    * 
    * @throws Error - Throws on database connection errors
    */
-  static async searchCountries(query: string): Promise<any[]> {
+  static async searchCountries(query: string): Promise<CountrySearchResult[]> {
     try {
       console.log('Searching countries with query:', query);
-      const countries = await invoke<any[]>('search_countries', { query });
+      const countries = await invoke<CountrySearchResult[]>('search_countries', { query });
       console.log('Search returned countries:', countries);
       return countries;
     } catch (error) {
