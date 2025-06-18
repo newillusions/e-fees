@@ -2,6 +2,12 @@
   import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import NewProjectModal from '$lib/components/NewProjectModal.svelte';
+  import ListCard from '$lib/components/ListCard.svelte';
+  import ResultsCounter from '$lib/components/ResultsCounter.svelte';
+  import ActionButton from '$lib/components/ActionButton.svelte';
+  import StatusBadge from '$lib/components/StatusBadge.svelte';
+  import ProjectCard from '$lib/components/ProjectCard.svelte';
+  import ProjectDetail from '$lib/components/ProjectDetail.svelte';
   import { projectsStore, projectsActions } from '$lib/stores';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
@@ -9,8 +15,10 @@
   import type { Project } from '../types';
   import { onMount } from 'svelte';
   
-  // Modal state
+  // Modal states
   let showNewProjectModal = $state(false);
+  let isProjectDetailOpen = $state(false);
+  let selectedProject: Project | null = $state(null);
   
   // Filter states
   let searchQuery = $state('');
@@ -29,12 +37,12 @@
       country: (project) => project.country,
       city: (project) => project.city
     },
-    searchTransform: (project, field) => {
-      if (field === 'folder') return project.folder;
-      if (field === 'number') return project.number.id;
-      return (project as any)[field];
-    },
-    sortFunction: (a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime()
+    sortFunction: (a, b) => {
+      // Sort by project number descending (newest numbers first)
+      const aNumber = a.number?.id || '';
+      const bNumber = b.number?.id || '';
+      return bNumber.localeCompare(aNumber);
+    }
   };
 
   // Reactive filtered projects using optimized filter function
@@ -51,6 +59,26 @@
     projectsActions.load();
   }
   
+  function handleEditProject(project: any) {
+    // TODO: Implement project editing
+    console.log('Edit project:', project.id);
+  }
+  
+  function handleViewProject(project: any) {
+    selectedProject = project;
+    isProjectDetailOpen = true;
+  }
+  
+  function handleCloseDetail() {
+    isProjectDetailOpen = false;
+    selectedProject = null;
+  }
+  
+  function handleEditFromDetail(event: CustomEvent) {
+    // TODO: Implement project editing from detail view
+    console.log('Edit project from detail:', event.detail.id);
+  }
+  
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
   }
@@ -61,17 +89,6 @@
     settingsActions.load();
   });
   
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'Active': return 'text-green-400 bg-green-400/10';
-      case 'Completed': return 'text-blue-400 bg-blue-400/10';
-      case 'On Hold': return 'text-yellow-400 bg-yellow-400/10';
-      case 'RFP': return 'text-orange-400 bg-orange-400/10';
-      case 'Draft': return 'text-gray-400 bg-gray-400/10';
-      case 'Cancelled': return 'text-red-400 bg-red-400/10';
-      default: return 'text-emittiv-light bg-emittiv-dark';
-    }
-  }
   
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
@@ -191,27 +208,13 @@
   }
 </style>
   
-  <!-- Results count and Clear button -->
-  <div class="flex justify-between items-center mb-2">
-    <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
-      {#if hasFiltersActive}
-        Showing {filteredProjects.length} of {$projectsStore.length} projects
-      {:else if $projectsStore.length > 0}
-        {$projectsStore.length} project{$projectsStore.length === 1 ? '' : 's'}
-      {/if}
-    </div>
-    {#if hasFiltersActive}
-      <button 
-        onclick={clearFilters}
-        class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
-      >
-        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Clear
-      </button>
-    {/if}
-  </div>
+  <ResultsCounter 
+    totalItems={$projectsStore.length}
+    filteredItems={filteredProjects.length}
+    hasFilters={hasFiltersActive}
+    entityName="projects"
+    on:clear-filters={clearFilters}
+  />
   
   {#if $projectsStore.length === 0}
     <EmptyState 
@@ -236,48 +239,14 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-6">
+    <div class="grid gap-3">
       {#each filteredProjects as project}
-        <Card>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-emittiv-white truncate">{project.name}</h3>
-              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
-                <span class="px-2 py-1 rounded-full text-xs font-medium {getStatusColor(project.status)}">
-                  {project.status}
-                </span>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="Edit project">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="View project details">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <p class="text-emittiv-lighter mb-3">
-              {project.area}, {project.city}, {project.country}
-            </p>
-            <div class="flex items-center justify-between text-sm text-emittiv-light">
-              <div class="flex items-center space-x-4">
-                <span class="flex items-center space-x-1">
-                  <span>Folder:</span>
-                  <button 
-                    onclick={() => openProjectFolder(project)}
-                    class="text-emittiv-splash hover:text-orange-400 underline hover:no-underline transition-all"
-                    title="Click to open in file explorer: {getFullProjectPath(project)}"
-                  >
-                    {project.folder}
-                  </button>
-                </span>
-              </div>
-              <span>Created: {new Date(project.time.created_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </Card>
+        <ProjectCard 
+          {project}
+          onFolderClick={openProjectFolder}
+          on:edit={(e) => handleEditProject(e.detail)}
+          on:view={(e) => handleViewProject(e.detail)}
+        />
       {/each}
     </div>
   {/if}
@@ -288,4 +257,12 @@
   bind:isOpen={showNewProjectModal}
   onClose={() => showNewProjectModal = false}
   onSuccess={handleProjectCreated}
+/>
+
+<!-- Project Detail Panel -->
+<ProjectDetail 
+  bind:isOpen={isProjectDetailOpen}
+  project={selectedProject}
+  on:close={handleCloseDetail}
+  on:edit={handleEditFromDetail}
 />
