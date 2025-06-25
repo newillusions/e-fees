@@ -34,7 +34,20 @@
     if (staffFilter && rfp.staff_name !== staffFilter) return false;
     
     return true;
-  }).sort((a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime());
+  }).sort((a, b) => {
+    // Primary sort: updated_at descending (most recent first)
+    const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
+    const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
+    
+    if (bUpdated !== aUpdated) {
+      return bUpdated - aUpdated;
+    }
+    
+    // Secondary sort: created_at descending (if updated_at is the same)
+    const aCreated = new Date(a.time?.created_at || 0).getTime();
+    const bCreated = new Date(b.time?.created_at || 0).getTime();
+    return bCreated - aCreated;
+  });
   
   // Get unique values for filters from actual RFP data
   $: uniqueStatuses = [...new Set($rfpsStore.map(rfp => rfp.status).filter(Boolean))].sort();
@@ -399,10 +412,10 @@
               <div class="flex-1 min-w-0">
                 <h3 class="text-lg font-semibold text-emittiv-white truncate">
                   {getProjectName(rfp.project_id)}
-                  {#if rfp.package}
-                    <span class="text-base font-normal text-emittiv-lighter ml-2">{rfp.package}</span>
-                  {/if}
                 </h3>
+                {#if rfp.package}
+                  <p class="text-sm text-emittiv-lighter mt-1 truncate">{rfp.package}</p>
+                {/if}
               </div>
               <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
                 <span class="px-2 py-1 rounded-full text-xs font-medium {getStatusColor(rfp.status)}">
