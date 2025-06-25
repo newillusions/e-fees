@@ -1,19 +1,20 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import CompanyModal from '$lib/components/CompanyModal.svelte';
   import CompanyDetail from '$lib/components/CompanyDetail.svelte';
+  import CompanyCard from '$lib/components/CompanyCard.svelte';
+  import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { companiesStore, companiesActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
   import type { Company } from '../types';
   
   // Filter states
-  let searchQuery = '';
-  let filters = {
+  let searchQuery = $state('');
+  let filters = $state({
     country: '',
     city: ''
-  };
+  });
   
   // Filter configuration for companies
   const filterConfig: FilterConfig<Company> = {
@@ -26,17 +27,17 @@
   };
 
   // Reactive filtered companies using optimized filter function
-  $: filteredCompanies = createFilterFunction($companiesStore, searchQuery, filters, filterConfig);
+  const filteredCompanies = $derived(createFilterFunction($companiesStore, searchQuery, filters, filterConfig));
   
   // Get unique values for filters using optimized functions
-  $: uniqueCountries = getUniqueFieldValues($companiesStore, (company) => company.country).filter(Boolean);
-  $: uniqueCities = getUniqueFieldValues($companiesStore, (company) => company.city).filter(Boolean);
+  const uniqueCountries = $derived(getUniqueFieldValues($companiesStore, (company) => company.country).filter(Boolean));
+  const uniqueCities = $derived(getUniqueFieldValues($companiesStore, (company) => company.city).filter(Boolean));
   
   // Modal states
-  let isCompanyModalOpen = false;
-  let isCompanyDetailOpen = false;
-  let selectedCompany: Company | null = null;
-  let modalMode: 'create' | 'edit' = 'create';
+  let isCompanyModalOpen = $state(false);
+  let isCompanyDetailOpen = $state(false);
+  let selectedCompany: Company | null = $state(null);
+  let modalMode: 'create' | 'edit' = $state('create');
   
   function handleAddCompany() {
     selectedCompany = null;
@@ -85,7 +86,7 @@
   });
   
   // Check if any filters are active
-  $: hasFiltersActive = hasActiveFilters(filters, searchQuery);
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
 </script>
 
 <div class="p-8">
@@ -113,7 +114,7 @@
     </div>
     <button
       class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
-      on:click={handleAddCompany}
+      onclick={handleAddCompany}
       aria-label="Add new company"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,27 +159,13 @@
   }
 </style>
   
-  <!-- Results count and Clear button -->
-  <div class="flex justify-between items-center mb-2">
-    <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
-      {#if hasFiltersActive}
-        Showing {filteredCompanies.length} of {$companiesStore.length} companies
-      {:else if $companiesStore.length > 0}
-        {$companiesStore.length} compan{$companiesStore.length === 1 ? 'y' : 'ies'}
-      {/if}
-    </div>
-    {#if hasFiltersActive}
-      <button 
-        on:click={clearFilters}
-        class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
-      >
-        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Clear
-      </button>
-    {/if}
-  </div>
+  <ResultsCounter 
+    totalItems={$companiesStore.length}
+    filteredItems={filteredCompanies.length}
+    hasFilters={hasFiltersActive}
+    entityName="companies"
+    on:clear-filters={clearFilters}
+  />
   
   {#if $companiesStore.length === 0}
     <EmptyState 
@@ -196,52 +183,20 @@
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No companies found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
       <button 
-        on:click={clearFilters}
+        onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
         Clear all filters
       </button>
     </div>
   {:else}
-    <div class="grid gap-6">
+    <div class="grid gap-2">
       {#each filteredCompanies as company}
-        <Card>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-emittiv-white truncate">{company.name}</h3>
-              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
-                <span class="px-2 py-1 rounded-full text-xs font-medium text-blue-400 bg-blue-400/10">
-                  {company.abbreviation}
-                </span>
-                <button on:click={() => handleEditCompany(company)} class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="Edit company">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-                <button on:click={() => handleViewCompany(company)} class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="View company details">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <p class="text-emittiv-lighter mb-2 truncate">
-              {company.city}, {company.country}
-            </p>
-            <div class="flex items-center justify-between text-sm text-emittiv-light">
-              <div class="flex items-center space-x-4">
-                <span>Short Name: {company.name_short}</span>
-                {#if company.reg_no}
-                  <span>Reg: {company.reg_no}</span>
-                {/if}
-                {#if company.tax_no}
-                  <span>VAT: {company.tax_no}</span>
-                {/if}
-              </div>
-              <span>Created: {new Date(company.time.created_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </Card>
+        <CompanyCard 
+          {company}
+          on:edit={(e) => handleEditCompany(e.detail)}
+          on:view={(e) => handleViewCompany(e.detail)}
+        />
       {/each}
     </div>
   {/if}

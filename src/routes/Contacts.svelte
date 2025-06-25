@@ -225,7 +225,7 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-3">
+    <div class="grid gap-2">
       {#each filteredContacts as contact}
         <ContactCard 
           {contact}

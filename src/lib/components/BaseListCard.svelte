@@ -8,19 +8,13 @@
   export let href: string = '';
   export let customClass = '';
   
-  // Mouse event handlers
+  // Mouse event handlers - now using CSS classes for consistent hover effects
   function handleMouseEnter(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    if (target) {
-      target.style.backgroundColor = '#222';
-    }
+    // Using CSS classes for hover effects - no manual style changes needed
   }
   
   function handleMouseLeave(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    if (target) {
-      target.style.backgroundColor = '';
-    }
+    // Using CSS classes for hover effects - no manual style changes needed
   }
   
   function handleClick() {
@@ -40,8 +34,7 @@
 {#if href}
   <a 
     {href}
-    class="group block bg-emittiv-black rounded-xl border border-emittiv-dark hover:border-emittiv-splash/30 transition-all px-3 py-2 {customClass}"
-    style="transition: all 0.3s ease;"
+    class="group block list-card px-3 py-2 {customClass}"
     on:mouseenter={handleMouseEnter}
     on:mouseleave={handleMouseLeave}
   >
@@ -89,8 +82,7 @@
   </a>
 {:else}
   <div 
-    class="group bg-emittiv-black rounded-xl border border-emittiv-dark hover:border-emittiv-splash/30 transition-all px-3 py-2 {clickable ? 'cursor-pointer' : ''} {customClass}"
-    style="transition: all 0.3s ease;"
+    class="group list-card px-3 py-2 {clickable ? 'cursor-pointer' : ''} {customClass}"
     on:click={handleClick}
     on:keydown={handleKeydown}
     on:mouseenter={handleMouseEnter}

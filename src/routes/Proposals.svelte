@@ -1,68 +1,68 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import ProposalCard from '$lib/components/ProposalCard.svelte';
+  import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { rfpsStore, projectsStore, companiesStore, contactsStore, rfpsActions } from '$lib/stores';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
+  import type { FeeProposal } from '../types';
   
   // Filter states
-  let searchQuery = '';
-  let statusFilter = '';
-  let stageFilter = '';
-  let staffFilter = '';
-  
-  // Reactive filtered RFPs - updates when any filter changes
-  $: filteredRfps = $rfpsStore.filter(rfp => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        rfp.name.toLowerCase().includes(query) ||
-        rfp.number.toLowerCase().includes(query) ||
-        rfp.activity?.toLowerCase().includes(query) ||
-        rfp.package?.toLowerCase().includes(query) ||
-        rfp.staff_name?.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
-    
-    // Status filter
-    if (statusFilter && rfp.status !== statusFilter) return false;
-    
-    // Stage filter
-    if (stageFilter && rfp.stage !== stageFilter) return false;
-    
-    // Staff filter
-    if (staffFilter && rfp.staff_name !== staffFilter) return false;
-    
-    return true;
-  }).sort((a, b) => {
-    // Primary sort: updated_at descending (most recent first)
-    const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
-    const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
-    
-    if (bUpdated !== aUpdated) {
-      return bUpdated - aUpdated;
-    }
-    
-    // Secondary sort: created_at descending (if updated_at is the same)
-    const aCreated = new Date(a.time?.created_at || 0).getTime();
-    const bCreated = new Date(b.time?.created_at || 0).getTime();
-    return bCreated - aCreated;
+  let searchQuery = $state('');
+  let filters = $state({
+    status: '',
+    stage: '',
+    staff: ''
   });
   
-  // Get unique values for filters from actual RFP data
-  $: uniqueStatuses = [...new Set($rfpsStore.map(rfp => rfp.status).filter(Boolean))].sort();
-  $: uniqueStages = [...new Set($rfpsStore.map(rfp => rfp.stage).filter(Boolean))].sort();
-  $: uniqueStaff = [...new Set($rfpsStore.map(rfp => rfp.staff_name).filter(Boolean))].sort();
+  // Filter configuration for proposals
+  const filterConfig: FilterConfig<FeeProposal> = {
+    searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
+    filterFields: {
+      status: (proposal) => proposal.status,
+      stage: (proposal) => proposal.stage,
+      staff: (proposal) => proposal.staff_name
+    },
+    sortFunction: (a, b) => {
+      // Primary sort: updated_at descending (most recent first)
+      const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
+      const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
+      
+      if (bUpdated !== aUpdated) {
+        return bUpdated - aUpdated;
+      }
+      
+      // Secondary sort: created_at descending (if updated_at is the same)
+      const aCreated = new Date(a.time?.created_at || 0).getTime();
+      const bCreated = new Date(b.time?.created_at || 0).getTime();
+      return bCreated - aCreated;
+    }
+  };
+  
+  // Reactive filtered proposals using optimized filter function
+  const filteredRfps = $derived(createFilterFunction($rfpsStore, searchQuery, filters, filterConfig));
+  
+  // Get unique values for filters using optimized functions
+  const uniqueStatuses = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.status).filter(Boolean));
+  const uniqueStages = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.stage).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.staff_name).filter(Boolean));
   
   function handleNewRfp() {
     // TODO: Implement new RFP functionality
   }
+
+  function handleEditRfp(rfp: FeeProposal) {
+    // TODO: Implement edit RFP functionality
+    console.log('Edit RFP:', rfp.id);
+  }
+
+  function handleViewRfp(rfp: FeeProposal) {
+    // TODO: Implement view RFP functionality
+    console.log('View RFP:', rfp.id);
+  }
   
   function clearFilters() {
-    searchQuery = '';
-    statusFilter = '';
-    stageFilter = '';
-    staffFilter = '';
+    searchQuery = clearAllFilters(filters);
   }
   
   // Load RFPs on mount
@@ -71,7 +71,7 @@
   });
   
   // Check if any filters are active
-  $: hasActiveFilters = searchQuery || statusFilter || stageFilter || staffFilter;
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
   
   function getStatusColor(status: string) {
     switch (status) {
@@ -303,7 +303,7 @@
     </div>
     <button
       class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
-      on:click={handleNewRfp}
+      onclick={handleNewRfp}
       aria-label="Add new proposal"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,7 +316,7 @@
   <div class="flex flex-wrap items-center gap-2 mb-2">
     <!-- Status Filter -->
     <select 
-      bind:value={statusFilter} 
+      bind:value={filters.status} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Status</option>
@@ -327,7 +327,7 @@
     
     <!-- Stage Filter -->
     <select 
-      bind:value={stageFilter} 
+      bind:value={filters.stage} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Stages</option>
@@ -338,7 +338,7 @@
     
     <!-- Staff Filter -->
     <select 
-      bind:value={staffFilter} 
+      bind:value={filters.staff} 
       class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Staff</option>
@@ -359,27 +359,13 @@
   }
 </style>
   
-  <!-- Results count and Clear button -->
-  <div class="flex justify-between items-center mb-2">
-    <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
-      {#if hasActiveFilters}
-        Showing {filteredRfps.length} of {$rfpsStore.length} proposals
-      {:else if $rfpsStore.length > 0}
-        {$rfpsStore.length} proposal{$rfpsStore.length === 1 ? '' : 's'}
-      {/if}
-    </div>
-    {#if hasActiveFilters}
-      <button 
-        on:click={clearFilters}
-        class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
-      >
-        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Clear
-      </button>
-    {/if}
-  </div>
+  <ResultsCounter 
+    totalItems={$rfpsStore.length}
+    filteredItems={filteredRfps.length}
+    hasFilters={hasFiltersActive}
+    entityName="proposals"
+    on:clear-filters={clearFilters}
+  />
   
   {#if $rfpsStore.length === 0}
     <EmptyState 
@@ -397,59 +383,23 @@
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No proposals found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
       <button 
-        on:click={clearFilters}
+        onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
         Clear all filters
       </button>
     </div>
   {:else}
-    <div class="grid gap-6">
+    <div class="grid gap-2">
       {#each filteredRfps as rfp}
-        <Card>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex-1 min-w-0">
-                <h3 class="text-lg font-semibold text-emittiv-white truncate">
-                  {getProjectName(rfp.project_id)}
-                </h3>
-                {#if rfp.package}
-                  <p class="text-sm text-emittiv-lighter mt-1 truncate">{rfp.package}</p>
-                {/if}
-              </div>
-              <div class="flex items-center space-x-1 ml-4 flex-shrink-0">
-                <span class="px-2 py-1 rounded-full text-xs font-medium {getStatusColor(rfp.status)}">
-                  {rfp.status}
-                </span>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="Edit proposal">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-                <button class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth" aria-label="View proposal details">
-                  <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <p class="text-emittiv-lighter mb-2 truncate">
-              {getCompanyName(rfp.company_id) || 'N/A'}
-              {#if getContactName(rfp.contact_id)}
-                <span class="ml-2">{getContactName(rfp.contact_id)}</span>
-              {/if}
-            </p>
-            <div class="flex items-center justify-between text-sm text-emittiv-light">
-              <div class="flex items-center space-x-4">
-                <span>Number: {rfp.number}</span>
-                <span>Rev: {rfp.rev}</span>
-                <span>Stage: {rfp.stage}</span>
-                <span>Staff: {rfp.staff_name || 'N/A'}</span>
-              </div>
-              <span>Created: {new Date(rfp.time.created_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </Card>
+        <ProposalCard 
+          proposal={rfp}
+          projectName={getProjectName(rfp.project_id)}
+          companyName={getCompanyName(rfp.company_id)}
+          contactName={getContactName(rfp.contact_id)}
+          on:edit={(e) => handleEditRfp(e.detail)}
+          on:view={(e) => handleViewRfp(e.detail)}
+        />
       {/each}
     </div>
   {/if}

@@ -239,7 +239,7 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-3">
+    <div class="grid gap-2">
       {#each filteredProjects as project}
         <ProjectCard 
           {project}

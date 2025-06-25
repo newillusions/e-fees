@@ -107,8 +107,9 @@ export interface Revision {
   notes: string;
 }
 
-// Legacy alias for backwards compatibility during transition
+// Legacy aliases for backwards compatibility during transition
 export interface Proposal extends Rfp {}
+export interface FeeProposal extends Rfp {}
 
 // ============================================================================
 // API RESPONSE TYPES
