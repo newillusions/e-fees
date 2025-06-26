@@ -98,10 +98,6 @@
       name={contact.full_name}
       subtitle="{contact.position || 'Contact'}{relatedCompany ? ` • ${relatedCompany.name}` : ''}"
       location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
-      avatar={initials}
-      avatarBg="from-purple-400/20 to-purple-400/10"
-      avatarBorder="border-purple-400/30"
-      avatarText="text-purple-400"
       stats={[
         { label: 'Proposals', value: contactRfps.length },
         { label: 'Awarded', value: contactRfps.filter(rfp => rfp.status === 'Awarded').length },
@@ -207,7 +203,7 @@
     <section>
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">Fee Proposals</h2>
-        <span class="text-xs text-emittiv-light bg-emittiv-darker px-2 py-1 rounded-lg">
+        <span class="text-xs text-emittiv-light px-2 py-1 rounded-lg" style="background-color: #111;">
           {contactRfps.length} total
         </span>
       </div>
@@ -225,21 +221,28 @@
             <ListCard clickable={false}>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
-                  <h3 class="text-sm font-medium text-emittiv-white truncate">
-                    {rfp.number}
-                  </h3>
-                  <p class="text-sm text-emittiv-lighter mt-1">
-                    {rfp.name}{#if rfp.package} - {rfp.package}{/if}
-                  </p>
-                  <div class="flex items-center gap-4 mt-1 text-xs text-emittiv-light">
-                    <span>Rev: {rfp.rev}</span>
-                    <span>Stage: {rfp.stage}</span>
+                  <div>
+                    <h3 class="text-xs font-medium text-emittiv-light">RFP Number:</h3>
+                    <p class="text-sm text-emittiv-white">{rfp.number}</p>
+                  </div>
+                  <div class="mt-2">
+                    <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
+                    <p class="text-sm text-emittiv-lighter">{rfp.name}{#if rfp.package} - {rfp.package}{/if}</p>
+                  </div>
+                  <div class="mt-2 space-y-1">
                     {#if rfp.staff_name}
-                      <span>Staff: {rfp.staff_name}</span>
+                      <div>
+                        <h3 class="text-xs font-medium text-emittiv-light">Staff:</h3>
+                        <p class="text-sm text-emittiv-white">{rfp.staff_name}</p>
+                      </div>
                     {/if}
-                    <span>
-                      {new Date(rfp.issue_date.length === 6 ? `20${rfp.issue_date.substring(0,2)}-${rfp.issue_date.substring(2,4)}-${rfp.issue_date.substring(4,6)}` : rfp.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
+                    <div class="flex items-center gap-4 text-xs text-emittiv-light">
+                      <span>Rev: {rfp.rev}</span>
+                      <span>Stage: {rfp.stage}</span>
+                      <span>
+                        {new Date(rfp.issue_date.length === 6 ? `20${rfp.issue_date.substring(0,2)}-${rfp.issue_date.substring(2,4)}-${rfp.issue_date.substring(4,6)}` : rfp.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">

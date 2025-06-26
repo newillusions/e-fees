@@ -6,6 +6,7 @@ import type {
   Rfp, 
   ConnectionStatus 
 } from '../types';
+import { mockProjects, mockCompanies, mockContacts, mockRfps } from './stores/data';
 import { 
   getProjects,
   getCompanies,
@@ -43,25 +44,25 @@ export const connectionStore = writable<ConnectionState>(initialConnectionState)
 // ============================================================================
 
 // Projects store
-export const projectsStore = writable<Project[]>([]);
+export const projectsStore = writable<Project[]>(mockProjects);
 export const projectsLoading = writable<boolean>(false);
 export const projectsError = writable<string | null>(null);
 
 
 // Companies store
-export const companiesStore = writable<Company[]>([]);
+export const companiesStore = writable<Company[]>(mockCompanies);
 export const companiesLoading = writable<boolean>(false);
 export const companiesError = writable<string | null>(null);
 
 
 // Contacts store
-export const contactsStore = writable<Contact[]>([]);
+export const contactsStore = writable<Contact[]>(mockContacts);
 export const contactsLoading = writable<boolean>(false);
 export const contactsError = writable<string | null>(null);
 
 
 // RFPs store
-export const rfpsStore = writable<Rfp[]>([]);
+export const rfpsStore = writable<Rfp[]>(mockRfps);
 export const rfpsLoading = writable<boolean>(false);
 export const rfpsError = writable<string | null>(null);
 
