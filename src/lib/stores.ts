@@ -176,6 +176,34 @@ export const projectsActions = {
     }
   },
 
+  async update(id: string, projectData: Partial<Project>) {
+    try {
+      console.log('Project store update called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('Project update API not implemented yet, cannot update project');
+      throw new Error('Update not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to update project';
+      projectsError.set(errorMessage);
+      console.error('Failed to update project:', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      console.log('Project store delete called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('Project delete API not implemented yet, cannot delete project');
+      throw new Error('Delete not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to delete project';
+      projectsError.set(errorMessage);
+      console.error('Failed to delete project:', error);
+      throw error;
+    }
+  },
+
   async refresh() {
     await this.load();
   }
@@ -334,6 +362,34 @@ export const contactsActions = {
     }
   },
 
+  async update(id: string, contactData: Partial<Contact>) {
+    try {
+      console.log('Contact store update called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('Contact update API not implemented yet, cannot update contact');
+      throw new Error('Update not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to update contact';
+      contactsError.set(errorMessage);
+      console.error('Failed to update contact:', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      console.log('Contact store delete called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('Contact delete API not implemented yet, cannot delete contact');
+      throw new Error('Delete not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to delete contact';
+      contactsError.set(errorMessage);
+      console.error('Failed to delete contact:', error);
+      throw error;
+    }
+  },
+
   async refresh() {
     await this.load();
   }
@@ -371,6 +427,34 @@ export const rfpsActions = {
       const errorMessage = error?.toString() || 'Failed to create rfp';
       rfpsError.set(errorMessage);
       console.error('Failed to create rfp:', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, rfpData: Partial<Rfp>) {
+    try {
+      console.log('RFP store update called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('RFP update API not implemented yet, cannot update proposal');
+      throw new Error('Update not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to update rfp';
+      rfpsError.set(errorMessage);
+      console.error('Failed to update rfp:', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      console.log('RFP store delete called with ID:', id);
+      // Note: API doesn't exist yet, but frontend code needs to be ready
+      console.warn('RFP delete API not implemented yet, cannot delete proposal');
+      throw new Error('Delete not available - API not implemented');
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to delete rfp';
+      rfpsError.set(errorMessage);
+      console.error('Failed to delete rfp:', error);
       throw error;
     }
   },

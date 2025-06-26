@@ -1,7 +1,7 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
-  import NewProjectModal from '$lib/components/NewProjectModal.svelte';
+  import ProjectModal from '$lib/components/ProjectModal.svelte';
   import ListCard from '$lib/components/ListCard.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import ActionButton from '$lib/components/ActionButton.svelte';
@@ -16,7 +16,8 @@
   import { onMount } from 'svelte';
   
   // Modal states
-  let showNewProjectModal = $state(false);
+  let showProjectModal = $state(false);
+  let projectModalMode: 'create' | 'edit' = $state('create');
   let isProjectDetailOpen = $state(false);
   let selectedProject: Project | null = $state(null);
   
@@ -51,17 +52,20 @@
 
   
   function handleNewProject() {
-    showNewProjectModal = true;
+    selectedProject = null;
+    projectModalMode = 'create';
+    showProjectModal = true;
   }
   
-  function handleProjectCreated(project: any) {
+  function handleProjectCreated() {
     // Reload projects to ensure the new one appears
     projectsActions.load();
   }
   
   function handleEditProject(project: any) {
-    // TODO: Implement project editing
-    console.log('Edit project:', project.id);
+    selectedProject = project;
+    projectModalMode = 'edit';
+    showProjectModal = true;
   }
   
   function handleViewProject(project: any) {
@@ -75,8 +79,11 @@
   }
   
   function handleEditFromDetail(event: CustomEvent) {
-    // TODO: Implement project editing from detail view
-    console.log('Edit project from detail:', event.detail.id);
+    // Close detail panel and open edit modal
+    isProjectDetailOpen = false;
+    selectedProject = event.detail;
+    projectModalMode = 'edit';
+    showProjectModal = true;
   }
   
   function clearFilters() {
@@ -252,11 +259,12 @@
   {/if}
 </div>
 
-<!-- New Project Modal -->
-<NewProjectModal 
-  bind:isOpen={showNewProjectModal}
-  onClose={() => showNewProjectModal = false}
-  onSuccess={handleProjectCreated}
+<!-- Project Modal -->
+<ProjectModal 
+  bind:isOpen={showProjectModal}
+  project={selectedProject}
+  mode={projectModalMode}
+  on:close={() => showProjectModal = false}
 />
 
 <!-- Project Detail Panel -->

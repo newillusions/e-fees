@@ -1,11 +1,19 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import ProposalCard from '$lib/components/ProposalCard.svelte';
+  import ProposalModal from '$lib/components/ProposalModal.svelte';
+  import ProposalDetail from '$lib/components/ProposalDetail.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { rfpsStore, projectsStore, companiesStore, contactsStore, rfpsActions } from '$lib/stores';
+  import { rfpsStore, projectsStore, companiesStore, contactsStore, rfpsActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
   import type { FeeProposal } from '../types';
+  
+  // Modal states
+  let showProposalModal = $state(false);
+  let proposalModalMode: 'create' | 'edit' = $state('create');
+  let isProposalDetailOpen = $state(false);
+  let selectedProposal: FeeProposal | null = $state(null);
   
   // Filter states
   let searchQuery = $state('');
@@ -40,34 +48,53 @@
   };
   
   // Reactive filtered proposals using optimized filter function
-  const filteredRfps = $derived(createFilterFunction($rfpsStore, searchQuery, filters, filterConfig));
+  const filteredProposals = $derived(createFilterFunction($rfpsStore, searchQuery, filters, filterConfig));
   
   // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.status).filter(Boolean));
-  const uniqueStages = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.stage).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues($rfpsStore, (rfp) => rfp.staff_name).filter(Boolean));
+  const uniqueStatuses = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.status).filter(Boolean));
+  const uniqueStages = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.stage).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.staff_name).filter(Boolean));
   
-  function handleNewRfp() {
-    // TODO: Implement new RFP functionality
+  function handleNewProposal() {
+    selectedProposal = null;
+    proposalModalMode = 'create';
+    showProposalModal = true;
   }
 
-  function handleEditRfp(rfp: FeeProposal) {
-    // TODO: Implement edit RFP functionality
-    console.log('Edit RFP:', rfp.id);
+  function handleEditProposal(proposal: FeeProposal) {
+    selectedProposal = proposal;
+    proposalModalMode = 'edit';
+    showProposalModal = true;
   }
 
-  function handleViewRfp(rfp: FeeProposal) {
-    // TODO: Implement view RFP functionality
-    console.log('View RFP:', rfp.id);
+  function handleViewProposal(proposal: FeeProposal) {
+    selectedProposal = proposal;
+    isProposalDetailOpen = true;
+  }
+  
+  function handleCloseDetail() {
+    isProposalDetailOpen = false;
+    selectedProposal = null;
+  }
+  
+  function handleEditFromDetail(event: CustomEvent) {
+    // Close detail panel and open edit modal
+    isProposalDetailOpen = false;
+    selectedProposal = event.detail;
+    proposalModalMode = 'edit';
+    showProposalModal = true;
   }
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
   }
   
-  // Load RFPs on mount
+  // Load proposals on mount
   onMount(() => {
     rfpsActions.load();
+    projectsActions.load();
+    companiesActions.load();
+    contactsActions.load();
   });
   
   // Check if any filters are active
@@ -303,7 +330,7 @@
     </div>
     <button
       class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
-      onclick={handleNewRfp}
+      onclick={handleNewProposal}
       aria-label="Add new proposal"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,7 +388,7 @@
   
   <ResultsCounter 
     totalItems={$rfpsStore.length}
-    filteredItems={filteredRfps.length}
+    filteredItems={filteredProposals.length}
     hasFilters={hasFiltersActive}
     entityName="proposals"
     on:clear-filters={clearFilters}
@@ -370,12 +397,12 @@
   {#if $rfpsStore.length === 0}
     <EmptyState 
       icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      title="No RFPs Yet"
-      description="Create your first RFP to start managing professional fee requests and proposals."
-      actionText="Create RFP"
-      onAction={handleNewRfp}
+      title="No Proposals Yet"
+      description="Create your first fee proposal to start managing professional fee requests and proposals."
+      actionText="Create Proposal"
+      onAction={handleNewProposal}
     />
-  {:else if filteredRfps.length === 0}
+  {:else if filteredProposals.length === 0}
     <div class="text-center py-12">
       <svg class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -391,16 +418,32 @@
     </div>
   {:else}
     <div class="grid gap-2">
-      {#each filteredRfps as rfp}
+      {#each filteredProposals as proposal}
         <ProposalCard 
-          proposal={rfp}
-          projectName={getProjectName(rfp.project_id)}
-          companyName={getCompanyName(rfp.company_id)}
-          contactName={getContactName(rfp.contact_id)}
-          on:edit={(e) => handleEditRfp(e.detail)}
-          on:view={(e) => handleViewRfp(e.detail)}
+          {proposal}
+          projectName={getProjectName(proposal.project_id)}
+          companyName={getCompanyName(proposal.company_id)}
+          contactName={getContactName(proposal.contact_id)}
+          on:edit={(e) => handleEditProposal(e.detail)}
+          on:view={(e) => handleViewProposal(e.detail)}
         />
       {/each}
     </div>
   {/if}
 </div>
+
+<!-- Proposal Modal -->
+<ProposalModal 
+  bind:isOpen={showProposalModal}
+  proposal={selectedProposal}
+  mode={proposalModalMode}
+  on:close={() => showProposalModal = false}
+/>
+
+<!-- Proposal Detail Panel -->
+<ProposalDetail 
+  bind:isOpen={isProposalDetailOpen}
+  proposal={selectedProposal}
+  on:close={handleCloseDetail}
+  on:edit={handleEditFromDetail}
+/>
