@@ -19,6 +19,7 @@ use commands::{
     update_company,
     delete_company,
     create_contact,
+    update_contact,
     create_rfp,
     health_check,
     get_stats,
@@ -35,6 +36,7 @@ use commands::{
     validate_project_number,
     create_project_with_template,
     get_area_suggestions,
+    get_all_cities,
     get_city_suggestions,
 };
 
@@ -89,19 +91,19 @@ pub fn run() {
             // Set up the application state
             app.manage(app_state.clone());
             
-            // Position window on right half of screen after a slight delay
-            let window_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                if let Some(window) = window_handle.get_webview_window("main") {
-                    // Use logical position for proper scaling support
-                    // At 150% scaling: 2560x1440 logical pixels
-                    let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x: 1280.0, y: 50.0 }));
-                    // Also ensure the size is correct using logical size
-                    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1280.0, height: 1200.0 }));
-                    info!("Window positioned on right half of screen with scaling support");
-                }
-            });
+            // Position window on right half of screen after a slight delay - DISABLED for new environment
+            // let window_handle = app.handle().clone();
+            // tauri::async_runtime::spawn(async move {
+            //     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            //     if let Some(window) = window_handle.get_webview_window("main") {
+            //         // Use logical position for proper scaling support
+            //         // At 150% scaling: 2560x1440 logical pixels
+            //         let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x: 1280.0, y: 50.0 }));
+            //         // Also ensure the size is correct using logical size
+            //         let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1280.0, height: 1200.0 }));
+            //         info!("Window positioned on right half of screen with scaling support");
+            //     }
+            // });
             
             // Initialize database connection in async context using Tauri's runtime
             let init_state = app_state.clone();
@@ -159,6 +161,7 @@ pub fn run() {
             update_company,
             delete_company,
             create_contact,
+            update_contact,
             create_rfp,
             health_check,
             get_stats,
@@ -175,6 +178,7 @@ pub fn run() {
             validate_project_number,
             create_project_with_template,
             get_area_suggestions,
+            get_all_cities,
             get_city_suggestions
         ])
         .run(tauri::generate_context!())

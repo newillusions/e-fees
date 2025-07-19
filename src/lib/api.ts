@@ -386,11 +386,17 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createCompany(company: Omit<Company, 'id'>): Promise<Company | null> {
+  static async createCompany(company: Omit<Company, 'id' | 'time'>): Promise<Company | null> {
     try {
+      // Only send the fields needed for creation (exclude auto-managed id and time)
       const newCompany = {
-        ...company,
-        id: null
+        name: company.name,
+        name_short: company.name_short,
+        abbreviation: company.abbreviation,
+        city: company.city,
+        country: company.country,
+        reg_no: company.reg_no || null,
+        tax_no: company.tax_no || null
       };
       
       const created = await invoke<Company>('create_company', { company: newCompany });
@@ -609,6 +615,46 @@ export class ApiClient {
       return created;
     } catch (error) {
       console.error('Failed to create contact:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Updates an existing contact with partial data.
+   * 
+   * @param id Contact ID (string, extracted from SurrealDB Thing object)
+   * @param contactUpdate Partial contact data - only fields to update
+   * @returns Promise<Contact | null> Updated contact or null on failure
+   */
+  static async updateContact(id: string, contactUpdate: Partial<Contact>): Promise<Contact | null> {
+    try {
+      console.log('Invoking update_contact command with ID:', id, 'and data:', contactUpdate);
+      
+      const updated = await invoke<Contact>('update_contact', { 
+        id, 
+        contactUpdate: contactUpdate 
+      });
+      return updated;
+    } catch (error) {
+      console.error('Failed to update contact:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Deletes a contact from the database.
+   * 
+   * @param id Contact ID (string, extracted from SurrealDB Thing object) 
+   * @returns Promise<Contact | null> Deleted contact or null on failure
+   */
+  static async deleteContact(id: string): Promise<Contact | null> {
+    try {
+      console.log('Invoking delete_contact command with ID:', id);
+      
+      const deleted = await invoke<Contact>('delete_contact', { id });
+      return deleted;
+    } catch (error) {
+      console.error('Failed to delete contact:', error);
       return null;
     }
   }
@@ -1329,6 +1375,35 @@ export class ApiClient {
       throw error;
     }
   }
+
+  /**
+   * Gets all unique cities from projects and companies tables.
+   * 
+   * @returns Promise<string[]> - Array of all city names
+   * 
+   * @example
+   * ```typescript
+   * const allCities = await ApiClient.getAllCities();
+   * console.log('All cities:', allCities);
+   * // ['Abu Dhabi', 'Dubai', 'Riyadh', 'Sharjah', ...]
+   * ```
+   * 
+   * Data Source:
+   * - Combines cities from both projects and companies tables
+   * - Returns alphabetically sorted list
+   * - Limited to 50 most common cities
+   * 
+   * @throws Error - Throws on database connection errors
+   */
+  static async getAllCities(): Promise<string[]> {
+    try {
+      const cities = await invoke('get_all_cities');
+      return cities as string[];
+    } catch (error) {
+      console.error('Failed to get all cities:', error);
+      throw error;
+    }
+  }
 }
 
 // ============================================================================
@@ -1378,6 +1453,8 @@ export const {
   // Contact operations
   getContacts,
   createContact,
+  updateContact,
+  deleteContact,
   
   // RFP operations
   getRfps,
@@ -1403,7 +1480,8 @@ export const {
   // Debugging and utilities
   investigateRecord,
   getAreaSuggestions,
-  getCitySuggestions
+  getCitySuggestions,
+  getAllCities
 } = ApiClient;
 
 /**

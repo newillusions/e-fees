@@ -15,8 +15,6 @@
         "title": "Fee Proposal Management",
         "width": 1280,
         "height": 1200,
-        "x": 1280,
-        "y": 50,
         "minWidth": 1000,
         "minHeight": 1000,
         "resizable": true,

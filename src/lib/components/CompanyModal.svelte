@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { companiesActions } from '$lib/stores';
+  import { searchCountries, getCitySuggestions, getAllCities } from '$lib/api';
   import type { Company } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
@@ -26,6 +27,17 @@
   let saveMessage = '';
   let formErrors: Record<string, string> = {};
   let showDeleteConfirm = false;
+
+  // Typeahead state for country and city
+  let countrySearchQuery = '';
+  let countryOptions: any[] = [];
+  let showCountryDropdown = false;
+  let selectedCountry: any = null;
+  let countrySelectedIndex = -1;
+  
+  let citySuggestions: string[] = [];
+  let showCityDropdown = false;
+  let citySelectedIndex = -1;
   
   // Update form when company prop changes
   $: if (company && mode === 'edit') {
@@ -38,6 +50,12 @@
       reg_no: company.reg_no || '',
       tax_no: company.tax_no || ''
     };
+    
+    // Initialize typeahead for edit mode
+    countrySearchQuery = company.country || '';
+    if (company.country) {
+      loadCitySuggestions();
+    }
   } else if (mode === 'create') {
     // Reset form for create mode
     formData = {
@@ -49,11 +67,19 @@
       reg_no: '',
       tax_no: ''
     };
+    
+    // Load all cities for create mode
+    if (isOpen) {
+      loadCitySuggestions();
+    }
   }
   
-  // Reset state when modal closes
+  // Reset state when modal closes, load cities when modal opens
   $: if (!isOpen) {
     resetForm();
+  } else if (isOpen && mode === 'create' && citySuggestions.length === 0) {
+    // Load all cities when modal opens in create mode
+    loadCitySuggestions();
   }
   
   function resetForm() {
@@ -71,6 +97,16 @@
     isSaving = false;
     isDeleting = false;
     showDeleteConfirm = false;
+    
+    // Reset typeahead state
+    countrySearchQuery = '';
+    countryOptions = [];
+    showCountryDropdown = false;
+    selectedCountry = null;
+    countrySelectedIndex = -1;
+    citySuggestions = [];
+    showCityDropdown = false;
+    citySelectedIndex = -1;
   }
   
   function validateForm(): boolean {
@@ -129,8 +165,11 @@
             updated_at: new Date().toISOString()
           }
         };
-        await companiesActions.create(companyData);
+        const newCompany = await companiesActions.create(companyData);
         saveMessage = 'Company created successfully!';
+        
+        // Dispatch company created event for parent components
+        dispatch('companyCreated', newCompany);
       } else {
         const companyId = getCompanyId(company);
         if (companyId) {
@@ -248,6 +287,135 @@
     
     return null;
   }
+
+  // Typeahead functions for country and city
+  async function searchCountriesDebounced() {
+    if (countrySearchQuery.length < 2) {
+      countryOptions = [];
+      showCountryDropdown = false;
+      return;
+    }
+    
+    try {
+      const results = await searchCountries(countrySearchQuery);
+      countryOptions = results;
+      showCountryDropdown = results.length > 0;
+    } catch (error) {
+      console.error('Failed to search countries:', error);
+      countryOptions = [];
+      showCountryDropdown = false;
+    }
+  }
+
+  function handleCountryInput() {
+    formData.country = '';
+    selectedCountry = null;
+    countrySelectedIndex = -1;
+    searchCountriesDebounced();
+  }
+
+  function selectCountry(country: any) {
+    selectedCountry = country;
+    countrySearchQuery = country.name;
+    formData.country = country.name;
+    showCountryDropdown = false;
+    countrySelectedIndex = -1;
+    
+    // Load city suggestions for the selected country
+    loadCitySuggestions();
+  }
+
+  async function loadCitySuggestions() {
+    try {
+      if (formData.country) {
+        // Load cities for specific country
+        const cities = await getCitySuggestions(formData.country);
+        citySuggestions = cities;
+      } else {
+        // Load all cities when no country selected
+        const cities = await getAllCities();
+        citySuggestions = cities;
+      }
+    } catch (error) {
+      console.error('Failed to load city suggestions:', error);
+      citySuggestions = [];
+    }
+  }
+
+  function handleCityInput() {
+    citySelectedIndex = -1;
+    
+    if (citySuggestions.length > 0 && formData.city.length > 0) {
+      const filteredSuggestions = citySuggestions.filter(city => 
+        city.toLowerCase().includes(formData.city.toLowerCase())
+      );
+      showCityDropdown = filteredSuggestions.length > 0;
+    } else {
+      showCityDropdown = false;
+    }
+  }
+
+  function selectCity(city: string) {
+    formData.city = city;
+    showCityDropdown = false;
+    citySelectedIndex = -1;
+  }
+
+  function handleCountryKeydown(e: KeyboardEvent) {
+    if (!showCountryDropdown || countryOptions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        countrySelectedIndex = Math.min(countrySelectedIndex + 1, countryOptions.length - 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        countrySelectedIndex = Math.max(countrySelectedIndex - 1, 0);
+        break;
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        if (countrySelectedIndex >= 0) {
+          selectCountry(countryOptions[countrySelectedIndex]);
+        }
+        break;
+      case 'Escape':
+        showCountryDropdown = false;
+        countrySelectedIndex = -1;
+        break;
+    }
+  }
+
+  function handleCityKeydown(e: KeyboardEvent) {
+    if (!showCityDropdown || citySuggestions.length === 0) return;
+    
+    const filteredSuggestions = citySuggestions.filter(city => 
+      city.toLowerCase().includes(formData.city.toLowerCase())
+    );
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        citySelectedIndex = Math.min(citySelectedIndex + 1, filteredSuggestions.length - 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        citySelectedIndex = Math.max(citySelectedIndex - 1, 0);
+        break;
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        if (citySelectedIndex >= 0) {
+          selectCity(filteredSuggestions[citySelectedIndex]);
+        }
+        break;
+      case 'Escape':
+        showCityDropdown = false;
+        citySelectedIndex = -1;
+        break;
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -362,7 +530,7 @@
           <div style="display: flex; flex-direction: column; gap: 12px;">
             <!-- City and Country Row -->
             <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
+              <div class="relative">
                 <label for="company_city" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                   City *
                 </label>
@@ -370,29 +538,76 @@
                   id="company_city"
                   type="text"
                   bind:value={formData.city}
-                  placeholder="Dubai"
+                  on:input={handleCityInput}
+                  on:keydown={handleCityKeydown}
+                  placeholder="Type to filter cities..."
                   required
                   class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.city ? 'border-red-500' : ''}"
                   style="padding: 8px 12px; font-size: 12px; height: 32px;"
                 />
+                
+                <!-- City dropdown -->
+                {#if showCityDropdown && citySuggestions.length > 0}
+                  {@const filteredCities = citySuggestions.filter(city => city.toLowerCase().includes(formData.city.toLowerCase()))}
+                  {#if filteredCities.length > 0}
+                    <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b shadow-lg z-50 overflow-y-auto" style="max-height: 120px;">
+                      {#each filteredCities as city, index}
+                        <div 
+                          class="text-emittiv-white hover:bg-emittiv-dark cursor-pointer {index === citySelectedIndex ? 'bg-emittiv-splash text-emittiv-black' : ''}"
+                          style="padding: 8px 12px; font-size: 12px;"
+                          role="option"
+                          aria-selected={index === citySelectedIndex}
+                          on:click={() => selectCity(city)}
+                          on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCity(city); } }}
+                          tabindex="0"
+                        >
+                          {city}
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                {/if}
+                
                 {#if formErrors.city}
                   <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.city}</p>
                 {/if}
               </div>
               
-              <div>
+              <div class="relative">
                 <label for="company_country" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                   Country *
                 </label>
                 <input
                   id="company_country"
                   type="text"
-                  bind:value={formData.country}
-                  placeholder="U.A.E."
+                  bind:value={countrySearchQuery}
+                  on:input={handleCountryInput}
+                  on:keydown={handleCountryKeydown}
+                  placeholder="Search countries..."
                   required
                   class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.country ? 'border-red-500' : ''}"
                   style="padding: 8px 12px; font-size: 12px; height: 32px;"
                 />
+                
+                <!-- Country dropdown -->
+                {#if showCountryDropdown && countryOptions.length > 0}
+                  <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b shadow-lg z-50 overflow-y-auto" style="max-height: 120px;">
+                    {#each countryOptions as country, index}
+                      <div 
+                        class="text-emittiv-white hover:bg-emittiv-dark cursor-pointer {index === countrySelectedIndex ? 'bg-emittiv-splash text-emittiv-black' : ''}"
+                        style="padding: 8px 12px; font-size: 12px;"
+                        role="option"
+                        aria-selected={index === countrySelectedIndex}
+                        on:click={() => selectCountry(country)}
+                        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCountry(country); } }}
+                        tabindex="0"
+                      >
+                        {country.name}
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+                
                 {#if formErrors.country}
                   <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.country}</p>
                 {/if}

@@ -250,6 +250,25 @@ pub struct Project {
     pub time: TimeStamps,
 }
 
+/// CompanyCreate represents a new company being created (without auto-managed fields)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompanyCreate {
+    /// Full legal company name
+    pub name: String,
+    /// Display name for UI and reports
+    pub name_short: String,
+    /// Short code for quick reference (e.g., "CHE", "DMCC")
+    pub abbreviation: String,
+    /// City where company headquarters is located
+    pub city: String,
+    /// Country where company is incorporated
+    pub country: String,
+    /// Company registration number (optional)
+    pub reg_no: Option<String>,
+    /// Tax identification number (optional)
+    pub tax_no: Option<String>,
+}
+
 // Project creation struct without auto-managed fields
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewProject {
@@ -353,14 +372,33 @@ pub struct Company {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contact {
     pub id: Option<Thing>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub last_name: Option<String>,
+    #[serde(default)]
+    pub full_name: Option<String>, // Auto-computed
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub phone: Option<String>,
+    #[serde(default)]
+    pub position: Option<String>,
+    #[serde(default)]
+    pub company: Option<Thing>, // Reference to company record
+    #[serde(default)]
+    pub time: Option<TimeStamps>,
+}
+
+// Contact creation struct without auto-managed fields
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContactCreate {
     pub first_name: String,
     pub last_name: String,
-    pub full_name: String, // Auto-computed
     pub email: String,
     pub phone: String,
     pub position: String,
-    pub company: Thing, // Reference to company record
-    pub time: TimeStamps,
+    pub company: String, // Company ID as string (e.g., "CHE")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -516,10 +554,29 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn create_company(&self, company: Company) -> Result<Option<Company>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.create("company").content(company).await,
-            DatabaseClient::WebSocket(client) => client.create("company").content(company).await,
+    pub async fn create_company(&self, company: CompanyCreate) -> Result<Option<Company>, Error> {
+        // Use the abbreviation as the company ID and escape single quotes
+        let query = format!(
+            "CREATE company:{} SET name = '{}', name_short = '{}', abbreviation = '{}', city = '{}', country = '{}', reg_no = {}, tax_no = {}, time = {{ created_at: time::now(), updated_at: time::now() }}",
+            company.abbreviation,
+            company.name.replace("'", "''"),
+            company.name_short.replace("'", "''"),
+            company.abbreviation.replace("'", "''"),
+            company.city.replace("'", "''"),
+            company.country.replace("'", "''"),
+            company.reg_no.map_or("NONE".to_string(), |v| format!("'{}'", v.replace("'", "''"))),
+            company.tax_no.map_or("NONE".to_string(), |v| format!("'{}'", v.replace("'", "''")))
+        );
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Company>, _> = response.take(0);
+        match result {
+            Ok(mut companies) => Ok(companies.pop()),
+            Err(e) => Err(e),
         }
     }
     
@@ -544,10 +601,47 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn create_contact(&self, contact: Contact) -> Result<Option<Contact>, Error> {
+    pub async fn create_contact(&self, contact: ContactCreate) -> Result<Option<Contact>, Error> {
+        info!("Creating contact with company ID: {}", contact.company);
+        
+        // Create the contact with ALL required fields explicitly, let database auto-generate ID
+        let full_name = format!("{} {}", contact.first_name, contact.last_name);
+        let query = format!(
+            "CREATE contacts SET first_name = '{}', last_name = '{}', full_name = '{}', email = '{}', phone = '{}', position = '{}', company = company:{}, time = {{ created_at: time::now(), updated_at: time::now() }}",
+            contact.first_name.replace("'", "''"),
+            contact.last_name.replace("'", "''"),
+            full_name.replace("'", "''"),
+            contact.email.replace("'", "''"),
+            contact.phone.replace("'", "''"),
+            contact.position.replace("'", "''"),
+            contact.company
+        );
+        
+        info!("Executing contact creation query: {}", query);
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Contact>, _> = response.take(0);
+        match result {
+            Ok(mut contacts) => Ok(contacts.pop()),
+            Err(e) => Err(e),
+        }
+    }
+    
+    pub async fn update_contact_partial(&self, id: &str, contact_update: crate::commands::ContactUpdate) -> Result<Option<Contact>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.create("contacts").content(contact).await,
-            DatabaseClient::WebSocket(client) => client.create("contacts").content(contact).await,
+            DatabaseClient::Http(client) => client.update(("contacts", id)).merge(contact_update).await,
+            DatabaseClient::WebSocket(client) => client.update(("contacts", id)).merge(contact_update).await,
+        }
+    }
+    
+    pub async fn delete_contact(&self, id: &str) -> Result<Option<Contact>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.delete(("contacts", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("contacts", id)).await,
         }
     }
     
@@ -902,10 +996,31 @@ impl DatabaseManager {
         if let Some(client) = &self.client {
             info!("Attempting to query contacts table");
             
-            let contacts: Vec<Contact> = client.select("contacts").await.unwrap_or_default();
-            info!("Successfully fetched {} contacts", contacts.len());
+            let all_contacts: Vec<Contact> = client.select("contacts").await.unwrap_or_default();
+            info!("Raw fetched {} contacts", all_contacts.len());
             
-            Ok(contacts)
+            // Filter out incomplete contacts (those missing required fields)
+            let valid_contacts: Vec<Contact> = all_contacts.into_iter()
+                .filter(|contact| {
+                    // Check that all required fields are present and non-empty
+                    let has_first_name = contact.first_name.as_ref().map_or(false, |s| !s.is_empty());
+                    let has_last_name = contact.last_name.as_ref().map_or(false, |s| !s.is_empty());
+                    let has_email = contact.email.as_ref().map_or(false, |s| !s.is_empty());
+                    let has_phone = contact.phone.as_ref().map_or(false, |s| !s.is_empty());
+                    let has_position = contact.position.as_ref().map_or(false, |s| !s.is_empty());
+                    let has_company = contact.company.is_some();
+                    
+                    if !has_first_name || !has_last_name || !has_email {
+                        info!("Filtering out incomplete contact with ID: {:?}", contact.id);
+                    }
+                    
+                    has_first_name && has_last_name && has_email && has_phone && has_position && has_company
+                })
+                .collect();
+            
+            info!("Successfully fetched {} valid contacts (filtered from raw)", valid_contacts.len());
+            
+            Ok(valid_contacts)
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -948,7 +1063,7 @@ impl DatabaseManager {
     }
 
     // Create a new company
-    pub async fn create_company(&self, company: Company) -> Result<Company, Error> {
+    pub async fn create_company(&self, company: CompanyCreate) -> Result<Company, Error> {
         if let Some(client) = &self.client {
             let created: Option<Company> = client.create_company(company).await?;
             
@@ -992,11 +1107,33 @@ impl DatabaseManager {
     }
 
     // Create a new contact
-    pub async fn create_contact(&self, contact: Contact) -> Result<Contact, Error> {
+    pub async fn create_contact(&self, contact: ContactCreate) -> Result<Contact, Error> {
         if let Some(client) = &self.client {
             let created: Option<Contact> = client.create_contact(contact).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create contact".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Update an existing contact with partial data
+    pub async fn update_contact_partial(&self, id: &str, contact_update: crate::commands::ContactUpdate) -> Result<Contact, Error> {
+        if let Some(client) = &self.client {
+            let updated: Option<Contact> = client.update_contact_partial(id, contact_update).await?;
+            
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update contact".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Delete a contact
+    pub async fn delete_contact(&self, id: &str) -> Result<Contact, Error> {
+        if let Some(client) = &self.client {
+            let deleted: Option<Contact> = client.delete_contact(id).await?;
+            
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete contact".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -1422,6 +1559,76 @@ impl DatabaseManager {
                     Err(e)
                 }
             }
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    pub async fn get_all_cities(&self) -> Result<Vec<String>, Error> {
+        info!("Getting all city suggestions from projects and companies");
+        
+        if let Some(client) = &self.client {
+            // SurrealDB doesn't support UNION, so we'll get cities from both tables separately
+            // and combine them in Rust
+            
+            // Get cities from projects
+            let projects_query = "SELECT city FROM projects WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
+            info!("Executing projects cities query");
+            
+            let mut projects_response = match client {
+                DatabaseClient::Http(client) => client.query(projects_query).await?,
+                DatabaseClient::WebSocket(client) => client.query(projects_query).await?,
+            };
+            
+            let projects_result: Result<Vec<serde_json::Value>, _> = projects_response.take(0);
+            let mut all_cities = Vec::new();
+            
+            match projects_result {
+                Ok(cities) => {
+                    let project_cities: Vec<String> = cities
+                        .into_iter()
+                        .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                        .collect();
+                    all_cities.extend(project_cities);
+                }
+                Err(e) => {
+                    error!("Failed to get cities from projects: {}", e);
+                }
+            }
+            
+            // Get cities from companies
+            let companies_query = "SELECT city FROM company WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
+            info!("Executing companies cities query");
+            
+            let mut companies_response = match client {
+                DatabaseClient::Http(client) => client.query(companies_query).await?,
+                DatabaseClient::WebSocket(client) => client.query(companies_query).await?,
+            };
+            
+            let companies_result: Result<Vec<serde_json::Value>, _> = companies_response.take(0);
+            
+            match companies_result {
+                Ok(cities) => {
+                    let company_cities: Vec<String> = cities
+                        .into_iter()
+                        .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                        .collect();
+                    all_cities.extend(company_cities);
+                }
+                Err(e) => {
+                    error!("Failed to get cities from companies: {}", e);
+                }
+            }
+            
+            // Remove duplicates and sort
+            all_cities.sort();
+            all_cities.dedup();
+            
+            // Limit to 50 cities
+            all_cities.truncate(50);
+            
+            info!("Found {} total unique city suggestions", all_cities.len());
+            Ok(all_cities)
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

@@ -18,6 +18,8 @@ import {
   updateCompany,
   deleteCompany,
   createContact,
+  updateContact,
+  deleteContact,
   createRfp
 } from './api';
 
@@ -333,14 +335,11 @@ export const contactsActions = {
     contactsError.set(null);
     
     try {
-      console.log('Loading contacts from database...');
       const contacts = await getContacts();
-      console.log('Contacts loaded successfully:', contacts.length, 'items');
       contactsStore.set(contacts);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load contacts';
       contactsError.set(errorMessage);
-      console.warn('Failed to load contacts from database, using mock data:', error);
     } finally {
       contactsLoading.set(false);
     }
@@ -348,45 +347,85 @@ export const contactsActions = {
 
   async create(contact: Omit<Contact, 'id'>) {
     try {
+      contactsLoading.set(true);
+      contactsError.set('');
+      
       const newContact = await createContact(contact);
+      
       if (newContact) {
         contactsStore.update(contacts => [...contacts, newContact]);
         return newContact;
       }
-      throw new Error('Failed to create contact');
+      throw new Error('Failed to create contact - API returned null');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to create contact';
       contactsError.set(errorMessage);
-      console.error('Failed to create contact:', error);
       throw error;
+    } finally {
+      contactsLoading.set(false);
     }
   },
 
   async update(id: string, contactData: Partial<Contact>) {
     try {
-      console.log('Contact store update called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('Contact update API not implemented yet, cannot update contact');
-      throw new Error('Update not available - API not implemented');
+      contactsLoading.set(true);
+      contactsError.set('');
+      
+      const updatedContact = await updateContact(id, contactData);
+      if (updatedContact) {
+        contactsStore.update(contacts => 
+          contacts.map(contact => 
+            contact.id === updatedContact.id ? updatedContact : contact
+          )
+        );
+      } else {
+        throw new Error('Update returned null - no contact updated');
+      }
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to update contact';
       contactsError.set(errorMessage);
-      console.error('Failed to update contact:', error);
       throw error;
+    } finally {
+      contactsLoading.set(false);
     }
   },
 
   async delete(id: string) {
     try {
-      console.log('Contact store delete called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('Contact delete API not implemented yet, cannot delete contact');
-      throw new Error('Delete not available - API not implemented');
+      contactsLoading.set(true);
+      contactsError.set('');
+      
+      const deletedContact = await deleteContact(id);
+      if (deletedContact) {
+        contactsStore.update(contacts => 
+          contacts.filter(contact => {
+            // Extract contact ID for comparison
+            let contactId = '';
+            if (typeof contact.id === 'string') {
+              contactId = contact.id;
+            } else if (contact.id && typeof contact.id === 'object') {
+              const thingObj = contact.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  contactId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  contactId = thingObj.id.String;
+                }
+              }
+            }
+            
+            return contactId !== id; // Keep contacts that don't match the deleted ID
+          })
+        );
+        return deletedContact;
+      }
+      throw new Error('Failed to delete contact');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to delete contact';
       contactsError.set(errorMessage);
-      console.error('Failed to delete contact:', error);
       throw error;
+    } finally {
+      contactsLoading.set(false);
     }
   },
 

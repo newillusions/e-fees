@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "surrealdb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "surrealdb-mcp-server"
+      ],
+      "env": {
+        "SURREALDB_URL": "ws://10.0.1.17:8000",
+        "SURREALDB_NS": "emittiv",
+        "SURREALDB_DB": "projects",
+        "SURREALDB_USER": "martin",
+        "SURREALDB_PASS": "th38ret3ch"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

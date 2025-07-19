@@ -30,7 +30,7 @@
 //! All commands include detailed logging using the `log` crate for debugging
 //! and monitoring in production environments.
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, Contact, Rfp};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp};
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::path::Path;
@@ -75,6 +75,21 @@ pub struct CompanyUpdate {
     pub country: Option<String>,
     pub reg_no: Option<String>,
     pub tax_no: Option<String>,
+}
+
+/// Partial contact update structure for modifying existing contacts.
+/// 
+/// Similar to CompanyUpdate, this struct allows updating specific fields
+/// of a contact without affecting other fields. All fields are optional
+/// to support partial updates via the database merge operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContactUpdate {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub position: Option<String>,
+    pub company: Option<String>, // Company ID as string
 }
 
 /// Application settings structure for environment configuration.
@@ -416,7 +431,7 @@ pub async fn get_companies(state: State<'_, AppState>) -> Result<Vec<Company>, S
 /// const created = await invoke('create_company', { company: newCompany });
 /// ```
 #[tauri::command]
-pub async fn create_company(company: Company, state: State<'_, AppState>) -> Result<Company, String> {
+pub async fn create_company(company: CompanyCreate, state: State<'_, AppState>) -> Result<Company, String> {
     info!("Creating new company: {}", company.name);
     
     let manager_clone = {
@@ -618,7 +633,7 @@ pub async fn get_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, St
 /// const created = await invoke('create_contact', { contact: newContact });
 /// ```
 #[tauri::command]
-pub async fn create_contact(contact: Contact, state: State<'_, AppState>) -> Result<Contact, String> {
+pub async fn create_contact(contact: ContactCreate, state: State<'_, AppState>) -> Result<Contact, String> {
     info!("Creating new contact: {} {}", contact.first_name, contact.last_name);
     
     let manager_clone = {
@@ -634,6 +649,92 @@ pub async fn create_contact(contact: Contact, state: State<'_, AppState>) -> Res
         Err(e) => {
             error!("Failed to create contact: {}", e);
             Err(format!("Failed to create contact: {}", e))
+        }
+    }
+}
+
+/// Update an existing contact in the database.
+/// 
+/// This command accepts partial contact data and updates only the specified fields
+/// using SurrealDB's MERGE operation. This allows for efficient partial updates
+/// without affecting unspecified fields.
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const updated = await invoke('update_contact', { id: contactId, contactUpdate: updatedData });
+/// ```
+/// 
+/// # Arguments
+/// * `id` - The contact ID (extracted from SurrealDB Thing object)
+/// * `contact_update` - Partial contact data with only fields to update
+/// 
+/// # Returns
+/// * `Result<Contact, String>` - Updated contact or error message
+#[tauri::command]
+pub async fn update_contact(id: String, contact_update: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
+    info!("Updating contact with id: {} with partial data: {:?}", id, contact_update);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    }; // Lock is automatically dropped here when manager goes out of scope
+    
+    match manager_clone.update_contact_partial(&id, contact_update).await {
+        Ok(updated_contact) => {
+            info!("Successfully updated contact with id: {}", id);
+            Ok(updated_contact)
+        }
+        Err(e) => {
+            error!("Failed to update contact: {}", e);
+            Err(format!("Failed to update contact: {}", e))
+        }
+    }
+}
+
+/// Delete a contact from the database.
+/// 
+/// This command permanently removes a contact record. Note that this
+/// operation will fail if the contact has associated RFPs or other
+/// dependencies due to foreign key constraints.
+/// 
+/// # Parameters
+/// - `id`: Contact ID to delete (extracted from SurrealDB Thing object)
+/// 
+/// # Returns
+/// - `Ok(Contact)`: The deleted contact data (for undo operations)
+/// - `Err(String)`: Contact not found or has dependencies
+/// 
+/// # Safety Considerations
+/// - This is a permanent operation that cannot be undone
+/// - Foreign key constraints prevent deletion of contacts with dependencies
+/// - Consider soft deletion (status flag) for production use
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// try {
+///   const deleted = await invoke('delete_contact', { id: 'contacts:john_smith' });
+///   console.log(`Deleted contact: ${deleted.full_name}`);
+/// } catch (error) {
+///   console.error('Cannot delete contact with active RFPs');
+/// }
+/// ```
+#[tauri::command]
+pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Contact, String> {
+    info!("Deleting contact with id: {}", id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    }; // Lock is automatically dropped here when manager goes out of scope
+    
+    match manager_clone.delete_contact(&id).await {
+        Ok(deleted_contact) => {
+            info!("Successfully deleted contact with id: {}", id);
+            Ok(deleted_contact)
+        }
+        Err(e) => {
+            error!("Failed to delete contact: {}", e);
+            Err(format!("Failed to delete contact: {}", e))
         }
     }
 }
@@ -1832,6 +1933,27 @@ pub async fn get_area_suggestions(country: String, state: State<'_, AppState>) -
 /// });
 /// // Returns: ["Dubai", "Abu Dhabi", "Sharjah", ...]
 /// ```
+#[tauri::command]
+pub async fn get_all_cities(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    info!("Getting all city suggestions");
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.get_all_cities().await {
+        Ok(cities) => {
+            info!("Successfully retrieved {} cities", cities.len());
+            Ok(cities)
+        }
+        Err(e) => {
+            error!("Failed to get all cities: {}", e);
+            Err(format!("Failed to get all cities: {}", e))
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
     info!("Getting city suggestions for country: {}", country);

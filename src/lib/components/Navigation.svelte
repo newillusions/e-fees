@@ -2,7 +2,7 @@
   import type { NavItem } from '../../types';
   import { onMount } from 'svelte';
   import { location, push } from 'svelte-spa-router';
-  import { positionWindow4K } from '../api';
+  // import { positionWindow4K } from '../api'; // DISABLED for new environment
   
   const navItems: NavItem[] = [
     {
@@ -53,15 +53,15 @@
         return;
       }
       
-      // Handle window positioning shortcut (Cmd/Ctrl + W)
-      if (key === 'w' || key === 'W') {
-        event.preventDefault();
-        positionWindow4K().then(result => {
-          console.log('Window positioning result:', result);
-        }).catch(error => {
-          console.error('Failed to position window:', error);
-        });
-      }
+      // Window positioning shortcut (Cmd/Ctrl + W) - DISABLED for new environment
+      // if (key === 'w' || key === 'W') {
+      //   event.preventDefault();
+      //   positionWindow4K().then(result => {
+      //     console.log('Window positioning result:', result);
+      //   }).catch(error => {
+      //     console.error('Failed to position window:', error);
+      //   });
+      // }
     }
   }
   
