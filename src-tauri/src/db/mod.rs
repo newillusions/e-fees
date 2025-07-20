@@ -402,6 +402,27 @@ pub struct ContactCreate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RfpCreate {
+    pub name: String,
+    pub number: String,
+    pub rev: i32,
+    pub status: String,
+    pub stage: String,
+    pub issue_date: String,
+    pub activity: String,
+    pub package: String,
+    pub project_id: String, // Project ID as string (e.g., "25_97107")
+    pub company_id: String, // Company ID as string (e.g., "EMITTIV")
+    pub contact_id: String, // Contact ID as string
+    pub staff_name: String,
+    pub staff_email: String,
+    pub staff_phone: String,
+    pub staff_position: String,
+    pub strap_line: String,
+    pub revisions: Vec<Revision>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rfp {
     pub id: Option<Thing>,
     pub name: String,
@@ -522,23 +543,23 @@ impl DatabaseClient {
     
     pub async fn create_new_project(&self, project: NewProject) -> Result<Option<Project>, Error> {
         // Use a custom query to let database auto-manage the time field
-        // Create ID in format yy_cccnn (e.g., 25_97106)
+        // Convert project number to database-safe format (replace - with _)
         let project_id = project.number.id.replace("-", "_");
-        let query = format!(
-            "CREATE projects:{} SET name = '{}', name_short = '{}', status = '{}', area = '{}', city = '{}', country = '{}', folder = '{}', number = {{ year: {}, country: {}, seq: {}, id: '{}' }}",
-            project_id,
-            project.name.replace("'", "''"),
-            project.name_short.replace("'", "''"), 
-            project.status.replace("'", "''"),
-            project.area.replace("'", "''"),
-            project.city.replace("'", "''"),
-            project.country.replace("'", "''"),
-            project.folder.replace("'", "''"),
-            project.number.year,
-            project.number.country,
-            project.number.seq,
-            project.number.id.replace("'", "''")
-        );
+        
+        // Build SET clause with project fields
+        let set_clauses = vec![
+            format!("name = '{}'", project.name.replace("'", "''")),
+            format!("name_short = '{}'", project.name_short.replace("'", "''")),
+            format!("status = '{}'", project.status.replace("'", "''")),
+            format!("area = '{}'", project.area.replace("'", "''")),
+            format!("city = '{}'", project.city.replace("'", "''")),
+            format!("country = '{}'", project.country.replace("'", "''")),
+            format!("folder = '{}'", project.folder.replace("'", "''")),
+            format!("number = {{ year: {}, country: {}, seq: {}, id: '{}' }}", 
+                project.number.year, project.number.country, project.number.seq, project.number.id.replace("'", "''"))
+        ];
+        
+        let query = format!("CREATE projects:{} SET {}", project_id, set_clauses.join(", "));
         
         info!("Executing project creation query: {}", query);
         
@@ -645,10 +666,71 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn create_rfp(&self, rfp: Rfp) -> Result<Option<Rfp>, Error> {
+    pub async fn create_rfp(&self, rfp: RfpCreate) -> Result<Option<Rfp>, Error> {
+        // Use raw SQL query like contacts do to avoid Thing format issues
+        // Generate RFP ID in format: project_number_rev (e.g., "25_97107_1")
+        let rfp_id = format!("{}_{}", rfp.project_id.replace("-", "_"), rfp.rev);
+        
+        let query = format!(
+            "CREATE rfp:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', stage = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
+            rfp_id,
+            rfp.name.replace("'", "''"),
+            rfp.number.replace("'", "''"),
+            rfp.rev,
+            rfp.project_id.replace("'", "''"),
+            rfp.company_id.replace("'", "''"), 
+            rfp.contact_id.replace("'", "''"),
+            rfp.status.replace("'", "''"),
+            rfp.stage.replace("'", "''"),
+            rfp.issue_date.replace("'", "''"),
+            rfp.activity.replace("'", "''"),
+            rfp.package.replace("'", "''"),
+            rfp.strap_line.replace("'", "''"),
+            rfp.staff_name.replace("'", "''"),
+            rfp.staff_email.replace("'", "''"),
+            rfp.staff_phone.replace("'", "''"),
+            rfp.staff_position.replace("'", "''")
+        );
+        
+        info!("Executing RFP creation query: {}", query);
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Rfp>, _> = response.take(0);
+        match result {
+            Ok(mut rfps) => Ok(rfps.pop()),
+            Err(e) => Err(e),
+        }
+    }
+    
+    pub async fn update_rfp(&self, id: &str, rfp: Rfp) -> Result<Option<Rfp>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.create("rfp").content(rfp).await,
-            DatabaseClient::WebSocket(client) => client.create("rfp").content(rfp).await,
+            DatabaseClient::Http(client) => client.update(("rfp", id)).content(rfp).await,
+            DatabaseClient::WebSocket(client) => client.update(("rfp", id)).content(rfp).await,
+        }
+    }
+    
+    pub async fn delete_rfp(&self, id: &str) -> Result<Option<Rfp>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.delete(("rfp", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("rfp", id)).await,
+        }
+    }
+
+    pub async fn update_project(&self, id: &str, project_data: crate::commands::ProjectUpdate) -> Result<Option<Project>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.update(("projects", id)).merge(project_data).await,
+            DatabaseClient::WebSocket(client) => client.update(("projects", id)).merge(project_data).await,
+        }
+    }
+
+    pub async fn delete_project(&self, id: &str) -> Result<Option<Project>, Error> {
+        match self {
+            DatabaseClient::Http(client) => client.delete(("projects", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("projects", id)).await,
         }
     }
 }
@@ -1140,11 +1222,55 @@ impl DatabaseManager {
     }
 
     // Create a new rfp
-    pub async fn create_rfp(&self, rfp: Rfp) -> Result<Rfp, Error> {
+    pub async fn create_rfp(&self, rfp: RfpCreate) -> Result<Rfp, Error> {
         if let Some(client) = &self.client {
             let created: Option<Rfp> = client.create_rfp(rfp).await?;
             
             created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create rfp".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Update an existing rfp
+    pub async fn update_rfp(&self, id: &str, rfp: Rfp) -> Result<Rfp, Error> {
+        if let Some(client) = &self.client {
+            let updated: Option<Rfp> = client.update_rfp(id, rfp).await?;
+            
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update rfp".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Delete an rfp
+    pub async fn delete_rfp(&self, id: &str) -> Result<Rfp, Error> {
+        if let Some(client) = &self.client {
+            let deleted: Option<Rfp> = client.delete_rfp(id).await?;
+            
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete rfp".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Update an existing project
+    pub async fn update_project(&self, id: &str, project_update: crate::commands::ProjectUpdate) -> Result<Project, Error> {
+        if let Some(client) = &self.client {
+            let updated: Option<Project> = client.update_project(id, project_update).await?;
+            
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update project".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // Delete a project
+    pub async fn delete_project(&self, id: &str) -> Result<Project, Error> {
+        if let Some(client) = &self.client {
+            let deleted: Option<Project> = client.delete_project(id).await?;
+            
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete project".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

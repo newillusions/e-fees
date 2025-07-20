@@ -111,7 +111,12 @@
       "mcp__desktop-commander__list_sessions",
       "mcp__surrealdb-emittiv__create",
       "mcp__surrealdb-emittiv__select",
-      "mcp__surrealdb-emittiv__query"
+      "mcp__surrealdb-emittiv__query",
+      "WebFetch(domain:docs.surrealdb.com)",
+      "mcp__surrealdb-claude__select",
+      "Bash(git clone:*)",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__search_files"
     ],
     "deny": []
   }

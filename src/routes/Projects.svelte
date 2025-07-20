@@ -2,6 +2,7 @@
   import Card from '$lib/components/Card.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import ProjectModal from '$lib/components/ProjectModal.svelte';
+  import NewProjectModal from '$lib/components/NewProjectModal.svelte';
   import ListCard from '$lib/components/ListCard.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import ActionButton from '$lib/components/ActionButton.svelte';
@@ -17,6 +18,7 @@
   
   // Modal states
   let showProjectModal = $state(false);
+  let showNewProjectModal = $state(false);
   let projectModalMode: 'create' | 'edit' = $state('create');
   let isProjectDetailOpen = $state(false);
   let selectedProject: Project | null = $state(null);
@@ -53,13 +55,18 @@
   
   function handleNewProject() {
     selectedProject = null;
-    projectModalMode = 'create';
-    showProjectModal = true;
+    showNewProjectModal = true;
   }
   
-  function handleProjectCreated() {
-    // Reload projects to ensure the new one appears
-    projectsActions.load();
+  function handleProjectCreated(project: Project) {
+    // Project is already added to store by NewProjectModal
+    // Just close the modal and show success
+    showNewProjectModal = false;
+    console.log('Project created successfully:', project.name);
+  }
+  
+  function handleNewProjectClosed() {
+    showNewProjectModal = false;
   }
   
   function handleEditProject(project: any) {
@@ -259,7 +266,14 @@
   {/if}
 </div>
 
-<!-- Project Modal -->
+<!-- New Project Modal -->
+<NewProjectModal 
+  bind:isOpen={showNewProjectModal}
+  onClose={handleNewProjectClosed}
+  onSuccess={handleProjectCreated}
+/>
+
+<!-- Edit Project Modal -->
 <ProjectModal 
   bind:isOpen={showProjectModal}
   project={selectedProject}

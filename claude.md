@@ -109,7 +109,8 @@ export { default as logo } from './images/logo-white.svg?url';
 ## Current Status ✅
 
 ### Completed Features
-- Company CRUD system with modals
+- **Company CRUD system** with modals ✅
+- **Contact CRUD system** with modals ✅ 
 - Advanced filtering across all pages
 - Native file explorer integration
 - Settings management
@@ -123,11 +124,13 @@ export { default as logo } from './images/logo-white.svg?url';
 - Optimistic UI updates
 - Consistent error handling
 
-### Recent Fixes
-- Contacts page company display
-- SurrealDB partial updates with merge()
-- Project schema simplification
-- Parameter name synchronization
+### Recent Fixes (July 2025)
+- **Contact creation fully working** - All required fields including manual full_name computation
+- **Company ID extraction** - Fixed SurrealDB Thing object handling in frontend
+- **Form input issues** - Removed excessive logging causing input blocking
+- **Window positioning** - Removed automatic positioning for new environment
+- **Database schema documentation** - Complete analysis in DATABASE_STRUCTURE_AND_DEBUGGING.md
+- **Test data templates** - Safe creation scripts in TEST_DATA_CREATION.md
 
 ## Git Workflow
 **IMPORTANT**: Always ask before committing
@@ -138,11 +141,27 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 ```
 
 ## Next Steps
-1. Apply CRUD pattern to Projects, Contacts, RFPs
-2. Implement detail views with slide-in panels
-3. Add bulk operations
-4. Create help documentation
-5. Build InDesign export functionality
+
+### Priority 1: Complete CRUD Operations
+1. **Projects CRUD** - Apply same pattern as Companies/Contacts
+   - Backend: `update_project`, `delete_project` commands  
+   - Frontend: Project modal with edit/delete functionality
+   - File: `src/lib/components/ProjectModal.svelte` (needs creation)
+
+2. **RFPs/Fee Proposals CRUD** - Apply same pattern
+   - Backend: `update_rfp`, `delete_rfp` commands
+   - Frontend: RFP modal with edit/delete functionality
+   - File: `src/lib/components/RfpModal.svelte` (needs creation)
+
+### Priority 2: Enhanced UI Features
+3. **Detail views with slide-in panels** - Rich data display
+4. **Bulk operations** - Multi-select and batch actions
+5. **Advanced filtering** - Date ranges, status combinations
+
+### Priority 3: Business Features  
+6. **Project folder integration** - Auto-create/open project directories
+7. **InDesign export functionality** - Generate formatted proposals
+8. **Help documentation** - In-app user guide
 
 ## Troubleshooting
 
@@ -159,5 +178,25 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 - Tauri uses less memory than Electron
 
 ---
-**Last Updated**: June 14, 2025  
-**Status**: Production-ready CRUD system with filtering
+**Last Updated**: July 19, 2025  
+**Status**: Contact & Company CRUD complete, Projects/RFPs next
+
+## Development Notes
+
+### Contact Creation Resolution (July 2025)
+**Problem**: "Error: Failed to create contact - API returned null"
+
+**Root Causes Identified**:
+1. Database requires ALL fields including `full_name` despite VALUE clause
+2. SurrealDB Thing objects need string ID extraction in frontend  
+3. Excessive logging blocked form inputs in reactive statements
+
+**Key Files Modified**:
+- `src-tauri/src/db/mod.rs:712` - Fixed Contact struct, manual full_name computation
+- `src/lib/components/ContactModal.svelte:36` - Company ID extraction helper
+- `src/lib/stores.ts:351` - Cleaned contact actions logging
+- `src-tauri/src/lib.rs` - Removed automatic window positioning
+
+**Documentation Created**:
+- `DATABASE_STRUCTURE_AND_DEBUGGING.md` - Complete schema analysis
+- `TEST_DATA_CREATION.md` - Safe test data templates

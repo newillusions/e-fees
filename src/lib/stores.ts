@@ -13,14 +13,18 @@ import {
   getContacts,
   getRfps,
   getStats,
-  createProject,
+  createProjectWithTemplate,
+  updateProject,
+  deleteProject,
   createCompany,
   updateCompany,
   deleteCompany,
   createContact,
   updateContact,
   deleteContact,
-  createRfp
+  createRfp,
+  updateRfp,
+  deleteRfp
 } from './api';
 
 // ============================================================================
@@ -162,9 +166,9 @@ export const projectsActions = {
     }
   },
 
-  async create(project: Omit<Project, 'id'>) {
+  async create(project: any) {
     try {
-      const newProject = await createProject(project);
+      const newProject = await createProjectWithTemplate(project);
       if (newProject) {
         projectsStore.update(projects => [...projects, newProject]);
         return newProject;
@@ -181,9 +185,33 @@ export const projectsActions = {
   async update(id: string, projectData: Partial<Project>) {
     try {
       console.log('Project store update called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('Project update API not implemented yet, cannot update project');
-      throw new Error('Update not available - API not implemented');
+      const updatedProject = await updateProject(id, projectData);
+      if (updatedProject) {
+        console.log('Update successful, updating store');
+        projectsStore.update(projects => 
+          projects.map(project => {
+            // Extract project ID for comparison - handle SurrealDB Thing objects
+            let projectId = '';
+            if (typeof project.id === 'string') {
+              projectId = project.id;
+            } else if (project.id && typeof project.id === 'object') {
+              const thingObj = project.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  projectId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  projectId = thingObj.id.String;
+                }
+              }
+            }
+            
+            console.log('Comparing:', projectId, 'with', id);
+            return projectId === id ? updatedProject : project;
+          })
+        );
+        return updatedProject;
+      }
+      throw new Error('Failed to update project');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to update project';
       projectsError.set(errorMessage);
@@ -195,9 +223,33 @@ export const projectsActions = {
   async delete(id: string) {
     try {
       console.log('Project store delete called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('Project delete API not implemented yet, cannot delete project');
-      throw new Error('Delete not available - API not implemented');
+      const deletedProject = await deleteProject(id);
+      if (deletedProject) {
+        console.log('Delete successful, updating store');
+        projectsStore.update(projects => 
+          projects.filter(project => {
+            // Extract project ID for comparison - handle SurrealDB Thing objects
+            let projectId = '';
+            if (typeof project.id === 'string') {
+              projectId = project.id;
+            } else if (project.id && typeof project.id === 'object') {
+              const thingObj = project.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  projectId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  projectId = thingObj.id.String;
+                }
+              }
+            }
+            
+            console.log('Delete filter comparing:', projectId, 'with', id);
+            return projectId !== id; // Keep projects that don't match the deleted ID
+          })
+        );
+        return deletedProject;
+      }
+      throw new Error('Failed to delete project');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to delete project';
       projectsError.set(errorMessage);
@@ -472,29 +524,80 @@ export const rfpsActions = {
 
   async update(id: string, rfpData: Partial<Rfp>) {
     try {
-      console.log('RFP store update called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('RFP update API not implemented yet, cannot update proposal');
-      throw new Error('Update not available - API not implemented');
+      rfpsLoading.set(true);
+      rfpsError.set('');
+      
+      const updatedRfp = await updateRfp(id, rfpData as Omit<Rfp, 'id'>);
+      if (updatedRfp) {
+        rfpsStore.update(rfps => 
+          rfps.map(rfp => {
+            // Extract RFP ID for comparison - handle SurrealDB Thing objects
+            let rfpId = '';
+            if (typeof rfp.id === 'string') {
+              rfpId = rfp.id;
+            } else if (rfp.id && typeof rfp.id === 'object') {
+              const thingObj = rfp.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  rfpId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  rfpId = thingObj.id.String;
+                }
+              }
+            }
+            
+            return rfpId === id ? updatedRfp : rfp;
+          })
+        );
+        return updatedRfp;
+      } else {
+        throw new Error('Update returned null - no rfp updated');
+      }
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to update rfp';
       rfpsError.set(errorMessage);
-      console.error('Failed to update rfp:', error);
       throw error;
+    } finally {
+      rfpsLoading.set(false);
     }
   },
 
   async delete(id: string) {
     try {
-      console.log('RFP store delete called with ID:', id);
-      // Note: API doesn't exist yet, but frontend code needs to be ready
-      console.warn('RFP delete API not implemented yet, cannot delete proposal');
-      throw new Error('Delete not available - API not implemented');
+      rfpsLoading.set(true);
+      rfpsError.set('');
+      
+      const deletedRfp = await deleteRfp(id);
+      if (deletedRfp) {
+        rfpsStore.update(rfps => 
+          rfps.filter(rfp => {
+            // Extract RFP ID for comparison - handle SurrealDB Thing objects
+            let rfpId = '';
+            if (typeof rfp.id === 'string') {
+              rfpId = rfp.id;
+            } else if (rfp.id && typeof rfp.id === 'object') {
+              const thingObj = rfp.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  rfpId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  rfpId = thingObj.id.String;
+                }
+              }
+            }
+            
+            return rfpId !== id; // Keep RFPs that don't match the deleted ID
+          })
+        );
+        return deletedRfp;
+      }
+      throw new Error('Failed to delete rfp');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to delete rfp';
       rfpsError.set(errorMessage);
-      console.error('Failed to delete rfp:', error);
       throw error;
+    } finally {
+      rfpsLoading.set(false);
     }
   },
 
@@ -513,11 +616,13 @@ export const proposalsActions = rfpsActions;
 // Load all data
 export const loadAllData = async () => {
   console.log('🔄 STARTING loadAllData...');
+  const { settingsActions } = await import('./stores/settings');
   const results = await Promise.allSettled([
     projectsActions.load(),
     companiesActions.load(),
     contactsActions.load(),
-    rfpsActions.load()
+    rfpsActions.load(),
+    settingsActions.load() // Load settings too
   ]);
   
   console.log('✅ COMPLETED loadAllData, results:', results.map(r => r.status));

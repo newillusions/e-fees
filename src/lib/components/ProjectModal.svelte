@@ -17,7 +17,7 @@
     city: '',
     country: '',
     folder: '',
-    status: 'A' as 'A' | 'C' | 'I'
+    status: 'Draft' as 'Draft' | 'RFP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled'
   };
   
   // Loading and error states
@@ -36,7 +36,7 @@
       city: project.city || '',
       country: project.country || '',
       folder: project.folder || '',
-      status: project.status || 'A'
+      status: project.status || 'Draft'
     };
   } else if (mode === 'create') {
     // Reset form for create mode
@@ -47,7 +47,7 @@
       city: '',
       country: '',
       folder: '',
-      status: 'A'
+      status: 'Draft'
     };
   }
   
@@ -64,7 +64,7 @@
       city: '',
       country: '',
       folder: '',
-      status: 'A'
+      status: 'Draft'
     };
     formErrors = {};
     saveMessage = '';
@@ -333,9 +333,12 @@
                   class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all appearance-none"
                   style="padding: 8px 12px; font-size: 12px; height: 32px; padding-right: 32px; background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%23999\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 16px 12px;"
                 >
-                  <option value="A">Active</option>
-                  <option value="C">Completed</option>
-                  <option value="I">Inactive</option>
+                  <option value="Draft">Draft</option>
+                  <option value="RFP">RFP</option>
+                  <option value="Active">Active</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
             </div>

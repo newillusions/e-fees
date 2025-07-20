@@ -30,7 +30,7 @@
 //! All commands include detailed logging using the `log` crate for debugging
 //! and monitoring in production environments.
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp, RfpCreate};
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::path::Path;
@@ -90,6 +90,22 @@ pub struct ContactUpdate {
     pub phone: Option<String>,
     pub position: Option<String>,
     pub company: Option<String>, // Company ID as string
+}
+
+/// Partial project update structure for modifying existing projects.
+/// 
+/// This struct allows updating specific fields of a project without affecting
+/// other fields. All fields are optional to support partial updates via the
+/// database merge operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectUpdate {
+    pub name: Option<String>,
+    pub name_short: Option<String>,
+    pub status: Option<String>, // ProjectStatus as string
+    pub area: Option<String>,
+    pub city: Option<String>,
+    pub country: Option<String>,
+    pub folder: Option<String>,
 }
 
 /// Application settings structure for environment configuration.
@@ -829,8 +845,11 @@ pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
 /// const created = await invoke('create_rfp', { rfp: newRfp });
 /// ```
 #[tauri::command]
-pub async fn create_rfp(rfp: Rfp, state: State<'_, AppState>) -> Result<Rfp, String> {
+pub async fn create_rfp(rfp: RfpCreate, state: State<'_, AppState>) -> Result<Rfp, String> {
     info!("Creating new rfp: {}", rfp.name);
+    info!("RFP project_id: {}", rfp.project_id);
+    info!("RFP company_id: {}", rfp.company_id);
+    info!("RFP contact_id: {}", rfp.contact_id);
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
@@ -845,6 +864,178 @@ pub async fn create_rfp(rfp: Rfp, state: State<'_, AppState>) -> Result<Rfp, Str
         Err(e) => {
             error!("Failed to create rfp: {}", e);
             Err(format!("Failed to create rfp: {}", e))
+        }
+    }
+}
+
+/// Update an existing RFP in the database.
+/// 
+/// This command updates an RFP record with new data. All fields are replaced
+/// with the provided values, so partial updates should include all current data.
+/// 
+/// # Parameters
+/// - `id`: The string ID of the RFP to update
+/// - `rfp`: Complete RFP object with updated data
+/// 
+/// # Returns
+/// - `Ok(Rfp)`: Updated RFP with current data
+/// - `Err(String)`: Validation error or RFP not found
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const updatedRfp = {
+///   ...existingRfp,
+///   status: "Sent",
+///   stage: "Under Review"
+/// };
+/// const result = await invoke('update_rfp', { 
+///   id: "rfp_id_here", 
+///   rfp: updatedRfp 
+/// });
+/// ```
+#[tauri::command]
+pub async fn update_rfp(id: String, rfp: Rfp, state: State<'_, AppState>) -> Result<Rfp, String> {
+    info!("Updating rfp with id: {}", id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.update_rfp(&id, rfp).await {
+        Ok(updated_rfp) => {
+            info!("Successfully updated rfp with id: {}", id);
+            Ok(updated_rfp)
+        }
+        Err(e) => {
+            error!("Failed to update rfp: {}", e);
+            Err(format!("Failed to update rfp: {}", e))
+        }
+    }
+}
+
+/// Delete an RFP from the database.
+/// 
+/// This command permanently removes an RFP record. This operation cannot be undone.
+/// Consider the impact on related records and reports before deletion.
+/// 
+/// # Parameters
+/// - `id`: The string ID of the RFP to delete
+/// 
+/// # Returns
+/// - `Ok(Rfp)`: The deleted RFP data for confirmation
+/// - `Err(String)`: Database error or RFP not found
+/// 
+/// # Warning
+/// This operation will permanently delete the RFP and cannot be undone.
+/// Ensure proper user confirmation before calling this command.
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const deletedRfp = await invoke('delete_rfp', { id: "rfp_id_here" });
+/// console.log('Deleted RFP:', deletedRfp.name);
+/// ```
+#[tauri::command]
+pub async fn delete_rfp(id: String, state: State<'_, AppState>) -> Result<Rfp, String> {
+    info!("Deleting rfp with id: {}", id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.delete_rfp(&id).await {
+        Ok(deleted_rfp) => {
+            info!("Successfully deleted rfp with id: {}", id);
+            Ok(deleted_rfp)
+        }
+        Err(e) => {
+            error!("Failed to delete rfp: {}", e);
+            Err(format!("Failed to delete rfp: {}", e))
+        }
+    }
+}
+
+/// Update an existing project in the database.
+/// 
+/// This command updates a project record with new data. Uses partial updates
+/// to only modify the specified fields while preserving others.
+/// 
+/// # Parameters
+/// - `id`: The string ID of the project to update
+/// - `project_update`: Partial project data with fields to update
+/// 
+/// # Returns
+/// - `Ok(Project)`: Updated project with current data
+/// - `Err(String)`: Validation error or project not found
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const projectUpdate = {
+///   name: "Updated Project Name",
+///   status: "Active"
+/// };
+/// const result = await invoke('update_project', { 
+///   id: "25_97105", 
+///   projectUpdate 
+/// });
+/// ```
+#[tauri::command]
+pub async fn update_project(id: String, project_update: ProjectUpdate, state: State<'_, AppState>) -> Result<Project, String> {
+    info!("Updating project with id: {} with partial data: {:?}", id, project_update);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.update_project(&id, project_update).await {
+        Ok(updated_project) => {
+            info!("Successfully updated project with id: {}", id);
+            Ok(updated_project)
+        }
+        Err(e) => {
+            error!("Failed to update project: {}", e);
+            Err(format!("Failed to update project: {}", e))
+        }
+    }
+}
+
+/// Delete a project from the database.
+/// 
+/// This command permanently removes a project record from the database.
+/// This operation cannot be undone.
+/// 
+/// # Parameters
+/// - `id`: The string ID of the project to delete
+/// 
+/// # Returns
+/// - `Ok(Project)`: The deleted project data for confirmation
+/// - `Err(String)`: Project not found or deletion failed
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const deletedProject = await invoke('delete_project', { 
+///   id: "25_97105" 
+/// });
+/// ```
+#[tauri::command]
+pub async fn delete_project(id: String, state: State<'_, AppState>) -> Result<Project, String> {
+    info!("Deleting project with id: {}", id);
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    match manager_clone.delete_project(&id).await {
+        Ok(deleted_project) => {
+            info!("Successfully deleted project with id: {}", id);
+            Ok(deleted_project)
+        }
+        Err(e) => {
+            error!("Failed to delete project: {}", e);
+            Err(format!("Failed to delete project: {}", e))
         }
     }
 }
@@ -1106,7 +1297,12 @@ pub async fn position_window_4k(window: tauri::Window) -> Result<String, String>
 pub async fn get_settings() -> Result<AppSettings, String> {
     info!("Reading settings from .env file");
     
-    let env_path = "../.env"; // Go up one level from src-tauri to project root
+    // Log the current working directory
+    if let Ok(cwd) = std::env::current_dir() {
+        info!("Current working directory: {:?}", cwd);
+    }
+    
+    let env_path = ".env"; // Should be in project root
     let mut settings = AppSettings {
         surrealdb_url: None,
         surrealdb_ns: None,
@@ -1120,9 +1316,13 @@ pub async fn get_settings() -> Result<AppSettings, String> {
         project_folder_path: None,
     };
     
+    info!("Looking for .env file at: {}", env_path);
+    
     if Path::new(env_path).exists() {
+        info!(".env file found, reading contents");
         match fs::read_to_string(env_path) {
             Ok(content) => {
+                info!("Successfully read .env file, parsing {} lines", content.lines().count());
                 // Parse .env file line by line
                 for line in content.lines() {
                     let line = line.trim();
@@ -1160,6 +1360,9 @@ pub async fn get_settings() -> Result<AppSettings, String> {
     } else {
         info!("No .env file found, returning empty settings");
     }
+    
+    info!("Returning settings: staff_name={:?}, staff_email={:?}, staff_phone={:?}, staff_position={:?}", 
+          settings.staff_name, settings.staff_email, settings.staff_phone, settings.staff_position);
     
     Ok(settings)
 }
@@ -1213,7 +1416,7 @@ pub async fn get_settings() -> Result<AppSettings, String> {
 pub async fn save_settings(settings: AppSettings) -> Result<String, String> {
     info!("Saving settings to .env file");
     
-    let env_path = "../.env"; // Go up one level from src-tauri to project root
+    let env_path = ".env"; // Should be in project root
     let mut lines = Vec::new();
     
     // Read existing .env file to preserve other variables
@@ -1971,6 +2174,53 @@ pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -
         Err(e) => {
             error!("Failed to get city suggestions: {}", e);
             Err(e.to_string())
+        }
+    }
+}
+
+/// TEST COMMAND - Create a test RFP to verify RfpCreate format
+#[tauri::command]
+pub async fn test_create_rfp(state: State<'_, AppState>) -> Result<String, String> {
+    use crate::db::RfpCreate;
+    
+    info!("Creating test RFP with DELETE ME markers using correct IDs");
+    
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    // Create test RFP with CORRECT IDs (queried from SurrealDB directly)
+    let test_rfp = RfpCreate {
+        name: "DELETE ME - Test RFP".to_string(),
+        number: "25-97107-FP-DELETE-ME".to_string(),
+        rev: 1,
+        project_id: "25_97107".to_string(),
+        company_id: "EMT".to_string(),                     // EMITTIV company ID: company:EMT
+        contact_id: "hqpz6h9z1v5w6uj46tl2".to_string(),   // Martin Robert contact ID: contacts:hqpz6h9z1v5w6uj46tl2
+        status: "Draft".to_string(),
+        stage: "Draft".to_string(),
+        issue_date: "250720".to_string(),
+        activity: "DELETE ME Testing".to_string(),
+        package: "DELETE ME Package".to_string(),
+        strap_line: "DELETE ME strap line".to_string(),
+        staff_name: "DELETE ME Test Staff".to_string(),
+        staff_email: "deleteme@test.com".to_string(),
+        staff_phone: "+000 0000 0000".to_string(),
+        staff_position: "DELETE ME Position".to_string(),
+        revisions: vec![],
+    };
+    
+    info!("Test RFP using correct IDs: company=EMT, contact=hqpz6h9z1v5w6uj46tl2");
+    
+    match manager_clone.create_rfp(test_rfp).await {
+        Ok(created_rfp) => {
+            info!("Successfully created test rfp with id: {:?}", created_rfp.id);
+            Ok(format!("Test RFP created successfully with ID: {:?}", created_rfp.id))
+        }
+        Err(e) => {
+            error!("Failed to create test rfp: {}", e);
+            Err(format!("Failed to create test rfp: {}", e))
         }
     }
 }

@@ -1,19 +1,19 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import ProposalCard from '$lib/components/ProposalCard.svelte';
-  import ProposalModal from '$lib/components/ProposalModal.svelte';
+  import RfpModal from '$lib/components/RfpModal.svelte';
   import ProposalDetail from '$lib/components/ProposalDetail.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { rfpsStore, projectsStore, companiesStore, contactsStore, rfpsActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
-  import type { FeeProposal } from '../types';
+  import type { Rfp } from '../types';
   
   // Modal states
   let showProposalModal = $state(false);
   let proposalModalMode: 'create' | 'edit' = $state('create');
   let isProposalDetailOpen = $state(false);
-  let selectedProposal: FeeProposal | null = $state(null);
+  let selectedProposal: Rfp | null = $state(null);
   
   // Filter states
   let searchQuery = $state('');
@@ -24,7 +24,7 @@
   });
   
   // Filter configuration for proposals
-  const filterConfig: FilterConfig<FeeProposal> = {
+  const filterConfig: FilterConfig<Rfp> = {
     searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
     filterFields: {
       status: (proposal) => proposal.status,
@@ -61,13 +61,13 @@
     showProposalModal = true;
   }
 
-  function handleEditProposal(proposal: FeeProposal) {
+  function handleEditProposal(proposal: Rfp) {
     selectedProposal = proposal;
     proposalModalMode = 'edit';
     showProposalModal = true;
   }
 
-  function handleViewProposal(proposal: FeeProposal) {
+  function handleViewProposal(proposal: Rfp) {
     selectedProposal = proposal;
     isProposalDetailOpen = true;
   }
@@ -432,10 +432,10 @@
   {/if}
 </div>
 
-<!-- Proposal Modal -->
-<ProposalModal 
+<!-- RFP Modal -->
+<RfpModal 
   bind:isOpen={showProposalModal}
-  proposal={selectedProposal}
+  rfp={selectedProposal}
   mode={proposalModalMode}
   on:close={() => showProposalModal = false}
 />

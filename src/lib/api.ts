@@ -754,19 +754,104 @@ export class ApiClient {
    */
   static async createRfp(rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
     try {
-      const newRfp = {
+      // Use RfpCreate format - remove id and time fields, ensure string IDs
+      const rfpCreate = {
+        name: rfp.name,
+        number: rfp.number,
+        rev: rfp.rev,
+        status: rfp.status,
+        stage: rfp.stage,
+        issue_date: rfp.issue_date,
+        activity: rfp.activity,
+        package: rfp.package,
+        project_id: typeof rfp.project_id === 'string' ? rfp.project_id.replace('projects:', '') : rfp.project_id?.toString() || '',
+        company_id: typeof rfp.company_id === 'string' ? rfp.company_id.replace('company:', '') : rfp.company_id?.toString() || '',
+        contact_id: typeof rfp.contact_id === 'string' ? rfp.contact_id.replace('contacts:', '') : rfp.contact_id?.toString() || '',
+        staff_name: rfp.staff_name,
+        staff_email: rfp.staff_email,
+        staff_phone: rfp.staff_phone,
+        staff_position: rfp.staff_position,
+        strap_line: rfp.strap_line,
+        revisions: rfp.revisions || []
+      };
+      
+      const created = await invoke<Rfp>('create_rfp', { rfp: rfpCreate });
+      return created;
+    } catch (error) {
+      console.error('Failed to create rfp:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Updates an existing RFP record in the database.
+   * 
+   * This method updates all fields of an RFP with the provided data.
+   * The timestamp is automatically updated to reflect the modification time.
+   * 
+   * @param id - The string ID of the RFP to update
+   * @param rfp - Complete RFP data with updated fields  
+   * @returns Promise<Rfp | null> - Updated RFP or null on failure
+   * 
+   * @example
+   * ```typescript
+   * const updatedRfp = {
+   *   ...existingRfp,
+   *   status: "Sent",
+   *   stage: "Under Review"
+   * };
+   * const result = await ApiClient.updateRfp("rfp_id", updatedRfp);
+   * if (result) {
+   *   console.log('RFP updated:', result.name);
+   * }
+   * ```
+   * 
+   * @throws Error - Re-throws database connection or validation errors
+   */
+  static async updateRfp(id: string, rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
+    try {
+      const updatedRfp = {
         ...rfp,
-        id: null,
+        id: null, // Let backend handle ID
         time: {
-          created_at: new Date().toISOString(),
+          ...rfp.time,
           updated_at: new Date().toISOString()
         }
       };
       
-      const created = await invoke<Rfp>('create_rfp', { rfp: newRfp });
-      return created;
+      const updated = await invoke<Rfp>('update_rfp', { id, rfp: updatedRfp });
+      return updated;
     } catch (error) {
-      console.error('Failed to create rfp:', error);
+      console.error('Failed to update rfp:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Deletes an RFP record from the database.
+   * 
+   * This method permanently removes an RFP record. This operation cannot be undone.
+   * Consider the impact on related records and reports before deletion.
+   * 
+   * @param id - The string ID of the RFP to delete
+   * @returns Promise<Rfp | null> - Deleted RFP data for confirmation or null on failure
+   * 
+   * @example
+   * ```typescript
+   * const deleted = await ApiClient.deleteRfp("rfp_id");
+   * if (deleted) {
+   *   console.log('Deleted RFP:', deleted.name);
+   * }
+   * ```
+   * 
+   * @throws Error - Re-throws database connection or constraint errors
+   */
+  static async deleteRfp(id: string): Promise<Rfp | null> {
+    try {
+      const deleted = await invoke<Rfp>('delete_rfp', { id });
+      return deleted;
+    } catch (error) {
+      console.error('Failed to delete rfp:', error);
       return null;
     }
   }
@@ -1220,6 +1305,30 @@ export class ApiClient {
     }
   }
 
+  static async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
+    try {
+      console.log('Updating project:', id, projectData);
+      const updated = await invoke<Project>('update_project', { id, projectUpdate: projectData });
+      console.log('Project updated successfully:', updated);
+      return updated;
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      throw error;
+    }
+  }
+
+  static async deleteProject(id: string): Promise<Project> {
+    try {
+      console.log('Deleting project:', id);
+      const deleted = await invoke<Project>('delete_project', { id });
+      console.log('Project deleted successfully:', deleted);
+      return deleted;
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      throw error;
+    }
+  }
+
   /**
    * Searches countries by name with fuzzy matching.
    * 
@@ -1443,6 +1552,8 @@ export const {
   getProjects,
   searchProjects,
   createProject,
+  updateProject,
+  deleteProject,
   
   // Company operations
   getCompanies,
@@ -1459,6 +1570,8 @@ export const {
   // RFP operations
   getRfps,
   createRfp,
+  updateRfp,
+  deleteRfp,
   
   // Statistics and monitoring
   getStats,

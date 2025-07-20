@@ -70,10 +70,7 @@ export interface Project {
   id?: string; // projects:YY_CCCNN
   name: string;
   name_short: string;
-  activity: ProjectActivity;
-  package: string;
   status: ProjectStatus;
-  stage: ProjectStage;
   area: string;
   city: string;
   country: string;

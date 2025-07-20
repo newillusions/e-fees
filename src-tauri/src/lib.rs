@@ -15,12 +15,16 @@ use commands::{
     get_contacts,
     get_rfps,
     create_project,
+    update_project,
+    delete_project,
     create_company,
     update_company,
     delete_company,
     create_contact,
     update_contact,
     create_rfp,
+    update_rfp,
+    delete_rfp,
     health_check,
     get_stats,
     get_db_info,
@@ -38,6 +42,7 @@ use commands::{
     get_area_suggestions,
     get_all_cities,
     get_city_suggestions,
+    test_create_rfp,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -157,12 +162,16 @@ pub fn run() {
             get_contacts,
             get_rfps,
             create_project,
+            update_project,
+            delete_project,
             create_company,
             update_company,
             delete_company,
             create_contact,
             update_contact,
             create_rfp,
+            update_rfp,
+            delete_rfp,
             health_check,
             get_stats,
             get_db_info,
@@ -179,7 +188,8 @@ pub fn run() {
             create_project_with_template,
             get_area_suggestions,
             get_all_cities,
-            get_city_suggestions
+            get_city_suggestions,
+            test_create_rfp
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

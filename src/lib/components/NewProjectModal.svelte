@@ -34,8 +34,9 @@
   import Button from './Button.svelte';
   import Input from './Input.svelte';
   import { generateNextProjectNumber, validateProjectNumber, createProjectWithTemplate, searchCountries, getAreaSuggestions, getCitySuggestions } from '$lib/api';
-  import type { Project, ProjectNumber } from '../../types';
-  import { projectStore } from '$lib/stores/data';
+  import type { Project } from '../../types';
+  import type { ProjectNumber } from '../../types/database';
+  import { projectsActions } from '$lib/stores';
 
   /**
    * Component Props
@@ -63,14 +64,14 @@
   
   /** Country search functionality */
   let countrySearchQuery = $state('');    // User input for country search
-  let countryOptions = $state([]);        // Search results from database
+  let countryOptions = $state<any[]>([]);        // Search results from database
   let showCountryDropdown = $state(false); // Dropdown visibility control
-  let selectedCountry = $state(null);     // Selected country object
+  let selectedCountry = $state<any>(null);     // Selected country object
   
   /** Location autocomplete suggestions */
-  let areaSuggestions = $state([]);       // Area suggestions based on country
+  let areaSuggestions = $state<string[]>([]);       // Area suggestions based on country
   let showAreaDropdown = $state(false);   // Area dropdown visibility
-  let citySuggestions = $state([]);       // City suggestions based on country
+  let citySuggestions = $state<string[]>([]);       // City suggestions based on country
   let showCityDropdown = $state(false);   // City dropdown visibility
   
   /** Keyboard navigation state for accessibility */
@@ -87,12 +88,31 @@
   let formData = $state({
     name: '',                                    // Full project name (required)
     name_short: '',                             // Short project name for folders (required)
+    status: 'Draft',                            // Project status (required, default: Draft)
     area: '',                                   // Project area/location (required)
     city: '',                                   // City where project is located (required)
     country: '',                                // Country name (required, drives numbering)
-    status: 'Draft',                            // Project status (default: Draft)
     year: new Date().getFullYear() % 100,      // 2-digit year for numbering (editable)
-    project_number: ''                          // Auto-generated project number (read-only)
+    project_number: '',                         // Auto-generated project number (read-only)
+    folder: ''                                  // Folder name (auto-populated from project_number + name_short)
+  });
+
+  // Auto-populate folder name when project number or short name changes
+  $effect(() => {
+    if (formData.project_number && formData.name_short) {
+      formData.folder = `${formData.project_number} ${formData.name_short}`;
+    } else if (formData.name_short) {
+      formData.folder = formData.name_short;
+    } else {
+      formData.folder = '';
+    }
+  });
+
+  // Auto-generate project number when country or year changes
+  $effect(() => {
+    if (formData.country && formData.year) {
+      generateProjectNumber();
+    }
   });
 
   // ============================================================================
@@ -544,24 +564,20 @@
         id: formData.project_number
       };
       
-      // Construct Project object with all form data
-      const project: Partial<Project> = {
+      // Construct Project object with required fields only
+      const project = {
         name: formData.name,
         name_short: formData.name_short,
+        status: formData.status,
         area: formData.area,
         city: formData.city,
         country: formData.country,
-        status: formData.status,
         number: projectNumber,
-        folder: `${formData.project_number} ${formData.name_short}`
-        // time field omitted - database auto-manages timestamps
+        folder: formData.folder
       };
       
-      // Create project in database and copy template folder
-      const createdProject = await createProjectWithTemplate(project);
-      
-      // Update reactive store for immediate UI updates
-      projectStore.update(projects => [...projects, createdProject]);
+      // Create project using store action instead of direct API call
+      const createdProject = await projectsActions.create(project);
       
       // Trigger success callback with created project
       onSuccess(createdProject);
@@ -592,12 +608,13 @@
     formData = {
       name: '',
       name_short: '',
+      status: 'Draft',
       area: '',
       city: '',
       country: '',
-      status: 'Draft',
       year: new Date().getFullYear() % 100,
-      project_number: ''
+      project_number: '',
+      folder: ''
     };
     
     // Reset country search state
@@ -757,13 +774,14 @@ All interactive elements include:
               
               <div>
                 <label for="project-status" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Status
+                  Status *
                 </label>
                 <select 
                   id="project-status"
                   class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
                   style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   bind:value={formData.status}
+                  required
                 >
                   <option value="Draft">Draft</option>
                   <option value="RFP">RFP</option>

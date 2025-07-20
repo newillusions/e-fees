@@ -26,9 +26,7 @@ export const settingsActions = {
     settingsError.set(null);
     
     try {
-      console.log('Loading settings from backend...');
       const settings = await invoke<AppSettings>('get_settings');
-      console.log('Settings loaded successfully:', settings);
       settingsStore.set(settings);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load settings';

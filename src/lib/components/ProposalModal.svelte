@@ -133,6 +133,7 @@
           project_id: formData.project_id ? `projects:${formData.project_id}` : null,
           company_id: formData.company_id ? `company:${formData.company_id}` : null,
           contact_id: formData.contact_id ? `contacts:${formData.contact_id}` : null,
+          revisions: [], // Initialize with empty revisions array
           time: {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()

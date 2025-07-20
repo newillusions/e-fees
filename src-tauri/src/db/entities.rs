@@ -236,6 +236,9 @@ pub struct RfpCreate {
     pub staff_email: Option<String>,
     pub staff_phone: Option<String>,
     pub staff_position: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rev: Option<i32>,
+    #[serde(default)]
     pub revisions: Vec<Revision>,
 }
 
