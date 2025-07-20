@@ -59,6 +59,29 @@
   const stageOptions = ['Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost'];
   
   // Helper function to extract ID from SurrealDB Thing object
+  // Helper function to extract ID from SurrealDB Thing object - COPIED FROM WORKING CONTACTS MODAL
+  function getRfpId(rfp: Rfp | null): string | null {
+    if (!rfp?.id) return null;
+    
+    if (typeof rfp.id === 'string') {
+      return rfp.id;
+    }
+    
+    // Handle SurrealDB Thing object format
+    if (rfp.id && typeof rfp.id === 'object') {
+      const thingObj = rfp.id as any;
+      if (thingObj.tb && thingObj.id) {
+        if (typeof thingObj.id === 'string') {
+          return thingObj.id; // Return just the ID part, not "rfp:ID"
+        } else if (thingObj.id.String) {
+          return thingObj.id.String;
+        }
+      }
+    }
+    
+    return null;
+  }
+
   function getRecordId(record: any): string {
     if (!record?.id) return '';
     
@@ -89,7 +112,8 @@
   $: allCompanyOptions = $companiesStore.map(company => ({
     id: getRecordId(company),
     name: company.name,
-    name_short: company.name_short
+    name_short: company.name_short,
+    abbreviation: company.abbreviation
   }));
   
   $: allContactOptions = $contactsStore.map(contact => ({
@@ -105,10 +129,35 @@
     project.number.toLowerCase().includes(projectSearchText.toLowerCase())
   ).slice(0, 20); // Limit to 20 results for performance
   
-  $: companyOptions = allCompanyOptions.filter(company => 
+  // Filter companies by contact's company if contact is selected
+  $: filteredCompanyOptions = formData.contact_id 
+    ? (() => {
+        const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
+        if (selectedContact && selectedContact.company) {
+          let contactCompanyId = '';
+          if (typeof selectedContact.company === 'string') {
+            contactCompanyId = selectedContact.company;
+          } else if (selectedContact.company && typeof selectedContact.company === 'object') {
+            const thingObj = selectedContact.company as any;
+            if (thingObj.tb && thingObj.id) {
+              if (typeof thingObj.id === 'string') {
+                contactCompanyId = thingObj.id;
+              } else if (thingObj.id.String) {
+                contactCompanyId = thingObj.id.String;
+              }
+            }
+          }
+          return allCompanyOptions.filter(company => company.id === contactCompanyId);
+        }
+        return allCompanyOptions;
+      })()
+    : allCompanyOptions;
+
+  $: companyOptions = filteredCompanyOptions.filter(company => 
     !companySearchText || 
     company.name.toLowerCase().includes(companySearchText.toLowerCase()) ||
-    (company.name_short && company.name_short.toLowerCase().includes(companySearchText.toLowerCase()))
+    (company.name_short && company.name_short.toLowerCase().includes(companySearchText.toLowerCase())) ||
+    (company.abbreviation && company.abbreviation.toLowerCase().includes(companySearchText.toLowerCase()))
   ).slice(0, 20);
   
   $: contactOptions = allContactOptions.filter(contact => 
@@ -348,17 +397,9 @@
         await rfpsActions.create(rfpData);
         saveMessage = 'RFP created successfully!';
       } else {
-        const rfpId = getRecordId(rfp);
+        const rfpId = getRfpId(rfp);
         if (rfpId) {
-          const rfpData = {
-            ...formData,
-            time: {
-              ...rfp?.time,
-              updated_at: new Date().toISOString()
-            }
-          };
-          
-          await rfpsActions.update(rfpId, rfpData);
+          await rfpsActions.update(rfpId, formData);
           saveMessage = 'RFP updated successfully!';
         } else {
           throw new Error('No valid RFP ID found for update');
@@ -501,6 +542,8 @@
     formData.contact_id = '';
     contactSearchText = '';
     contactDropdownOpen = false;
+    // Note: We don't clear company when clearing contact, as user might want to keep company selection
+    // The company dropdown will expand to show all companies again
   }
   
   
@@ -509,6 +552,29 @@
     const selectedContact = allContactOptions.find(c => c.id === contactId);
     contactSearchText = selectedContact ? selectedContact.full_name : '';
     contactDropdownOpen = false;
+    
+    // Auto-select the contact's company if contact has a company
+    if (selectedContact && selectedContact.company) {
+      let contactCompanyId = '';
+      if (typeof selectedContact.company === 'string') {
+        contactCompanyId = selectedContact.company;
+      } else if (selectedContact.company && typeof selectedContact.company === 'object') {
+        const thingObj = selectedContact.company as any;
+        if (thingObj.tb && thingObj.id) {
+          if (typeof thingObj.id === 'string') {
+            contactCompanyId = thingObj.id;
+          } else if (thingObj.id.String) {
+            contactCompanyId = thingObj.id.String;
+          }
+        }
+      }
+      
+      if (contactCompanyId && contactCompanyId !== formData.company_id) {
+        formData.company_id = contactCompanyId;
+        const selectedCompany = allCompanyOptions.find(c => c.id === contactCompanyId);
+        companySearchText = selectedCompany ? selectedCompany.name : '';
+      }
+    }
   }
   
   // Initialize search text when form data is populated (edit mode)

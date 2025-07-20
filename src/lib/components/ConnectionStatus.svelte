@@ -48,39 +48,6 @@
     showDebugInfo = !showDebugInfo;
   }
 
-  async function testRfpCreation() {
-    try {
-      // Use the actual RFP creation through the modal/API
-      const { rfpsActions } = await import('../stores');
-      
-      const testRfpData = {
-        name: "DELETE ME - Test RFP",
-        number: "25-97107-FP-DELETE-ME",
-        rev: 1,
-        status: "Draft",
-        stage: "Draft",
-        issue_date: "250720",
-        activity: "Design and Consultancy",
-        package: "Complete",
-        staff_name: "Martin Robert",
-        staff_email: "martin@emittiv.com",
-        staff_phone: "+971 5858 555 69",
-        staff_position: "Lighting Director",
-        strap_line: "sensory design studio",
-        revisions: [],
-        project_id: 'projects:25_97107',
-        company_id: 'company:EMT',                         // Correct EMITTIV company ID
-        contact_id: 'contacts:hqpz6h9z1v5w6uj46tl2'        // Correct Martin Robert contact ID
-      };
-      
-      await rfpsActions.create(testRfpData);
-      console.log('Test RFP created successfully via stores');
-      alert('Test RFP created successfully!');
-    } catch (error) {
-      console.error('Test RFP Error:', error);
-      alert(`Test RFP failed: ${error}`);
-    }
-  }
 </script>
 
 <div class="flex items-center px-6 py-2">
@@ -117,14 +84,6 @@
       {/if}
     </div>
     
-    <!-- Test button for debugging -->
-    <button
-      on:click={testRfpCreation}
-      class="ml-4 px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
-      title="Test RFP Creation"
-    >
-      Test RFP
-    </button>
   </div>
 </div>
 

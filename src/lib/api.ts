@@ -810,6 +810,10 @@ export class ApiClient {
    */
   static async updateRfp(id: string, rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
     try {
+      console.log('=== API updateRfp called ===');
+      console.log('ID passed to API:', id);
+      console.log('RFP data passed to API:', rfp);
+      
       const updatedRfp = {
         ...rfp,
         id: null, // Let backend handle ID
@@ -819,10 +823,12 @@ export class ApiClient {
         }
       };
       
+      console.log('Calling invoke with updatedRfp:', updatedRfp);
       const updated = await invoke<Rfp>('update_rfp', { id, rfp: updatedRfp });
+      console.log('Invoke returned:', updated);
       return updated;
     } catch (error) {
-      console.error('Failed to update rfp:', error);
+      console.error('Failed to update rfp - API ERROR:', error);
       return null;
     }
   }

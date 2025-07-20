@@ -423,6 +423,27 @@ pub struct RfpCreate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RfpUpdate {
+    pub name: String,
+    pub number: String,
+    pub rev: i32,
+    pub status: String,
+    pub stage: String,
+    pub issue_date: String,
+    pub activity: String,
+    pub package: String,
+    pub project_id: String, // Project ID as string (e.g., "25_97107")
+    pub company_id: String, // Company ID as string (e.g., "EMITTIV")
+    pub contact_id: String, // Contact ID as string
+    pub staff_name: String,
+    pub staff_email: String,
+    pub staff_phone: String,
+    pub staff_position: String,
+    pub strap_line: String,
+    pub revisions: Vec<Revision>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rfp {
     pub id: Option<Thing>,
     pub name: String,
@@ -706,10 +727,50 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn update_rfp(&self, id: &str, rfp: Rfp) -> Result<Option<Rfp>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.update(("rfp", id)).content(rfp).await,
-            DatabaseClient::WebSocket(client) => client.update(("rfp", id)).content(rfp).await,
+    pub async fn update_rfp(&self, id: &str, rfp: RfpUpdate) -> Result<Option<Rfp>, Error> {
+        info!("DatabaseClient::update_rfp called with id: '{}' and rfp: {:?}", id, rfp);
+        
+        let query = format!(
+            "UPDATE rfp:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', stage = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
+            id,
+            rfp.name.replace("'", "''"),
+            rfp.number.replace("'", "''"),
+            rfp.rev,
+            rfp.project_id.replace("'", "''"),
+            rfp.company_id.replace("'", "''"),
+            rfp.contact_id.replace("'", "''"),
+            rfp.status.replace("'", "''"),
+            rfp.stage.replace("'", "''"),
+            rfp.issue_date.replace("'", "''"),
+            rfp.activity.replace("'", "''"),
+            rfp.package.replace("'", "''"),
+            rfp.strap_line.replace("'", "''"),
+            rfp.staff_name.replace("'", "''"),
+            rfp.staff_email.replace("'", "''"),
+            rfp.staff_phone.replace("'", "''"),
+            rfp.staff_position.replace("'", "''")
+        );
+        
+        info!("Executing update query: {}", query);
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Rfp>, _> = response.take(0);
+        match result {
+            Ok(mut rfps) => {
+                info!("Update query returned {} records", rfps.len());
+                if rfps.is_empty() {
+                    warn!("Update query returned empty result set");
+                }
+                Ok(rfps.pop())
+            },
+            Err(e) => {
+                error!("Failed to parse update response: {}", e);
+                Err(e)
+            },
         }
     }
     
@@ -1233,7 +1294,7 @@ impl DatabaseManager {
     }
 
     // Update an existing rfp
-    pub async fn update_rfp(&self, id: &str, rfp: Rfp) -> Result<Rfp, Error> {
+    pub async fn update_rfp(&self, id: &str, rfp: RfpUpdate) -> Result<Rfp, Error> {
         if let Some(client) = &self.client {
             let updated: Option<Rfp> = client.update_rfp(id, rfp).await?;
             

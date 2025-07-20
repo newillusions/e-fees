@@ -42,7 +42,6 @@ use commands::{
     get_area_suggestions,
     get_all_cities,
     get_city_suggestions,
-    test_create_rfp,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -188,8 +187,7 @@ pub fn run() {
             create_project_with_template,
             get_area_suggestions,
             get_all_cities,
-            get_city_suggestions,
-            test_create_rfp
+            get_city_suggestions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

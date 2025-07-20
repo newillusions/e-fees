@@ -30,7 +30,7 @@
 //! All commands include detailed logging using the `log` crate for debugging
 //! and monitoring in production environments.
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp, RfpCreate};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp, RfpCreate, RfpUpdate};
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::path::Path;
@@ -894,8 +894,10 @@ pub async fn create_rfp(rfp: RfpCreate, state: State<'_, AppState>) -> Result<Rf
 /// });
 /// ```
 #[tauri::command]
-pub async fn update_rfp(id: String, rfp: Rfp, state: State<'_, AppState>) -> Result<Rfp, String> {
-    info!("Updating rfp with id: {}", id);
+pub async fn update_rfp(id: String, rfp: RfpUpdate, state: State<'_, AppState>) -> Result<Rfp, String> {
+    info!("=== Modal Update RFP Called ===");
+    info!("ID received from modal: '{}'", id);
+    info!("RFP data received: name='{}', number='{}', status='{}'", rfp.name, rfp.number, rfp.status);
     
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
@@ -908,7 +910,7 @@ pub async fn update_rfp(id: String, rfp: Rfp, state: State<'_, AppState>) -> Res
             Ok(updated_rfp)
         }
         Err(e) => {
-            error!("Failed to update rfp: {}", e);
+            error!("Failed to update rfp with id '{}': {}", id, e);
             Err(format!("Failed to update rfp: {}", e))
         }
     }
@@ -2178,49 +2180,3 @@ pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -
     }
 }
 
-/// TEST COMMAND - Create a test RFP to verify RfpCreate format
-#[tauri::command]
-pub async fn test_create_rfp(state: State<'_, AppState>) -> Result<String, String> {
-    use crate::db::RfpCreate;
-    
-    info!("Creating test RFP with DELETE ME markers using correct IDs");
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    // Create test RFP with CORRECT IDs (queried from SurrealDB directly)
-    let test_rfp = RfpCreate {
-        name: "DELETE ME - Test RFP".to_string(),
-        number: "25-97107-FP-DELETE-ME".to_string(),
-        rev: 1,
-        project_id: "25_97107".to_string(),
-        company_id: "EMT".to_string(),                     // EMITTIV company ID: company:EMT
-        contact_id: "hqpz6h9z1v5w6uj46tl2".to_string(),   // Martin Robert contact ID: contacts:hqpz6h9z1v5w6uj46tl2
-        status: "Draft".to_string(),
-        stage: "Draft".to_string(),
-        issue_date: "250720".to_string(),
-        activity: "DELETE ME Testing".to_string(),
-        package: "DELETE ME Package".to_string(),
-        strap_line: "DELETE ME strap line".to_string(),
-        staff_name: "DELETE ME Test Staff".to_string(),
-        staff_email: "deleteme@test.com".to_string(),
-        staff_phone: "+000 0000 0000".to_string(),
-        staff_position: "DELETE ME Position".to_string(),
-        revisions: vec![],
-    };
-    
-    info!("Test RFP using correct IDs: company=EMT, contact=hqpz6h9z1v5w6uj46tl2");
-    
-    match manager_clone.create_rfp(test_rfp).await {
-        Ok(created_rfp) => {
-            info!("Successfully created test rfp with id: {:?}", created_rfp.id);
-            Ok(format!("Test RFP created successfully with ID: {:?}", created_rfp.id))
-        }
-        Err(e) => {
-            error!("Failed to create test rfp: {}", e);
-            Err(format!("Failed to create test rfp: {}", e))
-        }
-    }
-}
