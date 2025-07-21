@@ -1,34 +1,34 @@
-/**
- * NewProjectModal.svelte
- * 
- * Complete project creation workflow with automatic project number generation.
- * This modal provides a comprehensive form for creating new RFP projects with
- * real-time validation, country search, and template folder creation.
- * 
- * Features:
- * - Automatic project number generation in YY-CCCNN format
- * - Fuzzy country search with autocomplete
- * - Area/city suggestions based on existing data
- * - Real-time validation and error handling
- * - Template folder copying with file renaming
- * - Full accessibility compliance (WCAG 2.1)
- * - Responsive design matching application standards
- * 
- * Project Number Format:
- * - YY: 2-digit year (25 = 2025)
- * - CCC: Country dial code (971 = UAE, 966 = Saudi)
- * - NN: 2-digit sequence number (01, 02, 03...)
- * - Example: "25-97105" (2025, UAE, 5th project)
- * 
- * Database Integration:
- * - Creates project record in SurrealDB
- * - Copies template folder structure
- * - Renames files with actual project number
- * - Updates reactive stores for UI consistency
- * 
- * @component
- */
 <script lang="ts">
+  /**
+   * NewProjectModal.svelte
+   * 
+   * Complete project creation workflow with automatic project number generation.
+   * This modal provides a comprehensive form for creating new FP projects with
+   * real-time validation, country search, and template folder creation.
+   * 
+   * Features:
+   * - Automatic project number generation in YY-CCCNN format
+   * - Fuzzy country search with autocomplete
+   * - Area/city suggestions based on existing data
+   * - Real-time validation and error handling
+   * - Template folder copying with file renaming
+   * - Full accessibility compliance (WCAG 2.1)
+   * - Responsive design matching application standards
+   * 
+   * Project Number Format:
+   * - YY: 2-digit year (25 = 2025)
+   * - CCC: Country dial code (971 = UAE, 966 = Saudi)
+   * - NN: 2-digit sequence number (01, 02, 03...)
+   * - Example: "25-97105" (2025, UAE, 5th project)
+   * 
+   * Database Integration:
+   * - Creates project record in SurrealDB
+   * - Copies template folder structure
+   * - Renames files with actual project number
+   * - Updates reactive stores for UI consistency
+   * 
+   * @component
+   */
   import { onMount } from 'svelte';
   import Card from './Card.svelte';
   import Button from './Button.svelte';
@@ -37,6 +37,49 @@
   import type { Project } from '../../types';
   import type { ProjectNumber } from '../../types/database';
   import { projectsActions } from '$lib/stores';
+
+  /**
+   * ============================================================================
+   * COMPONENT CAPABILITIES SUMMARY
+   * ============================================================================
+   * 
+   * This NewProjectModal component provides a complete project creation workflow
+   * with the following key capabilities:
+   * 
+   * 1. AUTOMATIC PROJECT NUMBERING
+   *    - Generates sequential numbers in YY-CCCNN format
+   *    - Uses country dial codes for geographic identification
+   *    - Ensures uniqueness through database validation
+   * 
+   * 2. ADVANCED SEARCH AND AUTOCOMPLETE
+   *    - Fuzzy country search across multiple fields
+   *    - Location suggestions based on existing project data
+   *    - Real-time filtering with keyboard navigation
+   * 
+   * 3. COMPREHENSIVE VALIDATION
+   *    - Required field validation
+   *    - Project number uniqueness checking
+   *    - User-friendly error messages
+   * 
+   * 4. ACCESSIBILITY COMPLIANCE
+   *    - WCAG 2.1 compliant keyboard navigation
+   *    - Proper ARIA labels and roles
+   *    - Screen reader support
+   *    - Focus management
+   * 
+   * 5. TEMPLATE INTEGRATION
+   *    - Automatic template folder copying
+   *    - File renaming with project numbers
+   *    - Cross-platform file operations
+   * 
+   * 6. REACTIVE STATE MANAGEMENT
+   *    - Svelte 5 runes for optimal performance
+   *    - Real-time UI updates
+   *    - Optimistic updates for better UX
+   * 
+   * The component integrates seamlessly with the application's database,
+   * file system, and UI state management for a complete end-to-end workflow.
+   */
 
   /**
    * Component Props
@@ -658,35 +701,10 @@
   }
 </script>
 
-<!-- 
-============================================================================
-TEMPLATE STRUCTURE
-============================================================================
-
-The template follows a structured layout:
-1. Modal backdrop with click-to-close functionality
-2. Modal container with proper ARIA attributes
-3. Header with title and close button
-4. Form with sections for project info and location
-5. Validation messages and action buttons
-
-All interactive elements include:
-- Proper ARIA labels and roles
-- Keyboard navigation support
-- Focus management
-- Loading states and visual feedback
--->
 
 <!-- Modal is only rendered when isOpen is true for performance -->
 {#if isOpen}
-  <!-- 
-    Modal backdrop: 
-    - Fixed positioning to cover entire viewport
-    - Semi-transparent black background with blur effect
-    - High z-index to appear above all other content
-    - Click handler to close modal when clicking outside
-    - ARIA attributes for screen reader accessibility
-  -->
+  <!-- Modal backdrop -->
   <div 
     class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
     role="dialog"
@@ -696,24 +714,13 @@ All interactive elements include:
     onclick={onClose}
     onkeydown={handleKeydown}
   >
-    <!-- 
-      Modal container:
-      - Dark theme background matching application design
-      - Responsive width with maximum constraints
-      - Scroll handling for content overflow
-      - Prevents click propagation to avoid closing when clicking inside
-    -->
+    <!-- Modal container -->
     <div 
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
       style="padding: 24px; max-width: 600px;"
       onclick={(e) => e.stopPropagation()}
     >
-      <!-- 
-        Modal Header:
-        - Clear title with ID for ARIA labeling
-        - Close button with proper accessibility attributes
-        - Consistent spacing and typography
-      -->
+      <!-- Modal Header -->
       <div class="flex items-center justify-between" style="margin-bottom: 20px;">
         <h2 id="modal-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">New Project</h2>
         <button 
@@ -727,17 +734,10 @@ All interactive elements include:
         </button>
       </div>
       
-      <!-- 
-        Main Form:
-        - Structured with semantic sections
-        - Consistent spacing and typography
-        - Proper form submission handling
-      -->
+      <!-- Main Form -->
       <form onsubmit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
         
-        <!-- =============================================== -->
         <!-- PROJECT INFORMATION SECTION -->
-        <!-- =============================================== -->
         <div>
           <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Project Information</h3>
           <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -784,7 +784,7 @@ All interactive elements include:
                   required
                 >
                   <option value="Draft">Draft</option>
-                  <option value="RFP">RFP</option>
+                  <option value="FP">FP</option>
                   <option value="Active">Active</option>
                   <option value="On Hold">On Hold</option>
                   <option value="Completed">Completed</option>
@@ -795,9 +795,7 @@ All interactive elements include:
           </div>
         </div>
         
-        <!-- =============================================== -->
         <!-- LOCATION DETAILS SECTION -->
-        <!-- =============================================== -->
         <div>
           <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Location Details</h3>
           <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -822,13 +820,6 @@ All interactive elements include:
                   {#if showCountryDropdown && countryOptions.length > 0}
                     <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b shadow-lg z-50 overflow-y-auto" style="max-height: 120px;">
                       {#each countryOptions as country, index}
-                        <!-- 
-                          Country option:
-                          - ARIA compliant with role and selection state
-                          - Keyboard accessible with Enter/Space handling
-                          - Visual highlighting for keyboard navigation
-                          - Consistent styling with application theme
-                        -->
                         <div 
                           class="text-emittiv-white hover:bg-emittiv-dark cursor-pointer border-b border-emittiv-dark/50 last:border-b-0 {index === countrySelectedIndex ? 'bg-emittiv-splash text-emittiv-black' : ''}"
                           role="option"
@@ -963,18 +954,14 @@ All interactive elements include:
           </div>
         </div>
         
-        <!-- =============================================== -->
         <!-- VALIDATION MESSAGES -->
-        <!-- =============================================== -->
         {#if validationMessage}
           <div class="p-3 bg-red-500/10 border border-red-500/30 rounded text-red-400" style="font-size: 12px;">
             {validationMessage}
           </div>
         {/if}
         
-        <!-- =============================================== -->
         <!-- ACTION BUTTONS -->
-        <!-- =============================================== -->
         <div class="flex justify-end items-center" style="gap: 8px; margin-top: 8px;">
           <!-- Cancel button with secondary styling -->
           <button
@@ -986,13 +973,7 @@ All interactive elements include:
             Cancel
           </button>
           
-          <!-- 
-            Submit button:
-            - Primary accent color (orange)
-            - Disabled when loading or no project number
-            - Dynamic text based on loading state
-            - Proper disabled styling for accessibility
-          -->
+          <!-- Submit button -->
           <button
             type="submit"
             disabled={isLoading || !formData.project_number}
@@ -1007,45 +988,3 @@ All interactive elements include:
   </div>
 {/if}
 
-<!-- 
-============================================================================
-COMPONENT SUMMARY
-============================================================================
-
-This NewProjectModal component provides a complete project creation workflow
-with the following key capabilities:
-
-1. AUTOMATIC PROJECT NUMBERING
-   - Generates sequential numbers in YY-CCCNN format
-   - Uses country dial codes for geographic identification
-   - Ensures uniqueness through database validation
-
-2. ADVANCED SEARCH AND AUTOCOMPLETE
-   - Fuzzy country search across multiple fields
-   - Location suggestions based on existing project data
-   - Real-time filtering with keyboard navigation
-
-3. COMPREHENSIVE VALIDATION
-   - Required field validation
-   - Project number uniqueness checking
-   - User-friendly error messages
-
-4. ACCESSIBILITY COMPLIANCE
-   - WCAG 2.1 compliant keyboard navigation
-   - Proper ARIA labels and roles
-   - Screen reader support
-   - Focus management
-
-5. TEMPLATE INTEGRATION
-   - Automatic template folder copying
-   - File renaming with project numbers
-   - Cross-platform file operations
-
-6. REACTIVE STATE MANAGEMENT
-   - Svelte 5 runes for optimal performance
-   - Real-time UI updates
-   - Optimistic updates for better UX
-
-The component integrates seamlessly with the application's database,
-file system, and UI state management for a complete end-to-end workflow.
--->

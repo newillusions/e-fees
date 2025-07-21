@@ -731,7 +731,7 @@ pub async fn update_contact(id: String, contact_update: ContactUpdate, state: St
 ///   const deleted = await invoke('delete_contact', { id: 'contacts:john_smith' });
 ///   console.log(`Deleted contact: ${deleted.full_name}`);
 /// } catch (error) {
-///   console.error('Cannot delete contact with active RFPs');
+///   console.error('Cannot delete contact with active FPs');
 /// }
 /// ```
 #[tauri::command]
@@ -799,7 +799,7 @@ pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
         }
         Err(e) => {
             error!("Failed to fetch rfps: {}", e);
-            Err(format!("Failed to fetch rfps: {}", e))
+            Err(format!("Failed to fetch fee proposals: {}", e))
         }
     }
 }
@@ -863,7 +863,7 @@ pub async fn create_rfp(rfp: RfpCreate, state: State<'_, AppState>) -> Result<Rf
         }
         Err(e) => {
             error!("Failed to create rfp: {}", e);
-            Err(format!("Failed to create rfp: {}", e))
+            Err(format!("Failed to create fee proposal: {}", e))
         }
     }
 }
@@ -911,7 +911,7 @@ pub async fn update_rfp(id: String, rfp: RfpUpdate, state: State<'_, AppState>) 
         }
         Err(e) => {
             error!("Failed to update rfp with id '{}': {}", id, e);
-            Err(format!("Failed to update rfp: {}", e))
+            Err(format!("Failed to update fee proposal: {}", e))
         }
     }
 }
@@ -953,7 +953,7 @@ pub async fn delete_rfp(id: String, state: State<'_, AppState>) -> Result<Rfp, S
         }
         Err(e) => {
             error!("Failed to delete rfp: {}", e);
-            Err(format!("Failed to delete rfp: {}", e))
+            Err(format!("Failed to delete fee proposal: {}", e))
         }
     }
 }

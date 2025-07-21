@@ -127,7 +127,6 @@
       location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
       stats={[
         { label: 'Revision', value: proposal.rev || 0 },
-        { label: 'Stage', value: proposal.stage ? 1 : 0 },
         { label: 'Days Active', value: Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) }
       ]}
     />
@@ -139,9 +138,8 @@
       title="Proposal Information" 
       columns={3}
       fields={[
-        { label: 'RFP Number', value: proposal.number },
+        { label: 'FP Number', value: proposal.number },
         { label: 'Status', value: proposal.status },
-        { label: 'Stage', value: proposal.stage || '—' },
         { label: 'Revision', value: proposal.rev.toString() },
         { label: 'Issue Date', value: formatIssueDate(proposal.issue_date) },
         { label: 'Staff Member', value: proposal.staff_name || '—' },

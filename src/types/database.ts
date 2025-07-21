@@ -28,8 +28,9 @@ export type ProjectStage =
 
 export type RfpStatus = 
   | 'Draft'
-  | 'Active'
+  | 'Prepared'
   | 'Sent'
+  | 'Negotiation'
   | 'Awarded'
   | 'Lost'
   | 'Cancelled';

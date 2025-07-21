@@ -19,7 +19,6 @@
   let searchQuery = $state('');
   let filters = $state({
     status: '',
-    stage: '',
     staff: ''
   });
   
@@ -28,22 +27,30 @@
     searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
     filterFields: {
       status: (proposal) => proposal.status,
-      stage: (proposal) => proposal.stage,
       staff: (proposal) => proposal.staff_name
     },
     sortFunction: (a, b) => {
-      // Primary sort: updated_at descending (most recent first)
-      const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
-      const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
+      // Primary sort: issue_date descending (most recent first)
+      // Convert YYMMDD format to comparable date
+      const parseIssueDate = (issueDate: string) => {
+        if (!issueDate || issueDate.length !== 6) return 0;
+        const year = 2000 + parseInt(issueDate.substring(0, 2));
+        const month = parseInt(issueDate.substring(2, 4)) - 1; // Month is 0-indexed
+        const day = parseInt(issueDate.substring(4, 6));
+        return new Date(year, month, day).getTime();
+      };
       
-      if (bUpdated !== aUpdated) {
-        return bUpdated - aUpdated;
+      const aIssueDate = parseIssueDate(a.issue_date);
+      const bIssueDate = parseIssueDate(b.issue_date);
+      
+      if (bIssueDate !== aIssueDate) {
+        return bIssueDate - aIssueDate;
       }
       
-      // Secondary sort: created_at descending (if updated_at is the same)
-      const aCreated = new Date(a.time?.created_at || 0).getTime();
-      const bCreated = new Date(b.time?.created_at || 0).getTime();
-      return bCreated - aCreated;
+      // Secondary sort: updated_at descending (if issue_date is the same)
+      const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
+      const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
+      return bUpdated - aUpdated;
     }
   };
   
@@ -52,7 +59,6 @@
   
   // Get unique values for filters using optimized functions
   const uniqueStatuses = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStages = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.stage).filter(Boolean));
   const uniqueStaff = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.staff_name).filter(Boolean));
   
   function handleNewProposal() {
@@ -352,17 +358,6 @@
       {/each}
     </select>
     
-    <!-- Stage Filter -->
-    <select 
-      bind:value={filters.stage} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
-    >
-      <option value="">All Stages</option>
-      {#each uniqueStages as stage}
-        <option value={stage}>{stage}</option>
-      {/each}
-    </select>
-    
     <!-- Staff Filter -->
     <select 
       bind:value={filters.staff} 
@@ -432,7 +427,7 @@
   {/if}
 </div>
 
-<!-- RFP Modal -->
+<!-- FP Modal -->
 <RfpModal 
   bind:isOpen={showProposalModal}
   rfp={selectedProposal}

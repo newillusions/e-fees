@@ -79,8 +79,7 @@ export interface Rfp {
   name: string;
   number: string;
   rev: number;
-  status: 'Draft' | 'Active' | 'Sent' | 'Awarded' | 'Lost' | 'Cancelled';
-  stage: 'Draft' | 'Prepared' | 'Sent' | 'Under Review' | 'Clarification' | 'Negotiation' | 'Awarded' | 'Lost';
+  status: 'Draft' | 'Prepared' | 'Sent' | 'Negotiation' | 'Awarded' | 'Lost' | 'Cancelled';
   issue_date: string;
   activity: string;
   package: string;

@@ -19,7 +19,6 @@
     number: '',
     rev: 1,
     status: 'Draft' as const,
-    stage: 'Draft' as const,
     issue_date: '',
     activity: 'Design and Consultancy',
     package: '',
@@ -55,8 +54,7 @@
   let contactDropdownOpen = false;
   
   // Status and stage options
-  const statusOptions = ['Draft', 'Active', 'Sent', 'Awarded', 'Lost', 'Cancelled'];
-  const stageOptions = ['Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost'];
+  const statusOptions = ['Draft', 'Prepared', 'Sent', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'];
   
   // Helper function to extract ID from SurrealDB Thing object
   // Helper function to extract ID from SurrealDB Thing object - COPIED FROM WORKING CONTACTS MODAL
@@ -228,7 +226,6 @@
       number: rfp.number || '',
       rev: rfp.rev || 1,
       status: rfp.status || 'Draft',
-      stage: rfp.stage || 'Draft',
       issue_date: rfp.issue_date || '',
       activity: rfp.activity || 'Design and Consultancy',
       package: rfp.package || '',
@@ -263,9 +260,8 @@
     formData = {
       name: 'Fee Proposal',
       number: '',
-      rev: 1, // Default revision for new RFPs
+      rev: 1, // Default revision for new FPs
       status: 'Draft',
-      stage: 'Draft',
       issue_date: todayFormatted, // Auto-populate with today's date
       activity: 'Design and Consultancy', // Default activity
       package: '',
@@ -297,14 +293,14 @@
     contactDropdownOpen = false;
   }
   
-  // Auto-generate RFP number from project when project is selected
+  // Auto-generate FP number from project when project is selected
   function updateRfpNumber() {
     if (formData.project_id && mode === 'create') {
       const selectedProject = allProjectOptions.find(p => p.id === formData.project_id);
       if (selectedProject && selectedProject.number) {
-        // Simple RFP number generation: PROJECT_NUMBER-FP
+        // Simple FP number generation: PROJECT_NUMBER-FP
         formData.number = `${selectedProject.number}-FP`;
-        console.log('Auto-generated RFP number:', formData.number);
+        console.log('Auto-generated FP number:', formData.number);
       }
     }
   }
@@ -324,11 +320,11 @@
     
     // Validate required fields
     if (!formData.name.trim()) {
-      formErrors.name = 'RFP name is required';
+      formErrors.name = 'FP name is required';
     }
     
     if (!formData.number.trim()) {
-      formErrors.number = 'RFP number is required';
+      formErrors.number = 'FP number is required';
     }
     
     if (!formData.project_id) {
@@ -375,7 +371,6 @@
           number: formData.number,
           rev: formData.rev || 1, // Use form value or default to 1
           status: formData.status,
-          stage: formData.stage,
           issue_date: formData.issue_date,
           activity: formData.activity,
           package: formData.package,
@@ -391,18 +386,18 @@
           contact_id: formData.contact_id || null
         };
         
-        console.log('RFP data after conversion:', rfpData);
+        console.log('FP data after conversion:', rfpData);
         console.log('Project ID after conversion:', rfpData.project_id);
         
         await rfpsActions.create(rfpData);
-        saveMessage = 'RFP created successfully!';
+        saveMessage = 'FP created successfully!';
       } else {
         const rfpId = getRfpId(rfp);
         if (rfpId) {
           await rfpsActions.update(rfpId, formData);
-          saveMessage = 'RFP updated successfully!';
+          saveMessage = 'FP updated successfully!';
         } else {
-          throw new Error('No valid RFP ID found for update');
+          throw new Error('No valid FP ID found for update');
         }
       }
       
@@ -427,7 +422,7 @@
     
     try {
       await rfpsActions.delete(rfpId);
-      saveMessage = 'RFP deleted successfully!';
+      saveMessage = 'FP deleted successfully!';
       
       // Auto-close after 1.5 seconds
       setTimeout(() => {
@@ -479,7 +474,7 @@
     showNewProjectModal = false;
     // Auto-select the newly created project
     formData.project_id = getRecordId(newProject);
-    updateRfpNumber(); // Update RFP number based on new project
+    updateRfpNumber(); // Update FP number based on new project
   }
 
   function handleCompanyCreated(event: CustomEvent) {
@@ -508,7 +503,7 @@
     const selectedProject = allProjectOptions.find(p => p.id === projectId);
     projectSearchText = selectedProject ? `${selectedProject.number} - ${selectedProject.name}` : '';
     projectDropdownOpen = false;
-    updateRfpNumber(); // Auto-generate RFP number
+    updateRfpNumber(); // Auto-generate FP number
   }
   
   function selectCompany(companyId: string) {
@@ -534,7 +529,7 @@
     formData.project_id = '';
     projectSearchText = '';
     projectDropdownOpen = false;
-    // Clear RFP number when project is cleared
+    // Clear FP number when project is cleared
     formData.number = '';
   }
   
@@ -623,7 +618,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between" style="margin-bottom: 20px;">
         <h2 id="rfp-modal-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">
-          {mode === 'create' ? 'Add New RFP' : 'Edit RFP'}
+          {mode === 'create' ? 'Add New FP' : 'Edit FP'}
         </h2>
         <button 
           on:click={closeModal}
@@ -645,7 +640,7 @@
             <div class="grid grid-cols-2" style="gap: 12px;">
               <div>
                 <label for="rfp_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  RFP Name *
+                  FP Name *
                 </label>
                 <input
                   id="rfp_name"
@@ -663,7 +658,7 @@
               
               <div>
                 <label for="rfp_number" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  RFP Number *
+                  FP Number *
                 </label>
                 <input
                   id="rfp_number"
@@ -680,8 +675,8 @@
               </div>
             </div>
             
-            <!-- Rev, Status and Stage Row -->
-            <div class="grid grid-cols-3" style="gap: 12px;">
+            <!-- Rev and Status Row -->
+            <div class="grid grid-cols-2" style="gap: 12px;">
               <div>
                 <label for="rfp_rev" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
                   Revision
@@ -709,22 +704,6 @@
                 >
                   {#each statusOptions as status}
                     <option value={status}>{status}</option>
-                  {/each}
-                </select>
-              </div>
-              
-              <div>
-                <label for="rfp_stage" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Stage
-                </label>
-                <select
-                  id="rfp_stage"
-                  bind:value={formData.stage}
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all appearance-none"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                >
-                  {#each stageOptions as stage}
-                    <option value={stage}>{stage}</option>
                   {/each}
                 </select>
               </div>
@@ -938,9 +917,9 @@
           </div>
         </div>
         
-        <!-- RFP Details Section -->
+        <!-- FP Details Section -->
         <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">RFP Details</h3>
+          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">FP Details</h3>
           <div style="display: flex; flex-direction: column; gap: 12px;">
             <!-- Issue Date and Activity Row -->
             <div class="grid grid-cols-2" style="gap: 12px;">
@@ -1089,7 +1068,7 @@
         <!-- Delete Confirmation -->
         {#if showDeleteConfirm}
           <div class="rounded-lg bg-red-900/20 border border-red-500/30 text-red-300" style="padding: 12px; font-size: 12px;">
-            <p style="margin-bottom: 8px;">⚠️ Are you sure you want to delete this RFP?</p>
+            <p style="margin-bottom: 8px;">⚠️ Are you sure you want to delete this FP?</p>
             <p class="text-red-400" style="font-size: 10px; margin-bottom: 12px;">This action cannot be undone. All related data and documents will be affected.</p>
             <div class="flex" style="gap: 8px;">
               <button
@@ -1112,7 +1091,7 @@
                   <div class="border-2 border-white border-t-transparent rounded-full animate-spin" style="width: 10px; height: 10px;"></div>
                   <span>Deleting...</span>
                 {:else}
-                  <span>Delete RFP</span>
+                  <span>Delete FP</span>
                 {/if}
               </button>
             </div>
@@ -1153,7 +1132,7 @@
                 <div class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
                 <span>Saving...</span>
               {:else}
-                <span>{mode === 'create' ? 'Create RFP' : 'Update RFP'}</span>
+                <span>{mode === 'create' ? 'Create FP' : 'Update FP'}</span>
               {/if}
             </button>
           </div>
