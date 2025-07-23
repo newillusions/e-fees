@@ -1789,7 +1789,6 @@ export const {
   validateProjectNumber,
   createProjectWithTemplate,
   copyProjectTemplate,
-  populateProjectData,
   checkProjectFolderExists,
   checkVarJsonExists,
   renameFolderWithOldSuffix,

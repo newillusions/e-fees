@@ -2470,26 +2470,27 @@ pub async fn copy_project_template(project_number: String, project_short_name: S
 /// });
 /// console.log(result); // "Template copied and populated successfully"
 /// ```
-#[tauri::command]
-pub async fn debug_test_fp_fetching(state: State<'_, AppState>) -> Result<String, String> {
-    info!("Debug: Testing FP record fetching");
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    let fps = manager_clone.get_rfps().await
-        .map_err(|e| format!("Failed to fetch FPs: {}", e))?;
-    
-    info!("Debug: Successfully fetched {} FP records", fps.len());
-    if fps.len() > 0 {
-        let first_fp = &fps[0];
-        info!("Debug: First FP ID = {:?}", first_fp.id);
-        info!("Debug: First FP name = {}", first_fp.name);
-    }
-    
-    Ok(format!("Success: Found {} FP records", fps.len()))
-}
+// REMOVED: Test function for debugging FP fetching
+// #[tauri::command]
+// pub async fn debug_test_fp_fetching(state: State<'_, AppState>) -> Result<String, String> {
+//     info!("Debug: Testing FP record fetching");
+//     let manager_clone = {
+//         let manager = state.lock().map_err(|e| e.to_string())?;
+//         manager.clone()
+//     };
+//     
+//     let fps = manager_clone.get_rfps().await
+//         .map_err(|e| format!("Failed to fetch FPs: {}", e))?;
+//     
+//     info!("Debug: Successfully fetched {} FP records", fps.len());
+//     if fps.len() > 0 {
+//         let first_fp = &fps[0];
+//         info!("Debug: First FP ID = {:?}", first_fp.id);
+//         info!("Debug: First FP name = {}", first_fp.name);
+//     }
+//     
+//     Ok(format!("Success: Found {} FP records", fps.len()))
+// }
 
 #[tauri::command]
 pub async fn populate_project_data(fp_id: String, project_number: String, project_short_name: String, state: State<'_, AppState>) -> Result<String, String> {
@@ -3071,28 +3072,29 @@ pub async fn get_area_suggestions(country: String, state: State<'_, AppState>) -
     }
 }
 
-/// Test the copy_project_template function with sample data.
-/// 
-/// This is a temporary test command to verify the template copying functionality
-/// works correctly with the sample project "25-97199 Test Project".
-#[tauri::command]
-pub async fn test_template_copy() -> Result<String, String> {
-    info!("Testing template copy function with sample data");
-    
-    let project_number = "25-97199".to_string();
-    let project_short_name = "Test Project".to_string();
-    
-    match copy_project_template(project_number, project_short_name).await {
-        Ok(result) => {
-            info!("Template copy test successful: {}", result);
-            Ok(format!("✅ Template copy test successful: {}", result))
-        }
-        Err(e) => {
-            error!("Template copy test failed: {}", e);
-            Err(format!("❌ Template copy test failed: {}", e))
-        }
-    }
-}
+// REMOVED: Test function for template copying
+// /// Test the copy_project_template function with sample data.
+// /// 
+// /// This is a temporary test command to verify the template copying functionality
+// /// works correctly with the sample project "25-97199 Test Project".
+// #[tauri::command]
+// pub async fn test_template_copy() -> Result<String, String> {
+//     info!("Testing template copy function with sample data");
+//     
+//     let project_number = "25-97199".to_string();
+//     let project_short_name = "Test Project".to_string();
+//     
+//     match copy_project_template(project_number, project_short_name).await {
+//         Ok(result) => {
+//             info!("Template copy test successful: {}", result);
+//             Ok(format!("✅ Template copy test successful: {}", result))
+//         }
+//         Err(e) => {
+//             error!("Template copy test failed: {}", e);
+//             Err(format!("❌ Template copy test failed: {}", e))
+//         }
+//     }
+// }
 
 /// Get city suggestions for a specific country.
 /// 
