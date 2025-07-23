@@ -862,6 +862,124 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Write RFP (fee proposal) data to JSON file in project folder
+   * 
+   * Exports RFP information to the project's JSON template file
+   * for InDesign integration. Fetches complete data including all linked
+   * records (project, company, contact) and writes to the appropriate
+   * project directory.
+   * 
+   * @param rfpId - The ID of the RFP to export (e.g., '24_96606_1')
+   * @returns Promise<string> - Success message with file path, or null on error
+   * 
+   * @example
+   * ```typescript
+   * const result = await ApiClient.writeFeeToJson('24_96606_1');
+   * if (result) {
+   *   console.log('File written:', result);
+   * }
+   * ```
+   */
+  static async writeFeeToJson(rfpId: string): Promise<string | null> {
+    try {
+      const result = await invoke<string>('write_fee_to_json', { rfpId });
+      console.log('RFP data written to JSON:', result);
+      return result;
+    } catch (error) {
+      console.error('Failed to write RFP data to JSON:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a project folder already exists
+   * 
+   * @param projectNumber - The project number (e.g., "25-97107")
+   * @param projectShortName - The short project name (e.g., "Cove Boulevard")
+   * @returns Promise<boolean> - true if folder exists, false if not
+   * 
+   * @example
+   * ```typescript
+   * const exists = await Api.checkProjectFolderExists("25-97107", "Cove Boulevard");
+   * if (exists) {
+   *   console.log('Project folder already exists');
+   * }
+   * ```
+   */
+  static async checkProjectFolderExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+    try {
+      const exists = await invoke<boolean>('check_project_folder_exists', { 
+        projectNumber, 
+        projectShortName 
+      });
+      return exists;
+    } catch (error) {
+      console.error('Failed to check project folder existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a var.json file already exists in a project folder
+   * 
+   * @param projectNumber - The project number (e.g., "25-97107")
+   * @param projectShortName - The short project name (e.g., "Cove Boulevard")
+   * @returns Promise<boolean> - true if var.json exists, false if not
+   */
+  static async checkVarJsonExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+    try {
+      const exists = await invoke<boolean>('check_var_json_exists', { 
+        projectNumber, 
+        projectShortName 
+      });
+      return exists;
+    } catch (error) {
+      console.error('Failed to check var.json existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Rename an existing folder with _old suffix
+   * 
+   * @param projectNumber - The project number (e.g., "25-97107")
+   * @param projectShortName - The short project name (e.g., "Cove Boulevard")
+   * @returns Promise<string> - Success message or error
+   */
+  static async renameFolderWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
+    try {
+      const result = await invoke<string>('rename_folder_with_old_suffix', { 
+        projectNumber, 
+        projectShortName 
+      });
+      return result;
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rename an existing var.json file with _old suffix
+   * 
+   * @param projectNumber - The project number (e.g., "25-97107")
+   * @param projectShortName - The short project name (e.g., "Cove Boulevard")
+   * @returns Promise<string> - Success message or error
+   */
+  static async renameVarJsonWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
+    try {
+      const result = await invoke<string>('rename_var_json_with_old_suffix', { 
+        projectNumber, 
+        projectShortName 
+      });
+      return result;
+    } catch (error) {
+      console.error('Failed to rename var.json:', error);
+      throw error;
+    }
+  }
+
   // ============================================================================
   // STATISTICS AND DASHBOARD METHODS
   // ============================================================================
@@ -1311,6 +1429,80 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Copy project template folder and rename files.
+   * 
+   * This method copies the template folder structure and renames all template files
+   * from "yy-cccnn" to the actual project number. Works cross-platform.
+   * 
+   * @param projectNumber - Project number (e.g., "24-96606")
+   * @param projectShortName - Project short name (e.g., "Test Project")
+   * @returns Promise<string> - Success message with folder path
+   * 
+   * @example
+   * ```typescript
+   * try {
+   *   const result = await ApiClient.copyProjectTemplate("24-96606", "Test Project");
+   *   console.log('Template copied:', result);
+   * } catch (error) {
+   *   console.error('Failed to copy template:', error);
+   * }
+   * ```
+   */
+  static async copyProjectTemplate(projectNumber: string, projectShortName: string): Promise<string> {
+    try {
+      console.log('Copying project template:', projectNumber, projectShortName);
+      const params = { 
+        projectNumber: projectNumber, 
+        projectShortName: projectShortName 
+      };
+      console.log('API parameters being sent:', params);
+      const result = await invoke<string>('copy_project_template', params);
+      console.log('Template copied successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Failed to copy project template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Populate project data from FP record and rename JSON file.
+   * 
+   * This method fetches FP record data, populates the JSON template with real data,
+   * and renames the final JSON file by removing "Default Values" from the filename.
+   * 
+   * @param fpId - FP record ID (e.g., "fee:24_96606_1")
+   * @param projectNumber - Project number (e.g., "24-96606")
+   * @param projectShortName - Project short name (e.g., "Test Project")
+   * @returns Promise<string> - Success message with update details
+   * 
+   * @example
+   * ```typescript
+   * try {
+   *   const result = await ApiClient.populateProjectData("fee:24_96606_1", "24-96606", "Test Project");
+   *   console.log('Data populated:', result);
+   * } catch (error) {
+   *   console.error('Failed to populate data:', error);
+   * }
+   * ```
+   */
+  static async populateProjectData(fpId: string, projectNumber: string, projectShortName: string): Promise<string> {
+    try {
+      console.log('Populating project data:', fpId, projectNumber, projectShortName);
+      const result = await invoke<string>('populate_project_data', { 
+        fpId: fpId,
+        projectNumber: projectNumber, 
+        projectShortName: projectShortName 
+      });
+      console.log('Project data populated successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Failed to populate project data:', error);
+      throw error;
+    }
+  }
+
   static async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
     try {
       console.log('Updating project:', id, projectData);
@@ -1578,6 +1770,7 @@ export const {
   createRfp,
   updateRfp,
   deleteRfp,
+  writeFeeToJson,
   
   // Statistics and monitoring
   getStats,
@@ -1595,6 +1788,12 @@ export const {
   generateNextProjectNumber,
   validateProjectNumber,
   createProjectWithTemplate,
+  copyProjectTemplate,
+  populateProjectData,
+  checkProjectFolderExists,
+  checkVarJsonExists,
+  renameFolderWithOldSuffix,
+  renameVarJsonWithOldSuffix,
   
   // Debugging and utilities
   investigateRecord,

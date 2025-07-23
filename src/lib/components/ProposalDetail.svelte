@@ -4,15 +4,28 @@
   import { onMount } from 'svelte';
   import { extractId } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
+  import { copyProjectTemplate, writeFeeToJson, checkProjectFolderExists, checkVarJsonExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
+  import WarningModal from './WarningModal.svelte';
   import type { FeeProposal, Project, Company, Contact } from '../../types';
   
   const dispatch = createEventDispatcher();
   
   export let isOpen = false;
   export let proposal: FeeProposal | null = null;
+  
+  // Modal state
+  let warningModal = {
+    isOpen: false,
+    title: 'Warning',
+    message: '',
+    confirmText: 'OK',
+    cancelText: '',
+    onConfirm: null,
+    onCancel: null
+  };
   
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
@@ -111,12 +124,167 @@
     }
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
+  
+  // Project creation workflow with existence check
+  async function handleCreateProject() {
+    if (!proposal || !relatedProject) {
+      console.error('Cannot create project: missing proposal or related project data');
+      return;
+    }
+    
+    try {
+      const rawProjectNumber = relatedProject.number?.id || '';
+      const projectName = relatedProject.name_short || relatedProject.name || '';
+      const proposalId = extractId(proposal.id);
+      
+      // Strip angle brackets from project number if present
+      const projectNumber = rawProjectNumber.replace(/[⟨⟩]/g, '');
+      
+      if (!projectNumber || !projectName) {
+        console.error('Cannot create project: missing project number or name');
+        warningModal = {
+          isOpen: true,
+          title: 'Missing Information',
+          message: 'Cannot create project: missing project number or name',
+          confirmText: 'OK',
+          cancelText: '',
+          onConfirm: null,
+          onCancel: null
+        };
+        return;
+      }
+      
+      console.log(`Checking project folder existence for ${projectNumber} ${projectName}...`);
+      
+      // Check if project folder already exists
+      const folderExists = await checkProjectFolderExists(projectNumber, projectName);
+      console.log('Folder exists result:', folderExists);
+      
+      if (folderExists) {
+        // Folder exists - check if var.json file also exists
+        console.log('Project folder exists, checking var.json file...');
+        
+        const jsonExists = await checkVarJsonExists(projectNumber, projectName);
+        console.log('JSON file exists result:', jsonExists);
+        
+        if (jsonExists) {
+          // Both folder and JSON exist - ask for overwrite permission
+          warningModal = {
+            isOpen: true,
+            title: 'JSON File Already Exists',
+            message: `Project folder and var.json file already exist!\n\nDo you want to rename the existing var.json with _old suffix and create a new one?`,
+            confirmText: 'Overwrite',
+            cancelText: 'Cancel',
+            onConfirm: async () => {
+              try {
+                // Rename existing JSON file with _old suffix
+                console.log('Renaming existing JSON file with _old suffix...');
+                const renameResult = await renameVarJsonWithOldSuffix(projectNumber, projectName);
+                console.log('JSON rename result:', renameResult);
+                
+                // Now create new JSON file
+                console.log('Creating new JSON file...');
+                const jsonResult = await writeFeeToJson(proposalId);
+                console.log('Fee data write result:', jsonResult);
+                
+                warningModal = {
+                  isOpen: true,
+                  title: 'Success',
+                  message: `Existing var.json renamed with _old suffix.\n\nNew JSON file created with fee proposal data!`,
+                  confirmText: 'OK',
+                  cancelText: '',
+                  onConfirm: null,
+                  onCancel: null
+                };
+              } catch (error) {
+                console.error('Failed to overwrite JSON file:', error);
+                warningModal = {
+                  isOpen: true,
+                  title: 'Error',
+                  message: `Failed to overwrite JSON file:\n\n${error}`,
+                  confirmText: 'OK',
+                  cancelText: '',
+                  onConfirm: null,
+                  onCancel: null
+                };
+              }
+            },
+            onCancel: null
+          };
+        } else {
+          // Folder exists but no JSON file - just create JSON
+          console.log('Project folder exists but no JSON file, creating JSON...');
+          
+          const jsonResult = await writeFeeToJson(proposalId);
+          console.log('Fee data write result:', jsonResult);
+          
+          warningModal = {
+            isOpen: true,
+            title: 'Success',
+            message: `Project folder already exists.\n\nJSON file created with fee proposal data!`,
+            confirmText: 'OK',
+            cancelText: '',
+            onConfirm: null,
+            onCancel: null
+          };
+        }
+        
+      } else {
+        // Folder doesn't exist - create folder then update JSON
+        console.log('Project folder does not exist, creating folder and populating data...');
+        
+        // Step 1: Copy project template
+        console.log(`Creating project template for ${projectNumber} ${projectName}`);
+        const copyResult = await copyProjectTemplate(projectNumber, projectName);
+        console.log('Template copy result:', copyResult);
+        
+        // Step 2: Write fee proposal data to JSON
+        console.log(`Writing fee data to JSON with ID: ${proposalId}`);
+        const jsonResult = await writeFeeToJson(proposalId);
+        console.log('Fee data write result:', jsonResult);
+        
+        warningModal = {
+          isOpen: true,
+          title: 'Success',
+          message: `Project creation completed successfully!\n\nFolder: ${projectNumber} ${projectName}\nJSON file populated with fee proposal data.`,
+          confirmText: 'OK',
+          cancelText: '',
+          onConfirm: null,
+          onCancel: null
+        };
+      }
+      
+    } catch (error) {
+      console.error('Failed to create/update project:', error);
+      warningModal = {
+        isOpen: true,
+        title: 'Error',
+        message: `Failed to create/update project:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
+  }
+  
+  // Custom actions for the detail panel
+  $: customActions = [
+    {
+      handler: handleCreateProject,
+      label: 'Create Project Folder',
+      tooltip: 'Create project folder with template and populate data',
+      icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4',
+      disabled: !proposal || !relatedProject
+    }
+  ];
 </script>
 
 {#if proposal}
 <DetailPanel 
   bind:isOpen 
   title="proposal"
+  {customActions}
   on:edit={handleEdit}
   on:close={handleClose}
 >
@@ -227,3 +395,14 @@
   </svelte:fragment>
 </DetailPanel>
 {/if}
+
+<!-- Warning/Success Modal -->
+<WarningModal
+  bind:isOpen={warningModal.isOpen}
+  title={warningModal.title}
+  message={warningModal.message}
+  confirmText={warningModal.confirmText}
+  cancelText={warningModal.cancelText}
+  onConfirm={warningModal.onConfirm}
+  onCancel={warningModal.onCancel}
+/>

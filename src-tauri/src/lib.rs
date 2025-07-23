@@ -39,9 +39,18 @@ use commands::{
     generate_next_project_number,
     validate_project_number,
     create_project_with_template,
+    copy_project_template,
+    populate_project_data,
+    debug_test_fp_fetching,
+    test_template_copy,
     get_area_suggestions,
     get_all_cities,
     get_city_suggestions,
+    write_fee_to_json,
+    check_project_folder_exists,
+    check_var_json_exists,
+    rename_folder_with_old_suffix,
+    rename_var_json_with_old_suffix,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -185,9 +194,17 @@ pub fn run() {
             generate_next_project_number,
             validate_project_number,
             create_project_with_template,
+            copy_project_template,
+            populate_project_data,
+            test_template_copy,
             get_area_suggestions,
             get_all_cities,
-            get_city_suggestions
+            get_city_suggestions,
+            write_fee_to_json,
+            check_project_folder_exists,
+            check_var_json_exists,
+            rename_folder_with_old_suffix,
+            rename_var_json_with_old_suffix
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
