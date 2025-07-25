@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { rfpsStore, rfpsActions, companiesStore, companiesActions } from '$lib/stores';
+  import { feesStore, feesActions, companiesStore, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -10,7 +10,7 @@
   import ListCard from './ListCard.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import ActionButton from './ActionButton.svelte';
-  import type { Contact, Rfp, Company } from '../../types';
+  import type { Contact, Fee, Company } from '../../types';
   
   const dispatch = createEventDispatcher();
   
@@ -23,19 +23,19 @@
   // Find related company
   $: relatedCompany = contact ? companyLookup.getCompany(contact.company) : null;
   
-  // Filter RFPs where this contact is involved
-  $: contactRfps = contact ? $rfpsStore.filter(rfp => {
-    if (!rfp.contact_id || !contact?.id) return false;
+  // Filter Fees where this contact is involved
+  $: contactFees = contact ? $feesStore.filter(fee => {
+    if (!fee.contact_id || !contact?.id) return false;
     
-    let rfpContactId = '';
-    if (typeof rfp.contact_id === 'string') {
-      rfpContactId = rfp.contact_id;
-    } else if (rfp.contact_id && typeof rfp.contact_id === 'object') {
-      if ((rfp.contact_id as any).tb && (rfp.contact_id as any).id) {
-        if (typeof (rfp.contact_id as any).id === 'string') {
-          rfpContactId = `${(rfp.contact_id as any).tb}:${(rfp.contact_id as any).id}`;
-        } else if ((rfp.contact_id as any).id.String) {
-          rfpContactId = `${(rfp.contact_id as any).tb}:${(rfp.contact_id as any).id.String}`;
+    let feeContactId = '';
+    if (typeof fee.contact_id === 'string') {
+      feeContactId = fee.contact_id;
+    } else if (fee.contact_id && typeof fee.contact_id === 'object') {
+      if ((fee.contact_id as any).tb && (fee.contact_id as any).id) {
+        if (typeof (fee.contact_id as any).id === 'string') {
+          feeContactId = `${(fee.contact_id as any).tb}:${(fee.contact_id as any).id}`;
+        } else if ((fee.contact_id as any).id.String) {
+          feeContactId = `${(fee.contact_id as any).tb}:${(fee.contact_id as any).id.String}`;
         }
       }
     }
@@ -53,9 +53,9 @@
       }
     }
     
-    const id1 = rfpContactId.replace('contacts:', '');
+    const id1 = feeContactId.replace('contacts:', '');
     const id2 = contactIdStr.replace('contacts:', '');
-    return id1 === id2 || rfpContactId === contactIdStr;
+    return id1 === id2 || feeContactId === contactIdStr;
   }).sort((a, b) => {
     // Parse issue_date for proper sorting
     const parseIssueDate = (dateStr: string) => {
@@ -70,7 +70,7 @@
 
   // Load related data when component mounts
   onMount(() => {
-    rfpsActions.load();
+    feesActions.load();
     companiesActions.load();
   });
   
@@ -99,10 +99,10 @@
       subtitle="{contact.position || 'Contact'}{relatedCompany ? ` • ${relatedCompany.name}` : ''}"
       location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
       stats={[
-        { label: 'Proposals', value: contactRfps.length },
-        { label: 'Awarded', value: contactRfps.filter(rfp => rfp.status === 'Awarded').length },
-        { label: 'Pending', value: contactRfps.filter(rfp => rfp.status === 'Sent').length },
-        { label: 'Lost', value: contactRfps.filter(rfp => rfp.status === 'Lost').length }
+        { label: 'Proposals', value: contactFees.length },
+        { label: 'Awarded', value: contactFees.filter(fee => fee.status === 'Awarded').length },
+        { label: 'Pending', value: contactFees.filter(fee => fee.status === 'Sent').length },
+        { label: 'Lost', value: contactFees.filter(fee => fee.status === 'Lost').length }
       ]}
     />
   </svelte:fragment>
@@ -204,11 +204,11 @@
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">Fee Proposals</h2>
         <span class="text-xs text-emittiv-light px-2 py-1 rounded-lg" style="background-color: #111;">
-          {contactRfps.length} total
+          {contactFees.length} total
         </span>
       </div>
       
-      {#if contactRfps.length === 0}
+      {#if contactFees.length === 0}
         <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
           <svg class="w-12 h-12 mx-auto mb-3 text-emittiv-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -217,36 +217,35 @@
         </div>
       {:else}
         <div class="grid gap-2">
-          {#each contactRfps as rfp}
+          {#each contactFees as fee}
             <ListCard clickable={false}>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div>
-                    <h3 class="text-xs font-medium text-emittiv-light">RFP Number:</h3>
-                    <p class="text-sm text-emittiv-white">{rfp.number}</p>
+                    <h3 class="text-xs font-medium text-emittiv-light">Fee Number:</h3>
+                    <p class="text-sm text-emittiv-white">{fee.number}</p>
                   </div>
                   <div class="mt-2">
                     <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
-                    <p class="text-sm text-emittiv-lighter">{rfp.name}{#if rfp.package} - {rfp.package}{/if}</p>
+                    <p class="text-sm text-emittiv-lighter">{fee.name}{#if fee.package} - {fee.package}{/if}</p>
                   </div>
                   <div class="mt-2 space-y-1">
-                    {#if rfp.staff_name}
+                    {#if fee.staff_name}
                       <div>
                         <h3 class="text-xs font-medium text-emittiv-light">Staff:</h3>
-                        <p class="text-sm text-emittiv-white">{rfp.staff_name}</p>
+                        <p class="text-sm text-emittiv-white">{fee.staff_name}</p>
                       </div>
                     {/if}
                     <div class="flex items-center gap-4 text-xs text-emittiv-light">
-                      <span>Rev: {rfp.rev}</span>
-                      <span>Stage: {rfp.stage}</span>
+                      <span>Rev: {fee.rev}</span>
                       <span>
-                        {new Date(rfp.issue_date.length === 6 ? `20${rfp.issue_date.substring(0,2)}-${rfp.issue_date.substring(2,4)}-${rfp.issue_date.substring(4,6)}` : rfp.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(fee.issue_date.length === 6 ? `20${fee.issue_date.substring(0,2)}-${fee.issue_date.substring(2,4)}-${fee.issue_date.substring(4,6)}` : fee.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={rfp.status} type="proposal" />
+                  <StatusBadge status={fee.status} type="proposal" />
                 </div>
               </div>
             </ListCard>

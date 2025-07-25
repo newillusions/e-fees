@@ -62,7 +62,6 @@
     // Project is already added to store by NewProjectModal
     // Just close the modal and show success
     showNewProjectModal = false;
-    console.log('Project created successfully:', project.name);
   }
   
   function handleNewProjectClosed() {

@@ -26,16 +26,15 @@ export type ProjectStage =
   | 'Construction'
   | 'Handover';
 
-export type RfpStatus = 
+export type FeeStatus = 
   | 'Draft'
-  | 'Prepared'
+  | 'Active'
   | 'Sent'
-  | 'Negotiation'
   | 'Awarded'
   | 'Lost'
   | 'Cancelled';
 
-export type RfpStage = 
+export type FeeStage = 
   | 'Draft'
   | 'Prepared'
   | 'Sent'
@@ -80,15 +79,15 @@ export interface Project {
   time?: TimeInfo;
 }
 
-export interface Rfp {
-  id?: string; // rfp:YY_CCCNN_R
+export interface Fee {
+  id?: string; // fee:YY_CCCNN_R
   name: string;
   number: string;
   project_id: string; // record<projects>
   company_id: string; // record<company>
   contact_id: string; // record<contacts>
-  status: RfpStatus;
-  stage: RfpStage;
+  status: FeeStatus;
+  stage: FeeStage;
   issue_date: string; // YYMMDD format
   activity?: string;
   package?: string;
@@ -147,8 +146,8 @@ export interface Currency {
 export type ProjectCreate = Omit<Project, 'id' | 'time'>;
 export type ProjectUpdate = Partial<ProjectCreate>;
 
-export type RfpCreate = Omit<Rfp, 'id' | 'time' | 'rev'>;
-export type RfpUpdate = Partial<RfpCreate>;
+export type FeeCreate = Omit<Fee, 'id' | 'time' | 'rev'>;
+export type FeeUpdate = Partial<FeeCreate>;
 
 export type CompanyCreate = Omit<Company, 'id' | 'time'>;
 export type CompanyUpdate = Partial<CompanyCreate>;
@@ -165,7 +164,7 @@ export const ValidationRules = {
       seq: { min: 1, max: 999 }
     }
   },
-  rfp: {
+  fee: {
     name: { minLength: 1 },
     issue_date: { pattern: /^\d{6}$/ } // YYMMDD
   },

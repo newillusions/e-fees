@@ -4,17 +4,17 @@
   import { onMount } from 'svelte';
   import { extractId } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { copyProjectTemplate, writeFeeToJson, checkProjectFolderExists, checkVarJsonExists, renameVarJsonWithOldSuffix } from '$lib/api';
+  import { copyProjectTemplate, writeFeeToJson, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
   import WarningModal from './WarningModal.svelte';
-  import type { FeeProposal, Project, Company, Contact } from '../../types';
+  import type { Fee, Project, Company, Contact } from '../../types';
   
   const dispatch = createEventDispatcher();
   
   export let isOpen = false;
-  export let proposal: FeeProposal | null = null;
+  export let proposal: Fee | null = null;
   
   // Modal state
   let warningModal = {
@@ -47,22 +47,22 @@
       }
     }
     
-    let rfpProjectId = '';
+    let feeProjectId = '';
     if (typeof proposal.project_id === 'string') {
-      rfpProjectId = proposal.project_id;
+      feeProjectId = proposal.project_id;
     } else if (proposal.project_id && typeof proposal.project_id === 'object') {
       if ((proposal.project_id as any).tb && (proposal.project_id as any).id) {
         if (typeof (proposal.project_id as any).id === 'string') {
-          rfpProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id}`;
+          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id}`;
         } else if ((proposal.project_id as any).id.String) {
-          rfpProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id.String}`;
+          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id.String}`;
         }
       }
     }
     
-    const id1 = rfpProjectId.replace('projects:', '');
+    const id1 = feeProjectId.replace('projects:', '');
     const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || rfpProjectId === projectIdStr;
+    return id1 === id2 || feeProjectId === projectIdStr;
   }) : null;
   
   // Find related company
@@ -85,22 +85,22 @@
       }
     }
     
-    let rfpContactId = '';
+    let feeContactId = '';
     if (typeof proposal.contact_id === 'string') {
-      rfpContactId = proposal.contact_id;
+      feeContactId = proposal.contact_id;
     } else if (proposal.contact_id && typeof proposal.contact_id === 'object') {
       if ((proposal.contact_id as any).tb && (proposal.contact_id as any).id) {
         if (typeof (proposal.contact_id as any).id === 'string') {
-          rfpContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id}`;
+          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id}`;
         } else if ((proposal.contact_id as any).id.String) {
-          rfpContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id.String}`;
+          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id.String}`;
         }
       }
     }
     
-    const id1 = rfpContactId.replace('contacts:', '');
+    const id1 = feeContactId.replace('contacts:', '');
     const id2 = contactIdStr.replace('contacts:', '');
-    return id1 === id2 || rfpContactId === contactIdStr;
+    return id1 === id2 || feeContactId === contactIdStr;
   }) : null;
 
   // Load related data when component mounts
@@ -154,94 +154,94 @@
         return;
       }
       
-      console.log(`Checking project folder existence for ${projectNumber} ${projectName}...`);
-      
       // Check if project folder already exists
       const folderExists = await checkProjectFolderExists(projectNumber, projectName);
-      console.log('Folder exists result:', folderExists);
       
       if (folderExists) {
-        // Folder exists - check if var.json file also exists
-        console.log('Project folder exists, checking var.json file...');
+        // Folder exists - check first for template file (with "Default Values")
+        const templateExists = await checkVarJsonTemplateExists(projectNumber, projectName);
         
-        const jsonExists = await checkVarJsonExists(projectNumber, projectName);
-        console.log('JSON file exists result:', jsonExists);
-        
-        if (jsonExists) {
-          // Both folder and JSON exist - ask for overwrite permission
-          warningModal = {
-            isOpen: true,
-            title: 'JSON File Already Exists',
-            message: `Project folder and var.json file already exist!\n\nDo you want to rename the existing var.json with _old suffix and create a new one?`,
-            confirmText: 'Overwrite',
-            cancelText: 'Cancel',
-            onConfirm: async () => {
-              try {
-                // Rename existing JSON file with _old suffix
-                console.log('Renaming existing JSON file with _old suffix...');
-                const renameResult = await renameVarJsonWithOldSuffix(projectNumber, projectName);
-                console.log('JSON rename result:', renameResult);
-                
-                // Now create new JSON file
-                console.log('Creating new JSON file...');
-                const jsonResult = await writeFeeToJson(proposalId);
-                console.log('Fee data write result:', jsonResult);
-                
-                warningModal = {
-                  isOpen: true,
-                  title: 'Success',
-                  message: `Existing var.json renamed with _old suffix.\n\nNew JSON file created with fee proposal data!`,
-                  confirmText: 'OK',
-                  cancelText: '',
-                  onConfirm: null,
-                  onCancel: null
-                };
-              } catch (error) {
-                console.error('Failed to overwrite JSON file:', error);
-                warningModal = {
-                  isOpen: true,
-                  title: 'Error',
-                  message: `Failed to overwrite JSON file:\n\n${error}`,
-                  confirmText: 'OK',
-                  cancelText: '',
-                  onConfirm: null,
-                  onCancel: null
-                };
-              }
-            },
-            onCancel: null
-          };
-        } else {
-          // Folder exists but no JSON file - just create JSON
-          console.log('Project folder exists but no JSON file, creating JSON...');
-          
+        if (templateExists) {
+          // Template file exists - populate it directly
           const jsonResult = await writeFeeToJson(proposalId);
-          console.log('Fee data write result:', jsonResult);
           
           warningModal = {
             isOpen: true,
             title: 'Success',
-            message: `Project folder already exists.\n\nJSON file created with fee proposal data!`,
+            message: `Project folder exists with template file.\n\nTemplate populated with fee proposal data and renamed to final JSON file!`,
             confirmText: 'OK',
             cancelText: '',
             onConfirm: null,
             onCancel: null
           };
+        } else {
+          // No template file - check if final var.json file exists
+          const jsonExists = await checkVarJsonExists(projectNumber, projectName);
+          
+          if (jsonExists) {
+            // Final JSON file exists - ask for overwrite permission
+            warningModal = {
+              isOpen: true,
+              title: 'JSON File Already Exists',
+              message: `Project folder and var.json file already exist!\n\nDo you want to rename the existing var.json with _old suffix and create a new one?`,
+              confirmText: 'Overwrite',
+              cancelText: 'Cancel',
+              onConfirm: async () => {
+                try {
+                  // Rename existing JSON file with _old suffix
+                  const renameResult = await renameVarJsonWithOldSuffix(projectNumber, projectName);
+                  
+                  // Now create new JSON file
+                  const jsonResult = await writeFeeToJson(proposalId);
+                  
+                  warningModal = {
+                    isOpen: true,
+                    title: 'Success',
+                    message: `Existing var.json renamed with _old suffix.\n\nNew JSON file created with fee proposal data!`,
+                    confirmText: 'OK',
+                    cancelText: '',
+                    onConfirm: null,
+                    onCancel: null
+                  };
+                } catch (error) {
+                  console.error('Failed to overwrite JSON file:', error);
+                  warningModal = {
+                    isOpen: true,
+                    title: 'Error',
+                    message: `Failed to overwrite JSON file:\n\n${error}`,
+                    confirmText: 'OK',
+                    cancelText: '',
+                    onConfirm: null,
+                    onCancel: null
+                  };
+                }
+              },
+              onCancel: null
+            };
+          } else {
+            // Folder exists but no JSON files - just create JSON
+            const jsonResult = await writeFeeToJson(proposalId);
+            
+            warningModal = {
+              isOpen: true,
+              title: 'Success',
+              message: `Project folder already exists.\n\nJSON file created with fee proposal data!`,
+              confirmText: 'OK',
+              cancelText: '',
+              onConfirm: null,
+              onCancel: null
+            };
+          }
         }
         
       } else {
         // Folder doesn't exist - create folder then update JSON
-        console.log('Project folder does not exist, creating folder and populating data...');
         
         // Step 1: Copy project template
-        console.log(`Creating project template for ${projectNumber} ${projectName}`);
         const copyResult = await copyProjectTemplate(projectNumber, projectName);
-        console.log('Template copy result:', copyResult);
         
         // Step 2: Write fee proposal data to JSON
-        console.log(`Writing fee data to JSON with ID: ${proposalId}`);
         const jsonResult = await writeFeeToJson(proposalId);
-        console.log('Fee data write result:', jsonResult);
         
         warningModal = {
           isOpen: true,

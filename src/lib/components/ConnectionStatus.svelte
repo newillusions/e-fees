@@ -42,9 +42,6 @@
 
   async function logDebugInfo() {
     const dbInfo = await getDbInfo();
-    console.log('=== SurrealDB Connection Debug Info ===');
-    console.log(JSON.stringify(dbInfo, null, 2));
-    console.log('=======================================');
     showDebugInfo = !showDebugInfo;
   }
 

@@ -73,6 +73,7 @@
   
   // UI state
   let isGenerating = false;
+  let isModalReady = false;
   
   // Typeahead search states
   let countrySearchText = '';
@@ -93,8 +94,8 @@
     formData.folder = '';
   }
   
-  // Auto-generate project number when country or year changes
-  $: if (formData.country && formData.year) {
+  // Auto-generate project number when country or year changes (but not if we already have one)
+  $: if (isModalReady && formData.country && formData.year && !formData.project_number && !isGenerating) {
     generateProjectNumber();
   }
   
@@ -116,6 +117,12 @@
     } finally {
       isGenerating = false;
     }
+  }
+
+  // Force regenerate project number (for manual refresh)
+  async function regenerateProjectNumber() {
+    formData.project_number = ''; // Clear current number
+    await generateProjectNumber(); // Generate new one
   }
   
   // Country search handler
@@ -258,6 +265,7 @@
     };
     
     formErrors = {};
+    isModalReady = false; // Reset modal ready state
     
     // Clear search texts and options
     countrySearchText = '';
@@ -272,6 +280,16 @@
     resetForm();
     operationActions.reset();
     dispatch('close');
+  }
+
+  // Initialize modal when it opens/closes
+  $: if (isOpen && !isModalReady) {
+    // Small delay to ensure modal is fully rendered before enabling auto-generation
+    setTimeout(() => {
+      isModalReady = true;
+    }, 100);
+  } else if (!isOpen) {
+    isModalReady = false;
   }
   
   // Typeahead handlers
@@ -354,23 +372,32 @@
             <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
               Project Number *
             </label>
-            <div class="relative">
+            <div class="relative flex">
               <input
                 type="text"
                 bind:value={formData.project_number}
                 placeholder="Auto-generated"
                 readonly
-                class="w-full bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-light placeholder-emittiv-light opacity-60 cursor-not-allowed"
+                class="flex-1 bg-emittiv-darker border border-emittiv-dark rounded-l text-emittiv-light placeholder-emittiv-light opacity-60 cursor-not-allowed"
                 style="padding: 8px 12px; font-size: 12px; height: 32px;"
               />
-              {#if isGenerating}
-                <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <button
+                type="button"
+                on:click={regenerateProjectNumber}
+                disabled={!formData.country || !formData.year || isGenerating}
+                class="px-3 bg-emittiv-dark border border-emittiv-dark border-l-0 rounded-r text-emittiv-light hover:bg-emittiv-light hover:text-emittiv-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style="height: 32px; font-size: 12px;"
+                title="Regenerate project number"
+              >
+                {#if isGenerating}
                   <div 
-                    class="border-2 border-emittiv-light border-t-transparent rounded-full animate-spin"
+                    class="border-2 border-current border-t-transparent rounded-full animate-spin"
                     style="width: 12px; height: 12px;"
                   ></div>
-                </div>
-              {/if}
+                {:else}
+                  ↻
+                {/if}
+              </button>
             </div>
             {#if formErrors.project_number}
               <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.project_number}</p>

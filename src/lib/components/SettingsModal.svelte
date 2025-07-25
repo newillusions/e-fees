@@ -120,7 +120,7 @@
     <!-- Modal Content -->
     <div 
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 24px; max-width: 700px;"
+      style="padding: 16px; max-width: 450px;"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="presentation"

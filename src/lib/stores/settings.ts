@@ -42,9 +42,7 @@ export const settingsActions = {
     settingsError.set(null);
     
     try {
-      console.log('Saving settings to backend...', settings);
       await invoke<string>('save_settings', { settings });
-      console.log('Settings saved successfully');
       settingsStore.set(settings);
       return true;
     } catch (error) {

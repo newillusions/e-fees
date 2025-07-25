@@ -6,6 +6,7 @@
   export let isOpen = false;
   export let title = '';
   export let canEdit = true;
+  export let customActions = [];
   
   function closePanel() {
     isOpen = false;
@@ -42,6 +43,20 @@
     <div class="relative bg-gradient-to-br from-emittiv-darker to-emittiv-black border-b border-emittiv-dark">
       <!-- Top Right Buttons -->
       <div class="absolute top-6 right-6 flex items-center gap-1">
+        <!-- Custom Action Buttons -->
+        {#each customActions as action}
+          <button 
+            on:click={action.handler}
+            class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+            aria-label={action.label}
+            disabled={action.disabled}
+            title={action.tooltip}
+          >
+            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={action.icon} />
+            </svg>
+          </button>
+        {/each}
         {#if canEdit}
           <!-- Edit Button -->
           <button 
