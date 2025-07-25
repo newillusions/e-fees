@@ -22,6 +22,7 @@
     "@tsconfig/svelte": "^5.0.4",
     "@types/node": "^24.0.1",
     "autoprefixer": "^10.4.21",
+    "playwright": "^1.54.1",
     "postcss": "^8.5.5",
     "svelte": "^5.34.1",
     "svelte-check": "^4.2.1",

@@ -7,7 +7,7 @@
 //! 
 //! The database module implements a robust connection management system with support
 //! for both WebSocket and HTTP connections to SurrealDB. It provides CRUD operations
-//! for all business entities including projects, companies, contacts, and RFPs.
+//! for all business entities including projects, companies, contacts, and fees.
 //! 
 //! ## Key Features
 //! 
@@ -17,48 +17,51 @@
 //! - **Comprehensive Error Handling**: User-friendly error messages and logging
 //! - **Business Logic**: Project numbering, country lookup, and data validation
 //! - **Performance Optimization**: Connection pooling and query optimization
-//! 
-//! ## Architecture
-//! 
-//! ```text
-//! ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-//! │   Tauri Commands │◄──►│ DatabaseManager │◄──►│   SurrealDB     │
-//! │                 │    │                 │    │                 │
-//! │ - create_project│    │ - Connection    │    │ - Projects      │
-//! │ - get_companies │    │ - Health Check  │    │ - Companies     │
-//! │ - search_rfps   │    │ - CRUD Ops      │    │ - Contacts      │
-//! └─────────────────┘    └─────────────────┘    └─────────────────┘
-//! ```
-//! 
-//! ## Database Schema
-//! 
-//! The module works with the following primary entities:
-//! - **Projects**: Core business projects with auto-generated numbering
-//! - **Companies**: Client organizations with contact information
-//! - **Contacts**: Individual contacts linked to companies
-//! - **RFPs**: Request for Proposals with revision tracking
-//! - **Countries**: Reference data for project numbering and location
-//! 
-//! ## Connection Management
-//! 
-//! The DatabaseManager handles connection lifecycle:
-//! 1. **Initialization**: Establish connection using environment configuration
-//! 2. **Authentication**: Multi-level auth with graceful fallback
-//! 3. **Monitoring**: Continuous health checks with automatic reconnection
-//! 4. **Cleanup**: Proper resource management and connection cleanup
-//! 
-//! ## Error Handling
-//! 
-//! All database operations implement comprehensive error handling:
-//! - Network connectivity issues
-//! - Authentication failures  
-//! - Query syntax errors
-//! - Data validation failures
-//! - Business rule violations
-//! 
-//! @fileoverview Database connectivity and CRUD operations for SurrealDB
-//! @author Fee Proposal Management System
-//! @version 2.0.0
+
+pub mod utils;
+
+//  
+// ## Architecture
+//  
+// ```text
+// ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+// │   Tauri Commands │◄──►│ DatabaseManager │◄──►│   SurrealDB     │
+// │                 │    │                 │    │                 │
+// │ - create_project│    │ - Connection    │    │ - Projects      │
+// │ - get_companies │    │ - Health Check  │    │ - Companies     │
+// │ - search_fees   │    │ - CRUD Ops      │    │ - Contacts      │
+// └─────────────────┘    └─────────────────┘    └─────────────────┘
+// ```
+//  
+// ## Database Schema
+//  
+// The module works with the following primary entities:
+// - **Projects**: Core business projects with auto-generated numbering
+// - **Companies**: Client organizations with contact information
+// - **Contacts**: Individual contacts linked to companies
+// - **Fees**: Fee proposals with revision tracking
+// - **Countries**: Reference data for project numbering and location
+//  
+// ## Connection Management
+//  
+// The DatabaseManager handles connection lifecycle:
+// 1. **Initialization**: Establish connection using environment configuration
+// 2. **Authentication**: Multi-level auth with graceful fallback
+// 3. **Monitoring**: Continuous health checks with automatic reconnection
+// 4. **Cleanup**: Proper resource management and connection cleanup
+//  
+// ## Error Handling
+//  
+// All database operations implement comprehensive error handling:
+// - Network connectivity issues
+// - Authentication failures  
+// - Query syntax errors
+// - Data validation failures
+// - Business rule violations
+//  
+// @fileoverview Database connectivity and CRUD operations for SurrealDB
+// @author Fee Proposal Management System
+// @version 2.0.0
 
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
@@ -215,7 +218,7 @@ impl Default for ConnectionStatus {
 /// # Status Values
 /// 
 /// - `Draft`: Initial state, project being defined
-/// - `RFP`: Request for Proposal stage
+/// - `Active`: Active project stage
 /// - `Active`: Project is ongoing
 /// - `On Hold`: Temporarily suspended
 /// - `Completed`: Project finished successfully
@@ -235,7 +238,7 @@ pub struct Project {
     /// Abbreviated name for folder structures and internal use
     pub name_short: String,
     /// Current project status (see status values above)
-    pub status: String, // 'Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled'
+    pub status: String, // 'Draft', 'Active', 'On Hold', 'Completed', 'Cancelled'
     /// Project area/district within the city
     pub area: String,
     /// City where the project is located
@@ -346,7 +349,7 @@ pub struct TimeStamps {
 /// 
 /// Companies are referenced by:
 /// - Contacts (one-to-many)
-/// - RFPs (project proposals)
+/// - Fees (project proposals)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Company {
     /// SurrealDB record identifier (auto-generated)
@@ -402,12 +405,11 @@ pub struct ContactCreate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RfpCreate {
+pub struct FeeCreate {
     pub name: String,
     pub number: String,
     pub rev: i32,
-    pub status: String,
-    pub stage: String,
+    pub status: String, // 'Draft', 'Prepared', 'Active', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'
     pub issue_date: String,
     pub activity: String,
     pub package: String,
@@ -423,12 +425,11 @@ pub struct RfpCreate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RfpUpdate {
+pub struct FeeUpdate {
     pub name: String,
     pub number: String,
     pub rev: i32,
-    pub status: String,
-    pub stage: String,
+    pub status: String, // 'Draft', 'Prepared', 'Active', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'
     pub issue_date: String,
     pub activity: String,
     pub package: String,
@@ -444,13 +445,12 @@ pub struct RfpUpdate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Rfp {
+pub struct Fee {
     pub id: Option<Thing>,
     pub name: String,
     pub number: String,
     pub rev: i32, // Auto-computed from revisions
-    pub status: String, // 'Draft', 'Active', 'Sent', 'Awarded', 'Lost', 'Cancelled'
-    pub stage: String, // 'Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost'
+    pub status: String, // 'Draft', 'Prepared', 'Active', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'
     pub issue_date: String, // YYMMDD format
     pub activity: String,
     pub package: String,
@@ -554,6 +554,7 @@ impl DatabaseClient {
             DatabaseClient::WebSocket(client) => client.select(table).await,
         }
     }
+
     
     pub async fn create_project(&self, project: Project) -> Result<Option<Project>, Error> {
         match self {
@@ -622,12 +623,6 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn update_company(&self, id: &str, company: Company) -> Result<Option<Company>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.update(("company", id)).content(company).await,
-            DatabaseClient::WebSocket(client) => client.update(("company", id)).content(company).await,
-        }
-    }
     
     pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Option<Company>, Error> {
         match self {
@@ -680,75 +675,67 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn delete_contact(&self, id: &str) -> Result<Option<Contact>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.delete(("contacts", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("contacts", id)).await,
-        }
-    }
     
-    pub async fn create_rfp(&self, rfp: RfpCreate) -> Result<Option<Rfp>, Error> {
+    pub async fn create_fee(&self, fee: FeeCreate) -> Result<Option<Fee>, Error> {
         // Use raw SQL query like contacts do to avoid Thing format issues
-        // Generate RFP ID in format: project_number_rev (e.g., "25_97107_1")
-        let rfp_id = format!("{}_{}", rfp.project_id.replace("-", "_"), rfp.rev);
+        // Generate Fee ID in format: project_number_rev (e.g., "25_97107_1")
+        let fee_id = format!("{}_{}", fee.project_id.replace("-", "_"), fee.rev);
         
         let query = format!(
-            "CREATE rfp:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', stage = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
-            rfp_id,
-            rfp.name.replace("'", "''"),
-            rfp.number.replace("'", "''"),
-            rfp.rev,
-            rfp.project_id.replace("'", "''"),
-            rfp.company_id.replace("'", "''"), 
-            rfp.contact_id.replace("'", "''"),
-            rfp.status.replace("'", "''"),
-            rfp.stage.replace("'", "''"),
-            rfp.issue_date.replace("'", "''"),
-            rfp.activity.replace("'", "''"),
-            rfp.package.replace("'", "''"),
-            rfp.strap_line.replace("'", "''"),
-            rfp.staff_name.replace("'", "''"),
-            rfp.staff_email.replace("'", "''"),
-            rfp.staff_phone.replace("'", "''"),
-            rfp.staff_position.replace("'", "''")
+            "CREATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = {}, company_id = {}, contact_id = {}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
+            fee_id,
+            fee.name.replace("'", "''"),
+            fee.number.replace("'", "''"),
+            fee.rev,
+            fee.project_id.replace("'", "''"),
+            fee.company_id.replace("'", "''"), 
+            fee.contact_id.replace("'", "''"),
+            fee.status.replace("'", "''"),
+            fee.issue_date.replace("'", "''"),
+            fee.activity.replace("'", "''"),
+            fee.package.replace("'", "''"),
+            fee.strap_line.replace("'", "''"),
+            fee.staff_name.replace("'", "''"),
+            fee.staff_email.replace("'", "''"),
+            fee.staff_phone.replace("'", "''"),
+            fee.staff_position.replace("'", "''")
         );
         
-        info!("Executing RFP creation query: {}", query);
+        info!("Executing Fee creation query: {}", query);
         
         let mut response = match self {
             DatabaseClient::Http(client) => client.query(&query).await?,
             DatabaseClient::WebSocket(client) => client.query(&query).await?,
         };
         
-        let result: Result<Vec<Rfp>, _> = response.take(0);
+        let result: Result<Vec<Fee>, _> = response.take(0);
         match result {
-            Ok(mut rfps) => Ok(rfps.pop()),
+            Ok(mut fees) => Ok(fees.pop()),
             Err(e) => Err(e),
         }
     }
     
-    pub async fn update_rfp(&self, id: &str, rfp: RfpUpdate) -> Result<Option<Rfp>, Error> {
-        info!("DatabaseClient::update_rfp called with id: '{}' and rfp: {:?}", id, rfp);
+    pub async fn update_fee(&self, id: &str, fee: FeeUpdate) -> Result<Option<Fee>, Error> {
+        info!("DatabaseClient::update_fee called with id: '{}' and fee: {:?}", id, fee);
         
         let query = format!(
-            "UPDATE rfp:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', stage = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
+            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = {}, company_id = {}, contact_id = {}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
             id,
-            rfp.name.replace("'", "''"),
-            rfp.number.replace("'", "''"),
-            rfp.rev,
-            rfp.project_id.replace("'", "''"),
-            rfp.company_id.replace("'", "''"),
-            rfp.contact_id.replace("'", "''"),
-            rfp.status.replace("'", "''"),
-            rfp.stage.replace("'", "''"),
-            rfp.issue_date.replace("'", "''"),
-            rfp.activity.replace("'", "''"),
-            rfp.package.replace("'", "''"),
-            rfp.strap_line.replace("'", "''"),
-            rfp.staff_name.replace("'", "''"),
-            rfp.staff_email.replace("'", "''"),
-            rfp.staff_phone.replace("'", "''"),
-            rfp.staff_position.replace("'", "''")
+            fee.name.replace("'", "''"),
+            fee.number.replace("'", "''"),
+            fee.rev,
+            fee.project_id.replace("'", "''"),
+            fee.company_id.replace("'", "''"),
+            fee.contact_id.replace("'", "''"),
+            fee.status.replace("'", "''"),
+            fee.issue_date.replace("'", "''"),
+            fee.activity.replace("'", "''"),
+            fee.package.replace("'", "''"),
+            fee.strap_line.replace("'", "''"),
+            fee.staff_name.replace("'", "''"),
+            fee.staff_email.replace("'", "''"),
+            fee.staff_phone.replace("'", "''"),
+            fee.staff_position.replace("'", "''")
         );
         
         info!("Executing update query: {}", query);
@@ -758,14 +745,14 @@ impl DatabaseClient {
             DatabaseClient::WebSocket(client) => client.query(&query).await?,
         };
         
-        let result: Result<Vec<Rfp>, _> = response.take(0);
+        let result: Result<Vec<Fee>, _> = response.take(0);
         match result {
-            Ok(mut rfps) => {
-                info!("Update query returned {} records", rfps.len());
-                if rfps.is_empty() {
+            Ok(mut fees) => {
+                info!("Update query returned {} records", fees.len());
+                if fees.is_empty() {
                     warn!("Update query returned empty result set");
                 }
-                Ok(rfps.pop())
+                Ok(fees.pop())
             },
             Err(e) => {
                 error!("Failed to parse update response: {}", e);
@@ -774,10 +761,10 @@ impl DatabaseClient {
         }
     }
     
-    pub async fn delete_rfp(&self, id: &str) -> Result<Option<Rfp>, Error> {
+    pub async fn delete_fee(&self, id: &str) -> Result<Option<Fee>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.delete(("rfp", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("rfp", id)).await,
+            DatabaseClient::Http(client) => client.delete(("fee", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("fee", id)).await,
         }
     }
 
@@ -1169,15 +1156,25 @@ impl DatabaseManager {
         }
     }
 
-    // Get all rfps
-    pub async fn get_rfps(&self) -> Result<Vec<Rfp>, Error> {
+    // Get all fees
+    pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         if let Some(client) = &self.client {
-            info!("Attempting to query rfp table");
+            info!("Attempting to query fee table");
             
-            let rfps: Vec<Rfp> = client.select("rfp").await.unwrap_or_default();
-            info!("Successfully fetched {} rfps", rfps.len());
-            
-            Ok(rfps)
+            // Try the query and handle potential deserialization errors
+            let result: Result<Vec<Fee>, Error> = client.select("fee").await;
+            match result {
+                Ok(fees) => {
+                    info!("Successfully fetched {} fee records", fees.len());
+                    Ok(fees)
+                }
+                Err(e) => {
+                    error!("Failed to select from fee table: {}", e);
+                    info!("This likely means deserialization failed - the Fee struct doesn't match the database schema");
+                    // Return empty vec for now so the app doesn't crash
+                    Ok(Vec::new())
+                }
+            }
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -1216,16 +1213,6 @@ impl DatabaseManager {
         }
     }
 
-    // Update an existing company
-    pub async fn update_company(&self, id: &str, company: Company) -> Result<Company, Error> {
-        if let Some(client) = &self.client {
-            let updated: Option<Company> = client.update_company(id, company).await?;
-            
-            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update company".to_string())))
-        } else {
-            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
-        }
-    }
 
     // Update an existing company with partial data
     pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Company, Error> {
@@ -1271,45 +1258,36 @@ impl DatabaseManager {
         }
     }
 
-    // Delete a contact
-    pub async fn delete_contact(&self, id: &str) -> Result<Contact, Error> {
+
+
+    // Create a new fee
+    pub async fn create_fee(&self, fee: FeeCreate) -> Result<Fee, Error> {
         if let Some(client) = &self.client {
-            let deleted: Option<Contact> = client.delete_contact(id).await?;
+            let created: Option<Fee> = client.create_fee(fee).await?;
             
-            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete contact".to_string())))
+            created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create fee".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
     }
 
-    // Create a new rfp
-    pub async fn create_rfp(&self, rfp: RfpCreate) -> Result<Rfp, Error> {
+    // Update an existing fee
+    pub async fn update_fee(&self, id: &str, fee: FeeUpdate) -> Result<Fee, Error> {
         if let Some(client) = &self.client {
-            let created: Option<Rfp> = client.create_rfp(rfp).await?;
+            let updated: Option<Fee> = client.update_fee(id, fee).await?;
             
-            created.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to create rfp".to_string())))
+            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update fee".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
     }
 
-    // Update an existing rfp
-    pub async fn update_rfp(&self, id: &str, rfp: RfpUpdate) -> Result<Rfp, Error> {
+    // Delete a fee
+    pub async fn delete_fee(&self, id: &str) -> Result<Fee, Error> {
         if let Some(client) = &self.client {
-            let updated: Option<Rfp> = client.update_rfp(id, rfp).await?;
+            let deleted: Option<Fee> = client.delete_fee(id).await?;
             
-            updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update rfp".to_string())))
-        } else {
-            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
-        }
-    }
-
-    // Delete an rfp
-    pub async fn delete_rfp(&self, id: &str) -> Result<Rfp, Error> {
-        if let Some(client) = &self.client {
-            let deleted: Option<Rfp> = client.delete_rfp(id).await?;
-            
-            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete rfp".to_string())))
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete fee".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }
@@ -1389,10 +1367,10 @@ impl DatabaseManager {
                 queries.push(format!("SELECT count() FROM {} GROUP ALL;", table_part));
             }
             
-            // 4. If it's an RFP record, also search for similar patterns
-            if record_id.starts_with("rfp:") {
-                queries.push("SELECT * FROM rfp WHERE string::contains(string(id), '23_966') LIMIT 10;".to_string());
-                queries.push("SELECT * FROM rfp WHERE string::contains(string(id), '⟨') LIMIT 10;".to_string());
+            // 4. If it's a Fee record, also search for similar patterns
+            if record_id.starts_with("fee:") {
+                queries.push("SELECT * FROM fee WHERE string::contains(string(id), '23_966') LIMIT 10;".to_string());
+                queries.push("SELECT * FROM fee WHERE string::contains(string(id), '⟨') LIMIT 10;".to_string());
             }
             
             // Execute each query and collect results
