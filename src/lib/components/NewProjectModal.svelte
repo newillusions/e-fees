@@ -487,31 +487,35 @@
       </div>
     {/if}
     
-    <!-- Actions -->
-    <div class="flex justify-end items-center" style="gap: 12px;">
-      <Button
-        variant="secondary"
-        size="sm"
-        on:click={closeModal}
-        disabled={$operationState.saving}
-      >
-        Cancel
-      </Button>
-      
-      <Button
-        type="submit"
-        variant="primary"
-        size="sm"
-        disabled={$operationState.saving || isGenerating}
-      >
-        {#if $operationState.saving}
-          <div 
-            class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-            style="width: 14px; height: 14px; margin-right: 6px;"
-          ></div>
-        {/if}
-        Create Project
-      </Button>
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="h-full !py-1 !flex !items-center !justify-center"
+          on:click={closeModal}
+          disabled={$operationState.saving}
+        >
+          Cancel
+        </Button>
+        
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          className="h-full !py-1 !flex !items-center !justify-center"
+          disabled={$operationState.saving || isGenerating}
+        >
+          {#if $operationState.saving}
+            <div 
+              class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+              style="width: 14px; height: 14px; margin-right: 6px;"
+            ></div>
+          {/if}
+          Create Project
+        </Button>
+      </div>
     </div>
   </form>
 </BaseModal>

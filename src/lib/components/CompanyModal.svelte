@@ -320,78 +320,107 @@
       </div>
     {/if}
     
-    <!-- Actions -->
-    <div class="flex justify-between items-center" style="gap: 12px;">
-      
-      <!-- Delete Button (Edit Mode Only) -->
-      {#if mode === 'edit'}
-        <div>
-          {#if !showDeleteConfirm}
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      {#if mode === 'edit' && !showDeleteConfirm}
+        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = true}
+            disabled={$operationState.saving || $operationState.deleting}
+          >
+            Delete
+          </Button>
+          
+          <div class="flex h-full" style="gap: 12px;">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              on:click={() => showDeleteConfirm = true}
+              className="h-full !py-1 !flex !items-center !justify-center"
+              on:click={closeModal}
               disabled={$operationState.saving || $operationState.deleting}
             >
-              Delete
+              Cancel
             </Button>
-          {:else}
-            <div class="flex gap-2">
-              <button
-                class="bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                style="height: 28px; padding: 6px 12px; font-size: 12px; gap: 6px;"
-                disabled={$operationState.deleting}
-                on:click={handleDelete}
-              >
-                {#if $operationState.deleting}
-                  <div 
-                    class="border-2 border-white border-t-transparent rounded-full animate-spin"
-                    style="width: 14px; height: 14px;"
-                  ></div>
-                {/if}
-                Confirm Delete
-              </button>
-              <Button
-                variant="ghost"
-                size="sm"
-                on:click={() => showDeleteConfirm = false}
-                disabled={$operationState.deleting}
-              >
-                Cancel
-              </Button>
-            </div>
-          {/if}
+            
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
+              disabled={$operationState.saving || $operationState.deleting}
+            >
+              {#if $operationState.saving}
+                <div 
+                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  style="width: 14px; height: 14px; margin-right: 6px;"
+                ></div>
+              {/if}
+              Update Company
+            </Button>
+          </div>
+        </div>
+      {:else if mode === 'edit' && showDeleteConfirm}
+        <!-- Delete Confirmation Mode -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={handleDelete}
+            disabled={$operationState.deleting}
+          >
+            {#if $operationState.deleting}
+              <div 
+                class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Confirm Delete
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = false}
+            disabled={$operationState.deleting}
+          >
+            Cancel
+          </Button>
         </div>
       {:else}
-        <div></div>
+        <!-- Create Mode: Just Cancel/Create buttons -->
+        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={closeModal}
+            disabled={$operationState.saving}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            disabled={$operationState.saving}
+          >
+            {#if $operationState.saving}
+              <div 
+                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Create Company
+          </Button>
+        </div>
       {/if}
-      
-      <!-- Main Actions -->
-      <div class="flex" style="gap: 12px;">
-        <Button
-          variant="secondary"
-          size="sm"
-          on:click={closeModal}
-          disabled={$operationState.saving || $operationState.deleting}
-        >
-          Cancel
-        </Button>
-        
-        <button
-          type="submit"
-          class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded font-medium transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          style="height: 28px; padding: 6px 12px; font-size: 12px; gap: 6px;"
-          disabled={$operationState.saving || $operationState.deleting || showDeleteConfirm}
-        >
-          {#if $operationState.saving}
-            <div 
-              class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-              style="width: 14px; height: 14px;"
-            ></div>
-          {/if}
-          {mode === 'create' ? 'Create Company' : 'Update Company'}
-        </button>
-      </div>
     </div>
   </form>
 </BaseModal>
