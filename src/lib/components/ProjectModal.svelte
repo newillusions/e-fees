@@ -306,7 +306,7 @@
           <Button
             variant="ghost"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-0 !flex !items-center !justify-center"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-2 !flex !items-center !justify-center"
             on:click={() => showDeleteConfirm = true}
             disabled={$operationState.saving || $operationState.deleting}
           >
@@ -317,7 +317,7 @@
             <Button
               variant="secondary"
               size="sm"
-              className="h-full !py-0 !flex !items-center !justify-center"
+              className="h-full !py-2 !flex !items-center !justify-center"
               on:click={closeModal}
               disabled={$operationState.saving || $operationState.deleting}
             >
@@ -328,7 +328,7 @@
               type="submit"
               variant="primary"
               size="sm"
-              className="h-full !py-0 !flex !items-center !justify-center"
+              className="h-full !py-2 !flex !items-center !justify-center"
               disabled={$operationState.saving || $operationState.deleting}
             >
               {#if $operationState.saving}
@@ -347,7 +347,7 @@
           <Button
             variant="ghost"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-0 !flex !items-center !justify-center"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-2 !flex !items-center !justify-center"
             on:click={handleDelete}
             disabled={$operationState.deleting}
           >
@@ -362,7 +362,7 @@
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-0 !flex !items-center !justify-center"
+            className="h-full !py-2 !flex !items-center !justify-center"
             on:click={() => showDeleteConfirm = false}
             disabled={$operationState.deleting}
           >
@@ -375,7 +375,7 @@
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-0 !flex !items-center !justify-center"
+            className="h-full !py-2 !flex !items-center !justify-center"
             on:click={closeModal}
             disabled={$operationState.saving}
           >
@@ -386,7 +386,7 @@
             type="submit"
             variant="primary"
             size="sm"
-            className="h-full !py-0 !flex !items-center !justify-center"
+            className="h-full !py-2 !flex !items-center !justify-center"
             disabled={$operationState.saving}
           >
             {#if $operationState.saving}
