@@ -118,8 +118,12 @@
     if (!project) return;
     
     await withLoadingState(async () => {
-      const projectId = extractSurrealId(project);
-      if (!projectId) throw new Error('Invalid project ID');
+      // Try to extract ID from project.id first, then from project itself
+      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      if (!projectId) {
+        console.error('Failed to extract project ID from:', project);
+        throw new Error('Invalid project ID');
+      }
       
       const projectData = {
         ...formData,
@@ -141,8 +145,12 @@
     if (!project || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      const projectId = extractSurrealId(project);
-      if (!projectId) throw new Error('Invalid project ID');
+      // Try to extract ID from project.id first, then from project itself
+      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      if (!projectId) {
+        console.error('Failed to extract project ID from:', project);
+        throw new Error('Invalid project ID');
+      }
       
       const result = await projectsActions.delete(projectId);
       operationActions.setMessage('Project deleted successfully');
@@ -307,20 +315,21 @@
             </Button>
           {:else}
             <div class="flex gap-2">
-              <button
-                class="bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                style="height: 28px; padding: 6px 12px; font-size: 12px; gap: 6px;"
-                disabled={$operationState.deleting}
+              <Button
+                variant="primary"
+                size="sm"
+                className="!bg-red-600 hover:!bg-red-700"
                 on:click={handleDelete}
+                disabled={$operationState.deleting}
               >
                 {#if $operationState.deleting}
                   <div 
                     class="border-2 border-white border-t-transparent rounded-full animate-spin"
-                    style="width: 14px; height: 14px;"
+                    style="width: 14px; height: 14px; margin-right: 6px;"
                   ></div>
                 {/if}
                 Confirm Delete
-              </button>
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -347,20 +356,20 @@
           Cancel
         </Button>
         
-        <button
+        <Button
           type="submit"
-          class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded font-medium transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          style="height: 28px; padding: 6px 12px; font-size: 12px; gap: 6px;"
+          variant="primary"
+          size="sm"
           disabled={$operationState.saving || $operationState.deleting || showDeleteConfirm}
         >
           {#if $operationState.saving}
             <div 
               class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-              style="width: 14px; height: 14px;"
+              style="width: 14px; height: 14px; margin-right: 6px;"
             ></div>
           {/if}
           {mode === 'create' ? 'Create Project' : 'Update Project'}
-        </button>
+        </Button>
       </div>
     </div>
   </form>
