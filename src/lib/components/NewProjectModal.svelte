@@ -221,7 +221,7 @@
       // Construct ProjectNumber object for database
       const projectNumber: ProjectNumber = {
         year,
-        country: countryCode,
+        country: parseInt(countryCode),
         seq,
         id: formData.project_number
       };
