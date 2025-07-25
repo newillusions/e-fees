@@ -308,6 +308,7 @@
             <Button
               variant="ghost"
               size="sm"
+              className="!text-red-400 hover:!text-red-300 hover:!bg-red-900/20"
               on:click={() => showDeleteConfirm = true}
               disabled={$operationState.saving || $operationState.deleting}
             >
@@ -316,15 +317,15 @@
           {:else}
             <div class="flex gap-2">
               <Button
-                variant="primary"
+                variant="ghost"
                 size="sm"
-                className="!bg-red-600 hover:!bg-red-700"
+                className="!bg-red-900/30 !text-red-300 hover:!bg-red-900/50 !border !border-red-600/50"
                 on:click={handleDelete}
                 disabled={$operationState.deleting}
               >
                 {#if $operationState.deleting}
                   <div 
-                    class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                    class="border-2 border-red-300 border-t-transparent rounded-full animate-spin"
                     style="width: 14px; height: 14px; margin-right: 6px;"
                   ></div>
                 {/if}
