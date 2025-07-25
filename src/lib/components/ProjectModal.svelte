@@ -298,83 +298,107 @@
       </div>
     {/if}
     
-    <!-- Actions -->
-    <div class="flex justify-between items-center" style="gap: 12px;">
-      
-      <!-- Delete Button (Edit Mode Only) -->
-      {#if mode === 'edit'}
-        <div>
-          {#if !showDeleteConfirm}
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      {#if mode === 'edit' && !showDeleteConfirm}
+        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full"
+            on:click={() => showDeleteConfirm = true}
+            disabled={$operationState.saving || $operationState.deleting}
+          >
+            Delete
+          </Button>
+          
+          <div class="flex h-full" style="gap: 12px;">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              className="!text-red-400 hover:!text-red-300 hover:!bg-red-900/20 !h-8"
-              on:click={() => showDeleteConfirm = true}
+              className="h-full"
+              on:click={closeModal}
               disabled={$operationState.saving || $operationState.deleting}
             >
-              Delete
+              Cancel
             </Button>
-          {:else}
-            <div class="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!bg-red-900/30 !text-red-300 hover:!bg-red-900/50 !border !border-red-600/50 !h-8"
-                on:click={handleDelete}
-                disabled={$operationState.deleting}
-              >
-                {#if $operationState.deleting}
-                  <div 
-                    class="border-2 border-red-300 border-t-transparent rounded-full animate-spin"
-                    style="width: 14px; height: 14px; margin-right: 6px;"
-                  ></div>
-                {/if}
-                Confirm Delete
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!h-8"
-                on:click={() => showDeleteConfirm = false}
-                disabled={$operationState.deleting}
-              >
-                Cancel
-              </Button>
-            </div>
-          {/if}
+            
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              className="h-full"
+              disabled={$operationState.saving || $operationState.deleting}
+            >
+              {#if $operationState.saving}
+                <div 
+                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  style="width: 14px; height: 14px; margin-right: 6px;"
+                ></div>
+              {/if}
+              Update Project
+            </Button>
+          </div>
+        </div>
+      {:else if mode === 'edit' && showDeleteConfirm}
+        <!-- Delete Confirmation: Confirm/Cancel delete buttons -->
+        <div class="flex justify-center items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full"
+            on:click={handleDelete}
+            disabled={$operationState.deleting}
+          >
+            {#if $operationState.deleting}
+              <div 
+                class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Confirm Delete
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full"
+            on:click={() => showDeleteConfirm = false}
+            disabled={$operationState.deleting}
+          >
+            Cancel
+          </Button>
         </div>
       {:else}
-        <div></div>
+        <!-- Create Mode: Just Cancel/Create buttons -->
+        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full"
+            on:click={closeModal}
+            disabled={$operationState.saving}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="h-full"
+            disabled={$operationState.saving}
+          >
+            {#if $operationState.saving}
+              <div 
+                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Create Project
+          </Button>
+        </div>
       {/if}
-      
-      <!-- Main Actions -->
-      <div class="flex" style="gap: 12px;">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="!h-8"
-          on:click={closeModal}
-          disabled={$operationState.saving || $operationState.deleting}
-        >
-          Cancel
-        </Button>
-        
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          className="!h-8"
-          disabled={$operationState.saving || $operationState.deleting || showDeleteConfirm}
-        >
-          {#if $operationState.saving}
-            <div 
-              class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-              style="width: 14px; height: 14px; margin-right: 6px;"
-            ></div>
-          {/if}
-          {mode === 'create' ? 'Create Project' : 'Update Project'}
-        </Button>
-      </div>
     </div>
   </form>
 </BaseModal>
