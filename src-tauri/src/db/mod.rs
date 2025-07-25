@@ -669,9 +669,72 @@ impl DatabaseClient {
     }
     
     pub async fn update_contact_partial(&self, id: &str, contact_update: crate::commands::ContactUpdate) -> Result<Option<Contact>, Error> {
+        
+        // Build SET clauses for only the fields that are provided
+        let mut set_clauses = Vec::new();
+        
+        if let Some(first_name) = &contact_update.first_name {
+            set_clauses.push(format!("first_name = '{}'", first_name.replace("'", "''")));
+        }
+        if let Some(last_name) = &contact_update.last_name {
+            set_clauses.push(format!("last_name = '{}'", last_name.replace("'", "''")));
+        }
+        if let Some(full_name) = &contact_update.full_name {
+            set_clauses.push(format!("full_name = '{}'", full_name.replace("'", "''")));
+        }
+        if let Some(email) = &contact_update.email {
+            set_clauses.push(format!("email = '{}'", email.replace("'", "''")));
+        }
+        if let Some(phone) = &contact_update.phone {
+            set_clauses.push(format!("phone = '{}'", phone.replace("'", "''")));
+        }
+        if let Some(position) = &contact_update.position {
+            set_clauses.push(format!("position = '{}'", position.replace("'", "''")));
+        }
+        if let Some(company) = &contact_update.company {
+            set_clauses.push(format!("company = company:{}", company));
+        }
+        
+        // Always update the updated_at timestamp
+        set_clauses.push("time.updated_at = time::now()".to_string());
+        
+        if set_clauses.is_empty() {
+            return Ok(None); // Nothing to update
+        }
+        
+        let query = format!(
+            "UPDATE contacts:{} SET {} RETURN AFTER",
+            id,
+            set_clauses.join(", ")
+        );
+        
+        info!("Executing contact update query: {}", query);
+        
+        let mut response = match self {
+            DatabaseClient::Http(client) => client.query(&query).await?,
+            DatabaseClient::WebSocket(client) => client.query(&query).await?,
+        };
+        
+        let result: Result<Vec<Contact>, _> = response.take(0);
+        match result {
+            Ok(mut contacts) => {
+                info!("Update query returned {} contacts", contacts.len());
+                if contacts.is_empty() {
+                    info!("Warning: Update query returned no records");
+                }
+                Ok(contacts.pop())
+            },
+            Err(e) => {
+                info!("Update query failed with error: {:?}", e);
+                Err(e)
+            },
+        }
+    }
+    
+    pub async fn delete_contact(&self, id: &str) -> Result<Option<Contact>, Error> {
         match self {
-            DatabaseClient::Http(client) => client.update(("contacts", id)).merge(contact_update).await,
-            DatabaseClient::WebSocket(client) => client.update(("contacts", id)).merge(contact_update).await,
+            DatabaseClient::Http(client) => client.delete(("contacts", id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(("contacts", id)).await,
         }
     }
     
@@ -1253,6 +1316,17 @@ impl DatabaseManager {
             let updated: Option<Contact> = client.update_contact_partial(id, contact_update).await?;
             
             updated.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to update contact".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+    
+    // Delete a contact
+    pub async fn delete_contact(&self, id: &str) -> Result<Contact, Error> {
+        if let Some(client) = &self.client {
+            let deleted: Option<Contact> = client.delete_contact(id).await?;
+            
+            deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete contact".to_string())))
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

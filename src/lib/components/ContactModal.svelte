@@ -5,13 +5,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { contactsActions, companiesStore } from '$lib/stores';
-  import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { extractSurrealId, formatSurrealRelation } from '$lib/utils/surrealdb';
   import { validateForm, CommonValidationRules, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
-  import FormSelect from './FormSelect.svelte';
+  import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
   import CompanyModal from './CompanyModal.svelte';
   import type { Contact, Company } from '$lib/../types';
@@ -58,12 +57,59 @@
   // UI state
   let showDeleteConfirm = false;
   let showCompanyModal = false;
+  let dataLoaded = false;
   
-  // Company lookup functionality
-  const { companyOptions } = createCompanyLookup(companiesStore);
+  // Typeahead search states for company selection
+  let companySearchText = '';
+  let companyOptions: Array<{ id: string; name: string; name_short?: string; abbreviation?: string }> = [];
   
   // Computed values
   $: fullName = `${formData.first_name} ${formData.last_name}`.trim();
+  
+  
+  // Company search handler for fuzzy search
+  async function handleCompanySearch(searchText: string) {
+    if (!searchText || searchText.length < 1) {
+      companyOptions = [];
+      return;
+    }
+    
+    try {
+      const searchLower = searchText.toLowerCase();
+      const filtered = $companiesStore
+        .filter(company => {
+          const nameMatch = company.name?.toLowerCase().includes(searchLower);
+          const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
+          const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
+          return nameMatch || shortNameMatch || abbreviationMatch;
+        })
+        .map(company => {
+          const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
+          return {
+            id: companyId,
+            name: company.name || '',
+            name_short: company.name_short || '',
+            abbreviation: company.abbreviation || ''
+          };
+        })
+        .slice(0, 10); // Limit to 10 results
+      
+      companyOptions = filtered;
+    } catch (error) {
+      console.warn('Failed to search companies:', error);
+      companyOptions = [];
+    }
+  }
+  
+  // Company selection handler
+  function handleCompanySelect(event: CustomEvent) {
+    formData.company = event.detail.id;
+    
+    // Clear any validation error for company field when a selection is made
+    if (formErrors.company) {
+      formErrors = { ...formErrors, company: '' };
+    }
+  }
   
   // Form submission handler
   function handleSubmit(event: Event) {
@@ -111,16 +157,20 @@
     if (!contact) return;
     
     await withLoadingState(async () => {
-      const contactId = extractSurrealId(contact);
+      // Try multiple extraction approaches
+      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      
       if (!contactId) throw new Error('Invalid contact ID');
       
+      // Only send fields that the backend ContactUpdate struct supports
       const contactData = {
-        ...formData,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         full_name: fullName,
-        time: {
-          created_at: contact.time.created_at,
-          updated_at: new Date().toISOString()
-        }
+        email: formData.email,
+        phone: formData.phone,
+        position: formData.position,
+        company: formData.company
       };
       
       const result = await contactsActions.update(contactId, contactData);
@@ -135,7 +185,8 @@
     if (!contact || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      const contactId = extractSurrealId(contact);
+      // Try multiple extraction approaches
+      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
       if (!contactId) throw new Error('Invalid contact ID');
       
       const result = await contactsActions.delete(contactId);
@@ -157,6 +208,10 @@
     };
     formErrors = {};
     showDeleteConfirm = false;
+    
+    // Clear company search state
+    companySearchText = '';
+    companyOptions = [];
   }
   
   function closeModal() {
@@ -174,23 +229,55 @@
     showCompanyModal = false;
   }
   
-  // Load form data when contact changes
-  $: if (contact && mode === 'edit') {
+  // Load form data when contact changes - only when modal opens
+  $: if (contact && mode === 'edit' && isOpen && !dataLoaded) {
+    loadContactForEdit();
+  }
+  
+  // Reset dataLoaded flag when modal closes
+  $: if (!isOpen) {
+    dataLoaded = false;
+  }
+  
+  function loadContactForEdit() {
+    if (!contact || dataLoaded) return;
+    dataLoaded = true;
+    
+    // Try multiple extraction approaches for company ID
+    const companyId = extractSurrealId(contact.company) || extractSurrealId(contact.company?.id) || contact.company?.id || contact.company || '';
+    
     formData = {
       first_name: contact.first_name || '',
       last_name: contact.last_name || '',
       email: contact.email || '',
       phone: contact.phone || '',
       position: contact.position || '',
-      company: extractSurrealId(contact.company) || ''
+      company: companyId
     };
+    
+    // Clear any existing validation errors when loading edit data
+    formErrors = {};
+    
+    // Set the company search text to show the selected company name
+    if (formData.company) {
+      const selectedCompany = $companiesStore.find(c => extractSurrealId(c.id) === formData.company);
+      
+      if (selectedCompany) {
+        companySearchText = selectedCompany.name || '';
+      }
+    }
+  }
+  
+  // Clear validation errors when modal opens in create mode
+  $: if (isOpen && mode === 'create') {
+    formErrors = {};
   }
 </script>
 
 <BaseModal 
   {isOpen} 
   title={mode === 'create' ? 'New Contact' : 'Edit Contact'}
-  maxWidth="450px"
+  maxWidth="500px"
   on:close={closeModal}
 >
   <!-- Form -->
@@ -267,13 +354,30 @@
             Company *
           </label>
           <div class="flex" style="gap: 8px;">
-            <FormSelect
+            <TypeaheadSelect
+              label=""
               bind:value={formData.company}
-              placeholder="Select company"
+              bind:searchText={companySearchText}
+              options={companyOptions}
+              displayFields={['name']}
+              placeholder="Search companies..."
               required
               error={formErrors.company}
-              options={$companyOptions}
-            />
+              on:input={(e) => handleCompanySearch(e.detail)}
+              on:select={handleCompanySelect}
+            >
+              <svelte:fragment slot="option" let:option>
+                <div class="flex flex-col">
+                  <span class="font-medium">{option.name}</span>
+                  {#if option.name_short && option.name_short !== option.name}
+                    <span class="text-emittiv-light text-xs">{option.name_short}</span>
+                  {/if}
+                  {#if option.abbreviation}
+                    <span class="text-emittiv-splash text-xs">{option.abbreviation}</span>
+                  {/if}
+                </div>
+              </svelte:fragment>
+            </TypeaheadSelect>
             
             <button
               type="button"
@@ -352,7 +456,7 @@
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
-              Update Contact
+              Update
             </Button>
           </div>
         </div>

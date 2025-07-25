@@ -83,6 +83,7 @@ pub struct CompanyUpdate {
 pub struct ContactUpdate {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
+    pub full_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub position: Option<String>,
@@ -604,19 +605,19 @@ crud_command!(
 /// 
 /// # Arguments
 /// * `id` - The contact ID (extracted from SurrealDB Thing object)
-/// * `contact_update` - Partial contact data with only fields to update
+/// * `contactUpdate` - Partial contact data with only fields to update
 /// 
 /// # Returns
 /// * `Result<Contact, String>` - Updated contact or error message
 #[tauri::command]
-pub async fn update_contact(id: String, contact_update: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
+pub async fn update_contact(id: String, contactUpdate: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
     let contact_name = format!("contact '{}'", id);
     execute_with_manager(
         &state,
         |manager| {
             let id_clone = id.clone();
             Box::pin(async move { 
-                manager.update_contact_partial(&id_clone, contact_update).await 
+                manager.update_contact_partial(&id_clone, contactUpdate).await 
             })
         },
         "update",
@@ -651,17 +652,48 @@ pub async fn update_contact(id: String, contact_update: ContactUpdate, state: St
 ///   console.error('Cannot delete contact with active FPs');
 /// }
 /// ```
-// TODO: Implement delete_contact functionality with proper business logic validation
-// Currently commented out as it's not used and needs proper implementation
-// to handle cascade delete scenarios (e.g., FPs linked to this contact)
-// crud_command!(
-//     delete_contact,
-//     Contact,
-//     delete_contact,
-//     "delete",
-//     "contact",
-//     id: String
-// );
+/// Delete a contact from the database.
+/// 
+/// This command permanently removes a contact record. Note that this
+/// operation will fail if the contact has associated RFPs or other
+/// relationships that prevent deletion.
+/// 
+/// # Arguments
+/// * `id` - The contact ID (extracted from SurrealDB Thing object)
+/// 
+/// # Returns
+/// * `Result<Contact, String>` - The deleted contact or error message
+/// 
+/// # Errors
+/// Returns error if:
+/// - Contact doesn't exist
+/// - Contact has dependent records (RFPs, etc.)
+/// - Database connection failure
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// try {
+///   const deleted = await invoke('delete_contact', { id: 'contacts:john_smith' });
+///   console.log('Deleted contact:', deleted.name);
+/// } catch (error) {
+///   console.error('Cannot delete contact:', error);
+/// }
+/// ```
+#[tauri::command]
+pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Contact, String> {
+    let contact_name = format!("contact '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.delete_contact(&id_clone).await 
+            })
+        },
+        "delete",
+        &contact_name
+    ).await
+}
 
 // ============================================================================
 // RFP (PROPOSAL) MANAGEMENT COMMANDS

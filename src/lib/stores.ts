@@ -26,6 +26,7 @@ import {
   updateFee,
   deleteFee
 } from './api';
+import { extractSurrealId } from './utils/surrealdb';
 
 // ============================================================================
 // CONNECTION STORE
@@ -399,17 +400,20 @@ export const contactsActions = {
       contactsError.set('');
       
       const updatedContact = await updateContact(id, contactData);
+      
       if (updatedContact) {
         contactsStore.update(contacts => 
           contacts.map(contact => 
-            contact.id === updatedContact.id ? updatedContact : contact
+            extractSurrealId(contact) === extractSurrealId(updatedContact) ? updatedContact : contact
           )
         );
+        return updatedContact; // Added return statement
       } else {
         throw new Error('Update returned null - no contact updated');
       }
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to update contact';
+      console.error('Contact update error:', errorMessage);
       contactsError.set(errorMessage);
       throw error;
     } finally {
