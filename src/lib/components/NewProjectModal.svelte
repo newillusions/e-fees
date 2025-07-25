@@ -357,7 +357,7 @@
         </div>
         
         <!-- Year and Project Number -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
           <FormInput
             label="Year"
             type="number"
@@ -372,21 +372,21 @@
             <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
               Project Number *
             </label>
-            <div class="relative flex">
+            <div class="relative flex" style="max-width: 100%;">
               <input
                 type="text"
                 bind:value={formData.project_number}
                 placeholder="Auto-generated"
                 readonly
                 class="flex-1 bg-emittiv-darker border border-emittiv-dark rounded-l text-emittiv-light placeholder-emittiv-light opacity-60 cursor-not-allowed"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                style="padding: 8px 12px; font-size: 12px; height: 32px; min-width: 0;"
               />
               <button
                 type="button"
                 on:click={regenerateProjectNumber}
                 disabled={!formData.country || !formData.year || isGenerating}
-                class="px-3 bg-emittiv-dark border border-emittiv-dark border-l-0 rounded-r text-emittiv-light hover:bg-emittiv-light hover:text-emittiv-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style="height: 32px; font-size: 12px;"
+                class="bg-emittiv-dark border border-emittiv-dark border-l-0 rounded-r text-emittiv-light hover:bg-emittiv-light hover:text-emittiv-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                style="height: 32px; font-size: 12px; padding: 0 8px; flex-shrink: 0;"
                 title="Regenerate project number"
               >
                 {#if isGenerating}
@@ -498,20 +498,20 @@
         Cancel
       </Button>
       
-      <button
+      <Button
         type="submit"
-        class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded font-medium transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-        style="height: 28px; padding: 6px 12px; font-size: 12px; gap: 6px;"
+        variant="primary"
+        size="sm"
         disabled={$operationState.saving || isGenerating}
       >
         {#if $operationState.saving}
           <div 
             class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-            style="width: 14px; height: 14px;"
+            style="width: 14px; height: 14px; margin-right: 6px;"
           ></div>
         {/if}
         Create Project
-      </button>
+      </Button>
     </div>
   </form>
 </BaseModal>
