@@ -337,7 +337,7 @@
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
-              Update Project
+              Update
             </Button>
           </div>
         </div>
