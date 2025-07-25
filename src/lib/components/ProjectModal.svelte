@@ -308,8 +308,7 @@
             <Button
               variant="ghost"
               size="sm"
-              className="!text-red-400 hover:!text-red-300 hover:!bg-red-900/20"
-              style="height: 32px;"
+              className="!text-red-400 hover:!text-red-300 hover:!bg-red-900/20 !h-8"
               on:click={() => showDeleteConfirm = true}
               disabled={$operationState.saving || $operationState.deleting}
             >
@@ -320,8 +319,7 @@
               <Button
                 variant="ghost"
                 size="sm"
-                className="!bg-red-900/30 !text-red-300 hover:!bg-red-900/50 !border !border-red-600/50"
-                style="height: 32px;"
+                className="!bg-red-900/30 !text-red-300 hover:!bg-red-900/50 !border !border-red-600/50 !h-8"
                 on:click={handleDelete}
                 disabled={$operationState.deleting}
               >
@@ -336,7 +334,7 @@
               <Button
                 variant="ghost"
                 size="sm"
-                style="height: 32px;"
+                className="!h-8"
                 on:click={() => showDeleteConfirm = false}
                 disabled={$operationState.deleting}
               >
@@ -354,7 +352,7 @@
         <Button
           variant="secondary"
           size="sm"
-          style="height: 32px;"
+          className="!h-8"
           on:click={closeModal}
           disabled={$operationState.saving || $operationState.deleting}
         >
@@ -365,7 +363,7 @@
           type="submit"
           variant="primary"
           size="sm"
-          style="height: 32px;"
+          className="!h-8"
           disabled={$operationState.saving || $operationState.deleting || showDeleteConfirm}
         >
           {#if $operationState.saving}
