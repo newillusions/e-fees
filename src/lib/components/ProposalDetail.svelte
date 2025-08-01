@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { extractId } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { copyProjectTemplate, writeFeeToJson, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
+  import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
@@ -268,6 +268,63 @@
     }
   }
   
+  // JSON export with safety checks
+  async function handleExportToJson() {
+    if (!proposal) {
+      console.error('Cannot export: no proposal data');
+      return;
+    }
+    
+    try {
+      const proposalId = extractId(proposal.id);
+      const result = await writeFeeToJsonSafe(proposalId);
+      
+      if (result) {
+        // Parse the result to show safety actions taken
+        const lines = result.split('\n');
+        const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
+        
+        let message = `JSON file export completed successfully!\n\nFile: ${filePath}`;
+        
+        // Add safety actions if present
+        const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
+        if (safetyIndex !== -1) {
+          const safetyActions = lines.slice(safetyIndex + 1).filter(line => line.trim().startsWith('•'));
+          if (safetyActions.length > 0) {
+            message += '\n\nSafety actions taken:';
+            safetyActions.forEach(action => {
+              message += `\n${action.trim()}`;
+            });
+          }
+        }
+        
+        warningModal = {
+          isOpen: true,
+          title: 'Export Successful',
+          message,
+          confirmText: 'OK',
+          cancelText: '',
+          onConfirm: null,
+          onCancel: null
+        };
+      } else {
+        throw new Error('Export failed - no result returned');
+      }
+      
+    } catch (error) {
+      console.error('Failed to export JSON:', error);
+      warningModal = {
+        isOpen: true,
+        title: 'Export Failed',
+        message: `Failed to export proposal to JSON:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
+  }
+  
   // Custom actions for the detail panel
   $: customActions = [
     {
@@ -276,6 +333,13 @@
       tooltip: 'Create project folder with template and populate data',
       icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4',
       disabled: !proposal || !relatedProject
+    },
+    {
+      handler: handleExportToJson,
+      label: 'Export to JSON',
+      tooltip: 'Export proposal data to project JSON file with safety checks',
+      icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      disabled: !proposal
     }
   ];
 </script>

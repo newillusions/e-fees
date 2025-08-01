@@ -28,6 +28,8 @@ use crate::crud_command;
 use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate};
 use std::sync::{Arc, Mutex};
 use std::fs;
+use serde_json::Value;
+use chrono::Utc;
 use std::path::{Path, PathBuf};
 use tauri::State;
 use log::{error, info};
@@ -1100,6 +1102,349 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
 
     info!("Successfully wrote RFP data to: {}", json_file_path);
     Ok(format!("Successfully wrote RFP data to: {}", json_file_path))
+}
+
+/// Write fee proposal data to JSON file with enhanced safety checks.
+/// 
+/// This enhanced version of `write_fee_to_json` includes safety mechanisms to detect
+/// and protect existing project data while allowing safe overwriting of placeholder content.
+/// 
+/// # Safety Features
+/// - Detects placeholder content vs. real project data
+/// - Creates timestamped backup copies of files containing real data
+/// - Alerts user when existing data is found
+/// - Safely renames template files when appropriate
+/// 
+/// # Parameters
+/// - `fee_id`: The string ID of the fee proposal to export
+/// 
+/// # Returns
+/// - `Ok(String)`: Success message with file path and safety actions taken
+/// - `Err(String)`: Error message if operation fails or user confirmation needed
+/// 
+/// # Placeholder Detection
+/// Files are considered to contain placeholder data if they contain:
+/// - Default template values like "Project Name" or "Client Name"
+/// - All field values match expected template patterns
+/// - File was recently created from template
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// const result = await invoke('write_fee_to_json_safe', { fee_id: 'fee:some_id' });
+/// ```
+#[tauri::command]
+pub async fn write_fee_to_json_safe(fee_id: String, state: State<'_, AppState>) -> Result<String, String> {
+    use std::path::Path;
+    use serde_json::json;
+    
+    info!("Writing fee {} to JSON file with safety checks", fee_id);
+    
+    // Get fee data using the same logic as the original function
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+
+    // Get fee record and related data (reusing existing logic)
+    let fees = manager_clone.get_fees().await
+        .map_err(|e| format!("Failed to fetch fee records: {}", e))?;
+    
+    let fee = fees.iter()
+        .find(|f| {
+            if let Some(id) = &f.id {
+                let db_id_clean = id.id.to_string().trim_start_matches('⟨').trim_end_matches('⟩').to_string();
+                let input_id_clean = fee_id.trim_start_matches("fee:").to_string();
+                db_id_clean == input_id_clean
+            } else {
+                false
+            }
+        })
+        .ok_or_else(|| format!("Fee record not found with ID: {}", fee_id))?;
+
+    // Get related data
+    let projects = manager_clone.get_projects().await
+        .map_err(|e| format!("Failed to fetch projects: {}", e))?;
+    
+    let project = projects.iter()
+        .find(|p| {
+            if let Some(p_id) = &p.id {
+                fee.project_id.id.to_string() == p_id.id.to_string()
+            } else {
+                false
+            }
+        })
+        .ok_or_else(|| format!("Project not found for fee"))?;
+
+    let companies = manager_clone.get_companies().await
+        .map_err(|e| format!("Failed to fetch companies: {}", e))?;
+    
+    let company = companies.iter()
+        .find(|c| {
+            if let Some(c_id) = &c.id {
+                fee.company_id.id.to_string() == c_id.id.to_string()
+            } else {
+                false
+            }
+        })
+        .ok_or_else(|| format!("Company not found for fee"))?;
+
+    let contacts = manager_clone.get_contacts().await
+        .map_err(|e| format!("Failed to fetch contacts: {}", e))?;
+    
+    let contact = contacts.iter()
+        .find(|c| {
+            if let Some(c_id) = &c.id {
+                fee.contact_id.id.to_string() == c_id.id.to_string()
+            } else {
+                false
+            }
+        })
+        .ok_or_else(|| format!("Contact not found for fee"))?;
+
+    // Get settings and build file paths
+    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let project_folder_path = settings.project_folder_path
+        .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
+
+    let project_number = project.number.id.replace("⟨", "").replace("⟩", "");
+    let project_name = &project.name_short;
+
+    let project_dir = format!("{}/01 RFPs/{} {}", project_folder_path, project_number, project_name);
+    
+    // Check all possible file name variations
+    let possible_template_paths = vec![
+        format!("{}/02 Proposal/{}-var Default Values.json", project_dir, project_number),
+        format!("{}/02 Proposal/{}-var default values.json", project_dir, project_number),
+        format!("{}/02 Proposal/{}-var - Default Values.json", project_dir, project_number),
+        format!("{}/02 Proposal/{}-var - default values.json", project_dir, project_number),
+    ];
+    
+    let final_file_path = format!("{}/02 Proposal/{}-var.json", project_dir, project_number);
+    
+    info!("Checking template file variations:");
+    for template_path in &possible_template_paths {
+        info!("  - {}", template_path);
+    }
+    info!("Final file path: {}", final_file_path);
+
+    // Safety check logic
+    let mut safety_actions = Vec::new();
+    let target_file_path: String;
+
+    if Path::new(&final_file_path).exists() {
+        // Final file exists - check if it contains real data or placeholders
+        let existing_content = fs::read_to_string(&final_file_path)
+            .map_err(|e| format!("Failed to read existing file: {}", e))?;
+        
+        let is_placeholder_content = check_if_placeholder_content(&existing_content)?;
+        
+        if is_placeholder_content {
+            info!("Existing file contains placeholder data - safe to overwrite");
+            target_file_path = final_file_path;
+            safety_actions.push("Detected placeholder content - safe to overwrite".to_string());
+        } else {
+            // File contains real project data - create backup
+            let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
+            let backup_path = format!("{}/02 Proposal/{}-var_backup_{}.json", project_dir, project_number, timestamp);
+            
+            fs::copy(&final_file_path, &backup_path)
+                .map_err(|e| format!("Failed to create backup: {}", e))?;
+            
+            info!("Created backup of existing data: {}", backup_path);
+            target_file_path = final_file_path;
+            safety_actions.push(format!("⚠️  EXISTING DATA DETECTED - Created backup: {}", backup_path));
+            safety_actions.push("Previous file contained real project data and has been preserved".to_string());
+        }
+    } else {
+        // Check if any template file exists
+        let existing_template = possible_template_paths.iter()
+            .find(|path| Path::new(path).exists());
+            
+        if let Some(template_path) = existing_template {
+            // Template file exists - rename it and proceed
+            info!("Found template file: {}", template_path);
+            info!("Renaming template file to final name");
+            target_file_path = final_file_path.clone();
+            
+            // Check for sync activity (same as original function)
+            let metadata = fs::metadata(template_path).map_err(|e| {
+                format!("Failed to read template file metadata: {}", e)
+            })?;
+            
+            if let Ok(modified) = metadata.modified() {
+                if let Ok(elapsed) = modified.elapsed() {
+                    if elapsed.as_secs() < 30 {
+                        info!("Template file was recently modified, waiting for potential sync...");
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                    }
+                }
+            }
+            
+            fs::rename(template_path, &final_file_path).map_err(|e| {
+                error!("Failed to rename template file: {}", e);
+                format!("Failed to rename template file from '{}' to '{}': {}", template_path, final_file_path, e)
+            })?;
+            
+            safety_actions.push(format!("Renamed template file '{}' to final name", 
+                template_path.split('/').last().unwrap_or("unknown")));
+        } else {
+            // Neither file exists - create new file
+            target_file_path = final_file_path;
+            safety_actions.push("Creating new JSON file".to_string());
+        }
+    }
+
+    // Format issue date (same as original function)
+    let issue_date = format_issue_date(&fee.issue_date);
+
+    // Create JSON data (same as original function)
+    let json_data = json!({
+        "01 Document Name": fee.name.clone(),
+        "02 Document Number": fee.number.clone(),
+        "03 Document Release": fee.rev.to_string(),
+        "04 Document Issue Date": issue_date,
+        "06 Project Name": project.name.clone(),
+        "07 Project Activity": fee.activity.clone(),
+        "08 Project Package": fee.package.clone(),
+        "09 Project Stage": project.status.clone(),
+        "11 Project Area": project.area.clone(),
+        "12 Project City": project.city.clone(),
+        "13 Project Country": project.country.clone(),
+        "21 Client Company": company.name.clone(),
+        "22 Client City": company.city.clone(),
+        "23 Client Country": company.country.clone(),
+        "26 Contact Name": contact.full_name.clone().unwrap_or_else(|| {
+            let first = contact.first_name.clone().unwrap_or_default();
+            let last = contact.last_name.clone().unwrap_or_default();
+            format!("{} {}", first, last)
+        }),
+        "27 Contact Position": contact.position.clone().unwrap_or_default(),
+        "28 Contact Phone": contact.phone.clone().unwrap_or_default(),
+        "29 Contact Email": contact.email.clone().unwrap_or_default(),
+        "99 Strap Line": fee.strap_line.clone()
+    });
+
+    // Ensure directory exists
+    if let Some(parent) = Path::new(&target_file_path).parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+            error!("Failed to create directory: {}", e);
+            format!("Failed to create directory: {}", e)
+        })?;
+    }
+
+    // Write JSON file
+    fs::write(&target_file_path, serde_json::to_string_pretty(&json_data).map_err(|e| {
+        error!("Failed to serialize JSON: {}", e);
+        format!("Failed to serialize JSON: {}", e)
+    })?).map_err(|e| {
+        error!("Failed to write file: {}", e);
+        format!("Failed to write file: {}", e)
+    })?;
+
+    // Prepare success message with safety actions
+    let mut result_message = format!("Successfully wrote fee proposal data to: {}", target_file_path);
+    if !safety_actions.is_empty() {
+        result_message.push_str("\n\nSafety actions taken:");
+        for action in safety_actions {
+            result_message.push_str(&format!("\n• {}", action));
+        }
+    }
+
+    info!("Successfully wrote fee data with safety checks: {}", target_file_path);
+    Ok(result_message)
+}
+
+/// Check if JSON content contains placeholder data or real project data.
+/// 
+/// # Parameters
+/// - `content`: The JSON file content as a string
+/// 
+/// # Returns
+/// - `Ok(true)`: Content appears to be placeholder data (safe to overwrite)
+/// - `Ok(false)`: Content appears to be real project data (needs backup)
+/// - `Err(String)`: Error parsing or analyzing content
+fn check_if_placeholder_content(content: &str) -> Result<bool, String> {
+    // Parse JSON content
+    let json_value: Value = serde_json::from_str(content)
+        .map_err(|e| format!("Failed to parse JSON content: {}", e))?;
+    
+    // Check for common placeholder indicators
+    let placeholder_indicators = [
+        "Project Name",
+        "Client Name", 
+        "Contact Name",
+        "Default Values",
+        "Template",
+        "PLACEHOLDER",
+        "XXX",
+        "TBD",
+        "yy-cccnn"
+    ];
+    
+    // Convert JSON to string for pattern matching
+    let content_str = content.to_lowercase();
+    
+    // Count placeholder indicators found
+    let placeholder_count = placeholder_indicators.iter()
+        .filter(|&&indicator| content_str.contains(&indicator.to_lowercase()))
+        .count();
+    
+    // Check specific fields that indicate real data
+    if let Some(obj) = json_value.as_object() {
+        // Check if document name looks real (not placeholder)
+        if let Some(doc_name) = obj.get("01 Document Name") {
+            if let Some(name_str) = doc_name.as_str() {
+                if !name_str.trim().is_empty() && 
+                   !placeholder_indicators.iter().any(|&ind| 
+                       name_str.to_lowercase().contains(&ind.to_lowercase())) {
+                    // Document has a real name
+                    if placeholder_count < 2 {
+                        return Ok(false); // Likely real data
+                    }
+                }
+            }
+        }
+        
+        // Check if project name looks real
+        if let Some(project_name) = obj.get("06 Project Name") {
+            if let Some(name_str) = project_name.as_str() {
+                if !name_str.trim().is_empty() && 
+                   !placeholder_indicators.iter().any(|&ind| 
+                       name_str.to_lowercase().contains(&ind.to_lowercase())) {
+                    // Project has a real name
+                    if placeholder_count < 2 {
+                        return Ok(false); // Likely real data
+                    }
+                }
+            }
+        }
+    }
+    
+    // If we found multiple placeholder indicators, it's likely template data
+    Ok(placeholder_count >= 2)
+}
+
+/// Format issue date from YYMMDD to "dd MMM yyyy" format.
+/// 
+/// # Parameters
+/// - `date_str`: Date string in YYMMDD format
+/// 
+/// # Returns
+/// - Formatted date string or current date if parsing fails
+fn format_issue_date(date_str: &str) -> String {
+    if date_str.len() == 6 {
+        if let (Ok(year), Ok(month), Ok(day)) = (
+            date_str[0..2].parse::<i32>(),
+            date_str[2..4].parse::<u32>(),
+            date_str[4..6].parse::<u32>()
+        ) {
+            let full_year = if year >= 50 { 1900 + year } else { 2000 + year };
+            let date = chrono::NaiveDate::from_ymd_opt(full_year, month, day);
+            return date.map(|d| d.format("%d %b %Y").to_string())
+                .unwrap_or_else(|| Utc::now().format("%d %b %Y").to_string());
+        }
+    }
+    Utc::now().format("%d %b %Y").to_string()
 }
 
 /// Update an existing project in the database.

@@ -9,6 +9,7 @@
   import { extractSurrealId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import { writeFeeToJsonSafe } from '$lib/api';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
@@ -93,10 +94,14 @@
   // UI state
   let showDeleteConfirm = false;
   let showProjectStatusSync = false;
+  let showJsonExportAlert = false;
   let originalStatus = '';
   let pendingUpdateData: any = null;
   let formInitialized = false;
   let dataLoaded = false;
+  
+  // Auto-export checkbox state (activated by default for new proposals)
+  let autoExportToJson = true;
   
   // Nested modal states
   let showNewProjectModal = false;
@@ -327,7 +332,47 @@
       };
       
       const result = await feesActions.create(proposalData);
-      operationActions.setMessage('Proposal created successfully');
+      
+      // Auto-export to JSON if enabled
+      if (autoExportToJson && result?.id) {
+        try {
+          const feeId = extractSurrealId(result.id) || extractSurrealId(result) || '';
+          if (feeId) {
+            const exportResult = await writeFeeToJsonSafe(feeId);
+            if (exportResult) {
+              // Parse export result for user feedback
+              const lines = exportResult.split('\n');
+              const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
+              
+              let message = 'Proposal created successfully and exported to JSON!';
+              
+              // Add safety actions if present
+              const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
+              if (safetyIndex !== -1) {
+                const safetyActions = lines.slice(safetyIndex + 1).filter(line => line.trim().startsWith('•'));
+                if (safetyActions.length > 0) {
+                  message += '\n\nJSON Export Details:';
+                  safetyActions.forEach(action => {
+                    message += `\n${action.trim()}`;
+                  });
+                }
+              }
+              
+              operationActions.setMessage(message);
+            } else {
+              operationActions.setMessage('Proposal created successfully, but JSON export failed');
+            }
+          } else {
+            operationActions.setMessage('Proposal created successfully, but could not extract ID for JSON export');
+          }
+        } catch (error) {
+          console.error('Auto-export failed:', error);
+          operationActions.setMessage(`Proposal created successfully, but JSON export failed: ${error}`);
+        }
+      } else {
+        operationActions.setMessage('Proposal created successfully');
+      }
+      
       resetForm();
       closeModal();
       return result;
@@ -374,8 +419,10 @@
     // If no project status sync needed, proceed with normal update
     await withLoadingState(async () => {
       const result = await feesActions.update(proposalId, updateData);
-      operationActions.setMessage('Proposal updated successfully');
-      closeModal();
+      
+      // After successful update, show JSON export alert
+      showJsonExportAlert = true;
+      
       return result;
     }, operationActions, 'saving');
   }
@@ -437,11 +484,62 @@
         ? 'Proposal and project status updated successfully!' 
         : 'Proposal updated successfully!');
       
-      closeModal();
+      // After successful update, show JSON export alert
+      showJsonExportAlert = true;
       return true;
     }, operationActions, 'saving');
     
     pendingUpdateData = null;
+  }
+  
+  // Handle JSON export from alert
+  async function handleJsonExportFromAlert() {
+    if (!proposal) return;
+    
+    showJsonExportAlert = false;
+    
+    try {
+      const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
+      if (!proposalId) {
+        operationActions.setError('Could not extract proposal ID for JSON export');
+        return;
+      }
+      
+      const exportResult = await writeFeeToJsonSafe(proposalId);
+      if (exportResult) {
+        // Parse export result for user feedback
+        const lines = exportResult.split('\n');
+        const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
+        
+        let message = 'Proposal updated and exported to JSON successfully!';
+        
+        // Add safety actions if present
+        const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
+        if (safetyIndex !== -1) {
+          const safetyActions = lines.slice(safetyIndex + 1).filter(line => line.trim().startsWith('•'));
+          if (safetyActions.length > 0) {
+            message += '\n\nJSON Export Details:';
+            safetyActions.forEach(action => {
+              message += `\n${action.trim()}`;
+            });
+          }
+        }
+        
+        operationActions.setMessage(message);
+        closeModal();
+      } else {
+        operationActions.setError('JSON export failed - no result returned');
+      }
+    } catch (error) {
+      console.error('JSON export failed:', error);
+      operationActions.setError(`JSON export failed: ${error}`);
+    }
+  }
+  
+  // Handle dismissing the JSON export alert
+  function handleJsonExportDismiss() {
+    showJsonExportAlert = false;
+    closeModal();
   }
   
   // Form management
@@ -469,10 +567,14 @@
     formErrors = {};
     showDeleteConfirm = false;
     showProjectStatusSync = false;
+    showJsonExportAlert = false;
     originalStatus = '';
     pendingUpdateData = null;
     formInitialized = false;
     dataLoaded = false;
+    
+    // Reset auto-export checkbox to default (enabled)
+    autoExportToJson = true;
     
     // Clear search texts
     projectSearchText = '';
@@ -953,6 +1055,28 @@
       </div>
     </div>
     
+    <!-- Auto-Export Options (Create Mode Only) -->
+    {#if mode === 'create'}
+      <div>
+        <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+          Export Options
+        </h3>
+        <div class="flex items-center" style="gap: 8px;">
+          <input
+            type="checkbox"
+            id="auto-export-json"
+            bind:checked={autoExportToJson}
+            class="w-4 h-4 text-emittiv-splash bg-emittiv-dark border-emittiv-dark rounded focus:ring-emittiv-splash focus:ring-2"
+          />
+          <label for="auto-export-json" class="text-emittiv-lighter text-sm cursor-pointer">
+            Automatically export to project JSON file after creation
+          </label>
+        </div>
+        <p class="text-emittiv-light text-xs mt-2">
+          When enabled, the proposal data will be safely exported to the project's JSON file with automatic backup of existing data.
+        </p>
+      </div>
+    {/if}
     
     <!-- Error/Success Messages -->
     {#if $operationState.error}
@@ -1006,6 +1130,33 @@
       </div>
     {/if}
     
+    <!-- JSON Export Alert -->
+    {#if showJsonExportAlert}
+      <div class="text-emittiv-splash text-sm bg-orange-900/20 border border-orange-500/30 rounded" style="padding: 8px 12px;">
+        <p class="font-medium" style="margin-bottom: 4px;">Export to JSON?</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={handleJsonExportFromAlert}
+            class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded font-medium transition-all flex items-center justify-center disabled:opacity-50"
+            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            disabled={$operationState.saving}
+          >
+            Yes, export
+          </button>
+          <button
+            type="button"
+            on:click={handleJsonExportDismiss}
+            class="border border-orange-500/30 rounded text-orange-300 hover:text-orange-200 transition-all"
+            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            disabled={$operationState.saving}
+          >
+            No, close
+          </button>
+        </div>
+      </div>
+    {/if}
+    
     <!-- Actions - Full Width Container -->
     <div class="w-full" style="height: 40px;">
       {#if mode === 'edit' && !showDeleteConfirm}
@@ -1016,7 +1167,7 @@
             size="sm"
             className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
             on:click={() => showDeleteConfirm = true}
-            disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync}
+            disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
           >
             Delete
           </Button>
@@ -1037,7 +1188,7 @@
               variant="primary"
               size="sm"
               className="h-full !py-1 !flex !items-center !justify-center"
-              disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync}
+              disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
             >
               {#if $operationState.saving}
                 <div 
@@ -1095,7 +1246,7 @@
             variant="primary"
             size="sm"
             className="h-full !py-1 !flex !items-center !justify-center"
-            disabled={$operationState.saving || showProjectStatusSync}
+            disabled={$operationState.saving || showProjectStatusSync || showJsonExportAlert}
           >
             {#if $operationState.saving}
               <div 

@@ -863,6 +863,40 @@ export class ApiClient {
   }
 
   /**
+   * Write fee proposal data to JSON file with enhanced safety checks.
+   * 
+   * This enhanced version includes safety mechanisms to detect and protect
+   * existing project data while allowing safe overwriting of placeholder content.
+   * It automatically creates timestamped backups when real project data is detected.
+   * 
+   * @param feeId - The ID of the fee proposal to export (e.g., "fee:some_id")
+   * @returns Promise<string | null> - Success message with safety actions taken, or null on error
+   * 
+   * @example
+   * ```typescript
+   * const result = await ApiClient.writeFeeToJsonSafe('fee:123');
+   * if (result) {
+   *   console.log(result); // Includes safety actions taken
+   *   // Example output:
+   *   // "Successfully wrote fee proposal data to: /path/to/25-97105-var.json
+   *   //  
+   *   //  Safety actions taken:
+   *   //  • ⚠️  EXISTING DATA DETECTED - Created backup: /path/to/25-97105-var_backup_20250801_143022.json
+   *   //  • Previous file contained real project data and has been preserved"
+   * }
+   * ```
+   */
+  static async writeFeeToJsonSafe(feeId: string): Promise<string | null> {
+    try {
+      const result = await invoke<string>('write_fee_to_json_safe', { feeId });
+      return result;
+    } catch (error) {
+      console.error('Failed to write fee data to JSON with safety checks:', error);
+      return null;
+    }
+  }
+
+  /**
    * Check if a project folder already exists
    * 
    * @param projectNumber - The project number (e.g., "25-97107")
@@ -1736,6 +1770,7 @@ export const {
   updateFee,
   deleteFee,
   writeFeeToJson,
+  writeFeeToJsonSafe,
   
   // Statistics and monitoring
   getStats,
