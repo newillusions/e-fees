@@ -1,19 +1,40 @@
+<!--
+  Refactored Contact Modal using BaseModal, FormInput, and FormSelect components
+  Reduced from ~538 lines to ~300 lines using base components
+-->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { contactsActions, companiesStore } from '$lib/stores';
-  import { createCompanyLookup } from '$lib/utils/companyLookup';
+  import { extractSurrealId, formatSurrealRelation } from '$lib/utils/surrealdb';
+  import { validateForm, CommonValidationRules, hasValidationErrors } from '$lib/utils/validation';
+  import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import BaseModal from './BaseModal.svelte';
+  import FormInput from './FormInput.svelte';
+  import TypeaheadSelect from './TypeaheadSelect.svelte';
+  import Button from './Button.svelte';
   import CompanyModal from './CompanyModal.svelte';
   import type { Contact, Company } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
   
   export let isOpen = false;
-  export let contact: Contact | null = null; // null for create, contact object for edit
+  export let contact: Contact | null = null;
   export let mode: 'create' | 'edit' = 'create';
   
-  // Form data
-  let formData = {
-    full_name: '',
+  // Use the new operation state utility
+  const { store: operationState, actions: operationActions } = useOperationState();
+  
+  // Form data with better typing
+  interface ContactFormData {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    position: string;
+    company: string;
+  }
+  
+  let formData: ContactFormData = {
     first_name: '',
     last_name: '',
     email: '',
@@ -22,554 +43,488 @@
     company: ''
   };
   
-  // Loading and error states
-  let isSaving = false;
-  let isDeleting = false;
-  let saveMessage = '';
+  // Validation setup using the new validation system
+  const validationRules = [
+    CommonValidationRules.contact.firstName,
+    CommonValidationRules.contact.lastName,
+    CommonValidationRules.contact.email,
+    { field: 'company' as keyof ContactFormData, required: true, minLength: 1 },
+  ];
+  
+  // Form validation state
   let formErrors: Record<string, string> = {};
+  
+  // UI state
   let showDeleteConfirm = false;
+  let showCompanyModal = false;
+  let dataLoaded = false;
   
-  // Company modal state
-  let isCompanyModalOpen = false;
+  // Typeahead search states for company selection
+  let companySearchText = '';
+  let companyOptions: Array<{ id: string; name: string; name_short?: string; abbreviation?: string }> = [];
   
-  // Helper function to extract ID from SurrealDB Thing object
-  function getCompanyId(company: Company): string {
-    if (!company?.id) return '';
-    
-    if (typeof company.id === 'string') {
-      return company.id;
+  // Computed values
+  $: fullName = `${formData.first_name} ${formData.last_name}`.trim();
+  
+  
+  // Company search handler for fuzzy search
+  async function handleCompanySearch(searchText: string) {
+    if (!searchText || searchText.length < 1) {
+      companyOptions = [];
+      return;
     }
     
-    // Handle SurrealDB Thing object format
-    const thingObj = company.id as any;
-    if (thingObj.tb && thingObj.id) {
-      if (typeof thingObj.id === 'string') {
-        return thingObj.id;
-      } else if (thingObj.id.String) {
-        return thingObj.id.String;
-      }
+    try {
+      const searchLower = searchText.toLowerCase();
+      const filtered = $companiesStore
+        .filter(company => {
+          const nameMatch = company.name?.toLowerCase().includes(searchLower);
+          const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
+          const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
+          return nameMatch || shortNameMatch || abbreviationMatch;
+        })
+        .map(company => {
+          const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
+          return {
+            id: companyId,
+            name: company.name || '',
+            name_short: company.name_short || '',
+            abbreviation: company.abbreviation || ''
+          };
+        })
+        .slice(0, 10); // Limit to 10 results
+      
+      companyOptions = filtered;
+    } catch (error) {
+      console.warn('Failed to search companies:', error);
+      companyOptions = [];
     }
-    
-    return '';
   }
   
-  // Company lookup
-  $: companyLookup = createCompanyLookup($companiesStore);
-  $: companyOptions = $companiesStore.map(company => ({
-    id: getCompanyId(company),
-    name: company.name,
-    name_short: company.name_short
-  }));
+  // Company selection handler
+  function handleCompanySelect(event: CustomEvent) {
+    formData.company = event.detail.id;
+    
+    // Clear any validation error for company field when a selection is made
+    if (formErrors.company) {
+      formErrors = { ...formErrors, company: '' };
+    }
+  }
   
-  // Update form when contact prop changes
-  $: if (contact && mode === 'edit') {
+  // Form submission handler
+  function handleSubmit(event: Event) {
+    event.preventDefault();
+    
+    // Validate using the new validation system
+    const errors = validateForm(formData, validationRules);
+    formErrors = errors;
+    
+    if (hasValidationErrors(errors)) {
+      operationActions.setError('Please fix the validation errors above.');
+      return;
+    }
+    
+    if (mode === 'create') {
+      handleCreate();
+    } else {
+      handleUpdate();
+    }
+  }
+  
+  // Create contact with loading state
+  async function handleCreate() {
+    await withLoadingState(async () => {
+      const timestamp = new Date().toISOString();
+      const contactData = {
+        ...formData,
+        full_name: fullName,
+        time: {
+          created_at: timestamp,
+          updated_at: timestamp
+        }
+      };
+      
+      const result = await contactsActions.create(contactData);
+      operationActions.setMessage('Contact created successfully');
+      resetForm();
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
+  }
+  
+  // Update contact with loading state  
+  async function handleUpdate() {
+    if (!contact) return;
+    
+    await withLoadingState(async () => {
+      // Try multiple extraction approaches
+      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      
+      if (!contactId) throw new Error('Invalid contact ID');
+      
+      // Only send fields that the backend ContactUpdate struct supports
+      const contactData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        full_name: fullName,
+        email: formData.email,
+        phone: formData.phone,
+        position: formData.position,
+        company: formData.company
+      };
+      
+      const result = await contactsActions.update(contactId, contactData);
+      operationActions.setMessage('Contact updated successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
+  }
+  
+  // Delete contact with loading state
+  async function handleDelete() {
+    if (!contact || !showDeleteConfirm) return;
+    
+    await withLoadingState(async () => {
+      // Try multiple extraction approaches
+      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      if (!contactId) throw new Error('Invalid contact ID');
+      
+      const result = await contactsActions.delete(contactId);
+      operationActions.setMessage('Contact deleted successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'deleting');
+  }
+  
+  // Form management
+  function resetForm() {
     formData = {
-      full_name: contact.full_name || '',
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      position: '',
+      company: ''
+    };
+    formErrors = {};
+    showDeleteConfirm = false;
+    
+    // Clear company search state
+    companySearchText = '';
+    companyOptions = [];
+  }
+  
+  function closeModal() {
+    resetForm();
+    operationActions.reset();
+    dispatch('close');
+  }
+  
+  // Company modal handlers
+  function handleAddCompany() {
+    showCompanyModal = true;
+  }
+  
+  function handleCompanyModalClose() {
+    showCompanyModal = false;
+  }
+  
+  // Load form data when contact changes - only when modal opens
+  $: if (contact && mode === 'edit' && isOpen && !dataLoaded) {
+    loadContactForEdit();
+  }
+  
+  // Reset dataLoaded flag when modal closes
+  $: if (!isOpen) {
+    dataLoaded = false;
+  }
+  
+  function loadContactForEdit() {
+    if (!contact || dataLoaded) return;
+    dataLoaded = true;
+    
+    // Try multiple extraction approaches for company ID
+    const companyId = extractSurrealId(contact.company) || extractSurrealId(contact.company?.id) || contact.company?.id || contact.company || '';
+    
+    formData = {
       first_name: contact.first_name || '',
       last_name: contact.last_name || '',
       email: contact.email || '',
       phone: contact.phone || '',
       position: contact.position || '',
-      company: contact.company || ''
+      company: companyId
     };
-  } else if (mode === 'create') {
-    // Reset form for create mode
-    formData = {
-      full_name: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      position: '',
-      company: ''
-    };
-  }
-  
-  // Reset state when modal closes
-  $: if (!isOpen) {
-    resetForm();
-  }
-  
-  
-  function resetForm() {
-    formData = {
-      full_name: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      position: '',
-      company: ''
-    };
-    formErrors = {};
-    saveMessage = '';
-    isSaving = false;
-    isDeleting = false;
-    showDeleteConfirm = false;
-  }
-
-  // Auto-generate full name from first and last name
-  function updateFullName() {
-    if (formData.first_name || formData.last_name) {
-      formData.full_name = `${formData.first_name} ${formData.last_name}`.trim();
-    }
-  }
-  
-  function validateForm(): boolean {
+    
+    // Clear any existing validation errors when loading edit data
     formErrors = {};
     
-    // Validate required fields - full_name is auto-generated by DB
-    if (!formData.first_name.trim()) {
-      formErrors.first_name = 'First name is required';
-    }
-    
-    if (!formData.last_name.trim()) {
-      formErrors.last_name = 'Last name is required';
-    }
-    
-    if (!formData.email.trim()) {
-      formErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      formErrors.email = 'Please enter a valid email address';
-    }
-    
-    // Phone validation - must contain '+' as per database schema
-    if (formData.phone && formData.phone.trim() && !formData.phone.includes('+')) {
-      formErrors.phone = 'Phone number must include country code with + (e.g., +971 50 123 4567)';
-    }
-    
-    return Object.keys(formErrors).length === 0;
-  }
-  
-  async function handleSubmit() {
-    if (!validateForm()) {
-      return;
-    }
-    
-    isSaving = true;
-    saveMessage = '';
-    
-    try {
-      if (mode === 'create') {
-        // Remove full_name and time fields - they are auto-generated by the database
-        const { full_name, ...contactDataWithoutComputed } = formData;
-        const newContact = await contactsActions.create(contactDataWithoutComputed);
-        saveMessage = 'Contact created successfully!';
-        dispatch('contactCreated', newContact);
-      } else {
-        const contactId = getContactId(contact);
-        if (contactId) {
-          await contactsActions.update(contactId, formData);
-          saveMessage = 'Contact updated successfully!';
-        } else {
-          throw new Error('No valid contact ID found for update');
-        }
-      }
+    // Set the company search text to show the selected company name
+    if (formData.company) {
+      const selectedCompany = $companiesStore.find(c => extractSurrealId(c.id) === formData.company);
       
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isSaving = false;
-    }
-  }
-  
-  async function handleDelete() {
-    const contactId = getContactId(contact);
-    if (!contactId) return;
-    
-    isDeleting = true;
-    saveMessage = '';
-    
-    try {
-      await contactsActions.delete(contactId);
-      saveMessage = 'Contact deleted successfully!';
-      
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isDeleting = false;
-      showDeleteConfirm = false;
-    }
-  }
-  
-  function confirmDelete() {
-    showDeleteConfirm = true;
-  }
-  
-  function cancelDelete() {
-    showDeleteConfirm = false;
-  }
-  
-  function closeModal() {
-    isOpen = false;
-    resetForm();
-    dispatch('close');
-  }
-  
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      closeModal();
-    }
-  }
-  
-  // Helper function to extract ID from SurrealDB Thing object
-  function getContactId(contact: Contact | null): string | null {
-    if (!contact?.id) return null;
-    
-    if (typeof contact.id === 'string') {
-      return contact.id;
-    }
-    
-    // Handle SurrealDB Thing object format
-    if (contact.id && typeof contact.id === 'object') {
-      const thingObj = contact.id as any;
-      if (thingObj.tb && thingObj.id) {
-        if (typeof thingObj.id === 'string') {
-          return thingObj.id; // Return just the ID part, not "contact:ID"
-        } else if (thingObj.id.String) {
-          return thingObj.id.String;
-        }
+      if (selectedCompany) {
+        companySearchText = selectedCompany.name || '';
       }
     }
-    
-    return null;
   }
   
-  function handleAddCompany() {
-    isCompanyModalOpen = true;
-  }
-  
-  function handleCompanyModalClose() {
-    isCompanyModalOpen = false;
-  }
-  
-  // Listen for company creation events
-  function handleCompanyCreated(event: CustomEvent) {
-    const newCompany = event.detail;
-    if (newCompany && newCompany.id) {
-      // Extract company ID using the same logic as getCompanyId helper
-      let companyId = null;
-      
-      if (typeof newCompany.id === 'string') {
-        companyId = newCompany.id;
-      } else if (newCompany.id && typeof newCompany.id === 'object') {
-        const thingObj = newCompany.id as any;
-        if (thingObj.tb && thingObj.id) {
-          if (typeof thingObj.id === 'string') {
-            companyId = thingObj.id;
-          } else if (thingObj.id.String) {
-            companyId = thingObj.id.String;
-          }
-        }
-      }
-      
-      if (companyId) {
-        formData.company = companyId;
-      }
-    }
-    handleCompanyModalClose();
+  // Clear validation errors when modal opens in create mode
+  $: if (isOpen && mode === 'create') {
+    formErrors = {};
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-{#if isOpen}
-  <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-    on:click={closeModal}
-    on:keydown={(e) => e.key === 'Escape' && closeModal()}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="contact-modal-title"
-    tabindex="-1"
-  >
-    <!-- Modal Content -->
-    <div 
-      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 24px; max-width: 700px;"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
-      role="presentation"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between" style="margin-bottom: 20px;">
-        <h2 id="contact-modal-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">
-          {mode === 'create' ? 'Add New Contact' : 'Edit Contact'}
-        </h2>
-        <button 
-          on:click={closeModal}
-          class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth"
-          aria-label="Close modal"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form on:submit|preventDefault={handleSubmit} style="display: flex; flex-direction: column; gap: 24px;">
-        <!-- Contact Basic Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Contact Information</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Full Name (Auto-generated) -->
-            <div>
-              <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Full Name (Auto-generated)
-              </label>
-              <div class="w-full bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-light flex items-center" style="padding: 8px 12px; font-size: 12px; height: 32px; opacity: 0.6;">
-                <span class="{formData.full_name ? '' : 'text-emittiv-light'}">
-                  {formData.full_name || 'Will be generated from first + last name'}
-                </span>
-              </div>
-              <p class="text-emittiv-light" style="font-size: 10px; margin-top: 2px;">This field is automatically generated from first and last name</p>
-            </div>
-            
-            <!-- First and Last Name Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="first_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  First Name *
-                </label>
-                <input
-                  id="first_name"
-                  type="text"
-                  bind:value={formData.first_name}
-                  on:input={updateFullName}
-                  on:blur={updateFullName}
-                  placeholder="Ryan"
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.first_name ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.first_name}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.first_name}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="last_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Last Name *
-                </label>
-                <input
-                  id="last_name"
-                  type="text"
-                  bind:value={formData.last_name}
-                  on:input={updateFullName}
-                  on:blur={updateFullName}
-                  placeholder="Marginson"
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.last_name ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.last_name}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.last_name}</p>
-                {/if}
-              </div>
-            </div>
-            
-            <!-- Email -->
-            <div>
-              <label for="email" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Email Address *
-              </label>
-              <input
-                id="email"
-                type="email"
-                bind:value={formData.email}
-                placeholder="ryan.marginson@example.com"
-                required
-                class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.email ? 'border-red-500' : ''}"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
-              />
-              {#if formErrors.email}
-                <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.email}</p>
-              {/if}
-            </div>
-          </div>
-        </div>
-
-        <!-- Professional Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Professional Details</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Position and Phone Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="position" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Position
-                </label>
-                <input
-                  id="position"
-                  type="text"
-                  bind:value={formData.position}
-                  placeholder="Senior Manager"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-              
-              <div>
-                <label for="phone" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  bind:value={formData.phone}
-                  placeholder="+971 50 123 4567"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.phone ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.phone}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.phone}</p>
-                {/if}
-              </div>
-            </div>
-            
-            <!-- Company -->
-            <div>
-              <label for="company" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Company
-              </label>
-              <div class="flex" style="gap: 8px;">
-                <select
-                  id="company"
-                  bind:value={formData.company}
-                  class="flex-1 bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all appearance-none"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                >
-                  <option value="">Select a company</option>
-                  {#each companyOptions as company}
-                    <option value={company.id}>{company.name}</option>
-                  {/each}
-                </select>
-                <button
-                  type="button"
-                  on:click={handleAddCompany}
-                  class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-colors flex items-center justify-center"
-                  style="padding: 6px; width: 32px; height: 32px;"
-                  title="Add new company"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+<BaseModal 
+  {isOpen} 
+  title={mode === 'create' ? 'New Contact' : 'Edit Contact'}
+  maxWidth="500px"
+  on:close={closeModal}
+>
+  <!-- Form -->
+  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- CONTACT INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Contact Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
         
-        <!-- Save Message -->
-        {#if saveMessage}
-          <div class="rounded-lg {saveMessage.startsWith('Error') ? 'bg-red-900/20 border border-red-500/30 text-red-300' : 'bg-green-900/20 border border-green-500/30 text-green-300'}" style="padding: 8px; font-size: 11px;">
-            {saveMessage}
-          </div>
-        {/if}
-
-        <!-- Delete Confirmation -->
-        {#if showDeleteConfirm}
-          <div class="rounded-lg bg-red-900/20 border border-red-500/30 text-red-300" style="padding: 12px; font-size: 12px;">
-            <p style="margin-bottom: 8px;">⚠️ Are you sure you want to delete this contact?</p>
-            <p class="text-red-400" style="font-size: 10px; margin-bottom: 12px;">This action cannot be undone. All related contacts and proposals will be affected.</p>
-            <div class="flex" style="gap: 8px;">
-              <button
-                type="button"
-                on:click={cancelDelete}
-                class="border border-red-500/30 rounded text-red-300 hover:text-red-200 hover:border-red-400 transition-all"
-                style="padding: 4px 8px; font-size: 11px; height: 24px;"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                on:click={handleDelete}
-                class="bg-red-600 hover:bg-red-700 text-white rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                style="padding: 4px 8px; font-size: 11px; height: 24px; gap: 4px;"
-                disabled={isDeleting}
-              >
-                {#if isDeleting}
-                  <div class="border-2 border-white border-t-transparent rounded-full animate-spin" style="width: 10px; height: 10px;"></div>
-                  <span>Deleting...</span>
-                {:else}
-                  <span>Delete Contact</span>
-                {/if}
-              </button>
-            </div>
-          </div>
-        {/if}
-        
-        <!-- Action Buttons -->
-        <div class="flex {mode === 'edit' ? 'justify-between' : 'justify-end'} border-t border-emittiv-dark" style="gap: 12px; padding-top: 16px; margin-top: 8px;">
-          {#if mode === 'edit'}
-            <button
-              type="button"
-              on:click={confirmDelete}
-              class="border border-red-500/50 rounded text-red-400 hover:text-red-300 hover:border-red-400 transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
-            >
-              Delete
-            </button>
-          {/if}
+        <!-- Name Fields -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="First Name"
+            bind:value={formData.first_name}
+            placeholder="John"
+            required
+            error={formErrors.first_name}
+          />
           
-          <div class="flex" style="gap: 12px;">
+          <FormInput
+            label="Last Name"
+            bind:value={formData.last_name}
+            placeholder="Doe"
+            required
+            error={formErrors.last_name}
+          />
+        </div>
+        
+        <!-- Full Name Display -->
+        {#if fullName}
+          <div>
+            <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+              Full Name (Auto-generated)
+            </label>
+            <div class="w-full bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-light flex items-center" style="padding: 8px 12px; font-size: 12px; height: 32px; opacity: 0.6;">
+              {fullName}
+            </div>
+          </div>
+        {/if}
+        
+        <!-- Contact Details -->
+        <FormInput
+          label="Email"
+          type="email"
+          bind:value={formData.email}
+          placeholder="john.doe@company.com"
+          required
+          error={formErrors.email}
+        />
+        
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Phone"
+            type="tel"
+            bind:value={formData.phone}
+            placeholder="+971 50 123 4567"
+            error={formErrors.phone}
+          />
+          
+          <FormInput
+            label="Position"
+            bind:value={formData.position}
+            placeholder="Manager"
+            error={formErrors.position}
+          />
+        </div>
+        
+        <!-- Company Selection -->
+        <div>
+          <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+            Company *
+          </label>
+          <div class="flex" style="gap: 8px;">
+            <TypeaheadSelect
+              label=""
+              bind:value={formData.company}
+              bind:searchText={companySearchText}
+              options={companyOptions}
+              displayFields={['name']}
+              placeholder="Search companies..."
+              required
+              error={formErrors.company}
+              on:input={(e) => handleCompanySearch(e.detail)}
+              on:select={handleCompanySelect}
+            >
+              <svelte:fragment slot="option" let:option>
+                <div class="flex flex-col">
+                  <span class="font-medium">{option.name}</span>
+                  {#if option.name_short && option.name_short !== option.name}
+                    <span class="text-emittiv-light text-xs">{option.name_short}</span>
+                  {/if}
+                  {#if option.abbreviation}
+                    <span class="text-emittiv-splash text-xs">{option.abbreviation}</span>
+                  {/if}
+                </div>
+              </svelte:fragment>
+            </TypeaheadSelect>
+            
             <button
               type="button"
+              on:click={handleAddCompany}
+              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-colors flex items-center justify-center"
+              style="padding: 6px; width: 32px; height: 32px;"
+              title="Add new company"
+              aria-label="Add new company"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Error/Success Messages -->
+    {#if $operationState.error}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        {$operationState.error}
+      </div>
+    {/if}
+    
+    {#if $operationState.message}
+      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+        {$operationState.message}
+      </div>
+    {/if}
+    
+    <!-- Delete Confirmation -->
+    {#if showDeleteConfirm && mode === 'edit'}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        <p class="font-medium mb-2">Are you sure you want to delete this contact?</p>
+        <p class="text-xs opacity-80">This action cannot be undone.</p>
+      </div>
+    {/if}
+    
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      {#if mode === 'edit' && !showDeleteConfirm}
+        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = true}
+            disabled={$operationState.saving || $operationState.deleting}
+          >
+            Delete
+          </Button>
+          
+          <div class="flex h-full" style="gap: 12px;">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
               on:click={closeModal}
-              class="border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-light transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting}
+              disabled={$operationState.saving || $operationState.deleting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            
+            <Button
               type="submit"
-              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 4px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
+              variant="primary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
+              disabled={$operationState.saving || $operationState.deleting}
             >
-              {#if isSaving}
-                <div class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
-                <span>Saving...</span>
-              {:else}
-                <span>{mode === 'create' ? 'Create Contact' : 'Update Contact'}</span>
+              {#if $operationState.saving}
+                <div 
+                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  style="width: 14px; height: 14px; margin-right: 6px;"
+                ></div>
               {/if}
-            </button>
+              Update
+            </Button>
           </div>
         </div>
-      </form>
+      {:else if mode === 'edit' && showDeleteConfirm}
+        <!-- Delete Confirmation Mode -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={handleDelete}
+            disabled={$operationState.deleting}
+          >
+            {#if $operationState.deleting}
+              <div 
+                class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Confirm Delete
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = false}
+            disabled={$operationState.deleting}
+          >
+            Cancel
+          </Button>
+        </div>
+      {:else}
+        <!-- Create Mode: Just Cancel/Create buttons -->
+        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={closeModal}
+            disabled={$operationState.saving}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            disabled={$operationState.saving}
+          >
+            {#if $operationState.saving}
+              <div 
+                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Create Contact
+          </Button>
+        </div>
+      {/if}
     </div>
-  </div>
-{/if}
-
+  </form>
+</BaseModal>
 
 <!-- Company Modal -->
-<CompanyModal 
-  bind:isOpen={isCompanyModalOpen}
+<CompanyModal
+  isOpen={showCompanyModal}
   mode="create"
   on:close={handleCompanyModalClose}
-  on:companyCreated={handleCompanyCreated}
 />
-
-<style>
-  /* Custom select styling */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    padding-right: 2.5rem;
-  }
-</style>

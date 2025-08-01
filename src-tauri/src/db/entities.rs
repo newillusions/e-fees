@@ -24,10 +24,13 @@ pub enum ProjectStatus {
     #[serde(rename = "RFP")]
     RFP,
     Active,
+    Awarded,
+    Completed,
+    Lost,
+    Cancelled,
     #[serde(rename = "On Hold")]
     OnHold,
-    Completed,
-    Cancelled,
+    Revised,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,18 +47,22 @@ pub enum ProjectStage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub enum RfpStatus {
+pub enum FeeStatus {
     Draft,
-    Active,
     Sent,
+    Negotiation,
     Awarded,
+    Completed,
     Lost,
     Cancelled,
+    #[serde(rename = "On Hold")]
+    OnHold,
+    Revised,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub enum RfpStage {
+pub enum FeeStage {
     Draft,
     Prepared,
     Sent,
@@ -113,7 +120,7 @@ pub struct Project {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Rfp {
+pub struct Fee {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Thing>,
     pub name: String,
@@ -121,10 +128,7 @@ pub struct Rfp {
     pub project_id: Thing,
     pub company_id: Thing,
     pub contact_id: Thing,
-    #[serde(default = "default_rfp_status")]
-    pub status: RfpStatus,
-    #[serde(default = "default_rfp_stage")]
-    pub stage: RfpStage,
+    pub status: String,
     pub issue_date: String, // YYMMDD format
     #[serde(skip_serializing_if = "Option::is_none")]
     pub activity: Option<String>,
@@ -140,8 +144,7 @@ pub struct Rfp {
     pub staff_phone: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub staff_position: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rev: Option<i32>, // auto-computed
+    pub rev: i32, // auto-computed
     #[serde(default)]
     pub revisions: Vec<Revision>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -220,14 +223,13 @@ pub struct ProjectCreate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RfpCreate {
+pub struct FeeCreate {
     pub name: String,
     pub number: String,
-    pub project_id: Thing,
-    pub company_id: Thing,
-    pub contact_id: Thing,
-    pub status: RfpStatus,
-    pub stage: RfpStage,
+    pub project_id: String,  // Raw ID string, not Thing
+    pub company_id: String,  // Raw ID string, not Thing
+    pub contact_id: String,  // Raw ID string, not Thing
+    pub status: String,
     pub issue_date: String,
     pub activity: Option<String>,
     pub package: Option<String>,
@@ -238,6 +240,27 @@ pub struct RfpCreate {
     pub staff_position: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rev: Option<i32>,
+    #[serde(default)]
+    pub revisions: Vec<Revision>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeeUpdate {
+    pub name: String,
+    pub number: String,
+    pub project_id: String,  // Raw ID string, not Thing
+    pub company_id: String,  // Raw ID string, not Thing
+    pub contact_id: String,  // Raw ID string, not Thing
+    pub status: String,
+    pub issue_date: String,
+    pub activity: Option<String>,
+    pub package: Option<String>,
+    pub strap_line: Option<String>,
+    pub staff_name: Option<String>,
+    pub staff_email: Option<String>,
+    pub staff_phone: Option<String>,
+    pub staff_position: Option<String>,
+    pub rev: i32,
     #[serde(default)]
     pub revisions: Vec<Revision>,
 }
@@ -268,12 +291,12 @@ fn default_project_stage() -> ProjectStage {
     ProjectStage::Concept
 }
 
-fn default_rfp_status() -> RfpStatus {
-    RfpStatus::Draft
+fn default_fee_status() -> FeeStatus {
+    FeeStatus::Draft
 }
 
-fn default_rfp_stage() -> RfpStage {
-    RfpStage::Draft
+fn default_fee_stage() -> FeeStage {
+    FeeStage::Draft
 }
 
 // Helper implementations
@@ -334,12 +357,32 @@ impl Validate for ProjectCreate {
     }
 }
 
-impl Validate for RfpCreate {
+impl Validate for FeeCreate {
     fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
         
         if self.name.is_empty() {
-            errors.push("RFP name cannot be empty".to_string());
+            errors.push("Fee name cannot be empty".to_string());
+        }
+        
+        if self.issue_date.len() != 6 || !self.issue_date.chars().all(|c| c.is_numeric()) {
+            errors.push("Issue date must be 6 digits in YYMMDD format".to_string());
+        }
+        
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+impl Validate for FeeUpdate {
+    fn validate(&self) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+        
+        if self.name.is_empty() {
+            errors.push("Fee name cannot be empty".to_string());
         }
         
         if self.issue_date.len() != 6 || !self.issue_date.chars().all(|c| c.is_numeric()) {

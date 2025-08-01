@@ -1,19 +1,19 @@
 <script lang="ts">
   import EmptyState from '$lib/components/EmptyState.svelte';
   import ProposalCard from '$lib/components/ProposalCard.svelte';
-  import RfpModal from '$lib/components/RfpModal.svelte';
+  import ProposalModal from '$lib/components/ProposalModal.svelte';
   import ProposalDetail from '$lib/components/ProposalDetail.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { rfpsStore, projectsStore, companiesStore, contactsStore, rfpsActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
+  import { feesStore, projectsStore, companiesStore, contactsStore, feesActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
-  import type { Rfp } from '../types';
+  import type { Fee } from '../types';
   
   // Modal states
   let showProposalModal = $state(false);
   let proposalModalMode: 'create' | 'edit' = $state('create');
   let isProposalDetailOpen = $state(false);
-  let selectedProposal: Rfp | null = $state(null);
+  let selectedProposal: Fee | null = $state(null);
   
   // Filter states
   let searchQuery = $state('');
@@ -55,11 +55,11 @@
   };
   
   // Reactive filtered proposals using optimized filter function
-  const filteredProposals = $derived(createFilterFunction($rfpsStore, searchQuery, filters, filterConfig));
+  const filteredProposals = $derived(createFilterFunction($feesStore, searchQuery, filters, filterConfig));
   
   // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues($rfpsStore, (proposal) => proposal.staff_name).filter(Boolean));
+  const uniqueStatuses = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.status).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.staff_name).filter(Boolean));
   
   function handleNewProposal() {
     selectedProposal = null;
@@ -67,13 +67,13 @@
     showProposalModal = true;
   }
 
-  function handleEditProposal(proposal: Rfp) {
+  function handleEditProposal(proposal: Fee) {
     selectedProposal = proposal;
     proposalModalMode = 'edit';
     showProposalModal = true;
   }
 
-  function handleViewProposal(proposal: Rfp) {
+  function handleViewProposal(proposal: Fee) {
     selectedProposal = proposal;
     isProposalDetailOpen = true;
   }
@@ -97,7 +97,7 @@
   
   // Load proposals on mount
   onMount(() => {
-    rfpsActions.load();
+    feesActions.load();
     projectsActions.load();
     companiesActions.load();
     contactsActions.load();
@@ -382,14 +382,14 @@
 </style>
   
   <ResultsCounter 
-    totalItems={$rfpsStore.length}
+    totalItems={$feesStore.length}
     filteredItems={filteredProposals.length}
     hasFilters={hasFiltersActive}
     entityName="proposals"
     on:clear-filters={clearFilters}
   />
   
-  {#if $rfpsStore.length === 0}
+  {#if $feesStore.length === 0}
     <EmptyState 
       icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
       title="No Proposals Yet"
@@ -428,9 +428,9 @@
 </div>
 
 <!-- FP Modal -->
-<RfpModal 
+<ProposalModal 
   bind:isOpen={showProposalModal}
-  rfp={selectedProposal}
+  proposal={selectedProposal}
   mode={proposalModalMode}
   on:close={() => showProposalModal = false}
 />

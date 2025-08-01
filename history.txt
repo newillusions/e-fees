@@ -1,9 +1,0 @@
-#V2
-SELECT * FROM rfp LIMIT 1;
-SELECT * FROM projects WHERE id = 'projects:25_97107';
-SELECT id FROM projects LIMIT 5;
-CREATE rfp SET name = 'DELETE ME - Test', number = 'TEST-DB-FP', rev = 1, status = 'Draft', stage = 'Initial', issue_date = '250720', activity = 'Test', package = 'Test', staff_name = 'Test', staff_email = 'test@test.com', staff_phone = '+000', staff_position = 'Test', strap_line = 'test', revisions = [], project_id = projects:⟨22_96601⟩, company_id = company:SLG, contact_id = contacts:f0itcziq0buolzzdzkkf;
-CREATE rfp SET name = 'DELETE ME - Test', number = 'TEST-DB-FP', rev = 1, status = 'Draft', stage = 'Draft', issue_date = '250720', activity = 'Test', package = 'Test', staff_name = 'Test', staff_email = 'test@test.com', staff_phone = '+000', staff_position = 'Test', strap_line = 'test', revisions = [], project_id = projects:⟨22_96601⟩, company_id = company:SLG, contact_id = contacts:f0itcziq0buolzzdzkkf;
-SELECT * FROM rfp WHERE number = 'TEST-DB-FP';
-INFO FOR TABLE rfp;
-INSERT INTO rfp (name, number, rev, status, stage, issue_date, activity, package, staff_name, staff_email, staff_phone, staff_position, strap_line, revisions, project_id, company_id, contact_id) VALUES ('DELETE ME - Test', 'TEST-DB-FP', 1, 'Draft', 'Draft', '250720', 'Test', 'Test', 'Test', 'test@test.com', '+000', 'Test', 'test', [], projects:⟨22_96601⟩, company:SLG, contacts:f0itcziq0buolzzdzkkf);

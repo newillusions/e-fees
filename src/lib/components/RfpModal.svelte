@@ -1,24 +1,57 @@
+<!--
+  Refactored RFP Modal using BaseModal, FormInput, FormSelect, and TypeaheadSelect components
+  Reduced from ~1,158 lines to ~650 lines using base components and utilities
+-->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { rfpsActions, companiesStore, contactsStore, projectsStore, settingsStore, settingsActions } from '$lib/stores';
-  import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import type { Rfp, Company, Contact, Project } from '$lib/../types';
+  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { validateForm, hasValidationErrors } from '$lib/utils/validation';
+  import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import BaseModal from './BaseModal.svelte';
+  import FormInput from './FormInput.svelte';
+  import FormSelect from './FormSelect.svelte';
+  import TypeaheadSelect from './TypeaheadSelect.svelte';
+  import Button from './Button.svelte';
   import NewProjectModal from './NewProjectModal.svelte';
   import CompanyModal from './CompanyModal.svelte';
   import ContactModal from './ContactModal.svelte';
+  import type { Rfp, Company, Contact, Project } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
   
   export let isOpen = false;
-  export let rfp: Rfp | null = null; // null for create, rfp object for edit
+  export let rfp: Rfp | null = null;
   export let mode: 'create' | 'edit' = 'create';
   
-  // Form data
-  let formData = {
+  // Use the new operation state utility
+  const { store: operationState, actions: operationActions } = useOperationState();
+  
+  // Form data with better typing
+  interface RfpFormData {
+    name: string;
+    number: string;
+    rev: number;
+    status: 'Draft' | 'Prepared' | 'Sent' | 'Negotiation' | 'Awarded' | 'Lost' | 'Cancelled';
+    issue_date: string;
+    activity: string;
+    package: string;
+    project_id: string;
+    company_id: string;
+    contact_id: string;
+    staff_name: string;
+    staff_email: string;
+    staff_phone: string;
+    staff_position: string;
+    strap_line: string;
+    revisions: any[];
+  }
+  
+  let formData: RfpFormData = {
     name: 'Fee Proposal',
     number: '',
     rev: 1,
-    status: 'Draft' as const,
+    status: 'Draft',
     issue_date: '',
     activity: 'Design and Consultancy',
     package: '',
@@ -30,77 +63,52 @@
     staff_phone: '',
     staff_position: '',
     strap_line: 'sensory design studio',
-    revisions: [] as any[]
+    revisions: []
   };
   
-  // Loading and error states
-  let isSaving = false;
-  let isDeleting = false;
-  let saveMessage = '';
+  // Status options
+  const statusOptions = [
+    { value: 'Draft', label: 'Draft' },
+    { value: 'Prepared', label: 'Prepared' },
+    { value: 'Sent', label: 'Sent' },
+    { value: 'Negotiation', label: 'Negotiation' },
+    { value: 'Awarded', label: 'Awarded' },
+    { value: 'Lost', label: 'Lost' },
+    { value: 'Cancelled', label: 'Cancelled' }
+  ];
+  
+  // Validation setup
+  const validationRules = [
+    { field: 'name' as keyof RfpFormData, required: true, minLength: 1, maxLength: 255 },
+    { field: 'number' as keyof RfpFormData, required: true, minLength: 1, maxLength: 50 },
+    { field: 'project_id' as keyof RfpFormData, required: true, minLength: 1 },
+    { field: 'company_id' as keyof RfpFormData, required: true, minLength: 1 },
+    { field: 'contact_id' as keyof RfpFormData, required: true, minLength: 1 }
+  ];
+  
+  // Form validation state
   let formErrors: Record<string, string> = {};
+  
+  // UI state
   let showDeleteConfirm = false;
-
-  // Nested modal states
   let showNewProjectModal = false;
   let showCompanyModal = false;
   let showContactModal = false;
   
-  // Search/filter states for typeahead functionality
+  // Typeahead search states
   let projectSearchText = '';
   let companySearchText = '';
   let contactSearchText = '';
-  let projectDropdownOpen = false;
-  let companyDropdownOpen = false;
-  let contactDropdownOpen = false;
   
-  // Status and stage options
-  const statusOptions = ['Draft', 'Prepared', 'Sent', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'];
+  // Get current settings for staff defaults
+  $: currentSettings = $settingsStore?.current || {};
   
   // Helper function to extract ID from SurrealDB Thing object
-  // Helper function to extract ID from SurrealDB Thing object - COPIED FROM WORKING CONTACTS MODAL
-  function getRfpId(rfp: Rfp | null): string | null {
-    if (!rfp?.id) return null;
-    
-    if (typeof rfp.id === 'string') {
-      return rfp.id;
-    }
-    
-    // Handle SurrealDB Thing object format
-    if (rfp.id && typeof rfp.id === 'object') {
-      const thingObj = rfp.id as any;
-      if (thingObj.tb && thingObj.id) {
-        if (typeof thingObj.id === 'string') {
-          return thingObj.id; // Return just the ID part, not "rfp:ID"
-        } else if (thingObj.id.String) {
-          return thingObj.id.String;
-        }
-      }
-    }
-    
-    return null;
-  }
-
   function getRecordId(record: any): string {
-    if (!record?.id) return '';
-    
-    if (typeof record.id === 'string') {
-      return record.id;
-    }
-    
-    // Handle SurrealDB Thing object format
-    const thingObj = record.id as any;
-    if (thingObj.tb && thingObj.id) {
-      if (typeof thingObj.id === 'string') {
-        return thingObj.id;
-      } else if (thingObj.id.String) {
-        return thingObj.id.String;
-      }
-    }
-    
-    return '';
+    return extractSurrealId(record) || '';
   }
   
-  // All dropdown options
+  // All dropdown options for typeahead
   $: allProjectOptions = $projectsStore.map(project => ({
     id: getRecordId(project),
     name: project.name,
@@ -125,81 +133,44 @@
     !projectSearchText || 
     project.name.toLowerCase().includes(projectSearchText.toLowerCase()) ||
     project.number.toLowerCase().includes(projectSearchText.toLowerCase())
-  ).slice(0, 20); // Limit to 20 results for performance
+  ).slice(0, 20);
   
   // Filter companies by contact's company if contact is selected
   $: filteredCompanyOptions = formData.contact_id 
     ? (() => {
         const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
         if (selectedContact && selectedContact.company) {
-          let contactCompanyId = '';
-          if (typeof selectedContact.company === 'string') {
-            contactCompanyId = selectedContact.company;
-          } else if (selectedContact.company && typeof selectedContact.company === 'object') {
-            const thingObj = selectedContact.company as any;
-            if (thingObj.tb && thingObj.id) {
-              if (typeof thingObj.id === 'string') {
-                contactCompanyId = thingObj.id;
-              } else if (thingObj.id.String) {
-                contactCompanyId = thingObj.id.String;
-              }
-            }
-          }
+          const contactCompanyId = extractSurrealId(selectedContact.company) || '';
           return allCompanyOptions.filter(company => company.id === contactCompanyId);
         }
         return allCompanyOptions;
       })()
     : allCompanyOptions;
-
-  $: companyOptions = filteredCompanyOptions.filter(company => 
-    !companySearchText || 
+  
+  $: companyOptions = filteredCompanyOptions.filter(company =>
+    !companySearchText ||
     company.name.toLowerCase().includes(companySearchText.toLowerCase()) ||
     (company.name_short && company.name_short.toLowerCase().includes(companySearchText.toLowerCase())) ||
     (company.abbreviation && company.abbreviation.toLowerCase().includes(companySearchText.toLowerCase()))
   ).slice(0, 20);
   
-  $: contactOptions = allContactOptions.filter(contact => 
-    !contactSearchText || 
+  // Filter contacts by selected company
+  $: filteredContactOptions = formData.company_id
+    ? allContactOptions.filter(contact => {
+        const contactCompanyId = extractSurrealId(contact.company) || '';
+        return contactCompanyId === formData.company_id;
+      })
+    : allContactOptions;
+  
+  $: contactOptions = filteredContactOptions.filter(contact =>
+    !contactSearchText ||
     contact.full_name.toLowerCase().includes(contactSearchText.toLowerCase())
   ).slice(0, 20);
   
-  // Filter contacts by selected company
-  $: filteredContactOptions = formData.company_id 
-    ? contactOptions.filter(contact => {
-        // Handle different ID formats for contact.company
-        let contactCompanyId = '';
-        if (typeof contact.company === 'string') {
-          contactCompanyId = contact.company;
-        } else if (contact.company && typeof contact.company === 'object') {
-          const thingObj = contact.company as any;
-          if (thingObj.tb && thingObj.id) {
-            if (typeof thingObj.id === 'string') {
-              contactCompanyId = thingObj.id;
-            } else if (thingObj.id.String) {
-              contactCompanyId = thingObj.id.String;
-            }
-          }
-        }
-        const matches = contactCompanyId === formData.company_id;
-        if (contact.full_name === 'Irene Nale') {
-          console.log('Debug Irene Nale filtering:', {
-            contactName: contact.full_name,
-            contactCompany: contact.company,
-            contactCompanyId,
-            selectedCompanyId: formData.company_id,
-            matches
-          });
-        }
-        return matches;
-      })
-    : contactOptions;
-  
-  // Get current settings for auto-population
-  $: currentSettings = $settingsStore;
-  
-  // Auto-populate staff fields from settings when modal opens in create mode
-  $: if (isOpen && mode === 'create' && currentSettings) {
-    // Only populate if fields are empty and settings are available
+  // Auto-populate staff fields from settings when modal opens
+  function populateStaffFromSettings() {
+    if (!currentSettings || Object.keys(currentSettings).length === 0) return;
+    
     if (!formData.staff_name && currentSettings.staff_name) {
       formData.staff_name = currentSettings.staff_name;
     }
@@ -219,7 +190,180 @@
     settingsActions.load().catch(err => console.error('Failed to load settings:', err));
   }
   
-  // Update form when rfp prop changes
+  // Helper to format today's date in YYMMDD format
+  function getTodayFormatted(): string {
+    const today = new Date();
+    const year = today.getFullYear().toString().slice(-2);
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+  
+  // Form submission handler
+  function handleSubmit(event: Event) {
+    event.preventDefault();
+    
+    // Custom validation for date format
+    const errors = validateForm(formData, validationRules);
+    
+    // Additional validation for issue date format (YYMMDD)
+    if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
+      errors.issue_date = 'Issue date must be in YYMMDD format';
+    }
+    
+    // Additional validation for email format
+    if (formData.staff_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.staff_email)) {
+      errors.staff_email = 'Please enter a valid email address';
+    }
+    
+    formErrors = errors;
+    
+    if (hasValidationErrors(errors)) {
+      operationActions.setError('Please fix the validation errors above.');
+      return;
+    }
+    
+    if (mode === 'create') {
+      handleCreate();
+    } else {
+      handleUpdate();
+    }
+  }
+  
+  // Create RFP with loading state
+  async function handleCreate() {
+    await withLoadingState(async () => {
+      const rfpData = {
+        ...formData,
+        // Send raw IDs - the API layer will handle the SurrealDB formatting
+        project_id: formData.project_id || null,
+        company_id: formData.company_id || null, 
+        contact_id: formData.contact_id || null
+      };
+      
+      const result = await rfpsActions.create(rfpData);
+      operationActions.setMessage('FP created successfully');
+      resetForm();
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
+  }
+  
+  // Update RFP with loading state  
+  async function handleUpdate() {
+    if (!rfp) return;
+    
+    await withLoadingState(async () => {
+      const rfpId = extractSurrealId(rfp);
+      if (!rfpId) throw new Error('Invalid RFP ID');
+      
+      const result = await rfpsActions.update(rfpId, formData);
+      operationActions.setMessage('FP updated successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
+  }
+  
+  // Delete RFP with loading state
+  async function handleDelete() {
+    if (!rfp || !showDeleteConfirm) return;
+    
+    await withLoadingState(async () => {
+      const rfpId = extractSurrealId(rfp);
+      if (!rfpId) throw new Error('Invalid RFP ID');
+      
+      const result = await rfpsActions.delete(rfpId);
+      operationActions.setMessage('FP deleted successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'deleting');
+  }
+  
+  // Form management
+  function resetForm() {
+    // Get today's date in YYMMDD format
+    const todayFormatted = getTodayFormatted();
+    
+    formData = {
+      name: 'Fee Proposal',
+      number: '',
+      rev: 1,
+      status: 'Draft',
+      issue_date: todayFormatted,
+      activity: 'Design and Consultancy',
+      package: '',
+      project_id: '',
+      company_id: '',
+      contact_id: '',
+      staff_name: '',
+      staff_email: '',
+      staff_phone: '',
+      staff_position: '',
+      strap_line: 'sensory design studio',
+      revisions: []
+    };
+    
+    formErrors = {};
+    showDeleteConfirm = false;
+    
+    // Clear search texts
+    projectSearchText = '';
+    companySearchText = '';
+    contactSearchText = '';
+    
+    // Populate staff fields from settings
+    populateStaffFromSettings();
+  }
+  
+  function closeModal() {
+    resetForm();
+    operationActions.reset();
+    dispatch('close');
+  }
+  
+  // Typeahead handlers
+  function handleProjectSelect(event: CustomEvent) {
+    formData.project_id = event.detail.id;
+  }
+  
+  function handleCompanySelect(event: CustomEvent) {
+    formData.company_id = event.detail.id;
+    // Clear contact when company changes
+    formData.contact_id = '';
+    contactSearchText = '';
+  }
+  
+  function handleContactSelect(event: CustomEvent) {
+    formData.contact_id = event.detail.id;
+    
+    // Auto-select company if contact has one
+    const selectedContact = allContactOptions.find(c => c.id === event.detail.id);
+    if (selectedContact && selectedContact.company) {
+      const contactCompanyId = extractSurrealId(selectedContact.company) || '';
+      if (contactCompanyId && contactCompanyId !== formData.company_id) {
+        formData.company_id = contactCompanyId;
+        const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+        if (company) {
+          companySearchText = company.name;
+        }
+      }
+    }
+  }
+  
+  // Modal handlers
+  function handleNewProjectModalClose() {
+    showNewProjectModal = false;
+  }
+  
+  function handleCompanyModalClose() {
+    showCompanyModal = false;
+  }
+  
+  function handleContactModalClose() {
+    showContactModal = false;
+  }
+  
+  // Load form data when rfp changes
   $: if (rfp && mode === 'edit') {
     formData = {
       name: rfp.name || '',
@@ -239,939 +383,357 @@
       strap_line: rfp.strap_line || 'sensory design studio',
       revisions: rfp.revisions || []
     };
+    
+    // Set search texts for selected items
+    const selectedProject = allProjectOptions.find(p => p.id === formData.project_id);
+    if (selectedProject) {
+      projectSearchText = `${selectedProject.number} - ${selectedProject.name}`;
+    }
+    
+    const selectedCompany = allCompanyOptions.find(c => c.id === formData.company_id);
+    if (selectedCompany) {
+      companySearchText = selectedCompany.name;
+    }
+    
+    const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
+    if (selectedContact) {
+      contactSearchText = selectedContact.full_name;
+    }
   } else if (mode === 'create') {
-    // Reset form for create mode
-    resetFormData();
-  }
-  
-  // Reset state when modal closes
-  $: if (!isOpen) {
     resetForm();
-  }
-  
-  function resetFormData() {
-    // Get today's date in YYMMDD format
-    const today = new Date();
-    const year = today.getFullYear().toString().slice(-2);
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-    const todayFormatted = `${year}${month}${day}`;
-    
-    formData = {
-      name: 'Fee Proposal',
-      number: '',
-      rev: 1, // Default revision for new FPs
-      status: 'Draft',
-      issue_date: todayFormatted, // Auto-populate with today's date
-      activity: 'Design and Consultancy', // Default activity
-      package: '',
-      project_id: '',
-      company_id: '',
-      contact_id: '',
-      staff_name: '', // Will be populated by reactive statement
-      staff_email: '', // Will be populated by reactive statement
-      staff_phone: '', // Will be populated by reactive statement
-      staff_position: '', // Will be populated by reactive statement
-      strap_line: 'sensory design studio', // Default strap line
-      revisions: []
-    };
-  }
-  
-  function resetForm() {
-    resetFormData();
-    formErrors = {};
-    saveMessage = '';
-    isSaving = false;
-    isDeleting = false;
-    showDeleteConfirm = false;
-    // Reset search states
-    projectSearchText = '';
-    companySearchText = '';
-    contactSearchText = '';
-    projectDropdownOpen = false;
-    companyDropdownOpen = false;
-    contactDropdownOpen = false;
-  }
-  
-  // Auto-generate FP number from project when project is selected
-  function updateRfpNumber() {
-    if (formData.project_id && mode === 'create') {
-      const selectedProject = allProjectOptions.find(p => p.id === formData.project_id);
-      if (selectedProject && selectedProject.number) {
-        // Simple FP number generation: PROJECT_NUMBER-FP
-        formData.number = `${selectedProject.number}-FP`;
-        console.log('Auto-generated FP number:', formData.number);
-      }
-    }
-  }
-  
-  // Format issue date to YYMMDD
-  function formatIssueDate(dateString: string): string {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}${month}${day}`;
-  }
-  
-  function validateForm(): boolean {
-    formErrors = {};
-    
-    // Validate required fields
-    if (!formData.name.trim()) {
-      formErrors.name = 'FP name is required';
-    }
-    
-    if (!formData.number.trim()) {
-      formErrors.number = 'FP number is required';
-    }
-    
-    if (!formData.project_id) {
-      formErrors.project_id = 'Project is required';
-    }
-    
-    if (!formData.company_id) {
-      formErrors.company_id = 'Company is required';
-    }
-    
-    if (!formData.contact_id) {
-      formErrors.contact_id = 'Contact is required';
-    }
-    
-    // Validate issue date format (YYMMDD)
-    if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
-      formErrors.issue_date = 'Issue date must be in YYMMDD format';
-    }
-    
-    // Validate email format if provided
-    if (formData.staff_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.staff_email)) {
-      formErrors.staff_email = 'Please enter a valid email address';
-    }
-    
-    return Object.keys(formErrors).length === 0;
-  }
-  
-  async function handleSubmit() {
-    if (!validateForm()) {
-      return;
-    }
-    
-    isSaving = true;
-    saveMessage = '';
-    
-    try {
-      if (mode === 'create') {
-        // Format the data for creation - convert string IDs to SurrealDB Thing format
-        console.log('Form data before conversion:', formData);
-        console.log('Project ID type and value:', typeof formData.project_id, formData.project_id);
-        
-        const rfpData = {
-          name: formData.name,
-          number: formData.number,
-          rev: formData.rev || 1, // Use form value or default to 1
-          status: formData.status,
-          issue_date: formData.issue_date,
-          activity: formData.activity,
-          package: formData.package,
-          staff_name: formData.staff_name,
-          staff_email: formData.staff_email,
-          staff_phone: formData.staff_phone,
-          staff_position: formData.staff_position,
-          strap_line: formData.strap_line,
-          revisions: formData.revisions,
-          // Send raw IDs - the API layer will handle the SurrealDB formatting
-          project_id: formData.project_id || null,
-          company_id: formData.company_id || null, 
-          contact_id: formData.contact_id || null
-        };
-        
-        console.log('FP data after conversion:', rfpData);
-        console.log('Project ID after conversion:', rfpData.project_id);
-        
-        await rfpsActions.create(rfpData);
-        saveMessage = 'FP created successfully!';
-      } else {
-        const rfpId = getRfpId(rfp);
-        if (rfpId) {
-          await rfpsActions.update(rfpId, formData);
-          saveMessage = 'FP updated successfully!';
-        } else {
-          throw new Error('No valid FP ID found for update');
-        }
-      }
-      
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isSaving = false;
-    }
-  }
-  
-  async function handleDelete() {
-    const rfpId = getRecordId(rfp);
-    if (!rfpId) return;
-    
-    isDeleting = true;
-    saveMessage = '';
-    
-    try {
-      await rfpsActions.delete(rfpId);
-      saveMessage = 'FP deleted successfully!';
-      
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isDeleting = false;
-      showDeleteConfirm = false;
-    }
-  }
-  
-  function confirmDelete() {
-    showDeleteConfirm = true;
-  }
-  
-  function cancelDelete() {
-    showDeleteConfirm = false;
-  }
-  
-  function closeModal() {
-    isOpen = false;
-    resetForm();
-    dispatch('close');
-  }
-  
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      closeModal();
-    }
-  }
-
-  // Nested modal handlers
-  function openNewProjectModal() {
-    showNewProjectModal = true;
-  }
-
-  function openCompanyModal() {
-    showCompanyModal = true;
-  }
-
-  function openContactModal() {
-    showContactModal = true;
-  }
-
-  function handleProjectCreated(newProject: Project) {
-    showNewProjectModal = false;
-    // Auto-select the newly created project
-    formData.project_id = getRecordId(newProject);
-    updateRfpNumber(); // Update FP number based on new project
-  }
-
-  function handleCompanyCreated(event: CustomEvent) {
-    const newCompany = event.detail;
-    showCompanyModal = false;
-    // Auto-select the newly created company
-    formData.company_id = getRecordId(newCompany);
-    // Clear contact selection since company changed
-    formData.contact_id = '';
-  }
-
-  function handleContactCreated(event: CustomEvent) {
-    const newContact = event.detail;
-    showContactModal = false;
-    // Auto-select the newly created contact
-    formData.contact_id = getRecordId(newContact);
-    // Auto-select the contact's company if not already selected
-    if (!formData.company_id && newContact.company) {
-      formData.company_id = newContact.company;
-    }
-  }
-  
-  // Typeahead helper functions
-  function selectProject(projectId: string) {
-    formData.project_id = projectId;
-    const selectedProject = allProjectOptions.find(p => p.id === projectId);
-    projectSearchText = selectedProject ? `${selectedProject.number} - ${selectedProject.name}` : '';
-    projectDropdownOpen = false;
-    updateRfpNumber(); // Auto-generate FP number
-  }
-  
-  function selectCompany(companyId: string) {
-    formData.company_id = companyId;
-    const selectedCompany = allCompanyOptions.find(c => c.id === companyId);
-    companySearchText = selectedCompany ? selectedCompany.name : '';
-    companyDropdownOpen = false;
-    // Clear contact selection when company changes
-    formData.contact_id = '';
-    contactSearchText = '';
-  }
-  
-  function clearCompany() {
-    formData.company_id = '';
-    companySearchText = '';
-    companyDropdownOpen = false;
-    // Clear contact selection when company is cleared
-    formData.contact_id = '';
-    contactSearchText = '';
-  }
-  
-  function clearProject() {
-    formData.project_id = '';
-    projectSearchText = '';
-    projectDropdownOpen = false;
-    // Clear FP number when project is cleared
-    formData.number = '';
-  }
-  
-  function clearContact() {
-    formData.contact_id = '';
-    contactSearchText = '';
-    contactDropdownOpen = false;
-    // Note: We don't clear company when clearing contact, as user might want to keep company selection
-    // The company dropdown will expand to show all companies again
-  }
-  
-  
-  function selectContact(contactId: string) {
-    formData.contact_id = contactId;
-    const selectedContact = allContactOptions.find(c => c.id === contactId);
-    contactSearchText = selectedContact ? selectedContact.full_name : '';
-    contactDropdownOpen = false;
-    
-    // Auto-select the contact's company if contact has a company
-    if (selectedContact && selectedContact.company) {
-      let contactCompanyId = '';
-      if (typeof selectedContact.company === 'string') {
-        contactCompanyId = selectedContact.company;
-      } else if (selectedContact.company && typeof selectedContact.company === 'object') {
-        const thingObj = selectedContact.company as any;
-        if (thingObj.tb && thingObj.id) {
-          if (typeof thingObj.id === 'string') {
-            contactCompanyId = thingObj.id;
-          } else if (thingObj.id.String) {
-            contactCompanyId = thingObj.id.String;
-          }
-        }
-      }
-      
-      if (contactCompanyId && contactCompanyId !== formData.company_id) {
-        formData.company_id = contactCompanyId;
-        const selectedCompany = allCompanyOptions.find(c => c.id === contactCompanyId);
-        companySearchText = selectedCompany ? selectedCompany.name : '';
-      }
-    }
-  }
-  
-  // Initialize search text when form data is populated (edit mode)
-  $: if (formData.project_id && !projectSearchText) {
-    const project = allProjectOptions.find(p => p.id === formData.project_id);
-    if (project) {
-      projectSearchText = `${project.number} - ${project.name}`;
-    }
-  }
-  
-  $: if (formData.company_id && !companySearchText) {
-    const company = allCompanyOptions.find(c => c.id === formData.company_id);
-    if (company) {
-      companySearchText = company.name;
-    }
-  }
-  
-  $: if (formData.contact_id && !contactSearchText) {
-    const contact = allContactOptions.find(c => c.id === formData.contact_id);
-    if (contact) {
-      contactSearchText = contact.full_name;
-    }
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-{#if isOpen}
-  <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-    on:click={closeModal}
-    on:keydown={(e) => e.key === 'Escape' && closeModal()}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="rfp-modal-title"
-    tabindex="-1"
-  >
-    <!-- Modal Content -->
-    <div 
-      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 24px; max-width: 900px;"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
-      role="presentation"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between" style="margin-bottom: 20px;">
-        <h2 id="rfp-modal-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">
-          {mode === 'create' ? 'Add New FP' : 'Edit FP'}
-        </h2>
-        <button 
-          on:click={closeModal}
-          class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth"
-          aria-label="Close modal"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form on:submit|preventDefault={handleSubmit} style="display: flex; flex-direction: column; gap: 24px;">
-        <!-- Basic Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Basic Information</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Name and Number Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="rfp_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  FP Name *
-                </label>
-                <input
-                  id="rfp_name"
-                  type="text"
-                  bind:value={formData.name}
-                  placeholder="Hotel Development - Design Services"
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.name ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.name}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.name}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="rfp_number" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  FP Number *
-                </label>
-                <input
-                  id="rfp_number"
-                  type="text"
-                  bind:value={formData.number}
-                  placeholder="25-97105-FP"
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.number ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.number}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.number}</p>
-                {/if}
-              </div>
-            </div>
-            
-            <!-- Rev and Status Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="rfp_rev" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Revision
-                </label>
-                <input
-                  id="rfp_rev"
-                  type="number"
-                  bind:value={formData.rev}
-                  placeholder="1"
-                  min="1"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-              
-              <div>
-                <label for="rfp_status" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Status
-                </label>
-                <select
-                  id="rfp_status"
-                  bind:value={formData.status}
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all appearance-none"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                >
-                  {#each statusOptions as status}
-                    <option value={status}>{status}</option>
-                  {/each}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Project & Client Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Project & Client Information</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Project Selection -->
-            <div>
-              <label for="project_id" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Project *
-              </label>
-              <div class="flex relative" style="gap: 8px;">
-                <div class="flex-1 relative">
-                  <input
-                    id="project_id"
-                    type="text"
-                    bind:value={projectSearchText}
-                    on:input={() => { projectDropdownOpen = true; }}
-                    on:focus={() => { projectDropdownOpen = true; }}
-                    on:blur={() => { setTimeout(() => projectDropdownOpen = false, 200); }}
-                    placeholder="Search projects..."
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.project_id ? 'border-red-500' : ''}"
-                    style="padding: 8px 30px 8px 12px; font-size: 12px; height: 32px;"
-                  />
-                  {#if projectSearchText}
-                    <button
-                      type="button"
-                      on:click={clearProject}
-                      class="absolute right-1 top-1/2 transform -translate-y-1/2 text-emittiv-light hover:text-emittiv-white flex items-center justify-center"
-                      style="width: 16px; height: 16px;"
-                      aria-label="Clear project"
-                    >
-                      <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  {/if}
-                  {#if projectDropdownOpen && projectOptions.length > 0}
-                    <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b max-h-48 overflow-y-auto z-50" style="margin-top: 1px;">
-                      {#each projectOptions as project}
-                        <button
-                          type="button"
-                          on:click={() => selectProject(project.id)}
-                          class="w-full text-left text-emittiv-white hover:bg-emittiv-dark text-xs border-b border-emittiv-dark last:border-b-0 truncate"
-                          style="height: 24px; line-height: 22px; padding: 1px 8px;"
-                        >
-                          <span class="font-medium">{project.number}</span> - <span class="truncate">{project.name}</span>
-                        </button>
-                      {/each}
-                    </div>
-                  {/if}
-                </div>
-                <button
-                  type="button"
-                  on:click={openNewProjectModal}
-                  class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                  aria-label="Add new project"
-                  title="Create new project"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-              {#if formErrors.project_id}
-                <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.project_id}</p>
-              {/if}
-            </div>
-            
-            <!-- Company and Contact Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="company_id" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Company *
-                </label>
-                <div class="flex relative" style="gap: 8px;">
-                  <div class="flex-1 relative">
-                    <input
-                      id="company_id"
-                      type="text"
-                      bind:value={companySearchText}
-                      on:input={() => { companyDropdownOpen = true; }}
-                      on:focus={() => { companyDropdownOpen = true; }}
-                      on:blur={() => { setTimeout(() => companyDropdownOpen = false, 200); }}
-                      placeholder="Search companies..."
-                      class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.company_id ? 'border-red-500' : ''}"
-                      style="padding: 8px 30px 8px 12px; font-size: 12px; height: 32px;"
-                    />
-                    {#if companySearchText}
-                      <button
-                        type="button"
-                        on:click={clearCompany}
-                        class="absolute right-1 top-1/2 transform -translate-y-1/2 text-emittiv-light hover:text-emittiv-white flex items-center justify-center"
-                        style="width: 16px; height: 16px;"
-                        aria-label="Clear company"
-                      >
-                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    {/if}
-                    {#if companyDropdownOpen && companyOptions.length > 0}
-                      <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b max-h-48 overflow-y-auto z-50" style="margin-top: 1px;">
-                        {#each companyOptions as company}
-                          <button
-                            type="button"
-                            on:click={() => selectCompany(company.id)}
-                            class="w-full text-left text-emittiv-white hover:bg-emittiv-dark text-xs border-b border-emittiv-dark last:border-b-0 truncate"
-                            style="height: 24px; line-height: 22px; padding: 1px 8px;"
-                          >
-                            <span class="font-medium truncate">{company.name}</span>
-                            {#if company.name_short && company.name_short !== company.name}
-                              <span class="text-emittiv-light"> ({company.name_short})</span>
-                            {/if}
-                          </button>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-                  <button
-                    type="button"
-                    on:click={openCompanyModal}
-                    class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                    aria-label="Add new company"
-                    title="Create new company"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
-                {#if formErrors.company_id}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.company_id}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="contact_id" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Contact *
-                </label>
-                <div class="flex relative" style="gap: 8px;">
-                  <div class="flex-1 relative">
-                    <input
-                      id="contact_id"
-                      type="text"
-                      bind:value={contactSearchText}
-                      on:input={() => { contactDropdownOpen = true; }}
-                      on:focus={() => { contactDropdownOpen = true; }}
-                      on:blur={() => { setTimeout(() => contactDropdownOpen = false, 200); }}
-                      placeholder="Search contacts..."
-                      class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.contact_id ? 'border-red-500' : ''}"
-                      style="padding: 8px 30px 8px 12px; font-size: 12px; height: 32px;"
-                    />
-                    {#if contactSearchText}
-                      <button
-                        type="button"
-                        on:click={clearContact}
-                        class="absolute right-1 top-1/2 transform -translate-y-1/2 text-emittiv-light hover:text-emittiv-white flex items-center justify-center"
-                        style="width: 16px; height: 16px;"
-                        aria-label="Clear contact"
-                      >
-                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    {/if}
-                    {#if contactDropdownOpen && filteredContactOptions.length > 0}
-                      <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b max-h-48 overflow-y-auto z-50" style="margin-top: 1px;">
-                        {#each filteredContactOptions as contact}
-                          <button
-                            type="button"
-                            on:click={() => selectContact(contact.id)}
-                            class="w-full text-left text-emittiv-white hover:bg-emittiv-dark text-xs border-b border-emittiv-dark last:border-b-0 truncate"
-                            style="height: 24px; line-height: 22px; padding: 1px 8px;"
-                          >
-                            <span class="font-medium truncate">{contact.full_name}</span>
-                            {#if contact.company}
-                              {@const contactCompanyId = typeof contact.company === 'string' ? contact.company : (contact.company?.id?.String || contact.company?.id || '')}
-                              {@const companyName = allCompanyOptions.find(c => c.id === contactCompanyId)?.name}
-                              {#if companyName}
-                                <span class="text-emittiv-light"> - {companyName}</span>
-                              {/if}
-                            {/if}
-                          </button>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-                  <button
-                    type="button"
-                    on:click={openContactModal}
-                    class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                    aria-label="Add new contact"
-                    title="Create new contact"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
-                {#if formErrors.contact_id}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.contact_id}</p>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
+<BaseModal 
+  {isOpen} 
+  title={mode === 'create' ? 'Add New FP' : 'Edit FP'}
+  maxWidth="500px"
+  on:close={closeModal}
+>
+  <!-- Form -->
+  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- BASIC INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Basic Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
         
-        <!-- FP Details Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">FP Details</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Issue Date and Activity Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="issue_date" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Issue Date (YYMMDD)
-                </label>
-                <input
-                  id="issue_date"
-                  type="text"
-                  bind:value={formData.issue_date}
-                  placeholder="250715"
-                  maxlength="6"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.issue_date ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.issue_date}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.issue_date}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="activity" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Activity
-                </label>
-                <input
-                  id="activity"
-                  type="text"
-                  bind:value={formData.activity}
-                  placeholder="Architecture, Interior Design"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-            </div>
-            
-            <!-- Package and Strap Line -->
-            <div>
-              <label for="package" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Package
-              </label>
-              <input
-                id="package"
-                type="text"
-                bind:value={formData.package}
-                placeholder="Design Development Package"
-                class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
-              />
-            </div>
-            
-            <div>
-              <label for="strap_line" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Strap Line
-              </label>
-              <input
-                id="strap_line"
-                type="text"
-                bind:value={formData.strap_line}
-                placeholder="Luxury Hotel Design & Development"
-                class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Staff Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Staff Information</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Staff Name and Position Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="staff_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Staff Name
-                </label>
-                <input
-                  id="staff_name"
-                  type="text"
-                  bind:value={formData.staff_name}
-                  placeholder="Martin Smith"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-              
-              <div>
-                <label for="staff_position" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Staff Position
-                </label>
-                <input
-                  id="staff_position"
-                  type="text"
-                  bind:value={formData.staff_position}
-                  placeholder="Senior Architect"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-            </div>
-            
-            <!-- Staff Email and Phone Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="staff_email" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Staff Email
-                </label>
-                <input
-                  id="staff_email"
-                  type="email"
-                  bind:value={formData.staff_email}
-                  placeholder="martin@emittiv.com"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.staff_email ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.staff_email}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.staff_email}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="staff_phone" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Staff Phone
-                </label>
-                <input
-                  id="staff_phone"
-                  type="tel"
-                  bind:value={formData.staff_phone}
-                  placeholder="+971 50 123 4567"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Save Message -->
-        {#if saveMessage}
-          <div class="rounded-lg {saveMessage.startsWith('Error') ? 'bg-red-900/20 border border-red-500/30 text-red-300' : 'bg-green-900/20 border border-green-500/30 text-green-300'}" style="padding: 8px; font-size: 11px;">
-            {saveMessage}
-          </div>
-        {/if}
-
-        <!-- Delete Confirmation -->
-        {#if showDeleteConfirm}
-          <div class="rounded-lg bg-red-900/20 border border-red-500/30 text-red-300" style="padding: 12px; font-size: 12px;">
-            <p style="margin-bottom: 8px;">⚠️ Are you sure you want to delete this FP?</p>
-            <p class="text-red-400" style="font-size: 10px; margin-bottom: 12px;">This action cannot be undone. All related data and documents will be affected.</p>
-            <div class="flex" style="gap: 8px;">
-              <button
-                type="button"
-                on:click={cancelDelete}
-                class="border border-red-500/30 rounded text-red-300 hover:text-red-200 hover:border-red-400 transition-all"
-                style="padding: 4px 8px; font-size: 11px; height: 24px;"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                on:click={handleDelete}
-                class="bg-red-600 hover:bg-red-700 text-white rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                style="padding: 4px 8px; font-size: 11px; height: 24px; gap: 4px;"
-                disabled={isDeleting}
-              >
-                {#if isDeleting}
-                  <div class="border-2 border-white border-t-transparent rounded-full animate-spin" style="width: 10px; height: 10px;"></div>
-                  <span>Deleting...</span>
-                {:else}
-                  <span>Delete FP</span>
-                {/if}
-              </button>
-            </div>
-          </div>
-        {/if}
-        
-        <!-- Action Buttons -->
-        <div class="flex {mode === 'edit' ? 'justify-between' : 'justify-end'} border-t border-emittiv-dark" style="gap: 12px; padding-top: 16px; margin-top: 8px;">
-          {#if mode === 'edit'}
-            <button
-              type="button"
-              on:click={confirmDelete}
-              class="border border-red-500/50 rounded text-red-400 hover:text-red-300 hover:border-red-400 transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
-            >
-              Delete
-            </button>
-          {/if}
+        <!-- Name and Number -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="FP Name"
+            bind:value={formData.name}
+            placeholder="Hotel Development - Design Services"
+            required
+            error={formErrors.name}
+          />
           
-          <div class="flex" style="gap: 12px;">
-            <button
-              type="button"
+          <FormInput
+            label="FP Number"
+            bind:value={formData.number}
+            placeholder="25-97105-FP"
+            required
+            error={formErrors.number}
+          />
+        </div>
+        
+        <!-- Revision and Status -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Revision"
+            type="number"
+            bind:value={formData.rev}
+            placeholder="1"
+            min="1"
+          />
+          
+          <FormSelect
+            label="Status"
+            bind:value={formData.status}
+            options={statusOptions}
+          />
+        </div>
+        
+        <!-- Issue Date and Activity -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Issue Date"
+            bind:value={formData.issue_date}
+            placeholder="YYMMDD format"
+            maxlength="6"
+            error={formErrors.issue_date}
+          />
+          
+          <FormInput
+            label="Activity"
+            bind:value={formData.activity}
+            placeholder="Design and Consultancy"
+          />
+        </div>
+        
+        <!-- Package -->
+        <FormInput
+          label="Package"
+          bind:value={formData.package}
+          placeholder="Package description"
+        />
+      </div>
+    </div>
+    
+    <!-- PROJECT & CLIENT INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Project & Client Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        
+        <!-- Project Selection -->
+        <TypeaheadSelect
+          label="Project"
+          bind:value={formData.project_id}
+          bind:searchText={projectSearchText}
+          options={projectOptions}
+          displayFields={['number', 'name']}
+          placeholder="Search projects..."
+          required
+          error={formErrors.project_id}
+          showAddButton
+          addButtonLabel="Create new project"
+          on:select={handleProjectSelect}
+          on:add-new={() => showNewProjectModal = true}
+        >
+          <svelte:fragment slot="option" let:option>
+            <span class="font-medium">{option.number}</span> - <span class="truncate">{option.name}</span>
+          </svelte:fragment>
+        </TypeaheadSelect>
+        
+        <!-- Company and Contact -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <TypeaheadSelect
+            label="Company"
+            bind:value={formData.company_id}
+            bind:searchText={companySearchText}
+            options={companyOptions}
+            displayFields={['name']}
+            placeholder="Search companies..."
+            required
+            error={formErrors.company_id}
+            showAddButton
+            addButtonLabel="Add new company"
+            on:select={handleCompanySelect}
+            on:add-new={() => showCompanyModal = true}
+          />
+          
+          <TypeaheadSelect
+            label="Contact"
+            bind:value={formData.contact_id}
+            bind:searchText={contactSearchText}
+            options={contactOptions}
+            displayFields={['full_name']}
+            placeholder="Search contacts..."
+            required
+            error={formErrors.contact_id}
+            showAddButton
+            addButtonLabel="Add new contact"
+            on:select={handleContactSelect}
+            on:add-new={() => showContactModal = true}
+          />
+        </div>
+      </div>
+    </div>
+    
+    <!-- STAFF INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Staff Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        
+        <!-- Staff Name and Email -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Staff Name"
+            bind:value={formData.staff_name}
+            placeholder="Full name"
+          />
+          
+          <FormInput
+            label="Staff Email"
+            type="email"
+            bind:value={formData.staff_email}
+            placeholder="email@company.com"
+            error={formErrors.staff_email}
+          />
+        </div>
+        
+        <!-- Staff Phone and Position -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Staff Phone"
+            type="tel"
+            bind:value={formData.staff_phone}
+            placeholder="+971 50 123 4567"
+          />
+          
+          <FormInput
+            label="Staff Position"
+            bind:value={formData.staff_position}
+            placeholder="Position title"
+          />
+        </div>
+        
+        <!-- Strap Line -->
+        <FormInput
+          label="Strap Line"
+          bind:value={formData.strap_line}
+          placeholder="sensory design studio"
+        />
+      </div>
+    </div>
+    
+    <!-- Error/Success Messages -->
+    {#if $operationState.error}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        {$operationState.error}
+      </div>
+    {/if}
+    
+    {#if $operationState.message}
+      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+        {$operationState.message}
+      </div>
+    {/if}
+    
+    <!-- Delete Confirmation -->
+    {#if showDeleteConfirm && mode === 'edit'}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        <p class="font-medium mb-2">Are you sure you want to delete this FP?</p>
+        <p class="text-xs opacity-80">This action cannot be undone.</p>
+      </div>
+    {/if}
+    
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      {#if mode === 'edit' && !showDeleteConfirm}
+        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = true}
+            disabled={$operationState.saving || $operationState.deleting}
+          >
+            Delete
+          </Button>
+          
+          <div class="flex h-full" style="gap: 12px;">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
               on:click={closeModal}
-              class="border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-light transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting}
+              disabled={$operationState.saving || $operationState.deleting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            
+            <Button
               type="submit"
-              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 4px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
+              variant="primary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
+              disabled={$operationState.saving || $operationState.deleting}
             >
-              {#if isSaving}
-                <div class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
-                <span>Saving...</span>
-              {:else}
-                <span>{mode === 'create' ? 'Create FP' : 'Update FP'}</span>
+              {#if $operationState.saving}
+                <div 
+                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  style="width: 14px; height: 14px; margin-right: 6px;"
+                ></div>
               {/if}
-            </button>
+              Update FP
+            </Button>
           </div>
         </div>
-      </form>
+      {:else if mode === 'edit' && showDeleteConfirm}
+        <!-- Delete Confirmation Mode -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={handleDelete}
+            disabled={$operationState.deleting}
+          >
+            {#if $operationState.deleting}
+              <div 
+                class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Confirm Delete
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = false}
+            disabled={$operationState.deleting}
+          >
+            Cancel
+          </Button>
+        </div>
+      {:else}
+        <!-- Create Mode: Just Cancel/Create buttons -->
+        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={closeModal}
+            disabled={$operationState.saving}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            disabled={$operationState.saving}
+          >
+            {#if $operationState.saving}
+              <div 
+                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Create FP
+          </Button>
+        </div>
+      {/if}
     </div>
-  </div>
-{/if}
+  </form>
+</BaseModal>
 
 <!-- Nested Modals -->
-<NewProjectModal 
-  bind:isOpen={showNewProjectModal}
-  onClose={() => showNewProjectModal = false}
-  onSuccess={handleProjectCreated}
-/>
-
-<CompanyModal 
-  bind:isOpen={showCompanyModal}
+<NewProjectModal
+  isOpen={showNewProjectModal}
   mode="create"
-  company={null}
-  on:close={() => showCompanyModal = false}
-  on:companyCreated={handleCompanyCreated}
+  on:close={handleNewProjectModalClose}
 />
 
-<ContactModal 
-  bind:isOpen={showContactModal}
+<CompanyModal
+  isOpen={showCompanyModal}
   mode="create"
-  contact={null}
-  on:close={() => showContactModal = false}
-  on:contactCreated={handleContactCreated}
+  on:close={handleCompanyModalClose}
 />
 
-<style>
-  /* Custom select styling */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    padding-right: 2.5rem;
-  }
-</style>
+<ContactModal
+  isOpen={showContactModal}
+  mode="create"
+  on:close={handleContactModalClose}
+/>

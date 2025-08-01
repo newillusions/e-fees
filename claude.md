@@ -125,7 +125,10 @@ export { default as logo } from './images/logo-white.svg?url';
 - Consistent error handling
 
 ### Recent Fixes (July 2025)
-- **Contact creation fully working** - All required fields including manual full_name computation
+- **Contact CRUD fully working** ✅ - Create, update, delete with proper ID extraction and form validation
+- **Contact modal improvements** ✅ - Fuzzy search company selection, reactive state fixes, 500px width
+- **Navigation reordered** ✅ - Dashboard, Projects, Companies, Contacts, Proposals (with Cmd+1-5 shortcuts)
+- **Debug logging cleanup** ✅ - Removed console.log/println! statements from contact operations
 - **Company ID extraction** - Fixed SurrealDB Thing object handling in frontend
 - **Form input issues** - Removed excessive logging causing input blocking
 - **Window positioning** - Removed automatic positioning for new environment
@@ -143,15 +146,20 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 ## Next Steps
 
 ### Priority 1: Complete CRUD Operations
-1. **Projects CRUD** - Apply same pattern as Companies/Contacts
+1. **✅ Contacts CRUD** - COMPLETED - Create, update, delete all working
+   - Backend: All contact commands implemented with proper ID extraction
+   - Frontend: ContactModal with fuzzy search and validation
+   - Default sorting by last updated timestamp
+
+2. **Proposals CRUD Testing** - Next session priority
+   - Backend: Commands appear well-implemented (no obvious issues found)
+   - Frontend: ProposalModal already has proper patterns applied
+   - Need to test and verify functionality
+
+3. **Projects CRUD** - Apply same pattern as Contacts
    - Backend: `update_project`, `delete_project` commands  
    - Frontend: Project modal with edit/delete functionality
    - File: `src/lib/components/ProjectModal.svelte` (needs creation)
-
-2. **RFPs/Fee Proposals CRUD** - Apply same pattern
-   - Backend: `update_rfp`, `delete_rfp` commands
-   - Frontend: RFP modal with edit/delete functionality
-   - File: `src/lib/components/RfpModal.svelte` (needs creation)
 
 ### Priority 2: Enhanced UI Features
 3. **Detail views with slide-in panels** - Rich data display
@@ -178,8 +186,8 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 - Tauri uses less memory than Electron
 
 ---
-**Last Updated**: July 19, 2025  
-**Status**: Contact & Company CRUD complete, Projects/RFPs next
+**Last Updated**: July 25, 2025  
+**Status**: Contacts CRUD fully complete with all fixes applied, navigation reordered, ready for proposals testing
 
 ## Development Notes
 

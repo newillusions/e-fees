@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { Project, Rfp, Company, Contact } from '../../types';
+import type { Project, Fee, Company, Contact } from '../../types';
 
 // Mock data
 const mockProjects: Project[] = [
@@ -45,14 +45,13 @@ const mockProjects: Project[] = [
   }
 ];
 
-const mockRfps: Rfp[] = [
+const mockFees: Fee[] = [
   {
     id: '1',
     name: 'Green Tower MEP Design',
     number: 'RFP-24-001',
     rev: 1,
     status: 'Sent',
-    stage: 'Under Review',
     issue_date: '240115',
     activity: 'Design and Consultancy',
     package: 'MEP Design Package',
@@ -84,7 +83,6 @@ const mockRfps: Rfp[] = [
     number: 'RFP-24-002',
     rev: 2,
     status: 'Draft',
-    stage: 'Prepared',
     issue_date: '240128',
     activity: 'Management',
     package: 'Construction Management',
@@ -182,31 +180,26 @@ const mockContacts: Contact[] = [
 ];
 
 // Export mock data for fallback use
-export { mockProjects, mockRfps, mockCompanies, mockContacts };
+export { mockProjects, mockFees, mockCompanies, mockContacts };
 
-// Legacy export for backwards compatibility
-export const mockProposals = mockRfps;
 
 // Stores
 export const projects = writable<Project[]>(mockProjects);
-export const rfps = writable<Rfp[]>(mockRfps);
+export const fees = writable<Fee[]>(mockFees);
 export const companies = writable<Company[]>(mockCompanies);
 export const contacts = writable<Contact[]>(mockContacts);
 
-// Legacy store for backwards compatibility
-export const proposals = rfps;
-
 // Alternative export names for consistency
 export const projectStore = projects;
-export const rfpStore = rfps;
+export const feeStore = fees;
 export const companyStore = companies;
 export const contactStore = contacts;
 
 // Stats computed from data
 export const stats = writable({
   totalProjects: mockProjects.length,
-  activeRfps: mockRfps.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
+  activeFees: mockFees.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
   totalCompanies: mockCompanies.length,
   totalContacts: mockContacts.length,
-  totalRfps: mockRfps.length
+  totalFees: mockFees.length
 });

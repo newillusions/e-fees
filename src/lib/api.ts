@@ -33,7 +33,7 @@ import type {
   Project, 
   Company, 
   Contact, 
-  Rfp, 
+  Fee, 
   ConnectionStatus,
   DatabaseStats,
   DatabaseInfo,
@@ -181,9 +181,7 @@ export class ApiClient {
    */
   static async getProjects(): Promise<Project[]> {
     try {
-      console.log('Invoking get_projects command...');
       const projects = await invoke<Project[]>('get_projects');
-      console.log('get_projects response:', projects);
       return projects;
     } catch (error) {
       console.error('Failed to fetch projects from database:', error);
@@ -223,9 +221,7 @@ export class ApiClient {
    */
   static async searchProjects(query: string): Promise<Project[]> {
     try {
-      console.log('Searching projects with query:', query);
       const projects = await invoke<Project[]>('search_projects', { query });
-      console.log('search_projects response:', projects);
       return projects;
     } catch (error) {
       console.error('Failed to search projects:', error);
@@ -336,9 +332,7 @@ export class ApiClient {
    */
   static async getCompanies(): Promise<Company[]> {
     try {
-      console.log('Invoking get_companies command...');
       const companies = await invoke<Company[]>('get_companies');
-      console.log('get_companies response:', companies);
       return companies;
     } catch (error) {
       console.error('Failed to fetch companies from database:', error);
@@ -445,10 +439,6 @@ export class ApiClient {
    */
   static async updateCompany(id: string, company: Partial<Company>): Promise<Company | null> {
     try {
-      console.log('API updateCompany called with:');
-      console.log('ID:', id);
-      console.log('Company data:', company);
-      
       // Convert to the structure expected by backend
       const companyUpdate = {
         name: company.name || null,
@@ -460,9 +450,7 @@ export class ApiClient {
         tax_no: company.tax_no || null
       };
       
-      console.log('Sending companyUpdate:', companyUpdate);
       const updated = await invoke<Company>('update_company', { id, companyUpdate });
-      console.log('Update response:', updated);
       return updated;
     } catch (error) {
       console.error('Failed to update company:', error);
@@ -505,9 +493,7 @@ export class ApiClient {
    */
   static async deleteCompany(id: string): Promise<Company | null> {
     try {
-      console.log('API deleteCompany called with ID:', id);
       const deleted = await invoke<Company>('delete_company', { id });
-      console.log('Delete response:', deleted);
       return deleted;
     } catch (error) {
       console.error('Failed to delete company:', error);
@@ -554,9 +540,7 @@ export class ApiClient {
    */
   static async getContacts(): Promise<Contact[]> {
     try {
-      console.log('Invoking get_contacts command...');
       const contacts = await invoke<Contact[]>('get_contacts');
-      console.log('get_contacts response:', contacts);
       return contacts;
     } catch (error) {
       console.error('Failed to fetch contacts from database:', error);
@@ -628,8 +612,6 @@ export class ApiClient {
    */
   static async updateContact(id: string, contactUpdate: Partial<Contact>): Promise<Contact | null> {
     try {
-      console.log('Invoking update_contact command with ID:', id, 'and data:', contactUpdate);
-      
       const updated = await invoke<Contact>('update_contact', { 
         id, 
         contactUpdate: contactUpdate 
@@ -649,8 +631,6 @@ export class ApiClient {
    */
   static async deleteContact(id: string): Promise<Contact | null> {
     try {
-      console.log('Invoking delete_contact command with ID:', id);
-      
       const deleted = await invoke<Contact>('delete_contact', { id });
       return deleted;
     } catch (error) {
@@ -670,18 +650,18 @@ export class ApiClient {
    * associated project, company, and contact information. RFPs represent
    * the core business documents for proposal management.
    * 
-   * @returns Promise<Rfp[]> - Array of all RFP records
+   * @returns Promise<Fee[]> - Array of all fee records
    * 
    * @example
    * ```typescript
    * try {
-   *   const rfps = await ApiClient.getRfps();
-   *   console.log(`Found ${rfps.length} RFPs`);
-   *   rfps.forEach(rfp => {
-   *     console.log(`${rfp.number}: ${rfp.name} (${rfp.status})`);
+   *   const fees = await ApiClient.getFees();
+   *   console.log(`Found ${fees.length} fees`);
+   *   fees.forEach(fee => {
+   *     console.log(`${fee.number}: ${fee.name} (${fee.status})`);
    *   });
    * } catch (error) {
-   *   console.error('Failed to load RFPs:', error);
+   *   console.error('Failed to load fees:', error);
    * }
    * ```
    * 
@@ -697,14 +677,12 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database connection or query errors
    */
-  static async getRfps(): Promise<Rfp[]> {
+  static async getFees(): Promise<Fee[]> {
     try {
-      console.log('Invoking get_rfps command...');
-      const rfps = await invoke<Rfp[]>('get_rfps');
-      console.log('get_rfps response:', rfps);
-      return rfps;
+      const fees = await invoke<Fee[]>('get_fees');
+      return fees;
     } catch (error) {
-      console.error('Failed to fetch rfps from database:', error);
+      console.error('Failed to fetch fees from database:', error);
       throw error;
     }
   }
@@ -752,33 +730,32 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createRfp(rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
+  static async createFee(fee: Omit<Fee, 'id'>): Promise<Fee | null> {
     try {
-      // Use RfpCreate format - remove id and time fields, ensure string IDs
-      const rfpCreate = {
-        name: rfp.name,
-        number: rfp.number,
-        rev: rfp.rev,
-        status: rfp.status,
-        stage: rfp.stage,
-        issue_date: rfp.issue_date,
-        activity: rfp.activity,
-        package: rfp.package,
-        project_id: typeof rfp.project_id === 'string' ? rfp.project_id.replace('projects:', '') : rfp.project_id?.toString() || '',
-        company_id: typeof rfp.company_id === 'string' ? rfp.company_id.replace('company:', '') : rfp.company_id?.toString() || '',
-        contact_id: typeof rfp.contact_id === 'string' ? rfp.contact_id.replace('contacts:', '') : rfp.contact_id?.toString() || '',
-        staff_name: rfp.staff_name,
-        staff_email: rfp.staff_email,
-        staff_phone: rfp.staff_phone,
-        staff_position: rfp.staff_position,
-        strap_line: rfp.strap_line,
-        revisions: rfp.revisions || []
+      // Use FeeCreate format - remove id and time fields, ensure string IDs
+      const feeCreate = {
+        name: fee.name,
+        number: fee.number,
+        rev: fee.rev,
+        status: fee.status,
+        issue_date: fee.issue_date,
+        activity: fee.activity,
+        package: fee.package,
+        project_id: typeof fee.project_id === 'string' ? fee.project_id.replace('projects:', '') : fee.project_id?.toString() || '',
+        company_id: typeof fee.company_id === 'string' ? fee.company_id.replace('company:', '') : fee.company_id?.toString() || '',
+        contact_id: typeof fee.contact_id === 'string' ? fee.contact_id.replace('contacts:', '') : fee.contact_id?.toString() || '',
+        staff_name: fee.staff_name,
+        staff_email: fee.staff_email,
+        staff_phone: fee.staff_phone,
+        staff_position: fee.staff_position,
+        strap_line: fee.strap_line,
+        revisions: fee.revisions || []
       };
       
-      const created = await invoke<Rfp>('create_rfp', { rfp: rfpCreate });
+      const created = await invoke<Fee>('create_fee', { fee: feeCreate });
       return created;
     } catch (error) {
-      console.error('Failed to create rfp:', error);
+      console.error('Failed to create fee:', error);
       return null;
     }
   }
@@ -808,27 +785,21 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database connection or validation errors
    */
-  static async updateRfp(id: string, rfp: Omit<Rfp, 'id'>): Promise<Rfp | null> {
+  static async updateFee(id: string, fee: Omit<Fee, 'id'>): Promise<Fee | null> {
     try {
-      console.log('=== API updateRfp called ===');
-      console.log('ID passed to API:', id);
-      console.log('RFP data passed to API:', rfp);
-      
-      const updatedRfp = {
-        ...rfp,
+      const updatedFee = {
+        ...fee,
         id: null, // Let backend handle ID
         time: {
-          ...rfp.time,
+          ...fee.time,
           updated_at: new Date().toISOString()
         }
       };
       
-      console.log('Calling invoke with updatedRfp:', updatedRfp);
-      const updated = await invoke<Rfp>('update_rfp', { id, rfp: updatedRfp });
-      console.log('Invoke returned:', updated);
+      const updated = await invoke<Fee>('update_fee', { id, fee: updatedFee });
       return updated;
     } catch (error) {
-      console.error('Failed to update rfp - API ERROR:', error);
+      console.error('Failed to update fee - API ERROR:', error);
       return null;
     }
   }
@@ -852,12 +823,12 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database connection or constraint errors
    */
-  static async deleteRfp(id: string): Promise<Rfp | null> {
+  static async deleteFee(id: string): Promise<Fee | null> {
     try {
-      const deleted = await invoke<Rfp>('delete_rfp', { id });
+      const deleted = await invoke<Fee>('delete_fee', { id });
       return deleted;
     } catch (error) {
-      console.error('Failed to delete rfp:', error);
+      console.error('Failed to delete fee:', error);
       return null;
     }
   }
@@ -870,7 +841,7 @@ export class ApiClient {
    * records (project, company, contact) and writes to the appropriate
    * project directory.
    * 
-   * @param rfpId - The ID of the RFP to export (e.g., '24_96606_1')
+   * @param feeId - The ID of the fee to export (e.g., '24_96606_1')
    * @returns Promise<string> - Success message with file path, or null on error
    * 
    * @example
@@ -881,10 +852,9 @@ export class ApiClient {
    * }
    * ```
    */
-  static async writeFeeToJson(rfpId: string): Promise<string | null> {
+  static async writeFeeToJson(feeId: string): Promise<string | null> {
     try {
-      const result = await invoke<string>('write_fee_to_json', { rfpId });
-      console.log('RFP data written to JSON:', result);
+      const result = await invoke<string>('write_fee_to_json', { rfpId: feeId });
       return result;
     } catch (error) {
       console.error('Failed to write RFP data to JSON:', error);
@@ -936,6 +906,26 @@ export class ApiClient {
       return exists;
     } catch (error) {
       console.error('Failed to check var.json existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a var.json template file (with "Default Values") exists in a project folder
+   * 
+   * @param projectNumber - The project number (e.g., "25-97107")
+   * @param projectShortName - The short project name (e.g., "Cove Boulevard")
+   * @returns Promise<boolean> - true if template file exists, false if not
+   */
+  static async checkVarJsonTemplateExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+    try {
+      const exists = await invoke<boolean>('check_var_json_template_exists', { 
+        projectNumber, 
+        projectShortName 
+      });
+      return exists;
+    } catch (error) {
+      console.error('Failed to check var.json template existence:', error);
       return false;
     }
   }
@@ -1021,9 +1011,7 @@ export class ApiClient {
    */
   static async getStats(): Promise<DatabaseStats> {
     try {
-      console.log('Invoking get_stats command...');
       const stats = await invoke<DatabaseStats>('get_stats');
-      console.log('get_stats response:', stats);
       return stats;
     } catch (error) {
       console.error('Failed to fetch stats from database:', error);
@@ -1225,9 +1213,7 @@ export class ApiClient {
    */
   static async selectFolder(): Promise<string | null> {
     try {
-      console.log('Opening folder picker dialog...');
       const folder = await invoke<string | null>('select_folder');
-      console.log('Selected folder:', folder);
       return folder;
     } catch (error) {
       console.error('Failed to open folder picker:', error);
@@ -1272,9 +1258,7 @@ export class ApiClient {
    */
   static async openFolderInExplorer(folderPath: string): Promise<string> {
     try {
-      console.log('Opening folder in explorer:', folderPath);
       const result = await invoke<string>('open_folder_in_explorer', { folderPath });
-      console.log('Folder opened successfully');
       return result;
     } catch (error) {
       console.error('Failed to open folder in explorer:', error);
@@ -1320,12 +1304,10 @@ export class ApiClient {
    */
   static async generateNextProjectNumber(countryName: string, year?: number): Promise<string> {
     try {
-      console.log('Generating next project number for country:', countryName, 'year:', year);
       const projectNumber = await invoke<string>('generate_next_project_number', { 
         countryName, 
         year: year || null 
       });
-      console.log('Generated project number:', projectNumber);
       return projectNumber;
     } catch (error) {
       console.error('Failed to generate project number:', error);
@@ -1366,9 +1348,7 @@ export class ApiClient {
    */
   static async validateProjectNumber(projectNumber: string): Promise<boolean> {
     try {
-      console.log('Validating project number:', projectNumber);
       const isValid = await invoke<boolean>('validate_project_number', { projectNumber });
-      console.log('Project number is valid:', isValid);
       return isValid;
     } catch (error) {
       console.error('Failed to validate project number:', error);
@@ -1419,9 +1399,7 @@ export class ApiClient {
    */
   static async createProjectWithTemplate(project: Partial<Project>): Promise<Project> {
     try {
-      console.log('Creating project with template:', project);
       const created = await invoke<Project>('create_project_with_template', { project });
-      console.log('Project created successfully:', created);
       return created;
     } catch (error) {
       console.error('Failed to create project with template:', error);
@@ -1451,14 +1429,11 @@ export class ApiClient {
    */
   static async copyProjectTemplate(projectNumber: string, projectShortName: string): Promise<string> {
     try {
-      console.log('Copying project template:', projectNumber, projectShortName);
       const params = { 
         projectNumber: projectNumber, 
         projectShortName: projectShortName 
       };
-      console.log('API parameters being sent:', params);
       const result = await invoke<string>('copy_project_template', params);
-      console.log('Template copied successfully:', result);
       return result;
     } catch (error) {
       console.error('Failed to copy project template:', error);
@@ -1489,13 +1464,11 @@ export class ApiClient {
    */
   static async populateProjectData(fpId: string, projectNumber: string, projectShortName: string): Promise<string> {
     try {
-      console.log('Populating project data:', fpId, projectNumber, projectShortName);
       const result = await invoke<string>('populate_project_data', { 
         fpId: fpId,
         projectNumber: projectNumber, 
         projectShortName: projectShortName 
       });
-      console.log('Project data populated successfully:', result);
       return result;
     } catch (error) {
       console.error('Failed to populate project data:', error);
@@ -1505,9 +1478,7 @@ export class ApiClient {
 
   static async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
     try {
-      console.log('Updating project:', id, projectData);
       const updated = await invoke<Project>('update_project', { id, projectUpdate: projectData });
-      console.log('Project updated successfully:', updated);
       return updated;
     } catch (error) {
       console.error('Failed to update project:', error);
@@ -1517,9 +1488,7 @@ export class ApiClient {
 
   static async deleteProject(id: string): Promise<Project> {
     try {
-      console.log('Deleting project:', id);
       const deleted = await invoke<Project>('delete_project', { id });
-      console.log('Project deleted successfully:', deleted);
       return deleted;
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -1563,9 +1532,7 @@ export class ApiClient {
    */
   static async searchCountries(query: string): Promise<CountrySearchResult[]> {
     try {
-      console.log('Searching countries with query:', query);
       const countries = await invoke<CountrySearchResult[]>('search_countries', { query });
-      console.log('Search returned countries:', countries);
       return countries;
     } catch (error) {
       console.error('Failed to search countries:', error);
@@ -1603,9 +1570,7 @@ export class ApiClient {
    */
   static async investigateRecord(recordId: string): Promise<any> {
     try {
-      console.log('Investigating database record:', recordId);
       const result = await invoke('investigate_record', { recordId });
-      console.log('Investigation result:', result);
       return result;
     } catch (error) {
       console.error('Failed to investigate record:', error);
@@ -1638,9 +1603,9 @@ export class ApiClient {
    * 
    * @throws Error - Throws on database connection errors
    */
-  static async getAreaSuggestions(country: string): Promise<string[]> {
+  static async getAreaSuggestions(country: string | null): Promise<string[]> {
     try {
-      const suggestions = await invoke('get_area_suggestions', { country });
+      const suggestions = await invoke('get_area_suggestions', { country: country || '' });
       return suggestions as string[];
     } catch (error) {
       console.error('Failed to get area suggestions:', error);
@@ -1673,9 +1638,9 @@ export class ApiClient {
    * 
    * @throws Error - Throws on database connection errors
    */
-  static async getCitySuggestions(country: string): Promise<string[]> {
+  static async getCitySuggestions(country: string | null): Promise<string[]> {
     try {
-      const suggestions = await invoke('get_city_suggestions', { country });
+      const suggestions = await invoke('get_city_suggestions', { country: country || '' });
       return suggestions as string[];
     } catch (error) {
       console.error('Failed to get city suggestions:', error);
@@ -1765,11 +1730,11 @@ export const {
   updateContact,
   deleteContact,
   
-  // RFP operations
-  getRfps,
-  createRfp,
-  updateRfp,
-  deleteRfp,
+  // Fee operations
+  getFees,
+  createFee,
+  updateFee,
+  deleteFee,
   writeFeeToJson,
   
   // Statistics and monitoring
@@ -1791,6 +1756,7 @@ export const {
   copyProjectTemplate,
   checkProjectFolderExists,
   checkVarJsonExists,
+  checkVarJsonTemplateExists,
   renameFolderWithOldSuffix,
   renameVarJsonWithOldSuffix,
   

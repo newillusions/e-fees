@@ -18,19 +18,14 @@
 //! All commands receive an `AppState` which is a thread-safe wrapper around
 //! the `DatabaseManager`. This allows multiple commands to safely access the
 //! database concurrently while maintaining consistency.
-//! 
-//! ## Error Handling
-//! 
-//! Commands use Rust's `Result` type to provide comprehensive error handling:
-//! - **Ok(T)**: Successful operation with data
-//! - **Err(String)**: Error with human-readable message for frontend display
-//! 
-//! ## Logging
-//! 
-//! All commands include detailed logging using the `log` crate for debugging
-//! and monitoring in production environments.
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Rfp, RfpCreate, RfpUpdate};
+pub mod utils;
+
+// Import the utility functions and macros
+use utils::execute_with_manager;
+use crate::crud_command;
+
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate};
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -38,6 +33,8 @@ use tauri::State;
 use log::{error, info};
 use serde::{Serialize, Deserialize};
 use tauri_plugin_dialog::DialogExt;
+
+mod tests;
 
 // ============================================================================
 // TYPE DEFINITIONS AND APPLICATION STATE
@@ -86,6 +83,7 @@ pub struct CompanyUpdate {
 pub struct ContactUpdate {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
+    pub full_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub position: Option<String>,
@@ -240,26 +238,13 @@ pub async fn get_connection_status(state: State<'_, AppState>) -> Result<Connect
 /// - Database query is optimized with proper indexing
 /// - Large result sets (1000+ projects) may take 2-3 seconds
 /// - Results are cached at the frontend level for better UX
-#[tauri::command]
-pub async fn get_projects(state: State<'_, AppState>) -> Result<Vec<Project>, String> {
-    info!("Fetching projects from database");
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.get_projects().await {
-        Ok(projects) => {
-            info!("Successfully fetched {} projects", projects.len());
-            Ok(projects)
-        }
-        Err(e) => {
-            error!("Failed to fetch projects: {}", e);
-            Err(format!("Failed to fetch projects: {}", e))
-        }
-    }
-}
+crud_command!(
+    get_projects,
+    Vec<Project>,
+    get_projects,
+    "fetch",
+    "projects"
+);
 
 /// Search projects using fuzzy matching across multiple fields.
 /// 
@@ -348,26 +333,15 @@ pub async fn search_projects(query: String, state: State<'_, AppState>) -> Resul
 /// };
 /// const created = await invoke('create_project', { project: newProject });
 /// ```
-#[tauri::command]
-pub async fn create_project(project: Project, state: State<'_, AppState>) -> Result<Project, String> {
-    info!("Creating new project: {}", project.name);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.create_project(project).await {
-        Ok(created_project) => {
-            info!("Successfully created project with id: {:?}", created_project.id);
-            Ok(created_project)
-        }
-        Err(e) => {
-            error!("Failed to create project: {}", e);
-            Err(format!("Failed to create project: {}", e))
-        }
-    }
-}
+crud_command!(
+    create_project,
+    Project,
+    Project,
+    create_project,
+    "create",
+    "project",
+    data: project
+);
 
 // ============================================================================
 // COMPANY MANAGEMENT COMMANDS
@@ -394,26 +368,22 @@ pub async fn create_project(project: Project, state: State<'_, AppState>) -> Res
 /// const companies = await invoke('get_companies');
 /// const uaeCompanies = companies.filter(c => c.country === 'UAE');
 /// ```
-#[tauri::command]
-pub async fn get_companies(state: State<'_, AppState>) -> Result<Vec<Company>, String> {
-    info!("Fetching companies from database");
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.get_companies().await {
-        Ok(companies) => {
-            info!("Successfully fetched {} companies", companies.len());
-            Ok(companies)
-        }
-        Err(e) => {
-            error!("Failed to fetch companies: {}", e);
-            Err(format!("Failed to fetch companies: {}", e))
-        }
-    }
-}
+// ============================================================================
+// REFACTORED COMPANY MANAGEMENT COMMANDS USING UTILITIES
+// ============================================================================
+
+/// Retrieve all companies from the database.
+/// 
+/// This command fetches all company records sorted alphabetically by name.
+/// Companies are core entities in the system and are referenced by contacts,
+/// projects, and proposals.
+crud_command!(
+    get_companies,
+    Vec<Company>,
+    get_companies,
+    "fetch",
+    "companies"
+);
 
 /// Create a new company in the database.
 /// 
@@ -446,26 +416,15 @@ pub async fn get_companies(state: State<'_, AppState>) -> Result<Vec<Company>, S
 /// };
 /// const created = await invoke('create_company', { company: newCompany });
 /// ```
-#[tauri::command]
-pub async fn create_company(company: CompanyCreate, state: State<'_, AppState>) -> Result<Company, String> {
-    info!("Creating new company: {}", company.name);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.create_company(company).await {
-        Ok(created_company) => {
-            info!("Successfully created company with id: {:?}", created_company.id);
-            Ok(created_company)
-        }
-        Err(e) => {
-            error!("Failed to create company: {}", e);
-            Err(format!("Failed to create company: {}", e))
-        }
-    }
-}
+crud_command!(
+    create_company,
+    Company,
+    CompanyCreate,
+    create_company,
+    "create",
+    "company",
+    data: company
+);
 
 /// Update an existing company with partial data.
 /// 
@@ -502,23 +461,18 @@ pub async fn create_company(company: CompanyCreate, state: State<'_, AppState>) 
 /// ```
 #[tauri::command]
 pub async fn update_company(id: String, company_update: CompanyUpdate, state: State<'_, AppState>) -> Result<Company, String> {
-    info!("Updating company with id: {} with partial data: {:?}", id, company_update);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.update_company_partial(&id, company_update).await {
-        Ok(updated_company) => {
-            info!("Successfully updated company with id: {}", id);
-            Ok(updated_company)
-        }
-        Err(e) => {
-            error!("Failed to update company: {}", e);
-            Err(format!("Failed to update company: {}", e))
-        }
-    }
+    let company_name = format!("company '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.update_company_partial(&id_clone, company_update).await 
+            })
+        },
+        "update",
+        &company_name
+    ).await
 }
 
 /// Delete a company from the database.
@@ -548,26 +502,14 @@ pub async fn update_company(id: String, company_update: CompanyUpdate, state: St
 ///   console.error('Cannot delete company with active projects');
 /// }
 /// ```
-#[tauri::command]
-pub async fn delete_company(id: String, state: State<'_, AppState>) -> Result<Company, String> {
-    info!("Deleting company with id: {}", id);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.delete_company(&id).await {
-        Ok(deleted_company) => {
-            info!("Successfully deleted company with id: {}", id);
-            Ok(deleted_company)
-        }
-        Err(e) => {
-            error!("Failed to delete company: {}", e);
-            Err(format!("Failed to delete company: {}", e))
-        }
-    }
-}
+crud_command!(
+    delete_company,
+    Company,
+    delete_company,
+    "delete",
+    "company",
+    id: String
+);
 
 // ============================================================================
 // CONTACT MANAGEMENT COMMANDS
@@ -597,26 +539,18 @@ pub async fn delete_company(id: String, state: State<'_, AppState>) -> Result<Co
 ///   c.company.name.toLowerCase().includes('hotel')
 /// );
 /// ```
-#[tauri::command]
-pub async fn get_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, String> {
-    info!("Fetching contacts from database");
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.get_contacts().await {
-        Ok(contacts) => {
-            info!("Successfully fetched {} contacts", contacts.len());
-            Ok(contacts)
-        }
-        Err(e) => {
-            error!("Failed to fetch contacts: {}", e);
-            Err(format!("Failed to fetch contacts: {}", e))
-        }
-    }
-}
+/// Retrieve all contacts from the database with company information.
+/// 
+/// This command fetches all contacts with their associated company data
+/// resolved through database joins. Contacts are sorted alphabetically
+/// by last name, then first name.
+crud_command!(
+    get_contacts,
+    Vec<Contact>,
+    get_contacts,
+    "fetch",
+    "contacts"
+);
 
 /// Create a new contact in the database.
 /// 
@@ -648,26 +582,15 @@ pub async fn get_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, St
 /// };
 /// const created = await invoke('create_contact', { contact: newContact });
 /// ```
-#[tauri::command]
-pub async fn create_contact(contact: ContactCreate, state: State<'_, AppState>) -> Result<Contact, String> {
-    info!("Creating new contact: {} {}", contact.first_name, contact.last_name);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.create_contact(contact).await {
-        Ok(created_contact) => {
-            info!("Successfully created contact with id: {:?}", created_contact.id);
-            Ok(created_contact)
-        }
-        Err(e) => {
-            error!("Failed to create contact: {}", e);
-            Err(format!("Failed to create contact: {}", e))
-        }
-    }
-}
+crud_command!(
+    create_contact,
+    Contact,
+    ContactCreate,
+    create_contact,
+    "create",
+    "contact",
+    data: contact
+);
 
 /// Update an existing contact in the database.
 /// 
@@ -682,29 +605,24 @@ pub async fn create_contact(contact: ContactCreate, state: State<'_, AppState>) 
 /// 
 /// # Arguments
 /// * `id` - The contact ID (extracted from SurrealDB Thing object)
-/// * `contact_update` - Partial contact data with only fields to update
+/// * `contactUpdate` - Partial contact data with only fields to update
 /// 
 /// # Returns
 /// * `Result<Contact, String>` - Updated contact or error message
 #[tauri::command]
-pub async fn update_contact(id: String, contact_update: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
-    info!("Updating contact with id: {} with partial data: {:?}", id, contact_update);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.update_contact_partial(&id, contact_update).await {
-        Ok(updated_contact) => {
-            info!("Successfully updated contact with id: {}", id);
-            Ok(updated_contact)
-        }
-        Err(e) => {
-            error!("Failed to update contact: {}", e);
-            Err(format!("Failed to update contact: {}", e))
-        }
-    }
+pub async fn update_contact(id: String, contactUpdate: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
+    let contact_name = format!("contact '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.update_contact_partial(&id_clone, contactUpdate).await 
+            })
+        },
+        "update",
+        &contact_name
+    ).await
 }
 
 /// Delete a contact from the database.
@@ -734,25 +652,47 @@ pub async fn update_contact(id: String, contact_update: ContactUpdate, state: St
 ///   console.error('Cannot delete contact with active FPs');
 /// }
 /// ```
+/// Delete a contact from the database.
+/// 
+/// This command permanently removes a contact record. Note that this
+/// operation will fail if the contact has associated RFPs or other
+/// relationships that prevent deletion.
+/// 
+/// # Arguments
+/// * `id` - The contact ID (extracted from SurrealDB Thing object)
+/// 
+/// # Returns
+/// * `Result<Contact, String>` - The deleted contact or error message
+/// 
+/// # Errors
+/// Returns error if:
+/// - Contact doesn't exist
+/// - Contact has dependent records (RFPs, etc.)
+/// - Database connection failure
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// try {
+///   const deleted = await invoke('delete_contact', { id: 'contacts:john_smith' });
+///   console.log('Deleted contact:', deleted.name);
+/// } catch (error) {
+///   console.error('Cannot delete contact:', error);
+/// }
+/// ```
 #[tauri::command]
 pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Contact, String> {
-    info!("Deleting contact with id: {}", id);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.delete_contact(&id).await {
-        Ok(deleted_contact) => {
-            info!("Successfully deleted contact with id: {}", id);
-            Ok(deleted_contact)
-        }
-        Err(e) => {
-            error!("Failed to delete contact: {}", e);
-            Err(format!("Failed to delete contact: {}", e))
-        }
-    }
+    let contact_name = format!("contact '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.delete_contact(&id_clone).await 
+            })
+        },
+        "delete",
+        &contact_name
+    ).await
 }
 
 // ============================================================================
@@ -766,7 +706,7 @@ pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Co
 /// creation date (newest first).
 /// 
 /// # Returns
-/// - `Ok(Vec<Rfp>)`: List of all RFPs with relationship data
+/// - `Ok(Vec<Fee>)`: List of all fees with relationship data
 /// - `Err(String)`: Database error or connection failure
 /// 
 /// # RFP Structure
@@ -780,29 +720,21 @@ pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Co
 /// 
 /// # Frontend Usage
 /// ```typescript
-/// const rfps = await invoke('get_rfps');
-/// const activeRfps = rfps.filter(r => r.status === 'Active');
+/// const fees = await invoke('get_fees');
+/// const activeFees = fees.filter(f => f.status === 'Active');
 /// ```
-#[tauri::command]
-pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
-    info!("Fetching rfps from database");
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.get_rfps().await {
-        Ok(rfps) => {
-            info!("Successfully fetched {} rfps", rfps.len());
-            Ok(rfps)
-        }
-        Err(e) => {
-            error!("Failed to fetch rfps: {}", e);
-            Err(format!("Failed to fetch fee proposals: {}", e))
-        }
-    }
-}
+/// Retrieve all RFPs (proposals) from the database.
+/// 
+/// This command fetches all fee proposals with their relationships to
+/// projects, companies, and contacts resolved. RFPs are sorted by
+/// creation date (newest first).
+crud_command!(
+    get_fees,
+    Vec<Fee>,
+    get_fees,
+    "fetch",
+    "fee proposals"
+);
 
 /// Create a new RFP (proposal) in the database.
 /// 
@@ -813,7 +745,7 @@ pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
 /// - `rfp`: Complete RFP object with all required relationships
 /// 
 /// # Returns
-/// - `Ok(Rfp)`: Created RFP with database-assigned metadata
+/// - `Ok(Fee)`: Created fee with database-assigned metadata
 /// - `Err(String)`: Validation error or invalid references
 /// 
 /// # Validation Rules
@@ -831,7 +763,7 @@ pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
 /// 
 /// # Frontend Usage
 /// ```typescript
-/// const newRfp = {
+/// const newFee = {
 ///   name: "Hotel Renovation Proposal",
 ///   project_id: "projects:25_97105",
 ///   company_id: "company:CHE", 
@@ -842,31 +774,17 @@ pub async fn get_rfps(state: State<'_, AppState>) -> Result<Vec<Rfp>, String> {
 ///   activity: "Interior Design",
 ///   package: "Complete renovation"
 /// };
-/// const created = await invoke('create_rfp', { rfp: newRfp });
+/// const created = await invoke('create_fee', { fee: newFee });
 /// ```
-#[tauri::command]
-pub async fn create_rfp(rfp: RfpCreate, state: State<'_, AppState>) -> Result<Rfp, String> {
-    info!("Creating new rfp: {}", rfp.name);
-    info!("RFP project_id: {}", rfp.project_id);
-    info!("RFP company_id: {}", rfp.company_id);
-    info!("RFP contact_id: {}", rfp.contact_id);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
-    match manager_clone.create_rfp(rfp).await {
-        Ok(created_rfp) => {
-            info!("Successfully created rfp with id: {:?}", created_rfp.id);
-            Ok(created_rfp)
-        }
-        Err(e) => {
-            error!("Failed to create rfp: {}", e);
-            Err(format!("Failed to create fee proposal: {}", e))
-        }
-    }
-}
+crud_command!(
+    create_fee,
+    Fee,
+    FeeCreate,
+    create_fee,
+    "create",
+    "fee proposal",
+    data: fee
+);
 
 /// Update an existing RFP in the database.
 /// 
@@ -878,42 +796,35 @@ pub async fn create_rfp(rfp: RfpCreate, state: State<'_, AppState>) -> Result<Rf
 /// - `rfp`: Complete RFP object with updated data
 /// 
 /// # Returns
-/// - `Ok(Rfp)`: Updated RFP with current data
+/// - `Ok(Fee)`: Updated fee with current data
 /// - `Err(String)`: Validation error or RFP not found
 /// 
 /// # Frontend Usage
 /// ```typescript
-/// const updatedRfp = {
-///   ...existingRfp,
+/// const updatedFee = {
+///   ...existingFee,
 ///   status: "Sent",
 ///   stage: "Under Review"
 /// };
-/// const result = await invoke('update_rfp', { 
-///   id: "rfp_id_here", 
-///   rfp: updatedRfp 
+/// const result = await invoke('update_fee', { 
+///   id: "fee_id_here", 
+///   fee: updatedFee 
 /// });
 /// ```
 #[tauri::command]
-pub async fn update_rfp(id: String, rfp: RfpUpdate, state: State<'_, AppState>) -> Result<Rfp, String> {
-    info!("=== Modal Update RFP Called ===");
-    info!("ID received from modal: '{}'", id);
-    info!("RFP data received: name='{}', number='{}', status='{}'", rfp.name, rfp.number, rfp.status);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    match manager_clone.update_rfp(&id, rfp).await {
-        Ok(updated_rfp) => {
-            info!("Successfully updated rfp with id: {}", id);
-            Ok(updated_rfp)
-        }
-        Err(e) => {
-            error!("Failed to update rfp with id '{}': {}", id, e);
-            Err(format!("Failed to update fee proposal: {}", e))
-        }
-    }
+pub async fn update_fee(id: String, fee: FeeUpdate, state: State<'_, AppState>) -> Result<Fee, String> {
+    let fee_name = format!("fee proposal '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.update_fee(&id_clone, fee).await 
+            })
+        },
+        "update",
+        &fee_name
+    ).await
 }
 
 /// Delete an RFP from the database.
@@ -925,7 +836,7 @@ pub async fn update_rfp(id: String, rfp: RfpUpdate, state: State<'_, AppState>) 
 /// - `id`: The string ID of the RFP to delete
 /// 
 /// # Returns
-/// - `Ok(Rfp)`: The deleted RFP data for confirmation
+/// - `Ok(Fee)`: The deleted fee data for confirmation
 /// - `Err(String)`: Database error or RFP not found
 /// 
 /// # Warning
@@ -934,29 +845,17 @@ pub async fn update_rfp(id: String, rfp: RfpUpdate, state: State<'_, AppState>) 
 /// 
 /// # Frontend Usage
 /// ```typescript
-/// const deletedRfp = await invoke('delete_rfp', { id: "rfp_id_here" });
-/// console.log('Deleted RFP:', deletedRfp.name);
+/// const deletedFee = await invoke('delete_fee', { id: "fee_id_here" });
+/// console.log('Deleted Fee:', deletedFee.name);
 /// ```
-#[tauri::command]
-pub async fn delete_rfp(id: String, state: State<'_, AppState>) -> Result<Rfp, String> {
-    info!("Deleting rfp with id: {}", id);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    match manager_clone.delete_rfp(&id).await {
-        Ok(deleted_rfp) => {
-            info!("Successfully deleted rfp with id: {}", id);
-            Ok(deleted_rfp)
-        }
-        Err(e) => {
-            error!("Failed to delete rfp: {}", e);
-            Err(format!("Failed to delete fee proposal: {}", e))
-        }
-    }
-}
+crud_command!(
+    delete_fee,
+    Fee,
+    delete_fee,
+    "delete",
+    "fee proposal",
+    id: String
+);
 
 /// Write RFP (fee proposal) data to JSON file in project folder
 /// 
@@ -985,7 +884,7 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
     };
 
     // Get all fee records - this works in the UI
-    let fees = manager_clone.get_rfps().await
+    let fees = manager_clone.get_fees().await
         .map_err(|e| format!("Failed to fetch fee records: {}", e))?;
     
     info!("Got {} fee records", fees.len());
@@ -1001,50 +900,20 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
         }
     }
     
-    // Find the specific fee record - same logic as populate_project_data
+    // Find the specific fee record - simplified and robust ID matching
     let fee = fees.iter()
         .find(|f| {
             if let Some(id) = &f.id {
-                // The database stores: "fee:⟨22_96601_1⟩" (with angle brackets)
-                // The frontend sends: "22_96601_1" (just the ID part)
-                // We need to handle both formats
+                // Extract clean ID parts from both database format and input
+                let db_id_clean = id.id.to_string().trim_start_matches('⟨').trim_end_matches('⟩').to_string();
+                let input_id_clean = rfp_id.trim_start_matches("fee:").to_string();
                 
-                let id_string = id.to_string(); // This gives us the full "fee:⟨22_96601_1⟩" format
-                let id_value = id.id.to_string(); // This gives us "⟨22_96601_1⟩" with angle brackets
+                info!("Comparing fee IDs: db='{}' vs input='{}'", db_id_clean, input_id_clean);
                 
-                // Strip the angle brackets from the ID value
-                let clean_id_value = id_value.trim_start_matches('⟨').trim_end_matches('⟩');
-                let formatted_without_brackets = format!("{}:{}", id.tb, clean_id_value);
-                
-                info!("=== COMPARING FEE ID ===");
-                info!("  Thing.to_string() = '{}'", id_string);
-                info!("  Thing.tb = '{}'", id.tb);
-                info!("  Thing.id (with brackets) = '{}'", id_value);
-                info!("  Thing.id (clean) = '{}'", clean_id_value);
-                info!("  Formatted without brackets = '{}'", formatted_without_brackets);
-                info!("  Target from frontend = '{}'", rfp_id);
-                info!("  Target with fee prefix = 'fee:{}'", rfp_id);
-                
-                // Try multiple formats: clean ID, formatted without brackets, and full format
-                let match1 = clean_id_value == rfp_id;
-                let match2 = formatted_without_brackets == rfp_id;  
-                let match3 = id_string == rfp_id;
-                let match4 = formatted_without_brackets == format!("fee:{}", rfp_id);
-                
-                info!("  Match tests:");
-                info!("    '{}' == '{}' -> {}", clean_id_value, rfp_id, match1);
-                info!("    '{}' == '{}' -> {}", formatted_without_brackets, rfp_id, match2);
-                info!("    '{}' == '{}' -> {}", id_string, rfp_id, match3);
-                info!("    '{}' == 'fee:{}' -> {}", formatted_without_brackets, rfp_id, match4);
-                
-                let matches = match1 || match2 || match3 || match4;
-                
+                let matches = db_id_clean == input_id_clean;
                 if matches {
-                    info!("✓ FOUND MATCHING FEE!");
-                } else {
-                    info!("✗ No match for this fee");
+                    info!("✓ Found matching fee: {}", f.number);
                 }
-                info!("========================");
                 
                 matches
             } else {
@@ -1112,17 +981,19 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
         })
         .ok_or_else(|| format!("Contact not found for fee"))?;
 
-    // Get project folder path from environment
-    let project_folder_path = std::env::var("PROJECT_FOLDER_PATH")
-        .unwrap_or_else(|_| "/Volumes/base/mms/DevTest/".to_string());
+    // Get project folder path from settings
+    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let project_folder_path = settings.project_folder_path
+        .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     // Build project directory path - match the format used by copyProjectTemplate
     // Use the project.number.id field which contains the formatted project number
-    let project_number = &project.number.id;
+    // Strip angle brackets if present (same as frontend does)
+    let project_number = project.number.id.replace("⟨", "").replace("⟩", "");
     
-    let project_name = &project.name;
+    let project_name = &project.name_short;  // Use short name for folder path
 
-    let project_dir = format!("{}01 RFPs/{} {}", project_folder_path, project_number, project_name);
+    let project_dir = format!("{}/01 RFPs/{} {}", project_folder_path, project_number, project_name);
     let old_json_file_path = format!("{}/02 Proposal/{}-var Default Values.json", project_dir, project_number);
     let new_json_file_path = format!("{}/02 Proposal/{}-var.json", project_dir, project_number);
     
@@ -1257,23 +1128,18 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
 /// ```
 #[tauri::command]
 pub async fn update_project(id: String, project_update: ProjectUpdate, state: State<'_, AppState>) -> Result<Project, String> {
-    info!("Updating project with id: {} with partial data: {:?}", id, project_update);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    match manager_clone.update_project(&id, project_update).await {
-        Ok(updated_project) => {
-            info!("Successfully updated project with id: {}", id);
-            Ok(updated_project)
-        }
-        Err(e) => {
-            error!("Failed to update project: {}", e);
-            Err(format!("Failed to update project: {}", e))
-        }
-    }
+    let project_name = format!("project '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move { 
+                manager.update_project(&id_clone, project_update).await 
+            })
+        },
+        "update",
+        &project_name
+    ).await
 }
 
 /// Delete a project from the database.
@@ -1294,26 +1160,14 @@ pub async fn update_project(id: String, project_update: ProjectUpdate, state: St
 ///   id: "25_97105" 
 /// });
 /// ```
-#[tauri::command]
-pub async fn delete_project(id: String, state: State<'_, AppState>) -> Result<Project, String> {
-    info!("Deleting project with id: {}", id);
-    
-    let manager_clone = {
-        let manager = state.lock().map_err(|e| e.to_string())?;
-        manager.clone()
-    };
-    
-    match manager_clone.delete_project(&id).await {
-        Ok(deleted_project) => {
-            info!("Successfully deleted project with id: {}", id);
-            Ok(deleted_project)
-        }
-        Err(e) => {
-            error!("Failed to delete project: {}", e);
-            Err(format!("Failed to delete project: {}", e))
-        }
-    }
-}
+crud_command!(
+    delete_project,
+    Project,
+    delete_project,
+    "delete",
+    "project",
+    id: String
+);
 
 // ============================================================================
 // SYSTEM AND UTILITY COMMANDS
@@ -1431,19 +1285,19 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
     let projects = manager_clone.get_projects().await.unwrap_or_default();
     let companies = manager_clone.get_companies().await.unwrap_or_default();
     let contacts = manager_clone.get_contacts().await.unwrap_or_default();
-    let rfps = manager_clone.get_rfps().await.unwrap_or_default();
+    let fees = manager_clone.get_fees().await.unwrap_or_default();
     
-    // Calculate active RFPs (exclude Lost and Cancelled)
-    let active_rfps = rfps.iter()
-        .filter(|r| r.status != "Lost" && r.status != "Cancelled")
+    // Calculate active fees (exclude Lost and Cancelled)
+    let active_fees = fees.iter()
+        .filter(|f| f.status != "Lost" && f.status != "Cancelled")
         .count();
     
     let stats = serde_json::json!({
         "totalProjects": projects.len(),
-        "activeRfps": active_rfps,
+        "activeFees": active_fees,
         "totalCompanies": companies.len(),
         "totalContacts": contacts.len(),
-        "totalRfps": rfps.len()
+        "totalFees": fees.len()
     });
     
     info!("Successfully calculated statistics");
@@ -2479,7 +2333,7 @@ pub async fn copy_project_template(project_number: String, project_short_name: S
 //         manager.clone()
 //     };
 //     
-//     let fps = manager_clone.get_rfps().await
+//     let fps = manager_clone.get_fees().await
 //         .map_err(|e| format!("Failed to fetch FPs: {}", e))?;
 //     
 //     info!("Debug: Successfully fetched {} FP records", fps.len());
@@ -2503,8 +2357,8 @@ pub async fn populate_project_data(fp_id: String, project_number: String, projec
         manager.clone()
     };
     
-    // Get FP data (using rfps function for now since that's what we have)
-    let fps = manager_clone.get_rfps().await
+    // Get FP data (using fees function for now since that's what we have)
+    let fps = manager_clone.get_fees().await
         .map_err(|e| format!("Failed to fetch FPs: {}", e))?;
     
     // Find the specific FP
@@ -2584,7 +2438,7 @@ pub async fn populate_project_data(fp_id: String, project_number: String, projec
 /// # Returns
 /// - `Ok(String)`: Success message with update details
 /// - `Err(String)`: File operation or JSON parsing error
-async fn update_project_json_file(project_number: &str, project_short_name: &str, fp: &Rfp) -> Result<String, String> {
+async fn update_project_json_file(project_number: &str, project_short_name: &str, fp: &Fee) -> Result<String, String> {
     use serde_json::Value;
     
     info!("Updating JSON file for project: {} {}", project_number, project_short_name);
@@ -2697,6 +2551,30 @@ pub async fn check_var_json_exists(project_number: String, project_short_name: S
     Ok(exists)
 }
 
+/// Check if a var.json template file (with "Default Values") exists in a project folder
+#[tauri::command]
+pub async fn check_var_json_template_exists(project_number: String, project_short_name: String) -> Result<bool, String> {
+    info!("Checking if var template (Default Values) exists for: {} {}", project_number, project_short_name);
+    
+    // Get project folder path from settings
+    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    
+    let base_path = settings.project_folder_path
+        .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
+    
+    let base_path_buf = PathBuf::from(&base_path);
+    let project_dir = base_path_buf
+        .join("01 RFPs")
+        .join(format!("{} {}", project_number, project_short_name))
+        .join("02 Proposal");
+    let json_template_path = project_dir.join(format!("{}-var Default Values.json", project_number));
+    
+    let exists = json_template_path.exists();
+    info!("var template file '{}' exists: {}", json_template_path.display(), exists);
+    
+    Ok(exists)
+}
+
 /// Rename an existing folder with _old suffix
 #[tauri::command]
 pub async fn rename_folder_with_old_suffix(project_number: String, project_short_name: String) -> Result<String, String> {
@@ -2780,34 +2658,6 @@ pub async fn rename_var_json_with_old_suffix(project_number: String, project_sho
     }
 }
 
-fn format_issue_date_for_json(issue_date: &str) -> String {
-    if issue_date.len() != 6 {
-        return issue_date.to_string();
-    }
-    
-    let year_part = &issue_date[0..2];
-    let month_part = &issue_date[2..4];
-    let day_part = &issue_date[4..6];
-    
-    // Convert YY to full year (assuming 20xx for now)
-    let year = format!("20{}", year_part);
-    
-    // Convert month number to abbreviated name
-    let month_name = match month_part {
-        "01" => "Jan", "02" => "Feb", "03" => "Mar", "04" => "Apr",
-        "05" => "May", "06" => "Jun", "07" => "Jul", "08" => "Aug",
-        "09" => "Sep", "10" => "Oct", "11" => "Nov", "12" => "Dec",
-        _ => return issue_date.to_string(), // Return original if invalid month
-    };
-    
-    // Remove leading zero from day if present
-    let day = day_part.trim_start_matches('0');
-    if day.is_empty() {
-        return issue_date.to_string();
-    }
-    
-    format!("{} {} {}", day, month_name, year)
-}
 
 /// Rename the JSON file to remove " Default Values" from filename.
 /// 

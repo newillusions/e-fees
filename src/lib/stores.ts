@@ -3,15 +3,15 @@ import type {
   Project, 
   Company, 
   Contact, 
-  Rfp, 
+  Fee, 
   ConnectionStatus 
 } from '../types';
-import { mockProjects, mockCompanies, mockContacts, mockRfps } from './stores/data';
+import { mockProjects, mockCompanies, mockContacts, mockFees } from './stores/data';
 import { 
   getProjects,
   getCompanies,
   getContacts,
-  getRfps,
+  getFees,
   getStats,
   createProjectWithTemplate,
   updateProject,
@@ -22,10 +22,11 @@ import {
   createContact,
   updateContact,
   deleteContact,
-  createRfp,
-  updateRfp,
-  deleteRfp
+  createFee,
+  updateFee,
+  deleteFee
 } from './api';
+import { extractSurrealId } from './utils/surrealdb';
 
 // ============================================================================
 // CONNECTION STORE
@@ -67,16 +68,12 @@ export const contactsLoading = writable<boolean>(false);
 export const contactsError = writable<string | null>(null);
 
 
-// RFPs store
-export const rfpsStore = writable<Rfp[]>(mockRfps);
-export const rfpsLoading = writable<boolean>(false);
-export const rfpsError = writable<string | null>(null);
+// Fees store
+export const feesStore = writable<Fee[]>(mockFees);
+export const feesLoading = writable<boolean>(false);
+export const feesError = writable<string | null>(null);
 
 
-// Legacy aliases for backwards compatibility
-export const proposalsStore = rfpsStore;
-export const proposalsLoading = rfpsLoading;
-export const proposalsError = rfpsError;
 
 // ============================================================================
 // DERIVED STORES (COMPUTED VALUES)
@@ -84,16 +81,13 @@ export const proposalsError = rfpsError;
 
 // Statistics derived from data
 export const statisticsStore = derived(
-  [projectsStore, rfpsStore, companiesStore, contactsStore],
-  ([projects, rfps, companies, contacts]) => ({
+  [projectsStore, feesStore, companiesStore, contactsStore],
+  ([projects, fees, companies, contacts]) => ({
     totalProjects: projects.length,
-    activeRfps: rfps.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
+    activeFees: fees.filter(f => f.status !== 'Lost' && f.status !== 'Cancelled').length,
     totalCompanies: companies.length,
     totalContacts: contacts.length,
-    totalRfps: rfps.length,
-    // Legacy fields for backwards compatibility
-    activeProposals: rfps.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
-    totalProposals: rfps.length
+    totalFees: fees.length,
   })
 );
 
@@ -103,18 +97,16 @@ export const activeProjectsStore = derived(
   $projects => $projects.filter(project => project.status === 'Active')
 );
 
-// Recent RFPs (last 30 days)
-export const recentRfpsStore = derived(
-  rfpsStore,
-  $rfps => {
+// Recent fees (last 30 days)
+export const recentFeesStore = derived(
+  feesStore,
+  $fees => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return $rfps.filter(rfp => new Date(rfp.time.created_at) > thirtyDaysAgo);
+    return $fees.filter(fee => new Date(fee.time.created_at) > thirtyDaysAgo);
   }
 );
 
-// Legacy alias
-export const recentProposalsStore = recentRfpsStore;
 
 // Companies with contact counts
 export const companiesWithContactsStore = derived(
@@ -129,16 +121,16 @@ export const companiesWithContactsStore = derived(
 
 // Loading state for any data operation
 export const isLoadingStore = derived(
-  [projectsLoading, companiesLoading, contactsLoading, rfpsLoading],
-  ([projects, companies, contacts, rfps]) => 
-    projects || companies || contacts || rfps
+  [projectsLoading, companiesLoading, contactsLoading, feesLoading],
+  ([projects, companies, contacts, fees]) => 
+    projects || companies || contacts || fees
 );
 
 // Global error state
 export const globalErrorStore = derived(
-  [projectsError, companiesError, contactsError, rfpsError],
-  ([projectsErr, companiesErr, contactsErr, rfpsErr]) => 
-    projectsErr || companiesErr || contactsErr || rfpsErr
+  [projectsError, companiesError, contactsError, feesError],
+  ([projectsErr, companiesErr, contactsErr, feesErr]) => 
+    projectsErr || companiesErr || contactsErr || feesErr
 );
 
 // ============================================================================
@@ -152,9 +144,7 @@ export const projectsActions = {
     projectsError.set(null);
     
     try {
-      console.log('Loading projects from database...');
       const projects = await getProjects();
-      console.log('Projects loaded successfully:', projects.length, 'items');
       projectsStore.set(projects);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load projects';
@@ -184,10 +174,8 @@ export const projectsActions = {
 
   async update(id: string, projectData: Partial<Project>) {
     try {
-      console.log('Project store update called with ID:', id);
       const updatedProject = await updateProject(id, projectData);
       if (updatedProject) {
-        console.log('Update successful, updating store');
         projectsStore.update(projects => 
           projects.map(project => {
             // Extract project ID for comparison - handle SurrealDB Thing objects
@@ -205,7 +193,6 @@ export const projectsActions = {
               }
             }
             
-            console.log('Comparing:', projectId, 'with', id);
             return projectId === id ? updatedProject : project;
           })
         );
@@ -222,10 +209,8 @@ export const projectsActions = {
 
   async delete(id: string) {
     try {
-      console.log('Project store delete called with ID:', id);
       const deletedProject = await deleteProject(id);
       if (deletedProject) {
-        console.log('Delete successful, updating store');
         projectsStore.update(projects => 
           projects.filter(project => {
             // Extract project ID for comparison - handle SurrealDB Thing objects
@@ -243,7 +228,6 @@ export const projectsActions = {
               }
             }
             
-            console.log('Delete filter comparing:', projectId, 'with', id);
             return projectId !== id; // Keep projects that don't match the deleted ID
           })
         );
@@ -270,9 +254,7 @@ export const companiesActions = {
     companiesError.set(null);
     
     try {
-      console.log('Loading companies from database...');
       const companies = await getCompanies();
-      console.log('Companies loaded successfully:', companies.length, 'items');
       companiesStore.set(companies);
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load companies';
@@ -301,10 +283,8 @@ export const companiesActions = {
 
   async update(id: string, companyData: Partial<Company>) {
     try {
-      console.log('Store update called with ID:', id);
       const updatedCompany = await updateCompany(id, companyData);
       if (updatedCompany) {
-        console.log('Update successful, updating store');
         companiesStore.update(companies => 
           companies.map(company => {
             // Extract company ID for comparison
@@ -322,7 +302,6 @@ export const companiesActions = {
               }
             }
             
-            console.log('Comparing:', companyId, 'with', id);
             return companyId === id ? updatedCompany : company;
           })
         );
@@ -339,10 +318,8 @@ export const companiesActions = {
 
   async delete(id: string) {
     try {
-      console.log('Store delete called with ID:', id);
       const deletedCompany = await deleteCompany(id);
       if (deletedCompany) {
-        console.log('Delete successful, updating store');
         companiesStore.update(companies => 
           companies.filter(company => {
             // Extract company ID for comparison
@@ -360,7 +337,6 @@ export const companiesActions = {
               }
             }
             
-            console.log('Delete filter comparing:', companyId, 'with', id);
             return companyId !== id; // Keep companies that don't match the deleted ID
           })
         );
@@ -424,17 +400,20 @@ export const contactsActions = {
       contactsError.set('');
       
       const updatedContact = await updateContact(id, contactData);
+      
       if (updatedContact) {
         contactsStore.update(contacts => 
           contacts.map(contact => 
-            contact.id === updatedContact.id ? updatedContact : contact
+            extractSurrealId(contact) === extractSurrealId(updatedContact) ? updatedContact : contact
           )
         );
+        return updatedContact; // Added return statement
       } else {
         throw new Error('Update returned null - no contact updated');
       }
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to update contact';
+      console.error('Contact update error:', errorMessage);
       contactsError.set(errorMessage);
       throw error;
     } finally {
@@ -486,118 +465,116 @@ export const contactsActions = {
   }
 };
 
-// RFPs actions
-export const rfpsActions = {
+// Fees actions
+export const feesActions = {
   async load() {
-    rfpsLoading.set(true);
-    rfpsError.set(null);
+    feesLoading.set(true);
+    feesError.set(null);
     
     try {
-      console.log('Loading RFPs from database...');
-      const rfps = await getRfps();
-      console.log('RFPs loaded successfully:', rfps.length, 'items');
-      rfpsStore.set(rfps);
+      const fees = await getFees();
+      feesStore.set(fees);
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to load rfps';
-      rfpsError.set(errorMessage);
-      console.warn('Failed to load RFPs from database, using mock data:', error);
+      const errorMessage = error?.toString() || 'Failed to load fees';
+      feesError.set(errorMessage);
+      console.warn('Failed to load Fees from database, using mock data:', error);
     } finally {
-      rfpsLoading.set(false);
+      feesLoading.set(false);
     }
   },
 
-  async create(rfp: Omit<Rfp, 'id'>) {
+  async create(fee: Omit<Fee, 'id'>) {
     try {
-      const newRfp = await createRfp(rfp);
-      if (newRfp) {
-        rfpsStore.update(rfps => [...rfps, newRfp]);
-        return newRfp;
+      const newFee = await createFee(fee);
+      if (newFee) {
+        feesStore.update(fees => [...fees, newFee]);
+        return newFee;
       }
-      throw new Error('Failed to create rfp');
+      throw new Error('Failed to create fee');
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to create rfp';
-      rfpsError.set(errorMessage);
-      console.error('Failed to create rfp:', error);
+      const errorMessage = error?.toString() || 'Failed to create fee';
+      feesError.set(errorMessage);
+      console.error('Failed to create fee:', error);
       throw error;
     }
   },
 
-  async update(id: string, rfpData: Partial<Rfp>) {
+  async update(id: string, feeData: Partial<Fee>) {
     try {
-      rfpsLoading.set(true);
-      rfpsError.set('');
+      feesLoading.set(true);
+      feesError.set('');
       
-      const updatedRfp = await updateRfp(id, rfpData as Omit<Rfp, 'id'>);
-      if (updatedRfp) {
-        rfpsStore.update(rfps => 
-          rfps.map(rfp => {
-            // Extract RFP ID for comparison - handle SurrealDB Thing objects
-            let rfpId = '';
-            if (typeof rfp.id === 'string') {
-              rfpId = rfp.id;
-            } else if (rfp.id && typeof rfp.id === 'object') {
-              const thingObj = rfp.id as any;
+      const updatedFee = await updateFee(id, feeData as Omit<Fee, 'id'>);
+      if (updatedFee) {
+        feesStore.update(fees => 
+          fees.map(fee => {
+            // Extract Fee ID for comparison - handle SurrealDB Thing objects
+            let feeId = '';
+            if (typeof fee.id === 'string') {
+              feeId = fee.id;
+            } else if (fee.id && typeof fee.id === 'object') {
+              const thingObj = fee.id as any;
               if (thingObj.tb && thingObj.id) {
                 if (typeof thingObj.id === 'string') {
-                  rfpId = thingObj.id;
+                  feeId = thingObj.id;
                 } else if (thingObj.id.String) {
-                  rfpId = thingObj.id.String;
+                  feeId = thingObj.id.String;
                 }
               }
             }
             
-            return rfpId === id ? updatedRfp : rfp;
+            return feeId === id ? updatedFee : fee;
           })
         );
-        return updatedRfp;
+        return updatedFee;
       } else {
-        throw new Error('Update returned null - no rfp updated');
+        throw new Error('Update returned null - no fee updated');
       }
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to update rfp';
-      rfpsError.set(errorMessage);
+      const errorMessage = error?.toString() || 'Failed to update fee';
+      feesError.set(errorMessage);
       throw error;
     } finally {
-      rfpsLoading.set(false);
+      feesLoading.set(false);
     }
   },
 
   async delete(id: string) {
     try {
-      rfpsLoading.set(true);
-      rfpsError.set('');
+      feesLoading.set(true);
+      feesError.set('');
       
-      const deletedRfp = await deleteRfp(id);
-      if (deletedRfp) {
-        rfpsStore.update(rfps => 
-          rfps.filter(rfp => {
-            // Extract RFP ID for comparison - handle SurrealDB Thing objects
-            let rfpId = '';
-            if (typeof rfp.id === 'string') {
-              rfpId = rfp.id;
-            } else if (rfp.id && typeof rfp.id === 'object') {
-              const thingObj = rfp.id as any;
+      const deletedFee = await deleteFee(id);
+      if (deletedFee) {
+        feesStore.update(fees => 
+          fees.filter(fee => {
+            // Extract Fee ID for comparison - handle SurrealDB Thing objects
+            let feeId = '';
+            if (typeof fee.id === 'string') {
+              feeId = fee.id;
+            } else if (fee.id && typeof fee.id === 'object') {
+              const thingObj = fee.id as any;
               if (thingObj.tb && thingObj.id) {
                 if (typeof thingObj.id === 'string') {
-                  rfpId = thingObj.id;
+                  feeId = thingObj.id;
                 } else if (thingObj.id.String) {
-                  rfpId = thingObj.id.String;
+                  feeId = thingObj.id.String;
                 }
               }
             }
             
-            return rfpId !== id; // Keep RFPs that don't match the deleted ID
+            return feeId !== id; // Keep Fees that don't match the deleted ID
           })
         );
-        return deletedRfp;
+        return deletedFee;
       }
-      throw new Error('Failed to delete rfp');
+      throw new Error('Failed to delete fee');
     } catch (error) {
-      const errorMessage = error?.toString() || 'Failed to delete rfp';
-      rfpsError.set(errorMessage);
+      const errorMessage = error?.toString() || 'Failed to delete fee';
+      feesError.set(errorMessage);
       throw error;
     } finally {
-      rfpsLoading.set(false);
+      feesLoading.set(false);
     }
   },
 
@@ -606,8 +583,6 @@ export const rfpsActions = {
   }
 };
 
-// Legacy alias for backwards compatibility
-export const proposalsActions = rfpsActions;
 
 // ============================================================================
 // GLOBAL ACTIONS
@@ -615,24 +590,21 @@ export const proposalsActions = rfpsActions;
 
 // Load all data
 export const loadAllData = async () => {
-  console.log('🔄 STARTING loadAllData...');
   const { settingsActions } = await import('./stores/settings');
-  const results = await Promise.allSettled([
+  await Promise.allSettled([
     projectsActions.load(),
     companiesActions.load(),
     contactsActions.load(),
-    rfpsActions.load(),
+    feesActions.load(),
     settingsActions.load() // Load settings too
   ]);
-  
-  console.log('✅ COMPLETED loadAllData, results:', results.map(r => r.status));
 };
 
 // Convenience functions for individual data loading
 export const loadProjects = () => projectsActions.load();
 export const loadCompanies = () => companiesActions.load();
 export const loadContacts = () => contactsActions.load();
-export const loadRfps = () => rfpsActions.load();
+export const loadFees = () => feesActions.load();
 
 // Refresh all data
 export const refreshAllData = async () => {
@@ -644,13 +616,13 @@ export const clearAllData = () => {
   projectsStore.set([]);
   companiesStore.set([]);
   contactsStore.set([]);
-  rfpsStore.set([]);
+  feesStore.set([]);
   
   // Clear errors
   projectsError.set(null);
   companiesError.set(null);
   contactsError.set(null);
-  rfpsError.set(null);
+  feesError.set(null);
 };
 
 // ============================================================================
@@ -662,11 +634,9 @@ export const getCurrentData = () => ({
   projects: get(projectsStore),
   companies: get(companiesStore),
   contacts: get(contactsStore),
-  rfps: get(rfpsStore),
+  fees: get(feesStore),
   connection: get(connectionStore),
   statistics: get(statisticsStore),
-  // Legacy alias
-  proposals: get(rfpsStore)
 });
 
 // Check if data is loaded
@@ -676,7 +646,7 @@ export const isDataLoaded = () => {
     data.projects.length > 0 ||
     data.companies.length > 0 ||
     data.contacts.length > 0 ||
-    data.rfps.length > 0
+    data.fees.length > 0
   );
 };
 

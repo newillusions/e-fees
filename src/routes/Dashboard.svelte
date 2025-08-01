@@ -1,29 +1,19 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
-  import { statisticsStore, isLoadingStore, recentRfpsStore, loadAllData, projectsStore, companiesStore } from '$lib/stores';
+  import { statisticsStore, isLoadingStore, recentFeesStore, loadAllData, projectsStore, companiesStore } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, findEntityById, getEntityDisplayName } from '$lib/utils';
   
   // Helper functions for activity display
   function getProjectName(projectId: any): string {
-    console.log('🔍 Looking for project with ID:', projectId);
-    
     const project = findEntityById($projectsStore, projectId);
-    const result = getEntityDisplayName(project) || 'Unknown Project';
-    
-    console.log('🔍 Found project:', result);
-    return result;
+    return getEntityDisplayName(project) || 'Unknown Project';
   }
   
   function getCompanyName(companyId: any): string {
-    console.log('🔍 Looking for company with ID:', companyId);
-    
     const company = findEntityById($companiesStore, companyId);
-    const result = getEntityDisplayName(company) || 'Unknown Company';
-    
-    console.log('🔍 Found company:', result);
-    return result;
+    return getEntityDisplayName(company) || 'Unknown Company';
   }
   
   
@@ -36,8 +26,8 @@
       color: 'text-blue-400'
     },
     {
-      title: 'Active RFPs',
-      key: 'activeRfps',
+      title: 'Active Fees',
+      key: 'activeFees',
       icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       color: 'status-connected'
     },
@@ -87,35 +77,35 @@
     <h2 class="text-xl font-heading font-semibold mb-4" style="color: var(--emittiv-white);">Recent Activity</h2>
     {#if $isLoadingStore}
       <LoadingSkeleton rows={4} />
-    {:else if $recentRfpsStore.length > 0}
+    {:else if $recentFeesStore.length > 0}
       <div class="space-y-1">
-        {#each $recentRfpsStore.slice(0, 5) as rfp}
+        {#each $recentFeesStore.slice(0, 5) as fee}
           <div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-emittiv-darker/50 transition-colors cursor-pointer text-xs">
             <!-- Status indicator -->
-            {#if rfp.status === 'Awarded'}
+            {#if fee.status === 'Awarded'}
               <div class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
-            {:else if rfp.status === 'Lost' || rfp.status === 'Cancelled'}
+            {:else if fee.status === 'Lost' || fee.status === 'Cancelled'}
               <div class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></div>
-            {:else if rfp.status === 'Active' || rfp.status === 'Sent'}
+            {:else if fee.status === 'Active' || fee.status === 'Sent'}
               <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
             {:else}
               <div class="w-1.5 h-1.5 rounded-full bg-gray-500 flex-shrink-0"></div>
             {/if}
             
-            <!-- RFP number -->
-            <span class="text-emittiv-white font-medium">{rfp.number}</span>
+            <!-- Fee number -->
+            <span class="text-emittiv-white font-medium">{fee.number}</span>
             
             <!-- Status badge -->
-            <span class="px-1.5 py-0.5 rounded bg-emittiv-dark text-emittiv-lighter text-xs">{rfp.status}</span>
+            <span class="px-1.5 py-0.5 rounded bg-emittiv-dark text-emittiv-lighter text-xs">{fee.status}</span>
             
             <!-- Project and company -->
             <span class="text-emittiv-light truncate flex-1">
-              {getProjectName(rfp.project_id)} • {getCompanyName(rfp.company_id)}
+              {getProjectName(fee.project_id)} • {getCompanyName(fee.company_id)}
             </span>
             
             <!-- Date -->
             <span class="text-emittiv-light flex-shrink-0">
-              {new Date(rfp.time.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(fee.time.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           </div>
         {/each}

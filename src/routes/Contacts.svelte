@@ -90,7 +90,7 @@
     if (selectedContact) {
       setTimeout(() => {
         if (selectedContact) {
-          const updatedContact = $contactsStore.find(c => c.id === selectedContact.id);
+          const updatedContact = $contactsStore.find(c => c.id === selectedContact!.id);
           if (updatedContact) {
             selectedContact = updatedContact;
           }

@@ -1,17 +1,42 @@
+<!--
+  Refactored Company Modal using BaseModal, FormInput, and Button components
+  Further reduced from ~700 lines to ~400 lines using base components
+-->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { companiesActions } from '$lib/stores';
   import { searchCountries, getCitySuggestions, getAllCities } from '$lib/api';
+  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { validateForm, CommonValidationRules, hasValidationErrors } from '$lib/utils/validation';
+  import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import BaseModal from './BaseModal.svelte';
+  import FormInput from './FormInput.svelte';
+  import FormSelect from './FormSelect.svelte';
+  import TypeaheadSelect from './TypeaheadSelect.svelte';
+  import Button from './Button.svelte';
   import type { Company } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
   
   export let isOpen = false;
-  export let company: Company | null = null; // null for create, company object for edit
+  export let company: Company | null = null;
   export let mode: 'create' | 'edit' = 'create';
   
-  // Form data
-  let formData = {
+  // Use the new operation state utility
+  const { store: operationState, actions: operationActions } = useOperationState();
+  
+  // Form data with better typing
+  interface CompanyFormData {
+    name: string;
+    name_short: string;
+    abbreviation: string;
+    city: string;
+    country: string;
+    reg_no: string;
+    tax_no: string;
+  }
+  
+  let formData: CompanyFormData = {
     name: '',
     name_short: '',
     abbreviation: '',
@@ -21,67 +46,117 @@
     tax_no: ''
   };
   
-  // Loading and error states
-  let isSaving = false;
-  let isDeleting = false;
-  let saveMessage = '';
+  // Validation setup using the new validation system
+  const validationRules = [
+    CommonValidationRules.company.name,
+    { field: 'name_short' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
+    { field: 'abbreviation' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 10 },
+    { field: 'city' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
+    { field: 'country' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
+    // reg_no and tax_no are optional fields
+    { field: 'reg_no' as keyof CompanyFormData, required: false, maxLength: 50 },
+    { field: 'tax_no' as keyof CompanyFormData, required: false, maxLength: 50 }
+  ];
+  
+  // Form validation state
   let formErrors: Record<string, string> = {};
+  
+  // UI state
   let showDeleteConfirm = false;
-
-  // Typeahead state for country and city
-  let countrySearchQuery = '';
-  let countryOptions: any[] = [];
-  let showCountryDropdown = false;
-  let selectedCountry: any = null;
-  let countrySelectedIndex = -1;
   
-  let citySuggestions: string[] = [];
-  let showCityDropdown = false;
-  let citySelectedIndex = -1;
+  // Typeahead search states
+  let countrySearchText = '';
+  let citySearchText = '';
   
-  // Update form when company prop changes
-  $: if (company && mode === 'edit') {
-    formData = {
-      name: company.name || '',
-      name_short: company.name_short || '',
-      abbreviation: company.abbreviation || '',
-      city: company.city || '',
-      country: company.country || '',
-      reg_no: company.reg_no || '',
-      tax_no: company.tax_no || ''
-    };
+  // Options for typeaheads (formatted for TypeaheadSelect)
+  let countryOptions: Array<{ id: string; name: string; dial_code?: string | number }> = [];
+  let cityOptions: Array<{ id: string; name: string }> = [];
+  
+  // Form field focus handling
+  function handleSubmit(event: Event) {
+    event.preventDefault();
     
-    // Initialize typeahead for edit mode
-    countrySearchQuery = company.country || '';
-    if (company.country) {
-      loadCitySuggestions();
+    // Validate using the new validation system
+    const errors = validateForm(formData, validationRules);
+    formErrors = errors;
+    
+    if (hasValidationErrors(errors)) {
+      operationActions.setError('Please fix the validation errors above.');
+      return;
     }
-  } else if (mode === 'create') {
-    // Reset form for create mode
-    formData = {
-      name: '',
-      name_short: '',
-      abbreviation: '',
-      city: '',
-      country: '',
-      reg_no: '',
-      tax_no: ''
-    };
     
-    // Load all cities for create mode
-    if (isOpen) {
-      loadCitySuggestions();
+    if (mode === 'create') {
+      handleCreate();
+    } else {
+      handleUpdate();
     }
   }
   
-  // Reset state when modal closes, load cities when modal opens
-  $: if (!isOpen) {
-    resetForm();
-  } else if (isOpen && mode === 'create' && citySuggestions.length === 0) {
-    // Load all cities when modal opens in create mode
-    loadCitySuggestions();
+  // Create company with loading state
+  async function handleCreate() {
+    await withLoadingState(async () => {
+      const timestamp = new Date().toISOString();
+      const companyData = {
+        ...formData,
+        time: {
+          created_at: timestamp,
+          updated_at: timestamp
+        }
+      };
+      
+      const result = await companiesActions.create(companyData);
+      operationActions.setMessage('Company created successfully');
+      resetForm();
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
   }
   
+  // Update company with loading state  
+  async function handleUpdate() {
+    if (!company) return;
+    
+    await withLoadingState(async () => {
+      const companyId = extractSurrealId(company.id) || extractSurrealId(company);
+      if (!companyId) {
+        console.error('Failed to extract company ID from:', company);
+        throw new Error('Invalid company ID');
+      }
+      
+      const companyData = {
+        ...formData,
+        time: {
+          created_at: company.time.created_at,
+          updated_at: new Date().toISOString()
+        }
+      };
+      
+      const result = await companiesActions.update(companyId, companyData);
+      operationActions.setMessage('Company updated successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'saving');
+  }
+  
+  // Delete company with loading state
+  async function handleDelete() {
+    if (!company || !showDeleteConfirm) return;
+    
+    await withLoadingState(async () => {
+      const companyId = extractSurrealId(company.id) || extractSurrealId(company);
+      if (!companyId) {
+        console.error('Failed to extract company ID from:', company);
+        throw new Error('Invalid company ID');
+      }
+      
+      const result = await companiesActions.delete(companyId);
+      operationActions.setMessage('Company deleted successfully');
+      closeModal();
+      return result;
+    }, operationActions, 'deleting');
+  }
+  
+  // Form management
   function resetForm() {
     formData = {
       name: '',
@@ -93,647 +168,318 @@
       tax_no: ''
     };
     formErrors = {};
-    saveMessage = '';
-    isSaving = false;
-    isDeleting = false;
     showDeleteConfirm = false;
     
-    // Reset typeahead state
-    countrySearchQuery = '';
+    // Clear search texts and options
+    countrySearchText = '';
+    citySearchText = '';
     countryOptions = [];
-    showCountryDropdown = false;
-    selectedCountry = null;
-    countrySelectedIndex = -1;
-    citySuggestions = [];
-    showCityDropdown = false;
-    citySelectedIndex = -1;
-  }
-  
-  function validateForm(): boolean {
-    formErrors = {};
-    
-    // Required fields
-    if (!formData.name.trim()) {
-      formErrors.name = 'Company name is required';
-    }
-    
-    if (!formData.name_short.trim()) {
-      formErrors.name_short = 'Short name is required';
-    }
-    
-    if (!formData.abbreviation.trim()) {
-      formErrors.abbreviation = 'Abbreviation is required';
-    } else if (formData.abbreviation.length > 10) {
-      formErrors.abbreviation = 'Abbreviation must be 10 characters or less';
-    }
-    
-    if (!formData.city.trim()) {
-      formErrors.city = 'City is required';
-    }
-    
-    if (!formData.country.trim()) {
-      formErrors.country = 'Country is required';
-    }
-    
-    // Optional fields validation
-    if (formData.name.length > 100) {
-      formErrors.name = 'Company name must be 100 characters or less';
-    }
-    
-    if (formData.name_short.length > 50) {
-      formErrors.name_short = 'Short name must be 50 characters or less';
-    }
-    
-    return Object.keys(formErrors).length === 0;
-  }
-  
-  async function handleSubmit() {
-    if (!validateForm()) {
-      return;
-    }
-    
-    isSaving = true;
-    saveMessage = '';
-    
-    try {
-      if (mode === 'create') {
-        // Add required time field for new companies
-        const companyData = {
-          ...formData,
-          time: {
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        };
-        const newCompany = await companiesActions.create(companyData);
-        saveMessage = 'Company created successfully!';
-        
-        // Dispatch company created event for parent components
-        dispatch('companyCreated', newCompany);
-      } else {
-        const companyId = getCompanyId(company);
-        if (companyId) {
-          console.log('Updating company with ID:', companyId);
-          console.log('Update data:', formData);
-          await companiesActions.update(companyId, formData);
-          saveMessage = 'Company updated successfully!';
-        } else {
-          throw new Error('No valid company ID found for update');
-        }
-      }
-      
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isSaving = false;
-    }
-  }
-  
-  async function handleDelete() {
-    const companyId = getCompanyId(company);
-    if (!companyId) return;
-    
-    isDeleting = true;
-    saveMessage = '';
-    
-    try {
-      console.log('Deleting company with ID:', companyId);
-      await companiesActions.delete(companyId);
-      saveMessage = 'Company deleted successfully!';
-      
-      // Auto-close after 1.5 seconds
-      setTimeout(() => {
-        closeModal();
-      }, 1500);
-      
-    } catch (error: any) {
-      saveMessage = `Error: ${error?.message || error}`;
-    } finally {
-      isDeleting = false;
-      showDeleteConfirm = false;
-    }
-  }
-  
-  function confirmDelete() {
-    showDeleteConfirm = true;
-  }
-  
-  function cancelDelete() {
-    showDeleteConfirm = false;
+    cityOptions = [];
   }
   
   function closeModal() {
-    isOpen = false;
     resetForm();
+    operationActions.reset();
     dispatch('close');
   }
   
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      closeModal();
+  // Load form data when company changes
+  $: if (company && mode === 'edit') {
+    formData = {
+      name: company.name || '',
+      name_short: company.name_short || '',
+      abbreviation: company.abbreviation || '',
+      city: company.city || '',
+      country: company.country || '',
+      reg_no: company.reg_no || '',
+      tax_no: company.tax_no || ''
+    };
+    
+    // Set search texts for selected items
+    if (formData.country) {
+      countrySearchText = formData.country;
+    }
+    if (formData.city) {
+      citySearchText = formData.city;
     }
   }
   
-  // Auto-generate abbreviation from company name
-  function generateAbbreviation() {
-    if (formData.name && !formData.abbreviation) {
-      // Take first letter of each word, max 6 characters
-      const words = formData.name.trim().split(/\s+/);
-      const abbrev = words
-        .map(word => word.charAt(0).toUpperCase())
-        .join('')
-        .substring(0, 6);
-      formData.abbreviation = abbrev;
-    }
-  }
-  
-  // Auto-generate short name from company name
-  function generateShortName() {
-    if (formData.name && !formData.name_short) {
-      // Take first 30 characters or first two words
-      const words = formData.name.trim().split(/\s+/);
-      if (words.length >= 2) {
-        formData.name_short = words.slice(0, 2).join(' ');
-      } else {
-        formData.name_short = formData.name.substring(0, 30);
-      }
-    }
-  }
-  
-  // Helper function to extract ID from SurrealDB Thing object
-  function getCompanyId(company: Company | null): string | null {
-    if (!company?.id) return null;
-    
-    if (typeof company.id === 'string') {
-      return company.id;
-    }
-    
-    // Handle SurrealDB Thing object format
-    if (company.id && typeof company.id === 'object') {
-      const thingObj = company.id as any;
-      if (thingObj.tb && thingObj.id) {
-        if (typeof thingObj.id === 'string') {
-          return thingObj.id; // Return just the ID part, not "company:ID"
-        } else if (thingObj.id.String) {
-          return thingObj.id.String;
-        }
-      }
-    }
-    
-    return null;
-  }
-
-  // Typeahead functions for country and city
-  async function searchCountriesDebounced() {
-    if (countrySearchQuery.length < 2) {
+  // Country search handler
+  async function handleCountrySearch(searchText: string) {
+    if (!searchText || searchText.length < 2) {
       countryOptions = [];
-      showCountryDropdown = false;
       return;
     }
     
     try {
-      const results = await searchCountries(countrySearchQuery);
-      countryOptions = results;
-      showCountryDropdown = results.length > 0;
+      const countries = await searchCountries(searchText);
+      countryOptions = countries.map(country => ({
+        id: country.name,
+        name: country.name,
+        dial_code: country.dial_code
+      }));
     } catch (error) {
-      console.error('Failed to search countries:', error);
+      console.warn('Failed to search countries:', error);
       countryOptions = [];
-      showCountryDropdown = false;
     }
   }
-
-  function handleCountryInput() {
-    formData.country = '';
-    selectedCountry = null;
-    countrySelectedIndex = -1;
-    searchCountriesDebounced();
-  }
-
-  function selectCountry(country: any) {
-    selectedCountry = country;
-    countrySearchQuery = country.name;
-    formData.country = country.name;
-    showCountryDropdown = false;
-    countrySelectedIndex = -1;
+  
+  // City search handler
+  async function handleCitySearch(searchText: string) {
+    if (!formData.country || !searchText || searchText.length < 2) {
+      cityOptions = [];
+      return;
+    }
     
-    // Load city suggestions for the selected country
-    loadCitySuggestions();
-  }
-
-  async function loadCitySuggestions() {
     try {
-      if (formData.country) {
-        // Load cities for specific country
-        const cities = await getCitySuggestions(formData.country);
-        citySuggestions = cities;
-      } else {
-        // Load all cities when no country selected
-        const cities = await getAllCities();
-        citySuggestions = cities;
-      }
+      const cities = await getCitySuggestions(formData.country);
+      cityOptions = cities
+        .filter(city => city.toLowerCase().includes(searchText.toLowerCase()))
+        .map(city => ({ id: city, name: city }))
+        .slice(0, 10);
     } catch (error) {
-      console.error('Failed to load city suggestions:', error);
-      citySuggestions = [];
+      console.warn('Failed to search cities:', error);
+      cityOptions = [];
     }
   }
-
-  function handleCityInput() {
-    citySelectedIndex = -1;
-    
-    if (citySuggestions.length > 0 && formData.city.length > 0) {
-      const filteredSuggestions = citySuggestions.filter(city => 
-        city.toLowerCase().includes(formData.city.toLowerCase())
-      );
-      showCityDropdown = filteredSuggestions.length > 0;
-    } else {
-      showCityDropdown = false;
-    }
+  
+  // Typeahead handlers
+  function handleCountrySelect(event: CustomEvent) {
+    formData.country = event.detail.id;
+    // Clear city when country changes
+    formData.city = '';
+    citySearchText = '';
+    cityOptions = [];
   }
-
-  function selectCity(city: string) {
-    formData.city = city;
-    showCityDropdown = false;
-    citySelectedIndex = -1;
-  }
-
-  function handleCountryKeydown(e: KeyboardEvent) {
-    if (!showCountryDropdown || countryOptions.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        countrySelectedIndex = Math.min(countrySelectedIndex + 1, countryOptions.length - 1);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        countrySelectedIndex = Math.max(countrySelectedIndex - 1, 0);
-        break;
-      case 'Enter':
-      case 'Tab':
-        e.preventDefault();
-        if (countrySelectedIndex >= 0) {
-          selectCountry(countryOptions[countrySelectedIndex]);
-        }
-        break;
-      case 'Escape':
-        showCountryDropdown = false;
-        countrySelectedIndex = -1;
-        break;
-    }
-  }
-
-  function handleCityKeydown(e: KeyboardEvent) {
-    if (!showCityDropdown || citySuggestions.length === 0) return;
-    
-    const filteredSuggestions = citySuggestions.filter(city => 
-      city.toLowerCase().includes(formData.city.toLowerCase())
-    );
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        citySelectedIndex = Math.min(citySelectedIndex + 1, filteredSuggestions.length - 1);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        citySelectedIndex = Math.max(citySelectedIndex - 1, 0);
-        break;
-      case 'Enter':
-      case 'Tab':
-        e.preventDefault();
-        if (citySelectedIndex >= 0) {
-          selectCity(filteredSuggestions[citySelectedIndex]);
-        }
-        break;
-      case 'Escape':
-        showCityDropdown = false;
-        citySelectedIndex = -1;
-        break;
-    }
+  
+  function handleCitySelect(event: CustomEvent) {
+    formData.city = event.detail.id;
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-{#if isOpen}
-  <!-- Modal Backdrop -->
-  <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-    on:click={closeModal}
-    on:keydown={(e) => e.key === 'Escape' && closeModal()}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="company-modal-title"
-    tabindex="-1"
-  >
-    <!-- Modal Content -->
-    <div 
-      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 24px; max-width: 700px;"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
-      role="presentation"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between" style="margin-bottom: 20px;">
-        <h2 id="company-modal-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">
-          {mode === 'create' ? 'Add New Company' : 'Edit Company'}
-        </h2>
-        <button 
-          on:click={closeModal}
-          class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth"
-          aria-label="Close modal"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form on:submit|preventDefault={handleSubmit} style="display: flex; flex-direction: column; gap: 24px;">
+<BaseModal 
+  {isOpen} 
+  title={mode === 'create' ? 'New Company' : 'Edit Company'}
+  maxWidth="500px"
+  on:close={closeModal}
+>
+  <!-- Form -->
+  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- COMPANY INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Company Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
         
-        <!-- Company Basic Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Company Information</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Company Name -->
-            <div>
-              <label for="company_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                Company Name *
-              </label>
-              <input
-                id="company_name"
-                type="text"
-                bind:value={formData.name}
-                on:blur={generateShortName}
-                on:blur={generateAbbreviation}
-                placeholder="Meraas Holding LLC"
-                required
-                class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.name ? 'border-red-500' : ''}"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
-              />
-              {#if formErrors.name}
-                <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.name}</p>
-              {/if}
-            </div>
-            
-            <!-- Short Name and Abbreviation Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="company_short" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Short Name *
-                </label>
-                <input
-                  id="company_short"
-                  type="text"
-                  bind:value={formData.name_short}
-                  placeholder="Meraas Holding"
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.name_short ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.name_short}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.name_short}</p>
-                {/if}
-              </div>
-              
-              <div>
-                <label for="company_abbrev" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Abbreviation *
-                </label>
-                <input
-                  id="company_abbrev"
-                  type="text"
-                  bind:value={formData.abbreviation}
-                  placeholder="MERAAS"
-                  required
-                  maxlength="10"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.abbreviation ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                {#if formErrors.abbreviation}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.abbreviation}</p>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Location Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">Location</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- City and Country Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div class="relative">
-                <label for="company_city" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  City *
-                </label>
-                <input
-                  id="company_city"
-                  type="text"
-                  bind:value={formData.city}
-                  on:input={handleCityInput}
-                  on:keydown={handleCityKeydown}
-                  placeholder="Type to filter cities..."
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.city ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                
-                <!-- City dropdown -->
-                {#if showCityDropdown && citySuggestions.length > 0}
-                  {@const filteredCities = citySuggestions.filter(city => city.toLowerCase().includes(formData.city.toLowerCase()))}
-                  {#if filteredCities.length > 0}
-                    <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b shadow-lg z-50 overflow-y-auto" style="max-height: 120px;">
-                      {#each filteredCities as city, index}
-                        <div 
-                          class="text-emittiv-white hover:bg-emittiv-dark cursor-pointer {index === citySelectedIndex ? 'bg-emittiv-splash text-emittiv-black' : ''}"
-                          style="padding: 8px 12px; font-size: 12px;"
-                          role="option"
-                          aria-selected={index === citySelectedIndex}
-                          on:click={() => selectCity(city)}
-                          on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCity(city); } }}
-                          tabindex="0"
-                        >
-                          {city}
-                        </div>
-                      {/each}
-                    </div>
-                  {/if}
-                {/if}
-                
-                {#if formErrors.city}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.city}</p>
-                {/if}
-              </div>
-              
-              <div class="relative">
-                <label for="company_country" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Country *
-                </label>
-                <input
-                  id="company_country"
-                  type="text"
-                  bind:value={countrySearchQuery}
-                  on:input={handleCountryInput}
-                  on:keydown={handleCountryKeydown}
-                  placeholder="Search countries..."
-                  required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {formErrors.country ? 'border-red-500' : ''}"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-                
-                <!-- Country dropdown -->
-                {#if showCountryDropdown && countryOptions.length > 0}
-                  <div class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b shadow-lg z-50 overflow-y-auto" style="max-height: 120px;">
-                    {#each countryOptions as country, index}
-                      <div 
-                        class="text-emittiv-white hover:bg-emittiv-dark cursor-pointer {index === countrySelectedIndex ? 'bg-emittiv-splash text-emittiv-black' : ''}"
-                        style="padding: 8px 12px; font-size: 12px;"
-                        role="option"
-                        aria-selected={index === countrySelectedIndex}
-                        on:click={() => selectCountry(country)}
-                        on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCountry(country); } }}
-                        tabindex="0"
-                      >
-                        {country.name}
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-                
-                {#if formErrors.country}
-                  <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.country}</p>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Optional Information Section -->
-        <div>
-          <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Registration Details</h3>
-          <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Optional registration and tax information</p>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Registration and Tax Numbers Row -->
-            <div class="grid grid-cols-2" style="gap: 12px;">
-              <div>
-                <label for="company_reg" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Registration Number
-                </label>
-                <input
-                  id="company_reg"
-                  type="text"
-                  bind:value={formData.reg_no}
-                  placeholder="123456789"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-              
-              <div>
-                <label for="company_tax" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                  Tax Number
-                </label>
-                <input
-                  id="company_tax"
-                  type="text"
-                  bind:value={formData.tax_no}
-                  placeholder="100123456789003"
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Save Message -->
-        {#if saveMessage}
-          <div class="rounded-lg {saveMessage.startsWith('Error') ? 'bg-red-900/20 border border-red-500/30 text-red-300' : 'bg-green-900/20 border border-green-500/30 text-green-300'}" style="padding: 8px; font-size: 11px;">
-            {saveMessage}
-          </div>
-        {/if}
-
-        <!-- Delete Confirmation -->
-        {#if showDeleteConfirm}
-          <div class="rounded-lg bg-red-900/20 border border-red-500/30 text-red-300" style="padding: 12px; font-size: 12px;">
-            <p style="margin-bottom: 8px;">⚠️ Are you sure you want to delete this company?</p>
-            <p class="text-red-400" style="font-size: 10px; margin-bottom: 12px;">This action cannot be undone. All related contacts and proposals will be affected.</p>
-            <div class="flex" style="gap: 8px;">
-              <button
-                type="button"
-                on:click={cancelDelete}
-                class="border border-red-500/30 rounded text-red-300 hover:text-red-200 hover:border-red-400 transition-all"
-                style="padding: 4px 8px; font-size: 11px; height: 24px;"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                on:click={handleDelete}
-                class="bg-red-600 hover:bg-red-700 text-white rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                style="padding: 4px 8px; font-size: 11px; height: 24px; gap: 4px;"
-                disabled={isDeleting}
-              >
-                {#if isDeleting}
-                  <div class="border-2 border-white border-t-transparent rounded-full animate-spin" style="width: 10px; height: 10px;"></div>
-                  <span>Deleting...</span>
-                {:else}
-                  <span>Delete Company</span>
-                {/if}
-              </button>
-            </div>
-          </div>
-        {/if}
-
-        <!-- Action Buttons -->
-        <div class="flex {mode === 'edit' ? 'justify-between' : 'justify-end'} border-t border-emittiv-dark" style="gap: 12px; padding-top: 16px; margin-top: 8px;">
-          {#if mode === 'edit'}
-            <button
-              type="button"
-              on:click={confirmDelete}
-              class="border border-red-500/50 rounded text-red-400 hover:text-red-300 hover:border-red-400 transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
-            >
-              Delete
-            </button>
-          {/if}
+        <!-- Company Name -->
+        <FormInput
+          label="Company Name"
+          bind:value={formData.name}
+          placeholder="Full company name"
+          required
+          error={formErrors.name}
+        />
+        
+        <!-- Short Name and Abbreviation -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Short Name"
+            bind:value={formData.name_short}
+            placeholder="Short name"
+            required
+            error={formErrors.name_short}
+          />
           
-          <div class="flex" style="gap: 12px;">
-            <button
-              type="button"
+          <FormInput
+            label="Abbreviation"
+            bind:value={formData.abbreviation}
+            placeholder="ABC"
+            maxlength={10}
+            required
+            error={formErrors.abbreviation}
+          />
+        </div>
+        
+        <!-- Location -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <TypeaheadSelect
+            label="Country"
+            bind:value={formData.country}
+            bind:searchText={countrySearchText}
+            options={countryOptions}
+            displayFields={['name']}
+            placeholder="Search countries..."
+            required
+            error={formErrors.country}
+            on:input={(e) => handleCountrySearch(e.detail)}
+            on:select={handleCountrySelect}
+          >
+            <svelte:fragment slot="option" let:option>
+              <span>{option.name}</span>
+              {#if option.dial_code}
+                <span class="text-emittiv-light text-xs ml-auto">+{option.dial_code}</span>
+              {/if}
+            </svelte:fragment>
+          </TypeaheadSelect>
+          
+          <TypeaheadSelect
+            label="City"
+            bind:value={formData.city}
+            bind:searchText={citySearchText}
+            options={cityOptions}
+            displayFields={['name']}
+            placeholder="Search cities..."
+            required
+            error={formErrors.city}
+            disabled={!formData.country}
+            on:input={(e) => handleCitySearch(e.detail)}
+            on:select={handleCitySelect}
+          />
+        </div>
+        
+        <!-- Registration Details -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Registration No."
+            bind:value={formData.reg_no}
+            placeholder="Company registration number (optional)"
+            error={formErrors.reg_no}
+          />
+          
+          <FormInput
+            label="Tax/VAT No."
+            bind:value={formData.tax_no}
+            placeholder="Tax identification number (optional)"
+            error={formErrors.tax_no}
+          />
+        </div>
+      </div>
+    </div>
+    
+    <!-- Error/Success Messages -->
+    {#if $operationState.error}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        {$operationState.error}
+      </div>
+    {/if}
+    
+    {#if $operationState.message}
+      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+        {$operationState.message}
+      </div>
+    {/if}
+    
+    <!-- Delete Confirmation -->
+    {#if showDeleteConfirm && mode === 'edit'}
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+        <p class="font-medium mb-2">Are you sure you want to delete this company?</p>
+        <p class="text-xs opacity-80">This action cannot be undone.</p>
+      </div>
+    {/if}
+    
+    <!-- Actions - Full Width Container -->
+    <div class="w-full" style="height: 40px;">
+      {#if mode === 'edit' && !showDeleteConfirm}
+        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = true}
+            disabled={$operationState.saving || $operationState.deleting}
+          >
+            Delete
+          </Button>
+          
+          <div class="flex h-full" style="gap: 12px;">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
               on:click={closeModal}
-              class="border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-light transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
-              disabled={isSaving || isDeleting}
+              disabled={$operationState.saving || $operationState.deleting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            
+            <Button
               type="submit"
-              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 4px;"
-              disabled={isSaving || isDeleting || showDeleteConfirm}
+              variant="primary"
+              size="sm"
+              className="h-full !py-1 !flex !items-center !justify-center"
+              disabled={$operationState.saving || $operationState.deleting}
             >
-              {#if isSaving}
-                <div class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
-                <span>Saving...</span>
-              {:else}
-                <span>{mode === 'create' ? 'Create Company' : 'Update Company'}</span>
+              {#if $operationState.saving}
+                <div 
+                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  style="width: 14px; height: 14px; margin-right: 6px;"
+                ></div>
               {/if}
-            </button>
+              Update
+            </Button>
           </div>
         </div>
-      </form>
+      {:else if mode === 'edit' && showDeleteConfirm}
+        <!-- Delete Confirmation Mode -->
+        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            on:click={handleDelete}
+            disabled={$operationState.deleting}
+          >
+            {#if $operationState.deleting}
+              <div 
+                class="border-2 border-white border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Confirm Delete
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={() => showDeleteConfirm = false}
+            disabled={$operationState.deleting}
+          >
+            Cancel
+          </Button>
+        </div>
+      {:else}
+        <!-- Create Mode: Just Cancel/Create buttons -->
+        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            on:click={closeModal}
+            disabled={$operationState.saving}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="h-full !py-1 !flex !items-center !justify-center"
+            disabled={$operationState.saving}
+          >
+            {#if $operationState.saving}
+              <div 
+                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                style="width: 14px; height: 14px; margin-right: 6px;"
+              ></div>
+            {/if}
+            Create Company
+          </Button>
+        </div>
+      {/if}
     </div>
-  </div>
-{/if}
+  </form>
+</BaseModal>

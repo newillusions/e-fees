@@ -13,7 +13,7 @@ use commands::{
     search_projects,
     get_companies,
     get_contacts,
-    get_rfps,
+    get_fees,
     create_project,
     update_project,
     delete_project,
@@ -22,9 +22,10 @@ use commands::{
     delete_company,
     create_contact,
     update_contact,
-    create_rfp,
-    update_rfp,
-    delete_rfp,
+    delete_contact,
+    create_fee,
+    update_fee,
+    delete_fee,
     health_check,
     get_stats,
     get_db_info,
@@ -46,8 +47,10 @@ use commands::{
     write_fee_to_json,
     check_project_folder_exists,
     check_var_json_exists,
+    check_var_json_template_exists,
     rename_folder_with_old_suffix,
     rename_var_json_with_old_suffix,
+    populate_project_data,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -165,7 +168,7 @@ pub fn run() {
             search_projects,
             get_companies,
             get_contacts,
-            get_rfps,
+            get_fees,
             create_project,
             update_project,
             delete_project,
@@ -174,9 +177,10 @@ pub fn run() {
             delete_company,
             create_contact,
             update_contact,
-            create_rfp,
-            update_rfp,
-            delete_rfp,
+            delete_contact,
+            create_fee,
+            update_fee,
+            delete_fee,
             health_check,
             get_stats,
             get_db_info,
@@ -198,8 +202,10 @@ pub fn run() {
             write_fee_to_json,
             check_project_folder_exists,
             check_var_json_exists,
+            check_var_json_template_exists,
             rename_folder_with_old_suffix,
-            rename_var_json_with_old_suffix
+            rename_var_json_with_old_suffix,
+            populate_project_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

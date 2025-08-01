@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { rfpsStore, rfpsActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
+  import { feesStore, feesActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -32,19 +32,19 @@
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
   
-  // Filter RFPs for this project
-  $: projectRfps = project ? $rfpsStore.filter(rfp => {
-    if (!rfp.project_id || !project?.id) return false;
+  // Filter fees for this project
+  $: projectFees = project ? $feesStore.filter(fee => {
+    if (!fee.project_id || !project?.id) return false;
     
-    let rfpProjectId = '';
-    if (typeof rfp.project_id === 'string') {
-      rfpProjectId = rfp.project_id;
-    } else if (rfp.project_id && typeof rfp.project_id === 'object') {
-      if ((rfp.project_id as any).tb && (rfp.project_id as any).id) {
-        if (typeof (rfp.project_id as any).id === 'string') {
-          rfpProjectId = `${(rfp.project_id as any).tb}:${(rfp.project_id as any).id}`;
-        } else if ((rfp.project_id as any).id.String) {
-          rfpProjectId = `${(rfp.project_id as any).tb}:${(rfp.project_id as any).id.String}`;
+    let feeProjectId = '';
+    if (typeof fee.project_id === 'string') {
+      feeProjectId = fee.project_id;
+    } else if (fee.project_id && typeof fee.project_id === 'object') {
+      if ((fee.project_id as any).tb && (fee.project_id as any).id) {
+        if (typeof (fee.project_id as any).id === 'string') {
+          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
+        } else if ((fee.project_id as any).id.String) {
+          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
         }
       }
     }
@@ -62,9 +62,9 @@
       }
     }
     
-    const id1 = rfpProjectId.replace('projects:', '');
+    const id1 = feeProjectId.replace('projects:', '');
     const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || rfpProjectId === projectIdStr;
+    return id1 === id2 || feeProjectId === projectIdStr;
   }).sort((a, b) => {
     // Parse issue_date for proper sorting
     const parseIssueDate = (dateStr: string) => {
@@ -79,7 +79,7 @@
 
   // Load related data when component mounts
   onMount(() => {
-    rfpsActions.load();
+    feesActions.load();
     companiesActions.load();
     settingsActions.load();
   });
@@ -157,9 +157,7 @@
       }
       
       // First, check if folder already exists
-      console.log(`Checking if project folder exists: ${projectNumber} ${projectName}`);
       const folderExists = await checkProjectFolderExists(projectNumber, projectName);
-      console.log('Folder exists result:', folderExists);
       
       if (folderExists) {
         warningModal = {
@@ -171,14 +169,10 @@
           onConfirm: async () => {
             try {
               // Rename existing folder with _old suffix
-              console.log('Renaming existing folder with _old suffix...');
               const renameResult = await renameFolderWithOldSuffix(projectNumber, projectName);
-              console.log('Rename result:', renameResult);
               
               // Now create new folder
-              console.log(`Creating new project folder for ${projectNumber} ${projectName}`);
               const copyResult = await copyProjectTemplate(projectNumber, projectName);
-              console.log('Project folder created:', copyResult);
               
               warningModal = {
                 isOpen: true,
@@ -208,9 +202,7 @@
       }
       
       // Create the project folder
-      console.log(`Creating project folder for ${projectNumber} ${projectName}`);
       const copyResult = await copyProjectTemplate(projectNumber, projectName);
-      console.log('Project folder created:', copyResult);
       
       warningModal = {
         isOpen: true,
@@ -262,10 +254,10 @@
       subtitle="{project.name_short} • {project.area}"
       location="{project.city}, {project.country}"
       stats={[
-        { label: 'Proposals', value: projectRfps.length },
-        { label: 'Awarded', value: projectRfps.filter(rfp => rfp.status === 'Awarded').length },
-        { label: 'Pending', value: projectRfps.filter(rfp => rfp.status === 'Sent').length },
-        { label: 'Lost', value: projectRfps.filter(rfp => rfp.status === 'Lost').length }
+        { label: 'Proposals', value: projectFees.length },
+        { label: 'Awarded', value: projectFees.filter(fee => fee.status === 'Awarded').length },
+        { label: 'Pending', value: projectFees.filter(fee => fee.status === 'Sent').length },
+        { label: 'Lost', value: projectFees.filter(fee => fee.status === 'Lost').length }
       ]}
     />
   </svelte:fragment>
@@ -291,11 +283,11 @@
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">Fee Proposals</h2>
         <span class="text-xs text-emittiv-light px-2 py-1 rounded-lg" style="background-color: #111;">
-          {projectRfps.length} total
+          {projectFees.length} total
         </span>
       </div>
       
-      {#if projectRfps.length === 0}
+      {#if projectFees.length === 0}
         <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
           <svg class="w-12 h-12 mx-auto mb-3 text-emittiv-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -304,39 +296,39 @@
         </div>
       {:else}
         <div class="grid gap-2">
-          {#each projectRfps as rfp}
+          {#each projectFees as fee}
             <ListCard clickable={false}>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div>
-                    <h3 class="text-xs font-medium text-emittiv-light">RFP Number:</h3>
-                    <p class="text-sm text-emittiv-white">{rfp.number}</p>
+                    <h3 class="text-xs font-medium text-emittiv-light">Fee Number:</h3>
+                    <p class="text-sm text-emittiv-white">{fee.number}</p>
                   </div>
                   <div class="mt-2">
                     <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
-                    <p class="text-sm text-emittiv-lighter">{rfp.name}{#if rfp.package} - {rfp.package}{/if}</p>
+                    <p class="text-sm text-emittiv-lighter">{fee.name}{#if fee.package} - {fee.package}{/if}</p>
                   </div>
                   <div class="mt-2 space-y-1">
                     <div>
                       <h3 class="text-xs font-medium text-emittiv-light">Company:</h3>
-                      <p class="text-sm text-emittiv-white">{companyLookup.getCompanyName(rfp.company_id) || 'N/A'}</p>
+                      <p class="text-sm text-emittiv-white">{companyLookup.getCompanyName(fee.company_id) || 'N/A'}</p>
                     </div>
-                    {#if rfp.staff_name}
+                    {#if fee.staff_name}
                       <div>
                         <h3 class="text-xs font-medium text-emittiv-light">Staff:</h3>
-                        <p class="text-sm text-emittiv-white">{rfp.staff_name}</p>
+                        <p class="text-sm text-emittiv-white">{fee.staff_name}</p>
                       </div>
                     {/if}
                     <div class="flex items-center gap-4 text-xs text-emittiv-light">
-                      <span>Rev: {rfp.rev}</span>
+                      <span>Rev: {fee.rev}</span>
                       <span>
-                        {new Date(rfp.issue_date.length === 6 ? `20${rfp.issue_date.substring(0,2)}-${rfp.issue_date.substring(2,4)}-${rfp.issue_date.substring(4,6)}` : rfp.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(fee.issue_date.length === 6 ? `20${fee.issue_date.substring(0,2)}-${fee.issue_date.substring(2,4)}-${fee.issue_date.substring(4,6)}` : fee.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={rfp.status} type="proposal" />
+                  <StatusBadge status={fee.status} type="proposal" />
                 </div>
               </div>
             </ListCard>

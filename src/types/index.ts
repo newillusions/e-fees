@@ -27,7 +27,7 @@ export interface Project {
   id?: string | SurrealThing;
   name: string;
   name_short: string;
-  status: 'Draft' | 'RFP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
+  status: 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
   area: string;
   city: string;
   country: string;
@@ -74,12 +74,12 @@ export interface Contact {
   };
 }
 
-export interface Rfp {
+export interface Fee {
   id?: string | SurrealThing;
   name: string;
   number: string;
   rev: number;
-  status: 'Draft' | 'Prepared' | 'Sent' | 'Negotiation' | 'Awarded' | 'Lost' | 'Cancelled';
+  status: 'Draft' | 'Sent' | 'Negotiation' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
   issue_date: string;
   activity: string;
   package: string;
@@ -106,9 +106,6 @@ export interface Revision {
   notes: string;
 }
 
-// Legacy aliases for backwards compatibility during transition
-export interface Proposal extends Rfp {}
-export interface FeeProposal extends Rfp {}
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -122,14 +119,14 @@ export interface FeeProposal extends Rfp {}
 export interface DatabaseStats {
   /** Total number of projects in the database */
   totalProjects: number;
-  /** Number of RFPs with status 'Active' or 'Sent' */
-  activeRfps: number;
+  /** Number of Fees with status 'Active' or 'Sent' */
+  activeFees: number;
   /** Total number of company records */
   totalCompanies: number;
   /** Total number of contact records */
   totalContacts: number;
-  /** Total number of RFP records regardless of status */
-  totalRfps: number;
+  /** Total number of Fee records regardless of status */
+  totalFees: number;
 }
 
 /**

@@ -58,13 +58,6 @@
     showNewProjectModal = true;
   }
   
-  function handleProjectCreated(project: Project) {
-    // Project is already added to store by NewProjectModal
-    // Just close the modal and show success
-    showNewProjectModal = false;
-    console.log('Project created successfully:', project.name);
-  }
-  
   function handleNewProjectClosed() {
     showNewProjectModal = false;
   }
@@ -269,8 +262,7 @@
 <!-- New Project Modal -->
 <NewProjectModal 
   bind:isOpen={showNewProjectModal}
-  onClose={handleNewProjectClosed}
-  onSuccess={handleProjectCreated}
+  on:close={handleNewProjectClosed}
 />
 
 <!-- Edit Project Modal -->

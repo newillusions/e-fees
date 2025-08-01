@@ -45,24 +45,18 @@
     // Test database connection first
     setTimeout(async () => {
       try {
-        console.log('Testing database connection...');
         const { checkDbConnection, getDbInfo } = await import('$lib/api');
         
         const isConnected = await checkDbConnection();
-        console.log('Database connection status:', isConnected);
         
         if (isConnected) {
-          console.log('Database is connected, fetching info...');
           const dbInfo = await getDbInfo();
-          console.log('Database info:', dbInfo);
         } else {
           console.warn('Database is not connected');
         }
         
         // Load data regardless
-        console.log('Loading all data...');
         await loadAllData();
-        console.log('Data loading completed');
       } catch (error) {
         console.error('Failed to load initial data:', error);
       }
