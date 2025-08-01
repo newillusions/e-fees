@@ -56,6 +56,11 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
   // Clear and rebuild cache when companies change
   companyCache.clear();
   
+  // Handle case where companies is null, undefined, or not an array
+  if (!companies || !Array.isArray(companies)) {
+    companies = [];
+  }
+  
   companies.forEach(company => {
     const id = extractId(company.id);
     if (id) {

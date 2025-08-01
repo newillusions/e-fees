@@ -12,6 +12,7 @@
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
+  import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
   import type { Company } from '$lib/../types';
   
@@ -52,17 +53,24 @@
     { field: 'abbreviation' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 10 },
     { field: 'city' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
     { field: 'country' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
-    { field: 'reg_no' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 },
-    { field: 'tax_no' as keyof CompanyFormData, required: true, minLength: 1, maxLength: 50 }
+    // reg_no and tax_no are optional fields
+    { field: 'reg_no' as keyof CompanyFormData, required: false, maxLength: 50 },
+    { field: 'tax_no' as keyof CompanyFormData, required: false, maxLength: 50 }
   ];
   
   // Form validation state
   let formErrors: Record<string, string> = {};
   
   // UI state
-  let countryOptions: string[] = [];
-  let cityOptions: string[] = [];
   let showDeleteConfirm = false;
+  
+  // Typeahead search states
+  let countrySearchText = '';
+  let citySearchText = '';
+  
+  // Options for typeaheads (formatted for TypeaheadSelect)
+  let countryOptions: Array<{ id: string; name: string; dial_code?: string | number }> = [];
+  let cityOptions: Array<{ id: string; name: string }> = [];
   
   // Form field focus handling
   function handleSubmit(event: Event) {
@@ -109,8 +117,11 @@
     if (!company) return;
     
     await withLoadingState(async () => {
-      const companyId = extractSurrealId(company);
-      if (!companyId) throw new Error('Invalid company ID');
+      const companyId = extractSurrealId(company.id) || extractSurrealId(company);
+      if (!companyId) {
+        console.error('Failed to extract company ID from:', company);
+        throw new Error('Invalid company ID');
+      }
       
       const companyData = {
         ...formData,
@@ -132,8 +143,11 @@
     if (!company || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      const companyId = extractSurrealId(company);
-      if (!companyId) throw new Error('Invalid company ID');
+      const companyId = extractSurrealId(company.id) || extractSurrealId(company);
+      if (!companyId) {
+        console.error('Failed to extract company ID from:', company);
+        throw new Error('Invalid company ID');
+      }
       
       const result = await companiesActions.delete(companyId);
       operationActions.setMessage('Company deleted successfully');
@@ -155,6 +169,12 @@
     };
     formErrors = {};
     showDeleteConfirm = false;
+    
+    // Clear search texts and options
+    countrySearchText = '';
+    citySearchText = '';
+    countryOptions = [];
+    cityOptions = [];
   }
   
   function closeModal() {
@@ -174,48 +194,73 @@
       reg_no: company.reg_no || '',
       tax_no: company.tax_no || ''
     };
-  }
-  
-  // Auto-suggestions
-  async function handleCountrySearch(searchTerm: string) {
-    if (searchTerm.length > 1) {
-      try {
-        const countries = await searchCountries(searchTerm);
-        countryOptions = countries.map(c => c.name);
-      } catch (error) {
-        console.warn('Failed to search countries:', error);
-      }
+    
+    // Set search texts for selected items
+    if (formData.country) {
+      countrySearchText = formData.country;
+    }
+    if (formData.city) {
+      citySearchText = formData.city;
     }
   }
   
-  async function handleCitySearch(searchTerm: string) {
-    if (searchTerm.length > 1 && formData.country) {
-      try {
-        const cities = await getCitySuggestions(formData.country);
-        cityOptions = cities;
-      } catch (error) {
-        console.warn('Failed to search cities:', error);
-      }
-    } else if (formData.country) {
-      try {
-        const cities = await getAllCities();
-        cityOptions = cities;
-      } catch (error) {
-        console.warn('Failed to load cities:', error);
-      }
+  // Country search handler
+  async function handleCountrySearch(searchText: string) {
+    if (!searchText || searchText.length < 2) {
+      countryOptions = [];
+      return;
+    }
+    
+    try {
+      const countries = await searchCountries(searchText);
+      countryOptions = countries.map(country => ({
+        id: country.name,
+        name: country.name,
+        dial_code: country.dial_code
+      }));
+    } catch (error) {
+      console.warn('Failed to search countries:', error);
+      countryOptions = [];
     }
   }
   
-  // Country selection handler
-  $: if (formData.country) {
-    handleCitySearch('');
+  // City search handler
+  async function handleCitySearch(searchText: string) {
+    if (!formData.country || !searchText || searchText.length < 2) {
+      cityOptions = [];
+      return;
+    }
+    
+    try {
+      const cities = await getCitySuggestions(formData.country);
+      cityOptions = cities
+        .filter(city => city.toLowerCase().includes(searchText.toLowerCase()))
+        .map(city => ({ id: city, name: city }))
+        .slice(0, 10);
+    } catch (error) {
+      console.warn('Failed to search cities:', error);
+      cityOptions = [];
+    }
+  }
+  
+  // Typeahead handlers
+  function handleCountrySelect(event: CustomEvent) {
+    formData.country = event.detail.id;
+    // Clear city when country changes
+    formData.city = '';
+    citySearchText = '';
+    cityOptions = [];
+  }
+  
+  function handleCitySelect(event: CustomEvent) {
+    formData.city = event.detail.id;
   }
 </script>
 
 <BaseModal 
   {isOpen} 
   title={mode === 'create' ? 'New Company' : 'Edit Company'}
-  maxWidth="450px"
+  maxWidth="500px"
   on:close={closeModal}
 >
   <!-- Form -->
@@ -259,22 +304,38 @@
         
         <!-- Location -->
         <div class="grid grid-cols-2" style="gap: 12px;">
-          <FormInput
+          <TypeaheadSelect
             label="Country"
             bind:value={formData.country}
-            placeholder="Country"
+            bind:searchText={countrySearchText}
+            options={countryOptions}
+            displayFields={['name']}
+            placeholder="Search countries..."
             required
             error={formErrors.country}
-            on:input={(e) => handleCountrySearch((e.target as HTMLInputElement).value)}
-          />
+            on:input={(e) => handleCountrySearch(e.detail)}
+            on:select={handleCountrySelect}
+          >
+            <svelte:fragment slot="option" let:option>
+              <span>{option.name}</span>
+              {#if option.dial_code}
+                <span class="text-emittiv-light text-xs ml-auto">+{option.dial_code}</span>
+              {/if}
+            </svelte:fragment>
+          </TypeaheadSelect>
           
-          <FormInput
+          <TypeaheadSelect
             label="City"
             bind:value={formData.city}
-            placeholder="City"
+            bind:searchText={citySearchText}
+            options={cityOptions}
+            displayFields={['name']}
+            placeholder="Search cities..."
             required
             error={formErrors.city}
-            on:input={(e) => handleCitySearch((e.target as HTMLInputElement).value)}
+            disabled={!formData.country}
+            on:input={(e) => handleCitySearch(e.detail)}
+            on:select={handleCitySelect}
           />
         </div>
         
@@ -283,16 +344,14 @@
           <FormInput
             label="Registration No."
             bind:value={formData.reg_no}
-            placeholder="Company registration number"
-            required
+            placeholder="Company registration number (optional)"
             error={formErrors.reg_no}
           />
           
           <FormInput
             label="Tax/VAT No."
             bind:value={formData.tax_no}
-            placeholder="Tax identification number"
-            required
+            placeholder="Tax identification number (optional)"
             error={formErrors.tax_no}
           />
         </div>
@@ -359,7 +418,7 @@
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
-              Update Company
+              Update
             </Button>
           </div>
         </div>

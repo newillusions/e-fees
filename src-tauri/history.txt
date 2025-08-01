@@ -19,3 +19,5 @@ UPDATE fee SET status = 'Negotiation' WHERE status = 'Under Review';
 REMOVE FIELD status ON rfp; DEFINE FIELD status ON rfp TYPE string DEFAULT 'Draft' ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Completed', 'Lost', 'Cancelled', 'On Hold', 'Revised'] PERMISSIONS FULL;
 REMOVE FIELD status ON fee; DEFINE FIELD status ON fee TYPE string DEFAULT 'Draft' ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Completed', 'Lost', 'Cancelled', 'On Hold', 'Revised'] PERMISSIONS FULL;
 REMOVE FIELD status ON projects; DEFINE FIELD status ON projects TYPE string ASSERT $value INSIDE ['Draft', 'RFP', 'Active', 'Awarded', 'Completed', 'Lost', 'Cancelled', 'On Hold', 'Revised'] PERMISSIONS FOR select, create, update WHERE FULL;
+USE NS emittiv; USE DB projects; SELECT * FROM contacts WHERE id = contacts:z94zj9j7cjd2ysiqlb6c;
+USE NS emittiv; USE DB projects; UPDATE contacts:z94zj9j7cjd2ysiqlb6c SET first_name = 'updated123', email = 'updated@test.com' RETURN AFTER;

@@ -219,35 +219,17 @@
           error={formErrors.name}
         />
         
-        <!-- Short Name and Area -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
-          <FormInput
-            label="Short Name"
-            bind:value={formData.name_short}
-            placeholder="Short name"
-            required
-            error={formErrors.name_short}
-          />
-          
-          <FormInput
-            label="Area"
-            bind:value={formData.area}
-            placeholder="Area/District"
-            required
-            error={formErrors.area}
-          />
-        </div>
+        <!-- Short Name -->
+        <FormInput
+          label="Short Name"
+          bind:value={formData.name_short}
+          placeholder="Short name"
+          required
+          error={formErrors.name_short}
+        />
         
-        <!-- Location -->
+        <!-- Location: Country, City, Area -->
         <div class="grid grid-cols-2" style="gap: 12px;">
-          <FormInput
-            label="City"
-            bind:value={formData.city}
-            placeholder="City"
-            required
-            error={formErrors.city}
-          />
-          
           <FormInput
             label="Country"
             bind:value={formData.country}
@@ -255,7 +237,23 @@
             required
             error={formErrors.country}
           />
+          
+          <FormInput
+            label="City"
+            bind:value={formData.city}
+            placeholder="City"
+            required
+            error={formErrors.city}
+          />
         </div>
+        
+        <FormInput
+          label="Area"
+          bind:value={formData.area}
+          placeholder="Area/District"
+          required
+          error={formErrors.area}
+        />
         
         <!-- Status and Folder -->
         <div class="grid grid-cols-2" style="gap: 12px;">

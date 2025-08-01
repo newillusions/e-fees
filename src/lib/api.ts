@@ -1603,9 +1603,9 @@ export class ApiClient {
    * 
    * @throws Error - Throws on database connection errors
    */
-  static async getAreaSuggestions(country: string): Promise<string[]> {
+  static async getAreaSuggestions(country: string | null): Promise<string[]> {
     try {
-      const suggestions = await invoke('get_area_suggestions', { country });
+      const suggestions = await invoke('get_area_suggestions', { country: country || '' });
       return suggestions as string[];
     } catch (error) {
       console.error('Failed to get area suggestions:', error);
@@ -1638,9 +1638,9 @@ export class ApiClient {
    * 
    * @throws Error - Throws on database connection errors
    */
-  static async getCitySuggestions(country: string): Promise<string[]> {
+  static async getCitySuggestions(country: string | null): Promise<string[]> {
     try {
-      const suggestions = await invoke('get_city_suggestions', { country });
+      const suggestions = await invoke('get_city_suggestions', { country: country || '' });
       return suggestions as string[];
     } catch (error) {
       console.error('Failed to get city suggestions:', error);

@@ -745,7 +745,7 @@ impl DatabaseClient {
         let fee_id = format!("{}_{}", fee.project_id.replace("-", "_"), fee.rev);
         
         let query = format!(
-            "CREATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = {}, company_id = {}, contact_id = {}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
+            "CREATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
             fee_id,
             fee.name.replace("'", "''"),
             fee.number.replace("'", "''"),
@@ -782,7 +782,7 @@ impl DatabaseClient {
         info!("DatabaseClient::update_fee called with id: '{}' and fee: {:?}", id, fee);
         
         let query = format!(
-            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = {}, company_id = {}, contact_id = {}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
+            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
             id,
             fee.name.replace("'", "''"),
             fee.number.replace("'", "''"),

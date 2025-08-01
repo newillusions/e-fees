@@ -5,7 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { projectsActions } from '$lib/stores';
-  import { generateNextProjectNumber, searchCountries, getAreaSuggestions, getCitySuggestions } from '$lib/api';
+  import { generateNextProjectNumber, searchCountries, getAreaSuggestions, getCitySuggestions, checkProjectFolderExists, copyProjectTemplate } from '$lib/api';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import BaseModal from './BaseModal.svelte';
@@ -74,6 +74,8 @@
   // UI state
   let isGenerating = false;
   let isModalReady = false;
+  let showFolderConfirm = false;
+  let pendingProjectData: any = null;
   
   // Typeahead search states
   let countrySearchText = '';
@@ -94,9 +96,18 @@
     formData.folder = '';
   }
   
-  // Auto-generate project number when country or year changes (but not if we already have one)
-  $: if (isModalReady && formData.country && formData.year && !formData.project_number && !isGenerating) {
-    generateProjectNumber();
+  // Track previous country and year to detect changes
+  let previousCountry = '';
+  let previousYear = 0;
+  
+  // Auto-generate project number when country or year changes
+  $: if (isModalReady && formData.country && formData.year && !isGenerating) {
+    // Check if country or year actually changed
+    if (formData.country !== previousCountry || formData.year !== previousYear) {
+      previousCountry = formData.country;
+      previousYear = formData.year;
+      generateProjectNumber();
+    }
   }
   
   // Generate the next available project number
@@ -145,15 +156,17 @@
     }
   }
   
-  // Area search handler
+  // Area search handler - works independently
   async function handleAreaSearch(searchText: string) {
-    if (!formData.country || !searchText || searchText.length < 2) {
+    if (!searchText || searchText.length < 2) {
       areaOptions = [];
       return;
     }
     
     try {
-      const results = await getAreaSuggestions(formData.country);
+      // Get suggestions for the selected country, or all if no country
+      const country = formData.country || null;
+      const results = await getAreaSuggestions(country);
       areaOptions = results
         .filter(area => area.toLowerCase().includes(searchText.toLowerCase()))
         .map(area => ({ id: area, name: area }))
@@ -164,15 +177,17 @@
     }
   }
   
-  // City search handler
+  // City search handler - works independently
   async function handleCitySearch(searchText: string) {
-    if (!formData.country || !searchText || searchText.length < 2) {
+    if (!searchText || searchText.length < 2) {
       cityOptions = [];
       return;
     }
     
     try {
-      const results = await getCitySuggestions(formData.country);
+      // Get suggestions for the selected country, or all if no country
+      const country = formData.country || null;
+      const results = await getCitySuggestions(country);
       cityOptions = results
         .filter(city => city.toLowerCase().includes(searchText.toLowerCase()))
         .map(city => ({ id: city, name: city }))
@@ -186,6 +201,17 @@
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
+    
+    // If user typed in the fields but didn't select from dropdown, use the typed values
+    if (countrySearchText && !formData.country) {
+      formData.country = countrySearchText;
+    }
+    if (citySearchText && !formData.city) {
+      formData.city = citySearchText;
+    }
+    if (areaSearchText && !formData.area) {
+      formData.area = areaSearchText;
+    }
     
     // Validate using the validation system
     const errors = validateForm(formData, validationRules);
@@ -242,12 +268,59 @@
         }
       };
       
+      // Create project in database first
       const result = await projectsActions.create(project);
-      operationActions.setMessage('Project created successfully');
+      
+      // Check if project folder already exists
+      const folderExists = await checkProjectFolderExists(formData.project_number, formData.name_short);
+      
+      if (folderExists) {
+        // Store project data and show confirmation dialog
+        pendingProjectData = { projectNumber: formData.project_number, projectShortName: formData.name_short };
+        showFolderConfirm = true;
+        operationActions.setMessage('Project created successfully! Folder already exists - confirm overwrite.');
+        return result;
+      } else {
+        // Create folder directly
+        await createProjectFolder(formData.project_number, formData.name_short);
+        operationActions.setMessage('Project and folder created successfully');
+        resetForm();
+        closeModal();
+        return result;
+      }
+    }, operationActions, 'saving');
+  }
+  
+  // Create project folder
+  async function createProjectFolder(projectNumber: string, projectShortName: string) {
+    try {
+      const result = await copyProjectTemplate(projectNumber, projectShortName);
+      console.log('Project folder created:', result);
+    } catch (error) {
+      console.error('Failed to create project folder:', error);
+      operationActions.setError(`Project created but folder creation failed: ${error}`);
+    }
+  }
+  
+  // Handle folder confirmation dialog
+  async function handleFolderConfirm(overwrite: boolean) {
+    showFolderConfirm = false;
+    
+    if (overwrite && pendingProjectData) {
+      await withLoadingState(async () => {
+        await createProjectFolder(pendingProjectData.projectNumber, pendingProjectData.projectShortName);
+        operationActions.setMessage('Project and folder created successfully (existing folder overwritten)');
+        resetForm();
+        closeModal();
+        return true;
+      }, operationActions, 'saving');
+    } else {
+      operationActions.setMessage('Project created successfully (folder creation skipped)');
       resetForm();
       closeModal();
-      return result;
-    }, operationActions, 'saving');
+    }
+    
+    pendingProjectData = null;
   }
   
   // Form management
@@ -266,6 +339,12 @@
     
     formErrors = {};
     isModalReady = false; // Reset modal ready state
+    showFolderConfirm = false;
+    pendingProjectData = null;
+    
+    // Reset tracking variables
+    previousCountry = '';
+    previousYear = 0;
     
     // Clear search texts and options
     countrySearchText = '';
@@ -292,24 +371,54 @@
     isModalReady = false;
   }
   
+  // Sync search text with form values (in case they get out of sync)
+  $: if (formData.country && !countrySearchText) {
+    countrySearchText = formData.country;
+  }
+  $: if (formData.city && !citySearchText) {
+    citySearchText = formData.city;
+  }
+  $: if (formData.area && !areaSearchText) {
+    areaSearchText = formData.area;
+  }
+  
   // Typeahead handlers
   function handleCountrySelect(event: CustomEvent) {
     formData.country = event.detail.option.name;
-    // Clear area and city when country changes
-    formData.area = '';
-    formData.city = '';
-    areaSearchText = '';
-    citySearchText = '';
-    areaOptions = [];
-    cityOptions = [];
+    countrySearchText = event.detail.option.name; // Keep search text in sync
+    // Don't clear area and city automatically - let user decide
+    // This was causing the area field to be cleared unexpectedly
   }
   
   function handleAreaSelect(event: CustomEvent) {
     formData.area = event.detail.option.name;
+    areaSearchText = event.detail.option.name; // Keep search text in sync
   }
   
   function handleCitySelect(event: CustomEvent) {
     formData.city = event.detail.option.name;
+    citySearchText = event.detail.option.name; // Keep search text in sync
+  }
+  
+  // Clear handlers for typeahead fields
+  function handleCountryClear() {
+    formData.country = '';
+    countrySearchText = '';
+    // Also clear dependent fields
+    formData.area = '';
+    formData.city = '';
+    areaSearchText = '';
+    citySearchText = '';
+  }
+  
+  function handleCityClear() {
+    formData.city = '';
+    citySearchText = '';
+  }
+  
+  function handleAreaClear() {
+    formData.area = '';
+    areaSearchText = '';
   }
 </script>
 
@@ -425,7 +534,7 @@
         <!-- Country Selection -->
         <TypeaheadSelect
           label="Country"
-          bind:value={formData.country}
+          value=""
           bind:searchText={countrySearchText}
           options={countryOptions}
           displayFields={['name']}
@@ -434,6 +543,7 @@
           error={formErrors.country}
           on:input={(e) => handleCountrySearch(e.detail)}
           on:select={handleCountrySelect}
+          on:clear={handleCountryClear}
         >
           <svelte:fragment slot="option" let:option>
             <span>{option.name}</span>
@@ -441,34 +551,34 @@
           </svelte:fragment>
         </TypeaheadSelect>
         
-        <!-- Area and City -->
+        <!-- City and Area -->
         <div class="grid grid-cols-2" style="gap: 12px;">
           <TypeaheadSelect
-            label="Area"
-            bind:value={formData.area}
-            bind:searchText={areaSearchText}
-            options={areaOptions}
-            displayFields={['name']}
-            placeholder="Search areas..."
-            required
-            error={formErrors.area}
-            disabled={!formData.country}
-            on:input={(e) => handleAreaSearch(e.detail)}
-            on:select={handleAreaSelect}
-          />
-          
-          <TypeaheadSelect
             label="City"
-            bind:value={formData.city}
+            value=""
             bind:searchText={citySearchText}
             options={cityOptions}
             displayFields={['name']}
             placeholder="Search cities..."
             required
             error={formErrors.city}
-            disabled={!formData.country}
             on:input={(e) => handleCitySearch(e.detail)}
             on:select={handleCitySelect}
+            on:clear={handleCityClear}
+          />
+          
+          <TypeaheadSelect
+            label="Area"
+            value=""
+            bind:searchText={areaSearchText}
+            options={areaOptions}
+            displayFields={['name']}
+            placeholder="Search areas..."
+            required
+            error={formErrors.area}
+            on:input={(e) => handleAreaSearch(e.detail)}
+            on:select={handleAreaSelect}
+            on:clear={handleAreaClear}
           />
         </div>
       </div>
@@ -487,6 +597,37 @@
       </div>
     {/if}
     
+    <!-- Folder Overwrite Confirmation -->
+    {#if showFolderConfirm}
+      <div class="text-yellow-400 text-sm bg-yellow-900/20 border border-yellow-500/30 rounded p-3">
+        <p class="font-medium mb-2">Project folder already exists</p>
+        <p class="text-xs opacity-80 mb-3">
+          A folder for project "{pendingProjectData?.projectNumber} {pendingProjectData?.projectShortName}" already exists. 
+          Do you want to overwrite it with a fresh template?
+        </p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={() => handleFolderConfirm(true)}
+            class="bg-yellow-600 hover:bg-yellow-700 text-white rounded font-medium transition-all flex items-center justify-center disabled:opacity-50"
+            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            disabled={$operationState.saving}
+          >
+            Yes, overwrite
+          </button>
+          <button
+            type="button"
+            on:click={() => handleFolderConfirm(false)}
+            class="border border-yellow-500/30 rounded text-yellow-300 hover:text-yellow-200 transition-all"
+            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            disabled={$operationState.saving}
+          >
+            No, skip folder creation
+          </button>
+        </div>
+      </div>
+    {/if}
+    
     <!-- Actions - Full Width Container -->
     <div class="w-full" style="height: 40px;">
       <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
@@ -495,7 +636,7 @@
           size="sm"
           className="h-full !py-1 !flex !items-center !justify-center"
           on:click={closeModal}
-          disabled={$operationState.saving}
+          disabled={$operationState.saving || showFolderConfirm}
         >
           Cancel
         </Button>
@@ -505,7 +646,7 @@
           variant="primary"
           size="sm"
           className="h-full !py-1 !flex !items-center !justify-center"
-          disabled={$operationState.saving || isGenerating}
+          disabled={$operationState.saving || isGenerating || showFolderConfirm}
         >
           {#if $operationState.saving}
             <div 

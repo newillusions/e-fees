@@ -4,7 +4,8 @@
 -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
+  import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
+  import { settingsStore } from '$lib/stores/settings';
   import { extractSurrealId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
@@ -13,6 +14,9 @@
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
+  import NewProjectModal from './NewProjectModal.svelte';
+  import CompanyModal from './CompanyModal.svelte';
+  import ContactModal from './ContactModal.svelte';
   import type { Fee, Project, Company, Contact } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
@@ -36,19 +40,29 @@
     project_id: string;
     company_id: string;
     contact_id: string;
+    activity: string;
+    strap_line: string;
+    staff_email: string;
+    staff_phone: string;
+    staff_position: string;
   }
   
   let formData: ProposalFormData = {
     number: '',
-    name: '',
+    name: 'Fee Proposal',
     issue_date: '',
-    rev: '0',
+    rev: '1',
     status: 'Draft',
     package: '',
     staff_name: '',
     project_id: '',
     company_id: '',
-    contact_id: ''
+    contact_id: '',
+    activity: 'Design and Consultancy',
+    strap_line: 'sensory design studio',
+    staff_email: '',
+    staff_phone: '',
+    staff_position: ''
   };
   
   // Status options
@@ -81,73 +95,127 @@
   let showProjectStatusSync = false;
   let originalStatus = '';
   let pendingUpdateData: any = null;
+  let formInitialized = false;
+  let dataLoaded = false;
+  
+  // Nested modal states
+  let showNewProjectModal = false;
+  let showCompanyModal = false;
+  let showContactModal = false;
+  let companyModalMode: 'create' | 'edit' = 'create';
+  let contactModalMode: 'create' | 'edit' = 'create';
+  let selectedCompany: Company | null = null;
+  let selectedContact: Contact | null = null;
   
   // Typeahead search states
   let projectSearchText = '';
   let companySearchText = '';
   let contactSearchText = '';
   
+  // Filtered options for typeahead dropdowns
+  let projectOptions: typeof allProjectOptions = [];
+  let companyOptions: typeof allCompanyOptions = [];
+  let contactOptions: typeof allContactOptions = [];
+  
   // Helper function to extract ID from various formats
   function extractId(value: any): string {
     return extractSurrealId(value) || '';
   }
   
-  // All dropdown options for typeahead
-  $: allProjectOptions = $projectsStore.map(project => ({
-    id: extractId(project.id),
-    name: project.name,
-    number: project.number?.id || `${project.number?.year || ''}-${project.number?.country || ''}-${project.number?.seq || ''}`.replace(/^-+|-+$/g, '') || 'No Number'
-  }));
+  // All dropdown options for typeahead - sorted by update date (newest first)
+  $: allProjectOptions = $projectsStore
+    .map(project => ({
+      id: extractId(project.id),
+      name: project.name,
+      name_short: project.name_short,
+      number: project.number?.id || `${project.number?.year || ''}-${project.number?.country || ''}-${project.number?.seq || ''}`.replace(/^-+|-+$/g, '') || 'No Number',
+      country: project.country,
+      city: project.city,
+      area: project.area,
+      updated_at: project.time?.updated_at || ''
+    }))
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   
-  $: allCompanyOptions = $companiesStore.map(company => ({
-    id: extractId(company.id),
-    name: company.name,
-    name_short: company.name_short
-  }));
+  // All company options - sorted by update date (newest first)
+  $: allCompanyOptions = $companiesStore
+    .map(company => ({
+      id: extractId(company.id),
+      name: company.name,
+      name_short: company.name_short,
+      updated_at: company.time?.updated_at || ''
+    }))
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   
-  $: allContactOptions = $contactsStore.map(contact => ({
-    id: extractId(contact.id),
-    full_name: contact.full_name,
-    company: contact.company
-  }));
-  
-  // Filtered dropdown options with typeahead search
-  $: projectOptions = allProjectOptions.filter(project => 
-    !projectSearchText || 
-    project.name.toLowerCase().includes(projectSearchText.toLowerCase()) ||
-    project.number.toLowerCase().includes(projectSearchText.toLowerCase())
-  ).slice(0, 20);
-  
-  // Filter companies by contact's company if contact is selected
+  // All contact options - sorted by update date (newest first)
+  $: allContactOptions = $contactsStore
+    .map(contact => ({
+      id: extractId(contact.id),
+      full_name: contact.full_name,
+      company: extractId(contact.company),
+      updated_at: contact.time?.updated_at || ''
+    }))
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+  // Filtered options based on selections
   $: filteredCompanyOptions = formData.contact_id 
-    ? (() => {
+    ? allCompanyOptions.filter(company => {
         const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
-        if (selectedContact && selectedContact.company) {
-          const contactCompanyId = extractSurrealId(selectedContact.company) || '';
-          return allCompanyOptions.filter(company => company.id === contactCompanyId);
-        }
-        return allCompanyOptions;
-      })()
+        return selectedContact ? company.id === selectedContact.company : true;
+      })
     : allCompanyOptions;
+
+  // Fix reactivity by explicitly depending on formData.company_id
+  $: filteredContactOptions = formData.company_id 
+    ? allContactOptions.filter(contact => contact.company === formData.company_id)
+    : allContactOptions;
   
+  // Project search handler with fuzzy search
+  function handleProjectSearch(searchText: string) {
+    if (!searchText || searchText.length < 1) {
+      projectOptions = allProjectOptions.filter(project => 
+        // Don't show projects that already have an RFP
+        !$feesStore.some(fee => extractId(fee.project_id) === project.id)
+      ).slice(0, 10);
+      return;
+    }
+    
+    const search = searchText.toLowerCase();
+    projectOptions = allProjectOptions.filter(project => {
+      // Don't show projects that already have an RFP
+      if ($feesStore.some(fee => extractId(fee.project_id) === project.id)) {
+        return false;
+      }
+      
+      // Fuzzy search across multiple fields
+      return (
+        project.name?.toLowerCase().includes(search) ||
+        project.name_short?.toLowerCase().includes(search) ||
+        project.number?.toLowerCase().includes(search) ||
+        project.country?.toLowerCase().includes(search) ||
+        project.city?.toLowerCase().includes(search) ||
+        project.area?.toLowerCase().includes(search)
+      );
+    }).slice(0, 20);
+  }
+  
+  // Initialize project options
+  $: if (!projectSearchText) {
+    handleProjectSearch('');
+  }
+  
+  // Filtered company options for search (use filtered options as base)
   $: companyOptions = filteredCompanyOptions.filter(company =>
     !companySearchText ||
     company.name.toLowerCase().includes(companySearchText.toLowerCase()) ||
     (company.name_short && company.name_short.toLowerCase().includes(companySearchText.toLowerCase()))
   ).slice(0, 20);
   
-  // Filter contacts by selected company
-  $: filteredContactOptions = formData.company_id
-    ? allContactOptions.filter(contact => {
-        const contactCompanyId = extractSurrealId(contact.company) || '';
-        return contactCompanyId === formData.company_id;
-      })
-    : allContactOptions;
-  
+  // Filtered contact options for search (use filtered options as base)
   $: contactOptions = filteredContactOptions.filter(contact =>
     !contactSearchText ||
     contact.full_name.toLowerCase().includes(contactSearchText.toLowerCase())
   ).slice(0, 20);
+  
   
   // Helper to format today's date in YYMMDD format
   function getTodayFormatted(): string {
@@ -163,7 +231,7 @@
     if (!formData.number && formData.project_id) {
       const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
       if (project?.number?.id) {
-        formData.number = `FP${project.number.id}-001`;
+        formData.number = `${project.number.id}-FP-${formData.rev}`;
       }
     }
   }
@@ -204,6 +272,17 @@
   function handleSubmit(event: Event) {
     event.preventDefault();
     
+    // If user typed in the project field but didn't select from dropdown, try to find a match
+    if (projectSearchText && !formData.project_id) {
+      const exactMatch = allProjectOptions.find(project => 
+        project.name.toLowerCase() === projectSearchText.toLowerCase() ||
+        project.number.toLowerCase() === projectSearchText.toLowerCase()
+      );
+      if (exactMatch) {
+        formData.project_id = exactMatch.id;
+      }
+    }
+    
     // Custom validation for date format
     const errors = validateForm(formData, validationRules);
     
@@ -229,18 +308,17 @@
   // Create proposal with loading state
   async function handleCreate() {
     await withLoadingState(async () => {
+      // Send clean IDs - backend SQL now properly adds table prefixes
+      const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
+      const companyId = formData.company_id || '';
+      const contactId = formData.contact_id || '';
+      
       const proposalData = {
         ...formData,
-        rev: parseInt(formData.rev) || 0,
-        project_id: formData.project_id ? `projects:${formData.project_id}` : null,
-        company_id: formData.company_id ? `company:${formData.company_id}` : null,
-        contact_id: formData.contact_id ? `contacts:${formData.contact_id}` : null,
-        // Add missing fields with defaults
-        activity: null,
-        strap_line: null,
-        staff_email: null,
-        staff_phone: null,
-        staff_position: null,
+        rev: parseInt(formData.rev) || 1,
+        project_id: projectId,
+        company_id: companyId,
+        contact_id: contactId,
         revisions: [],
         time: {
           created_at: new Date().toISOString(),
@@ -260,24 +338,24 @@
   async function handleUpdate() {
     if (!proposal) return;
     
-    const proposalId = extractSurrealId(proposal);
+    // Try multiple extraction approaches like ContactModal
+    const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
       return;
     }
     
+    // Send clean IDs - backend SQL now properly adds table prefixes
+    const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
+    const companyId = formData.company_id || '';
+    const contactId = formData.contact_id || '';
+    
     const updateData = {
       ...formData,
-      rev: parseInt(formData.rev) || 0,
-      project_id: formData.project_id ? `projects:${formData.project_id}` : null,
-      company_id: formData.company_id ? `company:${formData.company_id}` : null,
-      contact_id: formData.contact_id ? `contacts:${formData.contact_id}` : null,
-      // Add missing fields with defaults
-      activity: proposal?.activity || null,
-      strap_line: proposal?.strap_line || null,
-      staff_email: proposal?.staff_email || null,
-      staff_phone: proposal?.staff_phone || null,
-      staff_position: proposal?.staff_position || null,
+      rev: parseInt(formData.rev) || 1,
+      project_id: projectId,
+      company_id: companyId,
+      contact_id: contactId,
       revisions: proposal?.revisions || []
     };
     
@@ -293,6 +371,7 @@
       return;
     }
     
+    // If no project status sync needed, proceed with normal update
     await withLoadingState(async () => {
       const result = await feesActions.update(proposalId, updateData);
       operationActions.setMessage('Proposal updated successfully');
@@ -306,7 +385,8 @@
     if (!proposal || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      const proposalId = extractSurrealId(proposal);
+      // Try multiple extraction approaches like ContactModal
+      const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
       if (!proposalId) throw new Error('Invalid proposal ID');
       
       const result = await feesActions.delete(proposalId);
@@ -370,15 +450,20 @@
     
     formData = {
       number: '',
-      name: '',
+      name: 'Fee Proposal',
       issue_date: todayFormatted,
-      rev: '0',
+      rev: '1',
       status: 'Draft',
       package: '',
-      staff_name: '',
+      staff_name: $settingsStore.staff_name || '',
       project_id: '',
       company_id: '',
-      contact_id: ''
+      contact_id: '',
+      activity: 'Design and Consultancy',
+      strap_line: 'sensory design studio',
+      staff_email: $settingsStore.staff_email || '',
+      staff_phone: $settingsStore.staff_phone || '',
+      staff_position: $settingsStore.staff_position || ''
     };
     
     formErrors = {};
@@ -386,6 +471,8 @@
     showProjectStatusSync = false;
     originalStatus = '';
     pendingUpdateData = null;
+    formInitialized = false;
+    dataLoaded = false;
     
     // Clear search texts
     projectSearchText = '';
@@ -402,11 +489,18 @@
   // Typeahead handlers
   function handleProjectSelect(event: CustomEvent) {
     formData.project_id = event.detail.id;
+    projectSearchText = event.detail.option.name; // Keep search text in sync
     generateProposalNumber();
+  }
+  
+  function handleProjectClear() {
+    formData.project_id = '';
+    projectSearchText = '';
   }
   
   function handleCompanySelect(event: CustomEvent) {
     formData.company_id = event.detail.id;
+    companySearchText = event.detail.option.name;
     // Clear contact when company changes
     formData.contact_id = '';
     contactSearchText = '';
@@ -414,27 +508,154 @@
   
   function handleContactSelect(event: CustomEvent) {
     formData.contact_id = event.detail.id;
+    contactSearchText = event.detail.option.full_name;
     
-    // Auto-select company if contact has one
-    const selectedContact = allContactOptions.find(c => c.id === event.detail.id);
-    if (selectedContact && selectedContact.company) {
-      const contactCompanyId = extractSurrealId(selectedContact.company) || '';
-      if (contactCompanyId && contactCompanyId !== formData.company_id) {
-        formData.company_id = contactCompanyId;
-        const company = allCompanyOptions.find(c => c.id === contactCompanyId);
-        if (company) {
-          companySearchText = company.name;
+    // Only auto-select company if form is initialized and not loading existing data
+    if (formInitialized && mode === 'create') {
+      const selectedContact = allContactOptions.find(c => c.id === event.detail.id);
+      if (selectedContact && selectedContact.company) {
+        const contactCompanyId = selectedContact.company;
+        if (contactCompanyId && contactCompanyId !== formData.company_id) {
+          formData.company_id = contactCompanyId;
+          const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+          if (company) {
+            companySearchText = company.name;
+          }
         }
       }
     }
   }
+
+  // Clear handlers for cross-field clearing
+  function handleCompanyClear() {
+    formData.company_id = '';
+    companySearchText = '';
+    // Also clear contact when company is cleared
+    formData.contact_id = '';
+    contactSearchText = '';
+  }
+
+  function handleContactClear() {
+    formData.contact_id = '';
+    contactSearchText = '';
+    // Also clear company when contact is cleared
+    formData.company_id = '';
+    companySearchText = '';
+  }
   
-  // Load form data when proposal changes
-  $: if (proposal && mode === 'edit') {
-    // Capture original status when modal first opens for editing
-    if (!originalStatus) {
-      originalStatus = proposal.status || 'Draft';
+  // Nested modal handlers
+  function handleNewProject() {
+    showNewProjectModal = true;
+  }
+  
+  function handleNewProjectClosed() {
+    showNewProjectModal = false;
+    // Refresh project list to include the newly created project
+    projectsActions.load();
+  }
+  
+  function handleNewCompany() {
+    selectedCompany = null;
+    companyModalMode = 'create';
+    showCompanyModal = true;
+  }
+  
+  function handleCompanyModalClosed() {
+    showCompanyModal = false;
+    selectedCompany = null;
+  }
+  
+  function handleNewContact() {
+    selectedContact = null;
+    contactModalMode = 'create';
+    showContactModal = true;
+  }
+  
+  function handleContactModalClosed() {
+    showContactModal = false;
+    selectedContact = null;
+  }
+  
+  // Keep track of store lengths to detect new entities
+  let previousProjectCount = 0;
+  let previousCompanyCount = 0;
+  let previousContactCount = 0;
+  
+  // Handle successful creation from nested modals
+  $: if ($projectsStore.length > previousProjectCount && !showNewProjectModal) {
+    // A new project was created
+    const latestProject = $projectsStore[$projectsStore.length - 1];
+    if (latestProject) {
+      const projectId = extractId(latestProject.id);
+      formData.project_id = projectId;
+      projectSearchText = `${latestProject.number?.id || ''} - ${latestProject.name}`;
+      generateProposalNumber(); // Auto-generate proposal number based on new project
     }
+    previousProjectCount = $projectsStore.length;
+  }
+  
+  $: if ($companiesStore.length > previousCompanyCount && !showCompanyModal) {
+    // A new company was created
+    const latestCompany = $companiesStore[$companiesStore.length - 1];
+    if (latestCompany) {
+      const companyId = extractId(latestCompany.id);
+      formData.company_id = companyId;
+      companySearchText = latestCompany.name;
+    }
+    previousCompanyCount = $companiesStore.length;
+  }
+  
+  $: if ($contactsStore.length > previousContactCount && !showContactModal) {
+    // A new contact was created
+    const latestContact = $contactsStore[$contactsStore.length - 1];
+    if (latestContact) {
+      const contactId = extractId(latestContact.id);
+      formData.contact_id = contactId;
+      contactSearchText = latestContact.full_name;
+      
+      // Auto-select the contact's company if we don't have one selected
+      if (latestContact.company && !formData.company_id) {
+        const contactCompanyId = extractSurrealId(latestContact.company) || '';
+        if (contactCompanyId) {
+          formData.company_id = contactCompanyId;
+          const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+          if (company) {
+            companySearchText = company.name;
+          }
+        }
+      }
+    }
+    previousContactCount = $contactsStore.length;
+  }
+  
+  // Initialize store counts
+  $: if ($projectsStore.length > 0 && previousProjectCount === 0) {
+    previousProjectCount = $projectsStore.length;
+  }
+  $: if ($companiesStore.length > 0 && previousCompanyCount === 0) {
+    previousCompanyCount = $companiesStore.length;
+  }
+  $: if ($contactsStore.length > 0 && previousContactCount === 0) {
+    previousContactCount = $contactsStore.length;
+  }
+  
+  // Load form data when proposal changes - only when modal opens
+  $: if (proposal && mode === 'edit' && isOpen && !dataLoaded) {
+    loadProposalForEdit();
+  }
+
+  // Reset dataLoaded flag when modal closes
+  $: if (!isOpen) {
+    dataLoaded = false;
+    originalStatus = '';
+  }
+
+  function loadProposalForEdit() {
+    if (!proposal || dataLoaded) return;
+    dataLoaded = true;
+    
+    // Capture original status when modal first opens for editing
+    originalStatus = proposal.status || 'Draft';
     
     formData = {
       number: proposal.number || '',
@@ -446,7 +667,12 @@
       staff_name: proposal.staff_name || '',
       project_id: extractId(proposal.project_id) || '',
       company_id: extractId(proposal.company_id) || '',
-      contact_id: extractId(proposal.contact_id) || ''
+      contact_id: extractId(proposal.contact_id) || '',
+      activity: proposal.activity || '',
+      strap_line: proposal.strap_line || 'sensory design studio',
+      staff_email: proposal.staff_email || '',
+      staff_phone: proposal.staff_phone || '',
+      staff_position: proposal.staff_position || ''
     };
     
     // Set search texts for selected items
@@ -464,8 +690,40 @@
     if (selectedContact) {
       contactSearchText = selectedContact.full_name;
     }
-  } else if (mode === 'create') {
+    
+    // Clear any existing validation errors when loading edit data
+    formErrors = {};
+  }
+
+  // Initialize form for create mode
+  $: if (mode === 'create' && isOpen && !formInitialized) {
     resetForm();
+  }
+
+  // Set form as initialized after modal opens and data is loaded
+  $: if (isOpen && !formInitialized) {
+    // Small delay to ensure all reactive statements have run
+    setTimeout(() => {
+      formInitialized = true;
+    }, 100);
+  } else if (!isOpen) {
+    formInitialized = false;
+  }
+
+  // Auto-populate staff fields from settings when settings change or form is reset
+  $: if (mode === 'create' && $settingsStore.staff_name) {
+    if (!formData.staff_name) formData.staff_name = $settingsStore.staff_name;
+    if (!formData.staff_email) formData.staff_email = $settingsStore.staff_email || '';
+    if (!formData.staff_phone) formData.staff_phone = $settingsStore.staff_phone || '';
+    if (!formData.staff_position) formData.staff_position = $settingsStore.staff_position || '';
+  }
+
+  // Regenerate proposal number when revision changes
+  $: if (formData.project_id && formData.rev && mode === 'create') {
+    const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
+    if (project?.number?.id) {
+      formData.number = `${project.number.id}-FP-${formData.rev}`;
+    }
   }
 </script>
 
@@ -477,6 +735,105 @@
 >
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- PROJECT & CLIENT INFORMATION SECTION - MOVED TO TOP -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Project & Client Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        
+        <!-- Project Selection -->
+        <div class="flex relative" style="gap: 8px;">
+          <div class="flex-1">
+            <TypeaheadSelect
+              label="Project"
+              value=""
+              bind:searchText={projectSearchText}
+              options={projectOptions}
+              displayFields={['number', 'name']}
+              placeholder="Search projects..."
+              required
+              error={formErrors.project_id}
+              on:input={(e) => handleProjectSearch(e.detail)}
+              on:select={handleProjectSelect}
+              on:clear={handleProjectClear}
+            >
+              <svelte:fragment slot="option" let:option>
+                <span class="font-medium">{option.number}</span> - <span class="truncate">{option.name}</span>
+              </svelte:fragment>
+            </TypeaheadSelect>
+          </div>
+          <button
+            type="button"
+            on:click={handleNewProject}
+            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            aria-label="Add new project"
+            title="Add new project"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Company Selection -->
+        <div class="flex relative" style="gap: 8px;">
+          <div class="flex-1">
+            <TypeaheadSelect
+              label="Company"
+              value=""
+              bind:searchText={companySearchText}
+              options={companyOptions}
+              displayFields={['name']}
+              placeholder="Search companies..."
+              required
+              error={formErrors.company_id}
+              on:select={handleCompanySelect}
+              on:clear={handleCompanyClear}
+            />
+          </div>
+          <button
+            type="button"
+            on:click={handleNewCompany}
+            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            aria-label="Add new company"
+            title="Add new company"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Contact Selection -->
+        <div class="flex relative" style="gap: 8px;">
+          <div class="flex-1">
+            <TypeaheadSelect
+              label="Contact"
+              value=""
+              bind:searchText={contactSearchText}
+              options={contactOptions}
+              displayFields={['full_name']}
+              placeholder="Search contacts..."
+              on:select={handleContactSelect}
+              on:clear={handleContactClear}
+            />
+          </div>
+          <button
+            type="button"
+            on:click={handleNewContact}
+            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            aria-label="Add new contact"
+            title="Add new contact"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
     
     <!-- BASIC INFORMATION SECTION -->
     <div>
@@ -490,7 +847,7 @@
           <FormInput
             label="Proposal Number"
             bind:value={formData.number}
-            placeholder="FP25-97105-001"
+            placeholder="25-97105-FP-1"
             required
             error={formErrors.number}
           />
@@ -516,10 +873,10 @@
           />
           
           <FormInput
-            label="Revision"
+            label="Release"
             bind:value={formData.rev}
-            placeholder="0"
-            min="0"
+            placeholder="1"
+            min="1"
           />
         </div>
         
@@ -538,65 +895,64 @@
           />
         </div>
         
-        <!-- Staff Name -->
-        <FormInput
-          label="Staff Name"
-          bind:value={formData.staff_name}
-          placeholder="Staff member name"
-        />
-      </div>
-    </div>
-    
-    <!-- PROJECT & CLIENT INFORMATION SECTION -->
-    <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
-        Project & Client Information
-      </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        
-        <!-- Project Selection -->
-        <TypeaheadSelect
-          label="Project"
-          bind:value={formData.project_id}
-          bind:searchText={projectSearchText}
-          options={projectOptions}
-          displayFields={['number', 'name']}
-          placeholder="Search projects..."
-          required
-          error={formErrors.project_id}
-          on:select={handleProjectSelect}
-        >
-          <svelte:fragment slot="option" let:option>
-            <span class="font-medium">{option.number}</span> - <span class="truncate">{option.name}</span>
-          </svelte:fragment>
-        </TypeaheadSelect>
-        
-        <!-- Company and Contact -->
+        <!-- Activity and Strap Line -->
         <div class="grid grid-cols-2" style="gap: 12px;">
-          <TypeaheadSelect
-            label="Company"
-            bind:value={formData.company_id}
-            bind:searchText={companySearchText}
-            options={companyOptions}
-            displayFields={['name']}
-            placeholder="Search companies..."
-            required
-            error={formErrors.company_id}
-            on:select={handleCompanySelect}
+          <FormInput
+            label="Activity"
+            bind:value={formData.activity}
+            placeholder="Design and Consultancy"
           />
           
-          <TypeaheadSelect
-            label="Contact"
-            bind:value={formData.contact_id}
-            bind:searchText={contactSearchText}
-            options={contactOptions}
-            displayFields={['full_name']}
-            placeholder="Search contacts..."
-            on:select={handleContactSelect}
+          <FormInput
+            label="Strap Line"
+            bind:value={formData.strap_line}
+            placeholder="sensory design studio"
           />
         </div>
       </div>
     </div>
+    
+    <!-- STAFF INFORMATION SECTION -->
+    <div>
+      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+        Staff Information
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        
+        <!-- Staff Name and Email -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Staff Name"
+            bind:value={formData.staff_name}
+            placeholder="Staff member name"
+          />
+          
+          <FormInput
+            label="Staff Email"
+            type="email"
+            bind:value={formData.staff_email}
+            placeholder="staff@emittiv.com"
+          />
+        </div>
+        
+        <!-- Staff Phone and Position -->
+        <div class="grid grid-cols-2" style="gap: 12px;">
+          <FormInput
+            label="Staff Phone"
+            type="tel"
+            bind:value={formData.staff_phone}
+            placeholder="+971 50 123 4567"
+          />
+          
+          <FormInput
+            label="Staff Position"
+            bind:value={formData.staff_position}
+            placeholder="Lighting Director"
+          />
+        </div>
+      </div>
+    </div>
+    
     
     <!-- Error/Success Messages -->
     {#if $operationState.error}
@@ -613,8 +969,8 @@
     
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit'}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
-        <p class="font-medium mb-2">Are you sure you want to delete this proposal?</p>
+      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded" style="padding: 8px 12px;">
+        <p class="font-medium" style="margin-bottom: 4px;">Are you sure you want to delete this proposal?</p>
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
     {/if}
@@ -689,7 +1045,7 @@
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
-              Update Proposal
+              Update
             </Button>
           </div>
         </div>
@@ -754,3 +1110,38 @@
     </div>
   </form>
 </BaseModal>
+
+<!-- Nested Modals with higher z-index -->
+<!-- New Project Modal -->
+<NewProjectModal 
+  bind:isOpen={showNewProjectModal}
+  on:close={handleNewProjectClosed}
+/>
+
+<!-- Company Modal -->
+<CompanyModal 
+  bind:isOpen={showCompanyModal}
+  company={selectedCompany}
+  mode={companyModalMode}
+  on:close={handleCompanyModalClosed}
+/>
+
+<!-- Contact Modal -->
+<ContactModal 
+  bind:isOpen={showContactModal}
+  contact={selectedContact}
+  mode={contactModalMode}
+  on:close={handleContactModalClosed}
+/>
+
+<style>
+  /* Ensure nested modals appear above the proposal modal */
+  :global(.base-modal) {
+    z-index: 1000;
+  }
+  
+  /* Higher z-index for nested modals */
+  :global(.base-modal:last-child) {
+    z-index: 1100;
+  }
+</style>
