@@ -147,6 +147,7 @@
       id: extractId(company.id),
       name: company.name,
       name_short: company.name_short,
+      abbreviation: company.abbreviation,
       updated_at: company.time?.updated_at || ''
     }))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
@@ -209,11 +210,22 @@
   }
   
   // Filtered company options for search (use filtered options as base)
-  $: companyOptions = filteredCompanyOptions.filter(company =>
-    !companySearchText ||
-    company.name.toLowerCase().includes(companySearchText.toLowerCase()) ||
-    (company.name_short && company.name_short.toLowerCase().includes(companySearchText.toLowerCase()))
-  ).slice(0, 20);
+  $: companyOptions = filteredCompanyOptions.filter(company => {
+    if (!companySearchText) return true;
+    
+    const searchLower = companySearchText.toLowerCase().trim();
+    const nameMatch = company.name && company.name.toLowerCase().includes(searchLower);
+    const shortNameMatch = company.name_short && company.name_short.toLowerCase().includes(searchLower);
+    
+    // Handle abbreviation search
+    let abbreviationMatch = false;
+    if (company.abbreviation) {
+      const abbrev = String(company.abbreviation).toLowerCase().trim();
+      abbreviationMatch = abbrev.includes(searchLower);
+    }
+    
+    return nameMatch || shortNameMatch || abbreviationMatch;
+  }).slice(0, 20);
   
   // Filtered contact options for search (use filtered options as base)
   $: contactOptions = filteredContactOptions.filter(contact =>
