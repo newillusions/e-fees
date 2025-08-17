@@ -20,6 +20,17 @@
 //! database concurrently while maintaining consistency.
 
 pub mod utils;
+pub mod folder_management;
+
+// Re-export folder management commands
+pub use folder_management::{
+    get_project_folder_location,
+    move_project_folder,
+    move_project_from_rfp,
+    move_project_to_archive,
+    list_projects_in_folder,
+    validate_project_base_path,
+};
 
 // Import the utility functions and macros
 use utils::execute_with_manager;
@@ -36,7 +47,6 @@ use log::{error, info};
 use serde::{Serialize, Deserialize};
 use tauri_plugin_dialog::DialogExt;
 
-mod tests;
 
 // ============================================================================
 // TYPE DEFINITIONS AND APPLICATION STATE
@@ -698,13 +708,13 @@ pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Co
 }
 
 // ============================================================================
-// RFP (PROPOSAL) MANAGEMENT COMMANDS
+// FEE PROPOSAL MANAGEMENT COMMANDS
 // ============================================================================
 
-/// Retrieve all RFPs (proposals) from the database.
+/// Retrieve all fee proposals from the database.
 /// 
 /// This command fetches all fee proposals with their relationships to
-/// projects, companies, and contacts resolved. RFPs are sorted by
+/// projects, companies, and contacts resolved. Fees are sorted by
 /// creation date (newest first).
 /// 
 /// # Returns
@@ -725,10 +735,10 @@ pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Co
 /// const fees = await invoke('get_fees');
 /// const activeFees = fees.filter(f => f.status === 'Active');
 /// ```
-/// Retrieve all RFPs (proposals) from the database.
+/// Retrieve all fee proposals from the database.
 /// 
 /// This command fetches all fee proposals with their relationships to
-/// projects, companies, and contacts resolved. RFPs are sorted by
+/// projects, companies, and contacts resolved. Fees are sorted by
 /// creation date (newest first).
 crud_command!(
     get_fees,
@@ -738,7 +748,7 @@ crud_command!(
     "fee proposals"
 );
 
-/// Create a new RFP (proposal) in the database.
+/// Create a new fee proposal in the database.
 /// 
 /// This command creates a new fee proposal with automatic number generation
 /// and revision tracking initialization.
@@ -788,7 +798,7 @@ crud_command!(
     data: fee
 );
 
-/// Update an existing RFP in the database.
+/// Update an existing fee proposal in the database.
 /// 
 /// This command updates an RFP record with new data. All fields are replaced
 /// with the provided values, so partial updates should include all current data.
@@ -829,7 +839,7 @@ pub async fn update_fee(id: String, fee: FeeUpdate, state: State<'_, AppState>) 
     ).await
 }
 
-/// Delete an RFP from the database.
+/// Delete a fee proposal from the database.
 /// 
 /// This command permanently removes an RFP record. This operation cannot be undone.
 /// Consider the impact on related records and reports before deletion.

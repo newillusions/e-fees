@@ -92,11 +92,13 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 /// 
 /// # Environment Variables
 /// 
-/// - `SURREALDB_URL`: Database connection URL (default: ws://10.0.1.17:8000)
-/// - `SURREALDB_NS`: Namespace name (default: emittiv)
-/// - `SURREALDB_DB`: Database name (default: projects)
-/// - `SURREALDB_USER`: Username (default: martin)
-/// - `SURREALDB_PASS`: Password (required, no default)
+/// - `SURREALDB_URL`: Database connection URL (required, e.g., ws://localhost:8000)
+/// - `SURREALDB_NS`: Namespace name (required)
+/// - `SURREALDB_DB`: Database name (required)
+/// - `SURREALDB_USER`: Username (required)
+/// - `SURREALDB_PASS`: Password (required)
+/// - `SURREALDB_VERIFY_CERTS`: Verify TLS certificates (default: true)
+/// - `SURREALDB_ACCEPT_INVALID_HOSTNAMES`: Accept invalid hostnames (default: false)
 /// 
 /// # Examples
 /// 
@@ -116,6 +118,10 @@ pub struct DatabaseConfig {
     pub username: String,
     /// Authentication password
     pub password: String,
+    /// Whether to verify TLS certificates (default: true for security)
+    pub verify_certificates: bool,
+    /// Whether to accept invalid hostnames in certificates (default: false for security)
+    pub accept_invalid_hostnames: bool,
 }
 
 impl DatabaseConfig {
@@ -147,17 +153,30 @@ impl DatabaseConfig {
     /// The password is the only required environment variable to prevent
     /// accidental connections with default credentials in production.
     pub fn from_env() -> Result<Self, String> {
+        let url = env::var("SURREALDB_URL")
+            .unwrap_or_else(|_| "wss://10.0.1.17:8000".to_string());
+        
+        // Parse TLS verification settings from environment
+        let verify_certificates = env::var("SURREALDB_VERIFY_CERTS")
+            .map(|v| v.parse().unwrap_or(true))
+            .unwrap_or(true); // Default to true for security
+            
+        let accept_invalid_hostnames = env::var("SURREALDB_ACCEPT_INVALID_HOSTNAMES")
+            .map(|v| v.parse().unwrap_or(false))
+            .unwrap_or(false); // Default to false for security
+        
         Ok(DatabaseConfig {
-            url: env::var("SURREALDB_URL")
-                .unwrap_or_else(|_| "ws://10.0.1.17:8000".to_string()),
+            url,
             namespace: env::var("SURREALDB_NS")
-                .unwrap_or_else(|_| "emittiv".to_string()),
+                .map_err(|_| "SURREALDB_NS environment variable is required".to_string())?,
             database: env::var("SURREALDB_DB")
-                .unwrap_or_else(|_| "projects".to_string()),
+                .map_err(|_| "SURREALDB_DB environment variable is required".to_string())?,
             username: env::var("SURREALDB_USER")
-                .unwrap_or_else(|_| "martin".to_string()),
+                .map_err(|_| "SURREALDB_USER environment variable is required".to_string())?,
             password: env::var("SURREALDB_PASS")
                 .map_err(|_| "SURREALDB_PASS environment variable is required".to_string())?,
+            verify_certificates,
+            accept_invalid_hostnames,
         })
     }
 }
@@ -917,7 +936,18 @@ impl DatabaseManager {
         
         // Use WebSocket connection (preferred for SurrealDB)
         let db = if self.config.url.starts_with("ws://") || self.config.url.starts_with("wss://") {
-            info!("Connecting to SurrealDB using WebSocket at {}", self.config.url);
+            let is_secure = self.config.url.starts_with("wss://");
+            info!("Connecting to SurrealDB using {} WebSocket at {}", 
+                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" }, 
+                  self.config.url);
+            
+            // Warn about unencrypted connections
+            if !is_secure {
+                warn!("WARNING: Using unencrypted WebSocket connection (ws://). Data transmission is not secure!");
+            } else {
+                info!("Using encrypted WebSocket connection (wss://) with TLS certificate verification: {}", 
+                     self.config.verify_certificates);
+            }
             
             // Parse URL to remove protocol for Ws connection
             let connection_address = self.config.url
@@ -927,11 +957,26 @@ impl DatabaseManager {
             
             match Surreal::new::<Ws>(connection_address).await {
                 Ok(connection) => {
-                    info!("Successfully established WebSocket connection to SurrealDB at {}", connection_address);
+                    info!("Successfully established {} WebSocket connection to SurrealDB at {}", 
+                          if is_secure { "secure" } else { "unencrypted" }, 
+                          connection_address);
                     DatabaseClient::WebSocket(connection)
                 }
                 Err(err) => {
-                    error!("Failed to establish WebSocket connection to {}: {}", connection_address, err);
+                    // Provide more specific error messages for TLS-related failures
+                    let error_msg = err.to_string();
+                    if is_secure && (error_msg.contains("certificate") || error_msg.contains("tls") || error_msg.contains("ssl")) {
+                        error!("TLS/SSL connection failed to {}: {}. This may be due to:", connection_address, err);
+                        error!("  1. Server doesn't support TLS on this port");
+                        error!("  2. Invalid or self-signed certificate");
+                        error!("  3. Certificate hostname mismatch");
+                        error!("  4. Certificate verification settings");
+                        if !self.config.verify_certificates {
+                            info!("Certificate verification is disabled - this reduces security");
+                        }
+                    } else {
+                        error!("Failed to establish WebSocket connection to {}: {}", connection_address, err);
+                    }
                     return Err(err);
                 }
             }

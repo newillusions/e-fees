@@ -52,6 +52,12 @@ use commands::{
     rename_folder_with_old_suffix,
     rename_var_json_with_old_suffix,
     populate_project_data,
+    get_project_folder_location,
+    move_project_folder,
+    move_project_from_rfp,
+    move_project_to_archive,
+    list_projects_in_folder,
+    validate_project_base_path,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -59,12 +65,27 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             // Setup logging
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
+            
+            // Setup MCP plugin - don't crash app if it fails
+            info!("Attempting to initialize MCP plugin with socket server");
+            match app.handle().plugin(
+                tauri_plugin_mcp::init_with_config(
+                    tauri_plugin_mcp::PluginConfig::new("app".to_string())
+                        .start_socket_server(true)
+                        .socket_path("/tmp/tauri-mcp.sock".into())
+                )
+            ) {
+                Ok(_) => info!("MCP plugin initialized successfully"),
+                Err(e) => {
+                    error!("Failed to initialize MCP plugin: {}", e);
+                    error!("Continuing without MCP functionality");
+                    // Don't crash the app, just log the error and continue
+                }
             }
 
             info!("Initializing Fee Proposal Management Application");
@@ -207,7 +228,13 @@ pub fn run() {
             check_var_json_template_exists,
             rename_folder_with_old_suffix,
             rename_var_json_with_old_suffix,
-            populate_project_data
+            populate_project_data,
+            get_project_folder_location,
+            move_project_folder,
+            move_project_from_rfp,
+            move_project_to_archive,
+            list_projects_in_folder,
+            validate_project_base_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
