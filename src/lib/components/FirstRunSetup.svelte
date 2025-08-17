@@ -139,12 +139,12 @@
 {#if isOpen}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.8);">
     <div 
-      class="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg shadow-2xl"
-      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark);"
+      class="relative w-full max-h-[90vh] overflow-hidden rounded-lg shadow-2xl"
+      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); padding: 16px; max-width: 600px;"
       transition:fade={{ duration: 200 }}
     >
       <!-- Header -->
-      <div class="px-6 py-4 border-b" style="border-color: var(--emittiv-dark);">
+      <div class="pb-4 mb-4 border-b" style="border-color: var(--emittiv-dark);">
         <h2 class="text-xl font-bold" style="color: var(--emittiv-white);">
           Welcome to Fee Proposal Management
         </h2>
@@ -154,7 +154,7 @@
       </div>
       
       <!-- Progress Indicator -->
-      <div class="px-6 py-3 border-b" style="border-color: var(--emittiv-dark);">
+      <div class="pb-3 mb-4 border-b" style="border-color: var(--emittiv-dark);">
         <div class="flex items-center justify-between">
           {#each Array(totalSteps) as _, i}
             <div class="flex items-center">
@@ -182,7 +182,7 @@
       </div>
       
       <!-- Content -->
-      <div class="px-6 py-4 overflow-y-auto" style="max-height: 400px;">
+      <div class="overflow-y-auto" style="max-height: 400px;">
         {#if currentStep === 1}
           <div transition:slide={{ duration: 300 }}>
             <h3 class="text-lg font-semibold mb-4" style="color: var(--emittiv-white);">
@@ -376,7 +376,7 @@
       </div>
       
       <!-- Footer -->
-      <div class="px-6 py-4 border-t flex justify-between" style="border-color: var(--emittiv-dark);">
+      <div class="pt-4 mt-4 border-t flex justify-between" style="border-color: var(--emittiv-dark);">
         <button
           onclick={previousStep}
           disabled={currentStep === 1}

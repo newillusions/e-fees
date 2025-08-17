@@ -79,6 +79,10 @@
           {$connectionStore.errorMessage.substring(0, 25)}{$connectionStore.errorMessage.length > 25 ? '...' : ''}
         </span>
       {/if}
+      <!-- Version Display -->
+      <span class="text-xs" style="color: var(--emittiv-light); opacity: 0.5;">
+        v0.9.0
+      </span>
     </div>
     
   </div>

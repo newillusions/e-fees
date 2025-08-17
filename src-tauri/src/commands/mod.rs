@@ -42,7 +42,7 @@ use std::fs;
 use serde_json::Value;
 use chrono::Utc;
 use std::path::{Path, PathBuf};
-use tauri::State;
+use tauri::{State, Manager, AppHandle};
 use log::{error, info};
 use serde::{Serialize, Deserialize};
 use tauri_plugin_dialog::DialogExt;
@@ -881,7 +881,7 @@ crud_command!(
 /// - `Ok(String)`: Success message with file path
 /// - `Err(String)`: Error message if operation fails
 #[tauri::command]
-pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
     use serde_json::json;
@@ -994,7 +994,7 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
         .ok_or_else(|| format!("Contact not found for fee"))?;
 
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let project_folder_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
@@ -1143,7 +1143,7 @@ pub async fn write_fee_to_json(rfp_id: String, state: State<'_, AppState>) -> Re
 /// const result = await invoke('write_fee_to_json_safe', { fee_id: 'fee:some_id' });
 /// ```
 #[tauri::command]
-pub async fn write_fee_to_json_safe(fee_id: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn write_fee_to_json_safe(fee_id: String, state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
     use std::path::Path;
     use serde_json::json;
     
@@ -1212,7 +1212,7 @@ pub async fn write_fee_to_json_safe(fee_id: String, state: State<'_, AppState>) 
         .ok_or_else(|| format!("Contact not found for fee"))?;
 
     // Get settings and build file paths
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let project_folder_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
@@ -1778,7 +1778,7 @@ pub async fn position_window_4k(window: tauri::Window) -> Result<String, String>
 /// }
 /// ```
 #[tauri::command]
-pub async fn get_settings() -> Result<AppSettings, String> {
+pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> {
     info!("Reading settings from .env file");
     
     // Log the current working directory
@@ -1786,7 +1786,13 @@ pub async fn get_settings() -> Result<AppSettings, String> {
         info!("Current working directory: {:?}", cwd);
     }
     
-    let env_path = ".env"; // Should be in project root
+    // Use app data directory for .env file when running from app bundle
+    let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
+        app_data_dir.join(".env")
+    } else {
+        // Fallback to current directory for development
+        PathBuf::from(".env")
+    };
     let mut settings = AppSettings {
         surrealdb_url: None,
         surrealdb_ns: None,
@@ -1800,11 +1806,11 @@ pub async fn get_settings() -> Result<AppSettings, String> {
         project_folder_path: None,
     };
     
-    info!("Looking for .env file at: {}", env_path);
+    info!("Looking for .env file at: {:?}", env_path);
     
-    if Path::new(env_path).exists() {
+    if env_path.exists() {
         info!(".env file found, reading contents");
-        match fs::read_to_string(env_path) {
+        match fs::read_to_string(&env_path) {
             Ok(content) => {
                 info!("Successfully read .env file, parsing {} lines", content.lines().count());
                 // Parse .env file line by line
@@ -1897,15 +1903,32 @@ pub async fn get_settings() -> Result<AppSettings, String> {
 /// await invoke('save_settings', { settings });
 /// ```
 #[tauri::command]
-pub async fn save_settings(settings: AppSettings) -> Result<String, String> {
+pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Result<String, String> {
     info!("Saving settings to .env file");
     
-    let env_path = ".env"; // Should be in project root
+    // Use app data directory for .env file when running from app bundle
+    let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
+        let env_file_path = app_data_dir.join(".env");
+        
+        // Create app data directory if it doesn't exist
+        if let Some(parent_dir) = env_file_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent_dir) {
+                return Err(format!("Failed to create app data directory: {}", e));
+            }
+        }
+        
+        env_file_path
+    } else {
+        // Fallback to current directory for development
+        PathBuf::from(".env")
+    };
+    
+    info!("Using .env file path: {:?}", env_path);
     let mut lines = Vec::new();
     
     // Read existing .env file to preserve other variables
-    if Path::new(env_path).exists() {
-        match fs::read_to_string(env_path) {
+    if env_path.exists() {
+        match fs::read_to_string(&env_path) {
             Ok(content) => {
                 for line in content.lines() {
                     let line = line.trim();
@@ -1982,7 +2005,7 @@ pub async fn save_settings(settings: AppSettings) -> Result<String, String> {
     
     // Write to file atomically
     let content = lines.join("\n");
-    match fs::write(env_path, content) {
+    match fs::write(&env_path, content) {
         Ok(_) => {
             info!("Successfully saved settings to .env file");
             Ok("Settings saved successfully".to_string())
@@ -2394,7 +2417,7 @@ pub async fn validate_project_number(project_number: String, state: State<'_, Ap
 /// - Write permissions for destination directory
 /// - Windows: `xcopy` command must be available (standard on Windows)
 #[tauri::command]
-pub async fn create_project_with_template(project: NewProject, state: State<'_, AppState>) -> Result<Project, String> {
+pub async fn create_project_with_template(project: NewProject, state: State<'_, AppState>, app_handle: AppHandle) -> Result<Project, String> {
     info!("Creating project with template: {}", project.name);
     info!("Project data: {:?}", project);
     
@@ -2411,7 +2434,7 @@ pub async fn create_project_with_template(project: NewProject, state: State<'_, 
             
             // Get project folder path from settings
             info!("Getting settings for project folder path...");
-            let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+            let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
             
             info!("Settings loaded - project_folder_path: {:?}", settings.project_folder_path);
             
@@ -2589,11 +2612,11 @@ fn visit_dirs(dir: &Path, old_pattern: &str, new_pattern: &str) -> Result<(), St
 /// console.log(result); // "Template copied successfully to: /path/to/project"
 /// ```
 #[tauri::command]
-pub async fn copy_project_template(project_number: String, project_short_name: String) -> Result<String, String> {
+pub async fn copy_project_template(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<String, String> {
     info!("Copying project template for number: {}, short name: {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
@@ -2702,7 +2725,7 @@ pub async fn copy_project_template(project_number: String, project_short_name: S
 // }
 
 #[tauri::command]
-pub async fn populate_project_data(fp_id: String, project_number: String, project_short_name: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn populate_project_data(fp_id: String, project_number: String, project_short_name: String, state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
     info!("Populating project data for FP: {}, Project: {} {}", fp_id, project_number, project_short_name);
     
     // Fetch FP record data from database
@@ -2770,11 +2793,11 @@ pub async fn populate_project_data(fp_id: String, project_number: String, projec
     info!("Found FP: {} - {}", fp.name, fp.number);
     
     // Update JSON file with real data
-    let json_result = update_project_json_file(&project_number, &project_short_name, fp).await?;
+    let json_result = update_project_json_file(&project_number, &project_short_name, fp, app_handle.clone()).await?;
     info!("JSON file updated: {}", json_result);
     
     // Rename JSON file to remove " Default Values"
-    let rename_result = rename_json_file(&project_number, &project_short_name).await?;
+    let rename_result = rename_json_file(&project_number, &project_short_name, app_handle.clone()).await?;
     info!("JSON file renamed: {}", rename_result);
     
     Ok(format!("✅ Project data populated and file renamed: {} | {}", json_result, rename_result))
@@ -2793,13 +2816,13 @@ pub async fn populate_project_data(fp_id: String, project_number: String, projec
 /// # Returns
 /// - `Ok(String)`: Success message with update details
 /// - `Err(String)`: File operation or JSON parsing error
-async fn update_project_json_file(project_number: &str, project_short_name: &str, fp: &Fee) -> Result<String, String> {
+async fn update_project_json_file(project_number: &str, project_short_name: &str, fp: &Fee, app_handle: AppHandle) -> Result<String, String> {
     use serde_json::Value;
     
     info!("Updating JSON file for project: {} {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
     
@@ -2863,11 +2886,11 @@ async fn update_project_json_file(project_number: &str, project_short_name: &str
 /// - Original string if parsing fails
 /// Check if a project folder already exists
 #[tauri::command]
-pub async fn check_project_folder_exists(project_number: String, project_short_name: String) -> Result<bool, String> {
+pub async fn check_project_folder_exists(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<bool, String> {
     info!("Checking if project folder exists for: {} {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
@@ -2884,11 +2907,11 @@ pub async fn check_project_folder_exists(project_number: String, project_short_n
 
 /// Check if a var.json file already exists in a project folder
 #[tauri::command]
-pub async fn check_var_json_exists(project_number: String, project_short_name: String) -> Result<bool, String> {
+pub async fn check_var_json_exists(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<bool, String> {
     info!("Checking if var.json exists for: {} {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
@@ -2908,11 +2931,11 @@ pub async fn check_var_json_exists(project_number: String, project_short_name: S
 
 /// Check if a var.json template file (with "Default Values") exists in a project folder
 #[tauri::command]
-pub async fn check_var_json_template_exists(project_number: String, project_short_name: String) -> Result<bool, String> {
+pub async fn check_var_json_template_exists(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<bool, String> {
     info!("Checking if var template (Default Values) exists for: {} {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
@@ -2932,10 +2955,10 @@ pub async fn check_var_json_template_exists(project_number: String, project_shor
 
 /// Rename an existing folder with _old suffix
 #[tauri::command]
-pub async fn rename_folder_with_old_suffix(project_number: String, project_short_name: String) -> Result<String, String> {
+pub async fn rename_folder_with_old_suffix(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<String, String> {
     info!("Renaming folder with _old suffix: {} {}", project_number, project_short_name);
     
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
     
@@ -2971,10 +2994,10 @@ pub async fn rename_folder_with_old_suffix(project_number: String, project_short
 
 /// Rename an existing var.json file with _old suffix
 #[tauri::command]
-pub async fn rename_var_json_with_old_suffix(project_number: String, project_short_name: String) -> Result<String, String> {
+pub async fn rename_var_json_with_old_suffix(project_number: String, project_short_name: String, app_handle: AppHandle) -> Result<String, String> {
     info!("Renaming var.json with _old suffix: {} {}", project_number, project_short_name);
     
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
     
@@ -3026,11 +3049,11 @@ pub async fn rename_var_json_with_old_suffix(project_number: String, project_sho
 /// # Returns
 /// - `Ok(String)`: Success message with rename details
 /// - `Err(String)`: File operation error
-async fn rename_json_file(project_number: &str, project_short_name: &str) -> Result<String, String> {
+async fn rename_json_file(project_number: &str, project_short_name: &str, app_handle: AppHandle) -> Result<String, String> {
     info!("Renaming JSON file for project: {} {}", project_number, project_short_name);
     
     // Get project folder path from settings
-    let settings = get_settings().await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
     let base_path = settings.project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
     

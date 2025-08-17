@@ -154,7 +154,7 @@ impl DatabaseConfig {
     /// accidental connections with default credentials in production.
     pub fn from_env() -> Result<Self, String> {
         let url = env::var("SURREALDB_URL")
-            .unwrap_or_else(|_| "wss://10.0.1.17:8000".to_string());
+            .unwrap_or_else(|_| "ws://10.0.1.17:8000".to_string());
         
         // Parse TLS verification settings from environment
         let verify_certificates = env::var("SURREALDB_VERIFY_CERTS")
@@ -168,13 +168,13 @@ impl DatabaseConfig {
         Ok(DatabaseConfig {
             url,
             namespace: env::var("SURREALDB_NS")
-                .map_err(|_| "SURREALDB_NS environment variable is required".to_string())?,
+                .unwrap_or_else(|_| "emittiv".to_string()),
             database: env::var("SURREALDB_DB")
-                .map_err(|_| "SURREALDB_DB environment variable is required".to_string())?,
+                .unwrap_or_else(|_| "projects".to_string()),
             username: env::var("SURREALDB_USER")
-                .map_err(|_| "SURREALDB_USER environment variable is required".to_string())?,
+                .unwrap_or_else(|_| "martin".to_string()),
             password: env::var("SURREALDB_PASS")
-                .map_err(|_| "SURREALDB_PASS environment variable is required".to_string())?,
+                .unwrap_or_else(|_| "placeholder_password".to_string()),
             verify_certificates,
             accept_invalid_hostnames,
         })
