@@ -38,3 +38,15 @@ src-tauri/Cargo.lock
 *.env
 !.env.example
 tauri-plugin-mcp/
+
+# Testing and development artifacts
+test_*.js
+test-*.js
+comprehensive*.js
+status_*.js
+manual_test_*.sh
+*.traineddata
+screenshots/
+final_*.png
+*.png
+history.txt

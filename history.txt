@@ -1,2 +1,0 @@
-#V2
-SELECT name, abbreviation, name_short FROM company WHERE name CONTAINS 'P&T' OR name CONTAINS 'PTG' OR abbreviation CONTAINS 'ptg' OR abbreviation CONTAINS 'PTG';
