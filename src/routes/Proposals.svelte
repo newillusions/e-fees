@@ -23,7 +23,7 @@
   });
   
   // Filter configuration for proposals
-  const filterConfig: FilterConfig<Rfp> = {
+  const filterConfig: FilterConfig<Fee> = {
     searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
     filterFields: {
       status: (proposal) => proposal.status,
@@ -437,7 +437,7 @@
 
 <!-- Proposal Detail Panel -->
 <ProposalDetail 
-  bind:isOpen={isProposalDetailOpen}
+  isOpen={isProposalDetailOpen}
   proposal={selectedProposal}
   on:close={handleCloseDetail}
   on:edit={handleEditFromDetail}

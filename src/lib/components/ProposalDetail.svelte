@@ -344,48 +344,51 @@
   ];
 </script>
 
-{#if proposal}
 <DetailPanel 
-  bind:isOpen 
+  {isOpen}
+  show={!!proposal}
   title="proposal"
   {customActions}
   on:edit={handleEdit}
   on:close={handleClose}
 >
   <svelte:fragment slot="header">
-    <DetailHeader 
-      name="{proposal.number} - {proposal.name}"
-      subtitle="{relatedProject?.name || 'Unknown Project'}{proposal.package ? ` • ${proposal.package}` : ''}"
-      location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
-      stats={[
-        { label: 'Revision', value: proposal.rev || 0 },
-        { label: 'Days Active', value: Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) }
-      ]}
-    />
+    {#if proposal}
+      <DetailHeader 
+        name="{proposal.number} - {proposal.name}"
+        subtitle="{relatedProject?.name || 'Unknown Project'}{proposal.package ? ` • ${proposal.package}` : ''}"
+        location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
+        stats={[
+          { label: 'Revision', value: proposal.rev || 0 },
+          { label: 'Days Active', value: Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) }
+        ]}
+      />
+    {/if}
   </svelte:fragment>
   
   <svelte:fragment slot="content">
-    <!-- Proposal Information Section -->
-    <InfoCard 
-      title="Proposal Information" 
-      columns={3}
-      fields={[
-        { label: 'FP Number', value: proposal.number },
-        { label: 'Status', value: proposal.status },
-        { label: 'Revision', value: proposal.rev.toString() },
-        { label: 'Issue Date', value: formatIssueDate(proposal.issue_date) },
-        { label: 'Staff Member', value: proposal.staff_name || '—' },
-        { label: 'Created', value: proposal.time.created_at, type: 'date' },
-        { label: 'Last Updated', value: proposal.time.updated_at, type: 'date' },
-        { label: 'Record ID', value: extractId(proposal.id), type: 'id' }
-      ]}
-    />
+    {#if proposal}
+      <!-- Proposal Information Section -->
+      <InfoCard 
+        title="Proposal Information" 
+        columns={3}
+        fields={[
+          { label: 'FP Number', value: proposal.number },
+          { label: 'Status', value: proposal.status },
+          { label: 'Revision', value: proposal.rev.toString() },
+          { label: 'Issue Date', value: formatIssueDate(proposal.issue_date) },
+          { label: 'Staff Member', value: proposal.staff_name || '—' },
+          { label: 'Created', value: proposal.time.created_at, type: 'date' },
+          { label: 'Last Updated', value: proposal.time.updated_at, type: 'date' },
+          { label: 'Record ID', value: extractId(proposal.id), type: 'id' }
+        ]}
+      />
     
     <!-- Project Information Section -->
     {#if relatedProject}
       <InfoCard 
         title="Related Project" 
-        columns={2}
+        columns={3}
         fields={[
           { label: 'Project Number', value: relatedProject.number?.id || '—' },
           { label: 'Project Name', value: relatedProject.name },
@@ -411,7 +414,7 @@
     {#if relatedCompany}
       <InfoCard 
         title="Client Company" 
-        columns={2}
+        columns={3}
         fields={[
           { label: 'Company Name', value: relatedCompany.name },
           { label: 'Short Name', value: relatedCompany.name_short },
@@ -437,7 +440,7 @@
     {#if relatedContact}
       <InfoCard 
         title="Primary Contact" 
-        columns={2}
+        columns={3}
         fields={[
           { label: 'Full Name', value: relatedContact.full_name },
           { label: 'Position', value: relatedContact.position || '—' },
@@ -456,17 +459,18 @@
         </div>
       </section>
     {/if}
+    {/if}
   </svelte:fragment>
 </DetailPanel>
-{/if}
 
 <!-- Warning/Success Modal -->
 <WarningModal
-  bind:isOpen={warningModal.isOpen}
+  isOpen={warningModal.isOpen}
   title={warningModal.title}
   message={warningModal.message}
   confirmText={warningModal.confirmText}
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
+  on:close={() => warningModal.isOpen = false}
 />

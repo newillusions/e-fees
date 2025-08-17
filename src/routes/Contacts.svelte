@@ -248,7 +248,7 @@
 
 <!-- Contact Detail Panel -->
 <ContactDetail 
-  bind:isOpen={isContactDetailOpen}
+  isOpen={isContactDetailOpen}
   contact={selectedContact}
   on:close={handleCloseDetail}
   on:edit={handleEditFromDetail}

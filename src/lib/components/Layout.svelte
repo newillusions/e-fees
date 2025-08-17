@@ -64,12 +64,9 @@
             style="border-color: rgba(255, 255, 255, 0.1);">
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center space-x-2">
-          <span class="text-sm font-medium" style="color: var(--emittiv-white);">
-            24-97108
-          </span>
-          <span class="text-sm" style="color: var(--emittiv-light);">
-            Museum of Future
-          </span>
+          <h2 class="text-lg font-medium" style="color: var(--emittiv-white);">
+            {pageTitle}
+          </h2>
         </div>
         <div class="flex items-center space-x-1">
           <!-- Search button -->

@@ -86,98 +86,53 @@
   $: initials = contact ? contact.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '';
 </script>
 
-{#if contact}
 <DetailPanel 
-  bind:isOpen 
+  {isOpen}
+  show={!!contact}
   title="contact"
   on:edit={handleEdit}
   on:close={handleClose}
 >
   <svelte:fragment slot="header">
-    <DetailHeader 
-      name={contact.full_name}
-      subtitle="{contact.position || 'Contact'}{relatedCompany ? ` • ${relatedCompany.name}` : ''}"
-      location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
-      stats={[
-        { label: 'Proposals', value: contactFees.length },
-        { label: 'Awarded', value: contactFees.filter(fee => fee.status === 'Awarded').length },
-        { label: 'Pending', value: contactFees.filter(fee => fee.status === 'Sent').length },
-        { label: 'Lost', value: contactFees.filter(fee => fee.status === 'Lost').length }
-      ]}
-    />
+    {#if contact}
+      <DetailHeader 
+        name={contact.full_name}
+        subtitle="{contact.position || 'Contact'}{relatedCompany ? ` • ${relatedCompany.name}` : ''}"
+        location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
+        stats={[
+          { label: 'Proposals', value: contactFees.length },
+          { label: 'Awarded', value: contactFees.filter(fee => fee.status === 'Awarded').length },
+          { label: 'Pending', value: contactFees.filter(fee => fee.status === 'Sent').length },
+          { label: 'Lost', value: contactFees.filter(fee => fee.status === 'Lost').length }
+        ]}
+      />
+    {/if}
   </svelte:fragment>
   
   <svelte:fragment slot="content">
-    <!-- Contact Information Section -->
-    <section>
-      <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Contact Information</h2>
-      <div class="bg-emittiv-black rounded-xl px-3 py-2 border border-emittiv-dark">
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Full Name</div>
-            <div class="text-sm text-emittiv-white">{contact.full_name}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Position</div>
-            <div class="text-sm text-emittiv-white">{contact.position || '—'}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">First Name</div>
-            <div class="text-sm text-emittiv-white">{contact.first_name || '—'}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Last Name</div>
-            <div class="text-sm text-emittiv-white">{contact.last_name || '—'}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1 flex items-center gap-1">
-              <span>Email</span>
-              <ActionButton 
-                type="email" 
-                href="mailto:{contact.email}" 
-                ariaLabel="Email {contact.full_name}"
-                size={14}
-              />
-            </div>
-            <div class="text-sm text-emittiv-white">{contact.email}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1 flex items-center gap-1">
-              <span>Phone</span>
-              {#if contact.phone}
-                <ActionButton 
-                  type="phone" 
-                  href="tel:{contact.phone}" 
-                  ariaLabel="Call {contact.full_name}"
-                  size={14}
-                />
-              {/if}
-            </div>
-            <div class="text-sm text-emittiv-white">
-              {contact.phone || '—'}
-            </div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Created</div>
-            <div class="text-sm text-emittiv-white">{new Date(contact.time.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Last Updated</div>
-            <div class="text-sm text-emittiv-white">{new Date(contact.time.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-          </div>
-          <div>
-            <div class="text-xs text-emittiv-light mb-1">Record ID</div>
-            <div class="text-sm text-emittiv-white">{extractId(contact.id)}</div>
-          </div>
-        </div>
-      </div>
-    </section>
+    {#if contact}
+      <!-- Contact Information Section -->
+      <InfoCard 
+        title="Contact Information" 
+        columns={3}
+        fields={[
+          { label: 'Full Name', value: contact.full_name },
+          { label: 'Position', value: contact.position || '—' },
+          { label: 'Email', value: contact.email },
+          { label: 'First Name', value: contact.first_name || '—' },
+          { label: 'Last Name', value: contact.last_name || '—' },
+          { label: 'Phone', value: contact.phone || '—' },
+          { label: 'Created', value: contact.time.created_at, type: 'date' },
+          { label: 'Last Updated', value: contact.time.updated_at, type: 'date' },
+          { label: 'Record ID', value: extractId(contact.id), type: 'id' }
+        ]}
+      />
     
     <!-- Company Information Section -->
     {#if relatedCompany}
       <InfoCard 
         title="Company Information" 
-        columns={2}
+        columns={3}
         fields={[
           { label: 'Company Name', value: relatedCompany.name },
           { label: 'Short Name', value: relatedCompany.name_short },
@@ -253,6 +208,6 @@
         </div>
       {/if}
     </section>
+    {/if}
   </svelte:fragment>
 </DetailPanel>
-{/if}

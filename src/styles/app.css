@@ -315,6 +315,11 @@
     box-shadow: var(--shadow-card-hover);
   }
   
+  .list-card:active {
+    transform: translateY(-1px);
+    transition: transform 0.1s ease-in-out;
+  }
+  
   /* Navigation active states */
   .nav-active {
     background: linear-gradient(

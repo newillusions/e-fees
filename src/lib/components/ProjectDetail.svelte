@@ -240,43 +240,46 @@
   ];
 </script>
 
-{#if project}
 <DetailPanel 
-  bind:isOpen 
+  {isOpen}
+  show={!!project}
   title="project"
   {customActions}
   on:edit={handleEdit}
   on:close={handleClose}
 >
   <svelte:fragment slot="header">
-    <DetailHeader 
-      name="{project.number?.id} - {project.name}"
-      subtitle="{project.name_short} • {project.area}"
-      location="{project.city}, {project.country}"
-      stats={[
-        { label: 'Proposals', value: projectFees.length },
-        { label: 'Awarded', value: projectFees.filter(fee => fee.status === 'Awarded').length },
-        { label: 'Pending', value: projectFees.filter(fee => fee.status === 'Sent').length },
-        { label: 'Lost', value: projectFees.filter(fee => fee.status === 'Lost').length }
-      ]}
-    />
+    {#if project}
+      <DetailHeader 
+        name="{project.number?.id} - {project.name}"
+        subtitle="{project.name_short} • {project.area}"
+        location="{project.city}, {project.country}"
+        stats={[
+          { label: 'Proposals', value: projectFees.length },
+          { label: 'Awarded', value: projectFees.filter(fee => fee.status === 'Awarded').length },
+          { label: 'Pending', value: projectFees.filter(fee => fee.status === 'Sent').length },
+          { label: 'Lost', value: projectFees.filter(fee => fee.status === 'Lost').length }
+        ]}
+      />
+    {/if}
   </svelte:fragment>
   
   <svelte:fragment slot="content">
-    <!-- Project Information Section -->
-    <InfoCard 
-      title="Project Information" 
-      columns={3}
-      fields={[
-        { label: 'Project Number', value: project.number?.id || '—' },
-        { label: 'Status', value: project.status },
-        { label: 'Folder', value: project.folder || '—', clickable: true },
-        { label: 'Created', value: project.time.created_at, type: 'date' },
-        { label: 'Last Updated', value: project.time.updated_at, type: 'date' },
-        { label: 'Record ID', value: extractId(project.id), type: 'id' }
-      ]}
-      on:field-click={handleFieldClick}
-    />
+    {#if project}
+      <!-- Project Information Section -->
+      <InfoCard 
+        title="Project Information" 
+        columns={3}
+        fields={[
+          { label: 'Project Number', value: project.number?.id || '—' },
+          { label: 'Status', value: project.status },
+          { label: 'Folder', value: project.folder || '—', clickable: true },
+          { label: 'Created', value: project.time.created_at, type: 'date' },
+          { label: 'Last Updated', value: project.time.updated_at, type: 'date' },
+          { label: 'Record ID', value: extractId(project.id), type: 'id' }
+        ]}
+        on:field-click={handleFieldClick}
+      />
     
     <!-- Fee Proposals Section -->
     <section>
@@ -336,17 +339,18 @@
         </div>
       {/if}
     </section>
+    {/if}
   </svelte:fragment>
 </DetailPanel>
-{/if}
 
 <!-- Warning/Success Modal -->
 <WarningModal
-  bind:isOpen={warningModal.isOpen}
+  isOpen={warningModal.isOpen}
   title={warningModal.title}
   message={warningModal.message}
   confirmText={warningModal.confirmText}
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
+  on:close={() => warningModal.isOpen = false}
 />

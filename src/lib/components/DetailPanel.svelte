@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { fly, fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   
   const dispatch = createEventDispatcher();
   
@@ -7,9 +9,9 @@
   export let title = '';
   export let canEdit = true;
   export let customActions = [];
+  export let show = true; // New prop to control visibility
   
   function closePanel() {
-    isOpen = false;
     dispatch('close');
   }
   
@@ -26,19 +28,26 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-{#if isOpen}
+{#if show && isOpen}
   <!-- Backdrop -->
   <div 
-    class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 transition-opacity"
+    class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
     on:click={closePanel}
     on:keydown={(e) => e.key === 'Escape' && closePanel()}
     role="button"
     tabindex="-1"
     aria-label="Close detail view"
+    in:fade={{ duration: 200 }}
+    out:fade={{ duration: 200 }}
   ></div>
   
   <!-- Sliding Panel -->
-  <div class="fixed top-0 right-0 h-full bg-emittiv-black z-50 overflow-hidden slide-in-right shadow-2xl flex flex-col" style="width: calc(100vw - 240px); left: 240px;">
+  <div 
+    class="fixed top-0 right-0 h-full bg-emittiv-black z-50 overflow-hidden shadow-2xl flex flex-col" 
+    style="width: calc(100vw - 240px); left: 240px;"
+    in:fly={{ x: '100%', duration: 300, easing: cubicOut }}
+    out:fly={{ x: '100%', duration: 250, easing: cubicOut }}
+  >
     <!-- Header Section -->
     <div class="relative bg-gradient-to-br from-emittiv-darker to-emittiv-black border-b border-emittiv-dark">
       <!-- Top Right Buttons -->
@@ -95,19 +104,6 @@
 {/if}
 
 <style>
-  .slide-in-right {
-    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-  
   /* Custom scrollbar for dark theme */
   .overflow-y-auto::-webkit-scrollbar {
     width: 8px;

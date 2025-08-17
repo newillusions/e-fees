@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { fade, scale } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   
   const dispatch = createEventDispatcher();
   
@@ -16,7 +18,7 @@
       onConfirm();
     }
     dispatch('confirm');
-    closeModal();
+    dispatch('close');
   }
   
   function handleCancel() {
@@ -24,11 +26,6 @@
       onCancel();
     }
     dispatch('cancel');
-    closeModal();
-  }
-  
-  function closeModal() {
-    isOpen = false;
     dispatch('close');
   }
   
@@ -48,21 +45,25 @@
 {#if isOpen}
   <!-- Backdrop -->
   <div 
-    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-80 flex items-center justify-center"
     on:click={cancelText ? handleCancel : handleConfirm}
     on:keydown={(e) => e.key === 'Escape' && (cancelText ? handleCancel() : handleConfirm())}
     role="button"
     tabindex="-1"
     aria-label="Close modal"
+    in:fade={{ duration: 200 }}
+    out:fade={{ duration: 200 }}
   >
     <!-- Modal -->
     <div 
-      class="bg-emittiv-darker rounded-lg shadow-2xl border border-emittiv-dark max-w-xs w-full mx-4 transform scale-100 opacity-100 transition-all"
+      class="bg-emittiv-darker rounded-lg shadow-2xl border border-emittiv-dark max-w-xs w-full mx-4"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      in:scale={{ duration: 250, start: 0.95, easing: cubicOut }}
+      out:scale={{ duration: 200, start: 0.95, easing: cubicOut }}
     >
       <!-- Header -->
       <div class="px-4 py-3 border-b border-emittiv-dark">
@@ -102,32 +103,3 @@
   </div>
 {/if}
 
-<style>
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  
-  @keyframes scaleIn {
-    from {
-      transform: scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  
-  .fixed {
-    animation: fadeIn 0.2s ease-out;
-  }
-  
-  .transform {
-    animation: scaleIn 0.2s ease-out;
-  }
-</style>

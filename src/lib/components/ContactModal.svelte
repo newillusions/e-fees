@@ -278,6 +278,7 @@
   {isOpen} 
   title={mode === 'create' ? 'New Contact' : 'Edit Contact'}
   maxWidth="500px"
+  customClass="contact-modal"
   on:close={closeModal}
 >
   <!-- Form -->
@@ -528,3 +529,10 @@
   mode="create"
   on:close={handleCompanyModalClose}
 />
+
+<style>
+  /* Ensure ContactModal appears above DetailPanel (z-50) */
+  :global(.contact-modal) {
+    z-index: 65 !important;
+  }
+</style>

@@ -539,6 +539,84 @@ export const feesActions = {
     }
   },
 
+  async updateStatus(id: string, newStatus: string) {
+    try {
+      feesLoading.set(true);
+      feesError.set('');
+      
+      // Get the current fee to preserve other fields  
+      const { get } = await import('svelte/store');
+      const currentFees = get(feesStore);
+      const currentFee = currentFees.find(fee => {
+        // Extract Fee ID for comparison
+        let feeId = '';
+        if (typeof fee.id === 'string') {
+          feeId = fee.id;
+        } else if (fee.id && typeof fee.id === 'object') {
+          const thingObj = fee.id as any;
+          if (thingObj.tb && thingObj.id) {
+            if (typeof thingObj.id === 'string') {
+              feeId = thingObj.id;
+            } else if (thingObj.id.String) {
+              feeId = thingObj.id.String;
+            }
+          }
+        }
+        return feeId === id || `rfp:${feeId}` === id || feeId === `rfp:${id}`;
+      });
+      
+      if (!currentFee) {
+        throw new Error(`Fee with ID ${id} not found`);
+      }
+      
+      // Update only the status field
+      const updatedFeeData = {
+        ...currentFee,
+        status: newStatus,
+        time: {
+          ...currentFee.time,
+          updated_at: new Date().toISOString()
+        }
+      };
+      
+      // Remove the id field for the update
+      delete (updatedFeeData as any).id;
+      
+      const updatedFee = await updateFee(id, updatedFeeData);
+      if (updatedFee) {
+        feesStore.update(fees => 
+          fees.map(fee => {
+            // Extract Fee ID for comparison
+            let feeId = '';
+            if (typeof fee.id === 'string') {
+              feeId = fee.id;
+            } else if (fee.id && typeof fee.id === 'object') {
+              const thingObj = fee.id as any;
+              if (thingObj.tb && thingObj.id) {
+                if (typeof thingObj.id === 'string') {
+                  feeId = thingObj.id;
+                } else if (thingObj.id.String) {
+                  feeId = thingObj.id.String;
+                }
+              }
+            }
+            
+            return feeId === id ? updatedFee : fee;
+          })
+        );
+        return updatedFee;
+      } else {
+        throw new Error('Status update returned null');
+      }
+    } catch (error) {
+      const errorMessage = error?.toString() || 'Failed to update fee status';
+      feesError.set(errorMessage);
+      throw error;
+    } finally {
+      feesLoading.set(false);
+    }
+  },
+
   async delete(id: string) {
     try {
       feesLoading.set(true);

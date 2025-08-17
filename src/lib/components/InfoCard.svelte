@@ -33,7 +33,7 @@
 <section>
   <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">{title}</h2>
   <div class="bg-emittiv-black rounded-xl px-3 py-2 border border-emittiv-dark">
-    <div class="grid grid-cols-{columns} gap-2 text-sm">
+    <div class="grid gap-2 text-sm" class:grid-cols-1={columns === 1} class:grid-cols-2={columns === 2} class:grid-cols-3={columns === 3} class:grid-cols-4={columns === 4}>
       {#each fields as field, index}
         <div>
           <div class="text-xs text-emittiv-light">{field.label}</div>

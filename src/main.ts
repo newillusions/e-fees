@@ -1,6 +1,7 @@
 import './styles/app.css'
 import { mount } from 'svelte'
 import App from './App.svelte'
+import { securityMonitor, getSecurityReport } from './lib/security'
 
 const appDiv = document.getElementById('app');
 if (appDiv) {
@@ -8,6 +9,25 @@ if (appDiv) {
     const app = mount(App, {
       target: appDiv,
     });
+
+    // Initialize security monitoring in development
+    if (import.meta.env.DEV) {
+      console.log('Security Monitor initialized');
+      
+      // Make security report available globally for debugging
+      (window as any).getSecurityReport = getSecurityReport;
+      
+      // Log initial security validation
+      setTimeout(() => {
+        const report = getSecurityReport();
+        if (report.validation.errors.length > 0) {
+          console.error('Security Errors:', report.validation.errors);
+        }
+        if (report.validation.warnings.length > 0) {
+          console.warn('Security Warnings:', report.validation.warnings);
+        }
+      }, 1000);
+    }
   } catch (error) {
     console.error('Failed to create Svelte app:', error);
     // Fallback to show error

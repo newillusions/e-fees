@@ -212,7 +212,7 @@
 
 <!-- Company Detail View -->
 <CompanyDetail 
-  bind:isOpen={isCompanyDetailOpen}
+  isOpen={isCompanyDetailOpen}
   company={selectedCompany}
   on:close={handleCloseDetail}
   on:edit={handleEditFromDetail}

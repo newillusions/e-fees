@@ -261,6 +261,7 @@
   {isOpen} 
   title={mode === 'create' ? 'New Company' : 'Edit Company'}
   maxWidth="500px"
+  customClass="company-modal"
   on:close={closeModal}
 >
   <!-- Form -->
@@ -483,3 +484,10 @@
     </div>
   </form>
 </BaseModal>
+
+<style>
+  /* Ensure CompanyModal appears above DetailPanel (z-50) */
+  :global(.company-modal) {
+    z-index: 65 !important;
+  }
+</style>

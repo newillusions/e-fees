@@ -106,7 +106,7 @@
 </script>
 
 <div 
-  class="fixed inset-0 z-50 flex items-center justify-center transition-all duration-500"
+  class="fixed inset-0 z-90 flex items-center justify-center transition-all duration-500"
   style="background: linear-gradient(135deg, #000, #333);"
   class:opacity-0={!isConnecting}
   class:pointer-events-none={!isConnecting}

@@ -47,11 +47,6 @@
 </script>
 
 <div class="p-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-heading font-bold text-emittiv-white mb-2">Dashboard</h1>
-    <p class="text-emittiv-lighter">Welcome to your Fee Proposal Management System</p>
-    
-  </div>
   
   <!-- Stats Grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

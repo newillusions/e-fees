@@ -275,7 +275,7 @@
 
 <!-- Project Detail Panel -->
 <ProjectDetail 
-  bind:isOpen={isProjectDetailOpen}
+  isOpen={isProjectDetailOpen}
   project={selectedProject}
   on:close={handleCloseDetail}
   on:edit={handleEditFromDetail}

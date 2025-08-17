@@ -138,43 +138,46 @@
   }
 </script>
 
-{#if company}
 <DetailPanel 
-  bind:isOpen 
+  {isOpen}
+  show={!!company}
   title="company"
   on:edit={handleEdit}
   on:close={handleClose}
 >
   <svelte:fragment slot="header">
-    <DetailHeader 
-      name={company.name}
-      subtitle="{company.name_short} • {company.abbreviation}"
-      location="{company.city}, {company.country}"
-      stats={[
-        { label: 'Projects', value: companyProjects.length },
-        { label: 'Proposals', value: companyFees.length },
-        { label: 'Contacts', value: companyContacts.length }
-      ]}
-    />
+    {#if company}
+      <DetailHeader 
+        name={company.name}
+        subtitle="{company.name_short} • {company.abbreviation}"
+        location="{company.city}, {company.country}"
+        stats={[
+          { label: 'Projects', value: companyProjects.length },
+          { label: 'Proposals', value: companyFees.length },
+          { label: 'Contacts', value: companyContacts.length }
+        ]}
+      />
+    {/if}
   </svelte:fragment>
   
   <svelte:fragment slot="content">
-    <!-- Company Information Section -->
-    <InfoCard 
-      title="Company Information" 
-      columns={2}
-      fields={[
-        { label: 'Name', value: company.name },
-        { label: 'Short Name', value: company.name_short },
-        { label: 'Abbreviation', value: company.abbreviation },
-        { label: 'Location', value: `${company.city}, ${company.country}` },
-        { label: 'Registration Number', value: company.reg_no || '—' },
-        { label: 'Tax Number', value: company.tax_no || '—' },
-        { label: 'Created', value: company.time.created_at, type: 'date' },
-        { label: 'Last Updated', value: company.time.updated_at, type: 'date' },
-        { label: 'Record ID', value: extractId(company.id), type: 'id' }
-      ]}
-    />
+    {#if company}
+      <!-- Company Information Section -->
+      <InfoCard 
+        title="Company Information" 
+        columns={3}
+        fields={[
+          { label: 'Name', value: company.name },
+          { label: 'Short Name', value: company.name_short },
+          { label: 'Abbreviation', value: company.abbreviation },
+          { label: 'Location', value: `${company.city}, ${company.country}` },
+          { label: 'Registration Number', value: company.reg_no || '—' },
+          { label: 'Tax Number', value: company.tax_no || '—' },
+          { label: 'Created', value: company.time.created_at, type: 'date' },
+          { label: 'Last Updated', value: company.time.updated_at, type: 'date' },
+          { label: 'Record ID', value: extractId(company.id), type: 'id' }
+        ]}
+      />
     
     <!-- Projects Section -->
     <section>
@@ -234,17 +237,45 @@
       {:else}
         <div class="grid gap-2">
           {#each companyFees as fee}
+            {@const relatedProject = $projectsStore.find(p => {
+              if (!fee.project_id || !p?.id) return false;
+              
+              let projectIdStr = '';
+              if (typeof p.id === 'string') {
+                projectIdStr = p.id;
+              } else if (p.id && typeof p.id === 'object') {
+                if ((p.id as any).tb && (p.id as any).id) {
+                  if (typeof (p.id as any).id === 'string') {
+                    projectIdStr = `${(p.id as any).tb}:${(p.id as any).id}`;
+                  } else if ((p.id as any).id.String) {
+                    projectIdStr = `${(p.id as any).tb}:${(p.id as any).id.String}`;
+                  }
+                }
+              }
+              
+              let feeProjectId = '';
+              if (typeof fee.project_id === 'string') {
+                feeProjectId = fee.project_id;
+              } else if (fee.project_id && typeof fee.project_id === 'object') {
+                if ((fee.project_id as any).tb && (fee.project_id as any).id) {
+                  if (typeof (fee.project_id as any).id === 'string') {
+                    feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
+                  } else if ((fee.project_id as any).id.String) {
+                    feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
+                  }
+                }
+              }
+              
+              const id1 = feeProjectId.replace('projects:', '');
+              const id2 = projectIdStr.replace('projects:', '');
+              return id1 === id2 || feeProjectId === projectIdStr;
+            })}
             <ListCard clickable={false}>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
-                  <div>
-                    <h3 class="text-xs font-medium text-emittiv-light">Fee Number:</h3>
-                    <p class="text-sm text-emittiv-white">{fee.number}</p>
-                  </div>
-                  <div class="mt-2">
-                    <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
-                    <p class="text-sm text-emittiv-lighter">{fee.name}{#if fee.package} - {fee.package}{/if}</p>
-                  </div>
+                  <h3 class="text-sm font-medium text-emittiv-white truncate">
+                    {[fee.number, relatedProject?.name, fee.package].filter(Boolean).join(' - ')}
+                  </h3>
                   <div class="mt-2 flex items-center gap-4 text-xs text-emittiv-light">
                     <span>Rev: {fee.rev}</span>
                     {#if fee.staff_name}
@@ -293,30 +324,32 @@
                   <p class="text-sm text-emittiv-lighter">
                     {contact.position}
                   </p>
-                  <div class="flex items-center gap-4 mt-1 text-xs text-emittiv-light">
-                    <span>{contact.email}</span>
-                    <span>{contact.phone}</span>
+                  <div class="flex text-xs text-emittiv-light mt-1">
+                    <div class="flex items-center gap-1" style="width: 180px;">
+                      <a 
+                        href="tel:{contact.phone || '#'}" 
+                        class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+                        aria-label="Call {contact.full_name}"
+                      >
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </a>
+                      <span>{contact.phone || '+000 000 000 000'}</span>
+                    </div>
+                    <div class="flex items-center gap-1 flex-1">
+                      <a 
+                        href="mailto:{contact.email}" 
+                        class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+                        aria-label="Email {contact.full_name}"
+                      >
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 7.89a2 2 0 002.83 0L21 9M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </a>
+                      <span>{contact.email}</span>
+                    </div>
                   </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <a 
-                    href="mailto:{contact.email}" 
-                    class="p-2 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-all"
-                    aria-label="Email {contact.full_name}"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 7.89a2 2 0 002.83 0L21 9M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </a>
-                  <a 
-                    href="tel:{contact.phone}" 
-                    class="p-2 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-all"
-                    aria-label="Call {contact.full_name}"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </a>
                 </div>
               </div>
             </ListCard>
@@ -324,6 +357,6 @@
         </div>
       {/if}
     </section>
+    {/if}
   </svelte:fragment>
 </DetailPanel>
-{/if}

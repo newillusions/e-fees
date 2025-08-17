@@ -28,7 +28,7 @@
   interface ProjectFormData {
     name: string;
     name_short: string;
-    status: 'Draft' | 'FP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
+    status: 'Draft' | 'RFP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
     area: string;
     city: string;
     country: string;
@@ -52,7 +52,7 @@
   // Status options
   const statusOptions = [
     { value: 'Draft', label: 'Draft' },
-    { value: 'FP', label: 'FP' },
+    { value: 'RFP', label: 'RFP' },
     { value: 'Active', label: 'Active' },
     { value: 'On Hold', label: 'On Hold' },
     { value: 'Completed', label: 'Completed' },

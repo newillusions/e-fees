@@ -79,35 +79,34 @@ DEFINE INDEX project_number_unique ON projects FIELDS number.id UNIQUE;
 
 ---
 
-### 2. `rfp` Table
+### 2. `fee` Table
 
 **Purpose**: Fee proposals created by emittiv staff  
-**ID Format**: `rfp:⟨YY_CCCNN_R⟩` (auto-generated)  
+**ID Format**: `fee:⟨YY_CCCNN_R⟩` (auto-generated)  
 **Type**: SCHEMAFULL
 
 ```sql
-DEFINE TABLE rfp SCHEMAFULL;
-DEFINE FIELD name ON rfp TYPE string ASSERT $value != NONE AND string::len($value) > 0 DEFAULT 'Fee Proposal';
-DEFINE FIELD number ON rfp TYPE string ASSERT $value != NONE;
-DEFINE FIELD project_id ON rfp TYPE record<projects> ASSERT $value != NONE;
-DEFINE FIELD company_id ON rfp TYPE record<company> ASSERT $value != NONE;
-DEFINE FIELD contact_id ON rfp TYPE record<contacts> ASSERT $value != NONE;
-DEFINE FIELD status ON rfp TYPE string ASSERT $value INSIDE ['Draft', 'Active', 'Sent', 'Awarded', 'Lost', 'Cancelled', 'Revised'] DEFAULT 'Draft';
-DEFINE FIELD stage ON rfp TYPE string ASSERT $value INSIDE ['Draft', 'Prepared', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost'] DEFAULT 'Draft';
-DEFINE FIELD issue_date ON rfp TYPE string ASSERT $value != NONE AND string::len($value) = 6;
-DEFINE FIELD activity ON rfp TYPE option<string>;
-DEFINE FIELD package ON rfp TYPE option<string>;
-DEFINE FIELD strap_line ON rfp TYPE option<string> DEFAULT 'sensory design studio';
-DEFINE FIELD staff_name ON rfp TYPE option<string>;
-DEFINE FIELD staff_email ON rfp TYPE option<string>;
-DEFINE FIELD staff_phone ON rfp TYPE option<string>;
-DEFINE FIELD staff_position ON rfp TYPE option<string>;
-DEFINE FIELD rev ON rfp TYPE int DEFAULT 1 VALUE math::max($value.revisions[*].revision_number);
-DEFINE FIELD revisions ON rfp TYPE array<object> DEFAULT [];
-DEFINE FIELD time ON rfp TYPE object VALUE { created_at: time::now(), updated_at: time::now() };
+DEFINE TABLE fee SCHEMAFULL;
+DEFINE FIELD name ON fee TYPE string ASSERT $value != NONE AND string::len($value) > 0 DEFAULT 'Fee Proposal';
+DEFINE FIELD number ON fee TYPE string ASSERT $value != NONE;
+DEFINE FIELD project_id ON fee TYPE record<projects> ASSERT $value != NONE;
+DEFINE FIELD company_id ON fee TYPE record<company> ASSERT $value != NONE;
+DEFINE FIELD contact_id ON fee TYPE record<contacts> ASSERT $value != NONE;
+DEFINE FIELD status ON fee TYPE string ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Completed', 'Lost', 'Cancelled', 'On Hold', 'Revised'] DEFAULT 'Draft';
+DEFINE FIELD issue_date ON fee TYPE string ASSERT $value != NONE AND string::len($value) = 6;
+DEFINE FIELD activity ON fee TYPE option<string>;
+DEFINE FIELD package ON fee TYPE option<string>;
+DEFINE FIELD strap_line ON fee TYPE option<string> DEFAULT 'sensory design studio';
+DEFINE FIELD staff_name ON fee TYPE option<string>;
+DEFINE FIELD staff_email ON fee TYPE option<string>;
+DEFINE FIELD staff_phone ON fee TYPE option<string>;
+DEFINE FIELD staff_position ON fee TYPE option<string>;
+DEFINE FIELD rev ON fee TYPE int DEFAULT 1 VALUE math::max($value.revisions[*].revision_number);
+DEFINE FIELD revisions ON fee TYPE array<object> DEFAULT [];
+DEFINE FIELD time ON fee TYPE object VALUE { created_at: time::now(), updated_at: time::now() };
 
 -- Unique constraint on project + revision
-DEFINE INDEX rfp_project_rev ON rfp FIELDS project_id, rev UNIQUE;
+DEFINE INDEX fee_project_rev ON fee FIELDS project_id, rev UNIQUE;
 ```
 
 **Revision Management**:

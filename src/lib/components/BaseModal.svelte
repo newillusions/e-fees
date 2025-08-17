@@ -1,10 +1,13 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { fade, scale } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   
   export let isOpen = false;
   export let title = '';
   export let maxWidth = '450px';
   export let showCloseButton = true;
+  export let customClass = '';
   
   const dispatch = createEventDispatcher();
   
@@ -30,17 +33,29 @@
 {#if isOpen}
   <!-- Modal backdrop -->
   <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    class="fixed inset-0 bg-black bg-opacity-50 z-60 {customClass}"
     on:click={handleBackdropClick}
+    on:keydown={() => {}}
+    role="button"
+    tabindex="-1"
+    aria-label="Close modal"
+    in:fade={{ duration: 200 }}
+    out:fade={{ duration: 200 }}
+  ></div>
+  
+  <!-- Modal container -->
+  <div 
+    class="fixed inset-0 z-60 flex items-center justify-center p-4 pointer-events-none {customClass}"
     role="dialog"
     aria-modal="true"
     aria-labelledby={title ? 'modal-title' : undefined}
   >
-    <!-- Modal container -->
     <div 
-      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
+      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto pointer-events-auto"
       style="padding: 16px; max-width: {maxWidth};"
       on:click={(e) => e.stopPropagation()}
+      in:scale={{ duration: 250, start: 0.95, easing: cubicOut }}
+      out:scale={{ duration: 200, start: 0.95, easing: cubicOut }}
     >
       {#if title || showCloseButton}
         <!-- Modal Header -->

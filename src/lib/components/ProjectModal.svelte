@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { projectsActions } from '$lib/stores';
+  import { projectsActions, feesStore } from '$lib/stores';
   import { extractSurrealId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
@@ -12,7 +12,8 @@
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project } from '$lib/../types';
+  import StatusChangeModal from './StatusChangeModal.svelte';
+  import type { Project, Fee } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
   
@@ -22,6 +23,11 @@
   
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
+  
+  // Status change modal state
+  let showStatusChangeModal = false;
+  let pendingStatusChange = '';
+  let originalProject: Project | null = null;
   
   // Form data with better typing
   interface ProjectFormData {
@@ -115,6 +121,24 @@
   
   // Update project with loading state  
   async function handleUpdate() {
+    if (!project || !originalProject) return;
+    
+    // Check if status has changed
+    const statusChanged = formData.status !== originalProject.status;
+    
+    if (statusChanged) {
+      // Show status change confirmation modal
+      pendingStatusChange = formData.status;
+      showStatusChangeModal = true;
+      return;
+    }
+    
+    // If no status change, proceed with normal update
+    await performProjectUpdate();
+  }
+  
+  // Perform the actual project update
+  async function performProjectUpdate() {
     if (!project) return;
     
     await withLoadingState(async () => {
@@ -138,6 +162,74 @@
       closeModal();
       return result;
     }, operationActions, 'saving');
+  }
+  
+  // Handle status change confirmation
+  async function handleStatusChangeConfirm(event) {
+    const { project: projectData, newStatus, folderChangeRequired, affectedFees, feesToUpdate, suggestedFeeStatus } = event.detail;
+    
+    // Update the form data with the new status
+    formData.status = newStatus;
+    
+    // Close the status change modal
+    showStatusChangeModal = false;
+    
+    await withLoadingState(async () => {
+      let folderResult = null;
+      
+      // Perform folder movement if required
+      if (folderChangeRequired && project?.number?.id) {
+        const { moveProjectFolder } = await import('$lib/api/folderManagement');
+        try {
+          folderResult = await moveProjectFolder(project.number.id, newStatus);
+        } catch (error) {
+          console.error('Folder movement failed:', error);
+          folderResult = {
+            success: false,
+            message: `Failed to move folder: ${error}`,
+            old_path: undefined,
+            new_path: undefined
+          };
+        }
+      }
+      
+      // Perform the project update
+      await performProjectUpdate();
+      
+      // Update selected fee proposals if any
+      let updatedCount = 0;
+      if (feesToUpdate && feesToUpdate.length > 0) {
+        for (const feeUpdate of feesToUpdate) {
+          try {
+            const { feesActions } = await import('$lib/stores');
+            await feesActions.updateStatus(feeUpdate.id, feeUpdate.newStatus);
+            updatedCount++;
+          } catch (error) {
+            console.error(`Failed to update fee ${feeUpdate.id}:`, error);
+          }
+        }
+      }
+      
+      // Build success message
+      let message = 'Project updated successfully';
+      if (folderResult && folderResult.success) {
+        message += ` and ${folderResult.message}`;
+      }
+      if (updatedCount > 0) {
+        message += `. ${updatedCount} proposal(s) updated to ${suggestedFeeStatus}`;
+      }
+      
+      operationActions.setMessage(message);
+      return true;
+    }, operationActions, 'saving');
+  }
+  
+  // Handle status change cancellation
+  function handleStatusChangeCancel() {
+    // Revert the status back to original
+    formData.status = originalProject?.status || 'Draft';
+    showStatusChangeModal = false;
+    pendingStatusChange = '';
   }
   
   // Delete project with loading state
@@ -180,8 +272,46 @@
     dispatch('close');
   }
   
+  // Get related fees for impact analysis
+  $: relatedFees = project ? $feesStore.filter(fee => {
+    if (!fee.project_id || !project?.id) return false;
+    
+    let feeProjectId = '';
+    if (typeof fee.project_id === 'string') {
+      feeProjectId = fee.project_id;
+    } else if (fee.project_id && typeof fee.project_id === 'object') {
+      if ((fee.project_id as any).tb && (fee.project_id as any).id) {
+        if (typeof (fee.project_id as any).id === 'string') {
+          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
+        } else if ((fee.project_id as any).id.String) {
+          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
+        }
+      }
+    }
+    
+    let projectIdStr = '';
+    if (typeof project.id === 'string') {
+      projectIdStr = project.id;
+    } else if (project.id && typeof project.id === 'object') {
+      if ((project.id as any).tb && (project.id as any).id) {
+        if (typeof (project.id as any).id === 'string') {
+          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id}`;
+        } else if ((project.id as any).id.String) {
+          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id.String}`;
+        }
+      }
+    }
+    
+    const id1 = feeProjectId.replace('projects:', '');
+    const id2 = projectIdStr.replace('projects:', '');
+    return id1 === id2 || feeProjectId === projectIdStr;
+  }) : [];
+
   // Load form data when project changes
   $: if (project && mode === 'edit') {
+    // Store original project for comparison
+    originalProject = { ...project };
+    
     formData = {
       name: project.name || '',
       name_short: project.name_short || '',
@@ -400,3 +530,14 @@
     </div>
   </form>
 </BaseModal>
+
+<!-- Status Change Confirmation Modal -->
+<StatusChangeModal
+  isOpen={showStatusChangeModal}
+  project={originalProject}
+  newStatus={pendingStatusChange}
+  relatedFees={relatedFees}
+  mode="project-primary"
+  on:confirm={handleStatusChangeConfirm}
+  on:cancel={handleStatusChangeCancel}
+/>
