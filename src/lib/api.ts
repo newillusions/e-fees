@@ -1213,6 +1213,53 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Get application settings from the backend.
+   * 
+   * @returns Promise<any> - Current application settings
+   * 
+   * @example
+   * ```typescript
+   * const settings = await ApiClient.getSettings();
+   * console.log('Database URL:', settings.surrealdb_url);
+   * ```
+   */
+  static async getSettings(): Promise<any> {
+    try {
+      return await invoke<any>('get_settings');
+    } catch (error) {
+      console.error('Failed to get settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save application settings to the backend.
+   * 
+   * @param settings - Settings object to save
+   * @returns Promise<string> - Success or error message
+   * 
+   * @example
+   * ```typescript
+   * const settings = {
+   *   surrealdb_url: 'ws://10.0.1.17:8000',
+   *   surrealdb_ns: 'emittiv',
+   *   surrealdb_db: 'projects',
+   *   surrealdb_user: 'user',
+   *   surrealdb_pass: 'password'
+   * };
+   * await ApiClient.saveSettings(settings);
+   * ```
+   */
+  static async saveSettings(settings: any): Promise<string> {
+    try {
+      return await invoke<string>('save_settings', { settings });
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      throw error;
+    }
+  }
+
   // ============================================================================
   // FILE SYSTEM OPERATIONS
   // ============================================================================
@@ -1780,6 +1827,8 @@ export const {
   
   // System operations
   positionWindow4K,
+  getSettings,
+  saveSettings,
   selectFolder,
   openFolderInExplorer,
   

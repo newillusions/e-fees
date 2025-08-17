@@ -233,10 +233,11 @@
               
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-username" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Username
                   </label>
                   <input
+                    id="db-username"
                     type="text"
                     bind:value={dbConfig.username}
                     placeholder="username"
@@ -246,10 +247,11 @@
                 </div>
                 
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-password" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Password
                   </label>
                   <input
+                    id="db-password"
                     type="password"
                     bind:value={dbConfig.password}
                     placeholder="••••••••"
@@ -278,10 +280,11 @@
             
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="staff-name" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Your Name
                 </label>
                 <input
+                  id="staff-name"
                   type="text"
                   bind:value={staffInfo.name}
                   placeholder="John Doe"
@@ -291,10 +294,11 @@
               </div>
               
               <div>
-                <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="staff-email" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Email Address
                 </label>
                 <input
+                  id="staff-email"
                   type="email"
                   bind:value={staffInfo.email}
                   placeholder="john.doe@company.com"
@@ -305,10 +309,11 @@
               
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="staff-phone" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Phone Number
                   </label>
                   <input
+                    id="staff-phone"
                     type="tel"
                     bind:value={staffInfo.phone}
                     placeholder="+971 50 123 4567"
@@ -318,10 +323,11 @@
                 </div>
                 
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="staff-position" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Position
                   </label>
                   <input
+                    id="staff-position"
                     type="text"
                     bind:value={staffInfo.position}
                     placeholder="Project Manager"
@@ -340,10 +346,11 @@
             
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="project-path" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Project Folder Path
                 </label>
                 <input
+                  id="project-path"
                   type="text"
                   bind:value={projectPath}
                   placeholder="/path/to/projects/"
