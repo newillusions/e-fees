@@ -96,15 +96,16 @@ pub fn run() {
                 info!("Using default configuration or environment variables");
             }
 
-            // Initialize database manager
+            // Initialize database manager - use unconfigured if env vars not available
             let db_manager = match DatabaseManager::new() {
-                Ok(manager) => manager,
+                Ok(manager) => {
+                    info!("Database manager initialized with environment configuration");
+                    manager
+                },
                 Err(e) => {
-                    error!("Failed to initialize database manager: {}", e);
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Database configuration error: {}", e)
-                    )));
+                    info!("Environment variables not available ({}), using unconfigured database manager", e);
+                    info!("Application will start with FirstRunSetup modal");
+                    DatabaseManager::new_unconfigured()
                 }
             };
             let app_state = Arc::new(Mutex::new(db_manager));
@@ -156,19 +157,25 @@ pub fn run() {
                     }
                 };
                 
-                // Initialize database with the cloned manager
-                let initialized = match manager_clone.initialize().await {
-                    Ok(_) => {
-                        info!("Database initialized successfully");
-                        // Update the original manager in the state
-                        if let Ok(mut manager) = init_state.lock() {
-                            *manager = manager_clone;
+                // Initialize database with the cloned manager - skip if unconfigured
+                let initialized = if manager_clone.config.url.is_empty() {
+                    info!("Database manager is unconfigured, skipping initialization");
+                    info!("User will need to configure database through FirstRunSetup");
+                    false
+                } else {
+                    match manager_clone.initialize().await {
+                        Ok(_) => {
+                            info!("Database initialized successfully");
+                            // Update the original manager in the state
+                            if let Ok(mut manager) = init_state.lock() {
+                                *manager = manager_clone;
+                            }
+                            true
                         }
-                        true
-                    }
-                    Err(e) => {
-                        error!("Failed to initialize database: {}", e);
-                        false
+                        Err(e) => {
+                            error!("Failed to initialize database: {}", e);
+                            false
+                        }
                     }
                 };
                 

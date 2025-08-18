@@ -887,6 +887,82 @@ impl DatabaseManager {
         })
     }
 
+    /// Creates a new DatabaseManager without configuration for first-run scenarios.
+    /// 
+    /// This method allows the application to start even when database environment
+    /// variables are not set, enabling the FirstRunSetup modal to be displayed.
+    /// 
+    /// # Returns
+    /// 
+    /// A DatabaseManager with a placeholder configuration and disconnected status.
+    /// This manager cannot be used for database operations until properly configured.
+    pub fn new_unconfigured() -> Self {
+        let config = DatabaseConfig {
+            url: String::new(),
+            namespace: String::new(),
+            database: String::new(),
+            username: String::new(),
+            password: String::new(),
+            verify_certificates: true,
+            accept_invalid_hostnames: false,
+        };
+
+        let mut status = ConnectionStatus::default();
+        status.is_connected = false;
+        status.error_message = Some("Database not configured. Please use the settings to configure database connection.".to_string());
+
+        Self {
+            client: None,
+            status: Arc::new(Mutex::new(status)),
+            config,
+        }
+    }
+
+    /// Reconfigure the DatabaseManager with new settings.
+    /// 
+    /// This method allows updating the database configuration after initial startup,
+    /// typically called when the user completes the FirstRunSetup.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `url` - Database connection URL
+    /// * `namespace` - SurrealDB namespace
+    /// * `database` - SurrealDB database name
+    /// * `username` - Authentication username  
+    /// * `password` - Authentication password
+    /// 
+    /// # Returns
+    /// 
+    /// Returns Ok(()) if configuration is updated successfully, Err if configuration is invalid.
+    pub fn reconfigure(&mut self, url: String, namespace: String, database: String, username: String, password: String) -> Result<(), String> {
+        // Validate required fields
+        if url.is_empty() || namespace.is_empty() || database.is_empty() || username.is_empty() || password.is_empty() {
+            return Err("All database configuration fields are required".to_string());
+        }
+
+        // Update configuration
+        self.config = DatabaseConfig {
+            url,
+            namespace,
+            database,
+            username,
+            password,
+            verify_certificates: true,
+            accept_invalid_hostnames: false,
+        };
+
+        // Reset client connection
+        self.client = None;
+        
+        // Update status to indicate configuration is ready but not connected
+        self.update_status(false, Some("Database reconfigured. Connection will be attempted automatically.".to_string()));
+        
+        info!("Database manager reconfigured - URL: {}, NS: {}, DB: {}, User: {}", 
+              self.config.url, self.config.namespace, self.config.database, self.config.username);
+        
+        Ok(())
+    }
+
     // Initialize database connection
     pub async fn initialize(&mut self) -> Result<(), Error> {
         info!("Initializing database connection to {}", self.config.url);
