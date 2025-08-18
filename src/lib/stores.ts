@@ -149,8 +149,9 @@ export const projectsActions = {
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load projects';
       projectsError.set(errorMessage);
-      console.warn('Failed to load projects from database, using mock data:', error);
-      // Keep mock data in store - don't overwrite with empty array
+      console.warn('Failed to load projects from database:', error);
+      // Clear store when database connection fails
+      projectsStore.set([]);
     } finally {
       projectsLoading.set(false);
     }
@@ -259,7 +260,9 @@ export const companiesActions = {
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load companies';
       companiesError.set(errorMessage);
-      console.warn('Failed to load companies from database, using mock data:', error);
+      console.warn('Failed to load companies from database:', error);
+      // Clear store when database connection fails
+      companiesStore.set([]);
     } finally {
       companiesLoading.set(false);
     }
@@ -368,6 +371,9 @@ export const contactsActions = {
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load contacts';
       contactsError.set(errorMessage);
+      console.warn('Failed to load contacts from database:', error);
+      // Clear store when database connection fails
+      contactsStore.set([]);
     } finally {
       contactsLoading.set(false);
     }
@@ -477,7 +483,9 @@ export const feesActions = {
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load fees';
       feesError.set(errorMessage);
-      console.warn('Failed to load Fees from database, using mock data:', error);
+      console.warn('Failed to load fees from database:', error);
+      // Clear store when database connection fails
+      feesStore.set([]);
     } finally {
       feesLoading.set(false);
     }

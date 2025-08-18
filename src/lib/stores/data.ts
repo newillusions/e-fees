@@ -183,11 +183,11 @@ const mockContacts: Contact[] = [
 export { mockProjects, mockFees, mockCompanies, mockContacts };
 
 
-// Stores
-export const projects = writable<Project[]>(mockProjects);
-export const fees = writable<Fee[]>(mockFees);
-export const companies = writable<Company[]>(mockCompanies);
-export const contacts = writable<Contact[]>(mockContacts);
+// Stores - initialize with empty arrays, not mock data
+export const projects = writable<Project[]>([]);
+export const fees = writable<Fee[]>([]);
+export const companies = writable<Company[]>([]);
+export const contacts = writable<Contact[]>([]);
 
 // Alternative export names for consistency
 export const projectStore = projects;
@@ -195,11 +195,11 @@ export const feeStore = fees;
 export const companyStore = companies;
 export const contactStore = contacts;
 
-// Stats computed from data
+// Stats computed from data - start with zeros
 export const stats = writable({
-  totalProjects: mockProjects.length,
-  activeFees: mockFees.filter(r => r.status !== 'Lost' && r.status !== 'Cancelled').length,
-  totalCompanies: mockCompanies.length,
-  totalContacts: mockContacts.length,
-  totalFees: mockFees.length
+  totalProjects: 0,
+  activeFees: 0,
+  totalCompanies: 0,
+  totalContacts: 0,
+  totalFees: 0
 });
