@@ -43,7 +43,7 @@ use serde_json::Value;
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 use tauri::{State, Manager, AppHandle};
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Serialize, Deserialize};
 use tauri_plugin_dialog::DialogExt;
 
@@ -2035,6 +2035,62 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
             error!("Failed to write .env file: {}", e);
             Err(format!("Failed to write .env file: {}", e))
         }
+    }
+}
+
+/// Reload database configuration from the .env file and reinitialize connection.
+/// 
+/// This command allows the application to pick up new database settings without
+/// requiring a restart. It reloads settings from the .env file and reconfigures
+/// the database manager with the new connection parameters.
+/// 
+/// # Returns
+/// - `Ok(String)`: Success message indicating the database was reconfigured
+/// - `Err(String)`: Error message if reconfiguration failed
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// try {
+///   await invoke('reload_database_config');
+///   console.log('Database configuration reloaded successfully');
+/// } catch (error) {
+///   console.error('Failed to reload database config:', error);
+/// }
+/// ```
+#[tauri::command]
+pub async fn reload_database_config(state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
+    info!("Reloading database configuration from .env file");
+    
+    // Load fresh settings from the .env file
+    let settings = get_settings(app_handle).await?;
+    
+    // Extract database configuration
+    let url = settings.surrealdb_url.ok_or("Missing SurrealDB URL in settings")?;
+    let namespace = settings.surrealdb_ns.ok_or("Missing SurrealDB namespace in settings")?;
+    let database = settings.surrealdb_db.ok_or("Missing SurrealDB database in settings")?;
+    let username = settings.surrealdb_user.ok_or("Missing SurrealDB username in settings")?;
+    let password = settings.surrealdb_pass.ok_or("Missing SurrealDB password in settings")?;
+    
+    // Reconfigure the database manager
+    {
+        let mut manager = state.lock().map_err(|e| e.to_string())?;
+        manager.reconfigure(url, namespace, database, username, password)?;
+    }
+    
+    // Test the new connection
+    let manager_clone = {
+        let manager = state.lock().map_err(|e| e.to_string())?;
+        manager.clone()
+    };
+    
+    // Attempt to connect with new settings
+    let is_connected = manager_clone.check_connection().await;
+    if is_connected {
+        info!("Database reconfiguration successful - connection established");
+        Ok("Database configuration reloaded and connected successfully".to_string())
+    } else {
+        warn!("Database reconfiguration completed but connection test failed");
+        Ok("Database configuration reloaded but connection test failed - check settings".to_string())
     }
 }
 

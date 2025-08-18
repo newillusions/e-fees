@@ -1260,6 +1260,35 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Reload database configuration from .env file without requiring app restart.
+   * 
+   * This method triggers the backend to reload database settings from the .env file
+   * and reinitialize the database connection with the new parameters. This allows
+   * for real-time configuration changes without requiring an application restart.
+   * 
+   * @returns Promise<string> Success or failure message from the backend
+   * @throws Error if the reload operation fails
+   * 
+   * @example
+   * ```typescript
+   * try {
+   *   const result = await ApiClient.reloadDatabaseConfig();
+   *   console.log('Database reloaded:', result);
+   * } catch (error) {
+   *   console.error('Failed to reload database:', error);
+   * }
+   * ```
+   */
+  static async reloadDatabaseConfig(): Promise<string> {
+    try {
+      return await invoke<string>('reload_database_config');
+    } catch (error) {
+      console.error('Failed to reload database configuration:', error);
+      throw error;
+    }
+  }
+
   // ============================================================================
   // FILE SYSTEM OPERATIONS
   // ============================================================================
@@ -1829,6 +1858,7 @@ export const {
   positionWindow4K,
   getSettings,
   saveSettings,
+  reloadDatabaseConfig,
   selectFolder,
   openFolderInExplorer,
   

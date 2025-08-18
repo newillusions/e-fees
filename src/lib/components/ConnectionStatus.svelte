@@ -6,32 +6,104 @@
   let checkInterval: number;
   let showDebugInfo = false;
   
-  async function checkConnection() {
+  async function checkConnection(retries = 0) {
     try {
       const status = await getConnectionStatus();
+      const wasConnected = $connectionStore.isConnected;
+      const nowConnected = status.is_connected;
+      
       connectionStore.set({
         isConnected: status.is_connected,
         status: status.is_connected ? 'Connected' : 'Disconnected',
         lastChecked: status.last_check ? new Date(status.last_check) : undefined,
         errorMessage: status.error_message || undefined
       });
+      
+      // If we just connected for the first time, load data
+      if (!wasConnected && nowConnected) {
+        console.log('Database connected via status check - loading data...');
+        const { loadAllData } = await import('../stores');
+        await loadAllData();
+      }
+      
+      // If still not connected and we have retries left, try again
+      if (!status.is_connected && retries < 5) {
+        console.log(`Connection check ${retries + 1}/5 failed, retrying in ${2 + retries}s...`);
+        setTimeout(() => checkConnection(retries + 1), (2 + retries) * 1000);
+      }
+      
+      // FALLBACK: If connection status check fails but this is first time, try loading data anyway
+      // (backend might be working even if status check fails due to timing issues)
+      if (!status.is_connected && retries === 0 && !wasConnected) {
+        console.log('Connection status shows disconnected, but attempting data load as fallback...');
+        try {
+          console.log('Starting fallback loadAllData...');
+          const { loadAllData } = await import('../stores');
+          console.log('loadAllData function imported successfully');
+          await loadAllData();
+          console.log('Fallback data loading succeeded - backend is actually working');
+          // Update connection status to reflect reality
+          connectionStore.set({
+            isConnected: true,
+            status: 'Connected',
+            lastChecked: new Date(),
+            errorMessage: undefined
+          });
+        } catch (dataError) {
+          console.log('Fallback data loading failed:', dataError);
+          console.error('Fallback data loading error details:', dataError);
+        }
+      }
     } catch (error) {
       console.error('Failed to check connection:', error);
-      connectionStore.set({
-        isConnected: false,
-        status: 'Connection Error',
-        lastChecked: new Date(),
-        errorMessage: error?.toString() || 'Unknown error'
-      });
+      
+      // On initial startup, retry a few times before showing error
+      if (retries < 5) {
+        console.log(`Connection error ${retries + 1}/5, retrying in ${2 + retries}s...`);
+        connectionStore.set({
+          isConnected: false,
+          status: 'Connecting...',
+          lastChecked: new Date(),
+          errorMessage: undefined
+        });
+        setTimeout(() => checkConnection(retries + 1), (2 + retries) * 1000);
+      } else {
+        // FALLBACK: Even if connection checks completely fail, try loading data
+        console.log('All connection checks failed, attempting fallback data load...');
+        try {
+          console.log('Starting final fallback loadAllData...');
+          const { loadAllData } = await import('../stores');
+          console.log('Final fallback loadAllData function imported successfully');
+          await loadAllData();
+          console.log('Fallback data loading succeeded despite connection check failures');
+          connectionStore.set({
+            isConnected: true,
+            status: 'Connected',
+            lastChecked: new Date(),
+            errorMessage: undefined
+          });
+        } catch (dataError) {
+          console.log('Fallback data loading also failed:', dataError);
+          console.error('Final fallback data loading error details:', dataError);
+          connectionStore.set({
+            isConnected: false,
+            status: 'Connection Error',
+            lastChecked: new Date(),
+            errorMessage: error?.toString() || 'Unknown error'
+          });
+        }
+      }
     }
   }
   
   onMount(() => {
-    // Initial check
-    checkConnection();
+    // Delay initial check to allow backend startup time
+    setTimeout(() => {
+      checkConnection();
+    }, 2000); // 2 second delay for backend initialization
     
-    // Check connection every 30 seconds
-    checkInterval = setInterval(checkConnection, 30000) as any;
+    // Check connection every 30 seconds (without retries on periodic checks)
+    checkInterval = setInterval(() => checkConnection(0), 30000) as any;
   });
   
   onDestroy(() => {

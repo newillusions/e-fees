@@ -42,78 +42,50 @@
   async function handleSplashComplete() {
     showSplash = false;
     
-    // Test database connection first - with longer delay for backend initialization
+    // Simplified startup: just check settings and start the app
+    // The ConnectionStatus component will handle database connectivity display
     setTimeout(async () => {
       try {
-        const { checkDbConnection, getDbInfo, getSettings } = await import('$lib/api');
+        console.log('Starting app initialization...');
+        const { getSettings } = await import('$lib/api');
         
-        // Retry connection check up to 3 times to handle startup timing
-        let isConnected = false;
-        let retries = 3;
-        
-        while (!isConnected && retries > 0) {
-          isConnected = await checkDbConnection();
-          if (!isConnected && retries > 1) {
-            console.log(`Database connection attempt ${4 - retries} failed, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-          }
-          retries--;
-        }
-        
-        // Always check settings first to determine if this is truly a first run
         const settings = await getSettings();
+        console.log('Settings loaded:', settings ? 'found' : 'not found');
+        
         const isFirstRun = !settings || 
                           settings.surrealdb_user === 'placeholder' || 
                           !settings.surrealdb_user ||
                           !settings.surrealdb_url ||
                           settings.surrealdb_url === 'placeholder';
         
-        if (isConnected) {
-          const dbInfo = await getDbInfo();
-          appReady = true;
-        } else {
-          console.warn('Database connection failed during startup');
-          
-          if (isFirstRun) {
-            console.log('No valid settings found - showing first run setup');
-            showFirstRun = true;
-          } else {
-            console.log('Settings are configured but connection failed - continuing with app startup');
-            // Settings exist but connection failed - still allow app to start
-            // The connection status indicator will show the disconnected state
-            appReady = true;
-          }
-        }
-        
-        // Load data regardless
-        await loadAllData();
-      } catch (error) {
-        console.error('Failed to load initial data:', error);
-        
-        // Only show first run if settings are genuinely missing
-        try {
-          const { getSettings } = await import('$lib/api');
-          const settings = await getSettings();
-          const isFirstRun = !settings || 
-                            settings.surrealdb_user === 'placeholder' || 
-                            !settings.surrealdb_user ||
-                            !settings.surrealdb_url ||
-                            settings.surrealdb_url === 'placeholder';
-          
-          if (isFirstRun) {
-            console.log('Error during startup and no valid settings - showing first run setup');
-            showFirstRun = true;
-          } else {
-            console.log('Error during startup but settings exist - continuing with app');
-            appReady = true;
-          }
-        } catch (settingsError) {
-          console.error('Failed to check settings:', settingsError);
-          // If we can't even check settings, show first run
+        if (isFirstRun) {
+          console.log('First run detected - showing setup');
           showFirstRun = true;
+        } else {
+          console.log('Settings found - starting app');
+          appReady = true;
+          // Data will be loaded automatically when ConnectionStatus detects first connection
+          console.log('App ready - data loading will happen after database connection confirmed');
+          
+          // FALLBACK: Also attempt data loading directly after a delay
+          // This ensures data loads even if ConnectionStatus fails
+          setTimeout(async () => {
+            console.log('FALLBACK: Starting unconditional data loading after 5s delay...');
+            try {
+              await loadAllData();
+              console.log('FALLBACK: Unconditional data loading completed successfully');
+            } catch (error) {
+              console.log('FALLBACK: Unconditional data loading failed:', error);
+            }
+          }, 5000); // 5 second delay to allow ConnectionStatus to try first
         }
+      } catch (error) {
+        console.error('Failed during app initialization:', error);
+        // If we can't load settings at all, show first run setup
+        console.log('Settings load failed - showing first run setup');
+        showFirstRun = true;
       }
-    }, 1500); // Increased delay to allow backend initialization
+    }, 800); // Reduced delay since we're not trying to test connections
   }
   
   function handleFirstRunComplete() {

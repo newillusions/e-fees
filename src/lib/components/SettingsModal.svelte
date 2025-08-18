@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
+  import { reloadDatabaseConfig } from '$lib/api';
+  import { loadAllData } from '$lib/stores';
   
   const dispatch = createEventDispatcher();
   
@@ -59,14 +61,28 @@
         throw new Error('SurrealDB connection fields are required');
       }
       
-      // Save settings
+      // Save settings to .env file
       await settingsActions.save(settings);
-      saveMessage = 'Settings saved successfully! Please restart the application for changes to take effect.';
+      saveMessage = 'Settings saved! Applying configuration...';
       
-      // Auto-close after 2 seconds
+      // Reload database configuration in real-time
+      try {
+        const reloadResult = await reloadDatabaseConfig();
+        console.log('Database configuration reloaded:', reloadResult);
+        
+        // Refresh data with new connection
+        await loadAllData();
+        
+        saveMessage = 'Settings saved and applied successfully! Database connection updated.';
+      } catch (reloadError) {
+        console.warn('Database reload failed:', reloadError);
+        saveMessage = 'Settings saved but database reload failed. You may need to restart the app.';
+      }
+      
+      // Auto-close after 3 seconds (longer to show the reload process)
       setTimeout(() => {
         closeModal();
-      }, 2000);
+      }, 3000);
       
     } catch (error) {
       saveMessage = `Error: ${error.message || error}`;

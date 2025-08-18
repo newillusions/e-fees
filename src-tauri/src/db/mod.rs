@@ -188,6 +188,60 @@ impl DatabaseConfig {
             accept_invalid_hostnames,
         })
     }
+
+    /// Creates a DatabaseConfig from AppSettings (for production builds).
+    /// 
+    /// This method creates database configuration from the settings system
+    /// rather than environment variables, which is essential for production
+    /// builds where the .env file is not bundled with the application.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `settings` - Application settings loaded from the settings system
+    /// 
+    /// # Returns
+    /// 
+    /// - `Ok(DatabaseConfig)`: Successfully created configuration
+    /// - `Err(String)`: Missing required settings
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// let settings = get_settings(app_handle).await?;
+    /// let config = DatabaseConfig::from_settings(&settings)?;
+    /// let db_manager = DatabaseManager::from_config(config);
+    /// ```
+    pub fn from_settings(settings: &crate::commands::AppSettings) -> Result<Self, String> {
+        let url = settings.surrealdb_url.as_ref()
+            .ok_or("SurrealDB URL not configured in settings".to_string())?
+            .clone();
+        
+        let namespace = settings.surrealdb_ns.as_ref()
+            .ok_or("SurrealDB namespace not configured in settings".to_string())?
+            .clone();
+        
+        let database = settings.surrealdb_db.as_ref()
+            .ok_or("SurrealDB database not configured in settings".to_string())?
+            .clone();
+        
+        let username = settings.surrealdb_user.as_ref()
+            .ok_or("SurrealDB username not configured in settings".to_string())?
+            .clone();
+        
+        let password = settings.surrealdb_pass.as_ref()
+            .ok_or("SurrealDB password not configured in settings".to_string())?
+            .clone();
+        
+        Ok(DatabaseConfig {
+            url,
+            namespace,
+            database,
+            username,
+            password,
+            verify_certificates: true,  // Default to true for security
+            accept_invalid_hostnames: false,  // Default to false for security
+        })
+    }
 }
 
 /// Connection status tracking structure for real-time monitoring.
@@ -914,6 +968,29 @@ impl DatabaseManager {
         Self {
             client: None,
             status: Arc::new(Mutex::new(status)),
+            config,
+        }
+    }
+
+    /// Creates a new DatabaseManager with explicit configuration.
+    /// 
+    /// This method creates a DatabaseManager with provided configuration,
+    /// allowing initialization from the settings system instead of environment variables.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `config` - Database configuration loaded from settings
+    /// 
+    /// # Returns
+    /// 
+    /// A DatabaseManager configured with the provided settings.
+    pub fn from_config(config: DatabaseConfig) -> Self {
+        info!("Database manager initialized with provided config - URL: {}, NS: {}, DB: {}, User: {}", 
+              config.url, config.namespace, config.database, config.username);
+        
+        Self {
+            client: None,
+            status: Arc::new(Mutex::new(ConnectionStatus::default())),
             config,
         }
     }

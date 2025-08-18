@@ -140,12 +140,16 @@ export const globalErrorStore = derived(
 // Projects actions
 export const projectsActions = {
   async load() {
+    console.log('projectsActions.load() called');
     projectsLoading.set(true);
     projectsError.set(null);
     
     try {
+      console.log('Calling getProjects() API...');
       const projects = await getProjects();
+      console.log('getProjects() returned:', projects?.length || 0, 'projects');
       projectsStore.set(projects);
+      console.log('projectsStore updated with', projects?.length || 0, 'projects');
     } catch (error) {
       const errorMessage = error?.toString() || 'Failed to load projects';
       projectsError.set(errorMessage);

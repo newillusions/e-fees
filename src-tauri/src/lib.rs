@@ -5,7 +5,7 @@ use tauri::Manager;
 mod db;
 mod commands;
 
-use db::DatabaseManager;
+use db::{DatabaseManager, DatabaseConfig};
 use commands::{
     check_db_connection,
     get_connection_status,
@@ -33,6 +33,7 @@ use commands::{
     position_window_4k,
     get_settings,
     save_settings,
+    reload_database_config,
     select_folder,
     open_folder_in_explorer,
     investigate_record,
@@ -59,6 +60,33 @@ use commands::{
     list_projects_in_folder,
     validate_project_base_path,
 };
+
+/// Load database configuration from the settings system.
+/// 
+/// This function attempts to load database configuration from the application settings
+/// stored in the app data directory, which is essential for production builds where
+/// environment variables are not available.
+/// 
+/// # Arguments
+/// 
+/// * `app_handle` - Tauri application handle for accessing settings
+/// 
+/// # Returns
+/// 
+/// - `Ok(DatabaseConfig)`: Successfully loaded and parsed configuration
+/// - `Err(String)`: Configuration not found or invalid
+async fn load_database_config_from_settings(app_handle: &tauri::AppHandle) -> Result<DatabaseConfig, String> {
+    // Try to load settings from the app data directory
+    match commands::get_settings(app_handle.clone()).await {
+        Ok(settings) => {
+            // Convert settings to database configuration
+            DatabaseConfig::from_settings(&settings)
+        },
+        Err(e) => {
+            Err(format!("Failed to load settings: {}", e))
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -90,24 +118,14 @@ pub fn run() {
 
             info!("Initializing Fee Proposal Management Application");
             
-            // Load environment variables
+            // Load environment variables as fallback for development
             if let Err(e) = dotenvy::dotenv() {
                 info!("No .env file found or error loading it: {}", e);
-                info!("Using default configuration or environment variables");
+                info!("Will try settings system for production");
             }
 
-            // Initialize database manager - use unconfigured if env vars not available
-            let db_manager = match DatabaseManager::new() {
-                Ok(manager) => {
-                    info!("Database manager initialized with environment configuration");
-                    manager
-                },
-                Err(e) => {
-                    info!("Environment variables not available ({}), using unconfigured database manager", e);
-                    info!("Application will start with FirstRunSetup modal");
-                    DatabaseManager::new_unconfigured()
-                }
-            };
+            // Initialize with unconfigured state - will be configured async
+            let db_manager = DatabaseManager::new_unconfigured();
             let app_state = Arc::new(Mutex::new(db_manager));
             
             // Clone state for heartbeat monitoring
@@ -143,32 +161,42 @@ pub fn run() {
             
             // Initialize database connection in async context using Tauri's runtime
             let init_state = app_state.clone();
+            let app_handle_clone = app.handle().clone();
             
             tauri::async_runtime::spawn(async move {
                 info!("Starting database initialization");
                 
-                // Clone the manager and initialize it
-                let mut manager_clone = {
-                    if let Ok(manager) = init_state.lock() {
-                        manager.clone()
-                    } else {
-                        error!("Failed to acquire database manager lock during initialization");
-                        return;
+                // Try to load configuration from settings first, then from environment
+                let configured_manager = match load_database_config_from_settings(&app_handle_clone).await {
+                    Ok(config) => {
+                        info!("Database configuration loaded from settings");
+                        Some(DatabaseManager::from_config(config))
+                    },
+                    Err(settings_err) => {
+                        info!("Settings configuration not available ({}), trying environment variables", settings_err);
+                        
+                        match DatabaseManager::new() {
+                            Ok(manager) => {
+                                info!("Database configuration loaded from environment variables");
+                                Some(manager)
+                            },
+                            Err(env_err) => {
+                                info!("Environment configuration also not available ({})", env_err);
+                                info!("User will need to configure database through FirstRunSetup");
+                                None
+                            }
+                        }
                     }
                 };
                 
-                // Initialize database with the cloned manager - skip if unconfigured
-                let initialized = if manager_clone.config.url.is_empty() {
-                    info!("Database manager is unconfigured, skipping initialization");
-                    info!("User will need to configure database through FirstRunSetup");
-                    false
-                } else {
-                    match manager_clone.initialize().await {
+                let initialized = if let Some(mut manager) = configured_manager {
+                    // We have a configured manager, try to initialize it
+                    match manager.initialize().await {
                         Ok(_) => {
                             info!("Database initialized successfully");
                             // Update the original manager in the state
-                            if let Ok(mut manager) = init_state.lock() {
-                                *manager = manager_clone;
+                            if let Ok(mut state_manager) = init_state.lock() {
+                                *state_manager = manager;
                             }
                             true
                         }
@@ -177,6 +205,9 @@ pub fn run() {
                             false
                         }
                     }
+                } else {
+                    info!("Database manager remains unconfigured, skipping initialization");
+                    false
                 };
                 
                 if initialized {
@@ -217,6 +248,7 @@ pub fn run() {
             position_window_4k,
             get_settings,
             save_settings,
+            reload_database_config,
             select_folder,
             open_folder_in_explorer,
             investigate_record,
