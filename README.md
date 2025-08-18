@@ -48,8 +48,8 @@ cd fee-prop
 npm install
 
 # 3. Set up environment variables
-cp .env.example .env
-# Edit .env with your SurrealDB credentials
+cp .env.template .env
+# Edit .env with your actual SurrealDB credentials
 
 # 4. Start development server
 npm run tauri:dev
@@ -121,25 +121,39 @@ cd ..
 
 ### 3. Environment Configuration
 
-Create `.env` file in the project root:
+⚠️ **Security Note**: This application no longer includes hardcoded database credentials. All configuration must be provided through environment variables or the first-run setup wizard.
+
+Create `.env` file by copying the template:
+
+```bash
+cp .env.template .env
+```
+
+Then edit `.env` with your actual values:
 
 ```env
-# Database Configuration
-SURREALDB_URL=ws://10.0.1.17:8000
-SURREALDB_NS=emittiv
-SURREALDB_DB=projects
-SURREALDB_USER=martin
-SURREALDB_PASS=your_password_here
+# Database Configuration (All Required)
+SURREALDB_URL=ws://your-database-server:8000
+SURREALDB_NS=your_namespace
+SURREALDB_DB=your_database
+SURREALDB_USER=your_username
+SURREALDB_PASS=your_secure_password
 
-# Application Settings
-PROJECT_FOLDER_PATH=E:\emittiv\emittiv\01 Projects\01 RFPs
+# Optional TLS Configuration
+SURREALDB_VERIFY_CERTS=true
+SURREALDB_ACCEPT_INVALID_HOSTNAMES=false
 
-# Staff Information (for RFP generation)
-STAFF_NAME=Martin Smith
-STAFF_EMAIL=martin@emittiv.com
-STAFF_PHONE=+971-50-123-4567
-STAFF_POSITION=Principal Architect
+# Staff Information (can also be configured via UI)
+STAFF_NAME=Your Name
+STAFF_EMAIL=your.email@company.com
+STAFF_PHONE=+000 00 000 0000
+STAFF_POSITION=Your Position
+
+# Project Configuration (can also be configured via UI)  
+PROJECT_FOLDER_PATH=/path/to/your/projects/
 ```
+
+**Important**: Never commit the actual `.env` file to version control. The `.env.template` file provides a secure template with placeholder values.
 
 ## ⚙️ Configuration
 
@@ -149,12 +163,18 @@ The application supports multiple SurrealDB connection methods:
 
 #### WebSocket Connection (Recommended)
 ```env
-SURREALDB_URL=ws://10.0.1.17:8000
+SURREALDB_URL=ws://your-database-server:8000
 ```
 
 #### HTTP Connection (Fallback)
 ```env
-SURREALDB_URL=http://10.0.1.17:8000
+SURREALDB_URL=http://your-database-server:8000
+```
+
+#### Secure Connections (Production)
+```env
+SURREALDB_URL=wss://your-secure-database-server:8000
+SURREALDB_VERIFY_CERTS=true
 ```
 
 ### Authentication Levels
@@ -446,6 +466,9 @@ npm run tauri:build -- --target x86_64-unknown-linux-gnu
 SURREALDB_URL=wss://production-db.example.com
 SURREALDB_NS=production
 SURREALDB_DB=projects
+SURREALDB_USER=production_user
+SURREALDB_PASS=secure_production_password
+SURREALDB_VERIFY_CERTS=true
 ```
 
 #### Staging Environment
@@ -453,6 +476,8 @@ SURREALDB_DB=projects
 SURREALDB_URL=ws://staging-db.example.com
 SURREALDB_NS=staging
 SURREALDB_DB=projects
+SURREALDB_USER=staging_user
+SURREALDB_PASS=staging_password
 ```
 
 ## 🔍 Troubleshooting
@@ -472,9 +497,11 @@ Solution: Check network connectivity and database server status
 **Problem**: Authentication failed
 ```
 Solution: Verify credentials in .env file
-- Check SURREALDB_USER and SURREALDB_PASS
-- Ensure user has proper permissions
-- Try different authentication levels
+- Ensure all required environment variables are set (SURREALDB_URL, SURREALDB_NS, SURREALDB_DB, SURREALDB_USER, SURREALDB_PASS)
+- Check SURREALDB_USER and SURREALDB_PASS are correct
+- Verify database server is accessible at SURREALDB_URL
+- Ensure user has proper permissions in SurrealDB
+- Try the first-run setup wizard if no .env file exists
 ```
 
 #### Build Issues

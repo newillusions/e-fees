@@ -127,19 +127,22 @@ pub struct DatabaseConfig {
 impl DatabaseConfig {
     /// Creates a new DatabaseConfig from environment variables.
     /// 
-    /// This method reads database configuration from environment variables,
-    /// providing sensible defaults for development while requiring the password
-    /// to be explicitly set for security.
+    /// This method reads database configuration from environment variables.
+    /// All database configuration parameters are required for security reasons.
     /// 
     /// # Returns
     /// 
     /// - `Ok(DatabaseConfig)`: Successfully loaded configuration
-    /// - `Err(String)`: Missing required SURREALDB_PASS environment variable
+    /// - `Err(String)`: Missing required environment variables
     /// 
     /// # Examples
     /// 
     /// ```rust
-    /// // Set environment variables first
+    /// // Set all required environment variables
+    /// std::env::set_var("SURREALDB_URL", "ws://localhost:8000");
+    /// std::env::set_var("SURREALDB_NS", "your_namespace");
+    /// std::env::set_var("SURREALDB_DB", "your_database");
+    /// std::env::set_var("SURREALDB_USER", "your_username");
     /// std::env::set_var("SURREALDB_PASS", "your_password");
     /// 
     /// match DatabaseConfig::from_env() {
@@ -150,11 +153,11 @@ impl DatabaseConfig {
     /// 
     /// # Security Note
     /// 
-    /// The password is the only required environment variable to prevent
-    /// accidental connections with default credentials in production.
+    /// All database connection parameters are required to prevent
+    /// accidental connections with hardcoded default credentials.
     pub fn from_env() -> Result<Self, String> {
         let url = env::var("SURREALDB_URL")
-            .unwrap_or_else(|_| "ws://10.0.1.17:8000".to_string());
+            .map_err(|_| "SURREALDB_URL environment variable is required but not set".to_string())?;
         
         // Parse TLS verification settings from environment
         let verify_certificates = env::var("SURREALDB_VERIFY_CERTS")
@@ -165,16 +168,22 @@ impl DatabaseConfig {
             .map(|v| v.parse().unwrap_or(false))
             .unwrap_or(false); // Default to false for security
         
+        // Get required configuration from environment with proper error handling
+        let namespace = env::var("SURREALDB_NS")
+            .map_err(|_| "SURREALDB_NS environment variable is required but not set".to_string())?;
+        let database = env::var("SURREALDB_DB")
+            .map_err(|_| "SURREALDB_DB environment variable is required but not set".to_string())?;
+        let username = env::var("SURREALDB_USER")
+            .map_err(|_| "SURREALDB_USER environment variable is required but not set".to_string())?;
+        let password = env::var("SURREALDB_PASS")
+            .map_err(|_| "SURREALDB_PASS environment variable is required but not set".to_string())?;
+
         Ok(DatabaseConfig {
             url,
-            namespace: env::var("SURREALDB_NS")
-                .unwrap_or_else(|_| "emittiv".to_string()),
-            database: env::var("SURREALDB_DB")
-                .unwrap_or_else(|_| "projects".to_string()),
-            username: env::var("SURREALDB_USER")
-                .unwrap_or_else(|_| "martin".to_string()),
-            password: env::var("SURREALDB_PASS")
-                .unwrap_or_else(|_| "placeholder_password".to_string()),
+            namespace,
+            database,
+            username,
+            password,
             verify_certificates,
             accept_invalid_hostnames,
         })

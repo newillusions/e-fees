@@ -36,7 +36,14 @@ src-tauri/Cargo.lock
 
 # Additional security for environment files
 *.env
-!.env.example
+!.env.template
+
+# Sensitive configuration files
+passwords.txt
+claude_desktop_config.json
+.claude/
+
+# Development artifacts  
 tauri-plugin-mcp/
 
 # Testing and development artifacts

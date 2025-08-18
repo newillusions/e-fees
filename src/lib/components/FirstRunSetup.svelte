@@ -14,9 +14,9 @@
   
   // Form data
   let dbConfig = {
-    url: 'ws://10.0.1.17:8000',
-    namespace: 'emittiv',
-    database: 'projects',
+    url: '',
+    namespace: '',
+    database: '',
     username: '',
     password: ''
   };
@@ -28,7 +28,7 @@
     position: ''
   };
   
-  let projectPath = '/Volumes/base/mms/DevTest/';
+  let projectPath = '';
   
   // State
   let isTestingConnection = false;
@@ -191,13 +191,14 @@
             
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="db-url" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Database URL
                 </label>
                 <input
+                  id="db-url"
                   type="text"
                   bind:value={dbConfig.url}
-                  placeholder="ws://localhost:8000"
+                  placeholder="e.g., ws://localhost:8000 or ws://your-server:8000"
                   class="w-full px-3 py-2 rounded"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
@@ -205,26 +206,28 @@
               
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-namespace" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Namespace
                   </label>
                   <input
+                    id="db-namespace"
                     type="text"
                     bind:value={dbConfig.namespace}
-                    placeholder="emittiv"
+                    placeholder="your-namespace"
                     class="w-full px-3 py-2 rounded"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
                 
                 <div>
-                  <label class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-database" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Database
                   </label>
                   <input
+                    id="db-database"
                     type="text"
                     bind:value={dbConfig.database}
-                    placeholder="projects"
+                    placeholder="your-database"
                     class="w-full px-3 py-2 rounded"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
@@ -353,7 +356,7 @@
                   id="project-path"
                   type="text"
                   bind:value={projectPath}
-                  placeholder="/path/to/projects/"
+                  placeholder="e.g., /Users/username/Projects/ or C:\Projects\\"
                   class="w-full px-3 py-2 rounded"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
