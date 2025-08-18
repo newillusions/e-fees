@@ -49,16 +49,27 @@
         
         const isConnected = await checkDbConnection();
         
+        // Always check settings first to determine if this is truly a first run
+        const settings = await getSettings();
+        const isFirstRun = !settings || 
+                          settings.surrealdb_user === 'placeholder' || 
+                          !settings.surrealdb_user ||
+                          !settings.surrealdb_url ||
+                          settings.surrealdb_url === 'placeholder';
+        
         if (isConnected) {
           const dbInfo = await getDbInfo();
           appReady = true;
         } else {
-          console.warn('Database is not connected');
-          // Check if this is first run
-          const settings = await getSettings();
-          if (!settings || settings.surrealdb_user === 'placeholder' || !settings.surrealdb_user) {
+          console.warn('Database connection failed during startup');
+          
+          if (isFirstRun) {
+            console.log('No valid settings found - showing first run setup');
             showFirstRun = true;
           } else {
+            console.log('Settings are configured but connection failed - continuing with app startup');
+            // Settings exist but connection failed - still allow app to start
+            // The connection status indicator will show the disconnected state
             appReady = true;
           }
         }
@@ -67,8 +78,29 @@
         await loadAllData();
       } catch (error) {
         console.error('Failed to load initial data:', error);
-        // Show first run on error
-        showFirstRun = true;
+        
+        // Only show first run if settings are genuinely missing
+        try {
+          const { getSettings } = await import('$lib/api');
+          const settings = await getSettings();
+          const isFirstRun = !settings || 
+                            settings.surrealdb_user === 'placeholder' || 
+                            !settings.surrealdb_user ||
+                            !settings.surrealdb_url ||
+                            settings.surrealdb_url === 'placeholder';
+          
+          if (isFirstRun) {
+            console.log('Error during startup and no valid settings - showing first run setup');
+            showFirstRun = true;
+          } else {
+            console.log('Error during startup but settings exist - continuing with app');
+            appReady = true;
+          }
+        } catch (settingsError) {
+          console.error('Failed to check settings:', settingsError);
+          // If we can't even check settings, show first run
+          showFirstRun = true;
+        }
       }
     }, 500);
   }
