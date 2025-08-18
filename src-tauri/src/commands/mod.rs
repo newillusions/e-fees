@@ -1932,9 +1932,23 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
             Ok(content) => {
                 for line in content.lines() {
                     let line = line.trim();
-                    if line.is_empty() || line.starts_with('#') {
+                    if line.is_empty() {
                         lines.push(line.to_string());
                         continue;
+                    }
+                    
+                    // Skip our managed section headers to avoid duplicates
+                    if line.starts_with('#') {
+                        match line {
+                            "# SurrealDB Configuration" | 
+                            "# TLS Configuration" |
+                            "# Staff Information" | 
+                            "# Project Configuration" => continue,
+                            _ => {
+                                lines.push(line.to_string());
+                                continue;
+                            }
+                        }
                     }
                     
                     if let Some((key, _)) = line.split_once('=') {
@@ -1944,6 +1958,7 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                         match key {
                             "SURREALDB_URL" | "SURREALDB_NS" | "SURREALDB_DB" | 
                             "SURREALDB_USER" | "SURREALDB_PASS" |
+                            "SURREALDB_VERIFY_CERTS" | "SURREALDB_ACCEPT_INVALID_HOSTNAMES" |
                             "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
                             "PROJECT_FOLDER_PATH" => continue,
                             _ => lines.push(line.to_string()),
@@ -1979,6 +1994,12 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     if let Some(pass) = &settings.surrealdb_pass {
         lines.push(format!("SURREALDB_PASS=\"{}\"", pass));
     }
+    
+    // Add TLS configuration
+    lines.push("".to_string());
+    lines.push("# TLS Configuration".to_string());
+    lines.push("SURREALDB_VERIFY_CERTS=true".to_string());
+    lines.push("SURREALDB_ACCEPT_INVALID_HOSTNAMES=false".to_string());
     
     lines.push("".to_string());
     lines.push("# Staff Information".to_string());
