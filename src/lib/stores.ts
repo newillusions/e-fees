@@ -574,7 +574,7 @@ export const feesActions = {
             }
           }
         }
-        return feeId === id || `rfp:${feeId}` === id || feeId === `rfp:${id}`;
+        return feeId === id; // || `rfp:${feeId}` === id || feeId === `rfp:${id}`; // RFP table dropped - keeping for reference
       });
       
       if (!currentFee) {

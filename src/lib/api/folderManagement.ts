@@ -43,7 +43,7 @@ export async function moveProjectFromRfp(
   projectNumber: string, 
   destination: 'current' | 'archive' | 'inactive'
 ): Promise<FolderOperationResult> {
-  return await invoke('move_project_from_rfp', { 
+  return await invoke('move_project_from_rfp', { // backend command name kept for compatibility 
     projectNumber, 
     destination 
   });
@@ -76,7 +76,7 @@ export async function validateProjectBasePath(): Promise<string> {
 
 // Status to folder mapping for UI displays
 export const statusToFolder: Record<string, string> = {
-  'rfp': '01 RFPs',
+  'rfp': '01 RFPs', // Status "rfp" kept for existing data compatibility
   'proposal': '01 RFPs', 
   'submitted': '01 RFPs',
   'active': '11 Current',
@@ -92,7 +92,7 @@ export const statusToFolder: Record<string, string> = {
 };
 
 export const folderToStatus: Record<string, string> = {
-  '01 RFPs': 'rfp',
+  '01 RFPs': 'rfp', // Folder maps to "rfp" status for compatibility
   '11 Current': 'active', 
   '99 Completed': 'completed',
   '00 Inactive': 'cancelled'
@@ -109,5 +109,5 @@ export function getFolderForStatus(status: string): string {
  * Get the status for a folder location
  */
 export function getStatusForFolder(folder: string): string {
-  return folderToStatus[folder] || 'rfp';
+  return folderToStatus[folder] || 'rfp'; // Default to 'rfp' status for unknown folders
 }
