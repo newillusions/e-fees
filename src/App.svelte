@@ -42,12 +42,23 @@
   async function handleSplashComplete() {
     showSplash = false;
     
-    // Test database connection first
+    // Test database connection first - with longer delay for backend initialization
     setTimeout(async () => {
       try {
         const { checkDbConnection, getDbInfo, getSettings } = await import('$lib/api');
         
-        const isConnected = await checkDbConnection();
+        // Retry connection check up to 3 times to handle startup timing
+        let isConnected = false;
+        let retries = 3;
+        
+        while (!isConnected && retries > 0) {
+          isConnected = await checkDbConnection();
+          if (!isConnected && retries > 1) {
+            console.log(`Database connection attempt ${4 - retries} failed, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          }
+          retries--;
+        }
         
         // Always check settings first to determine if this is truly a first run
         const settings = await getSettings();
@@ -102,7 +113,7 @@
           showFirstRun = true;
         }
       }
-    }, 500);
+    }, 1500); // Increased delay to allow backend initialization
   }
   
   function handleFirstRunComplete() {
