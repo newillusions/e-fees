@@ -11,11 +11,17 @@
   export let customActions = [];
   export let show = true; // New prop to control visibility
   
+  // Debug logging
+  $: {
+    console.log('DetailPanel props:', { isOpen, title, canEdit, show, customActionsCount: customActions.length });
+  }
+  
   function closePanel() {
     dispatch('close');
   }
   
   function handleEdit() {
+    console.log('DetailPanel: handleEdit called');
     dispatch('edit');
   }
   
@@ -55,7 +61,11 @@
         <!-- Custom Action Buttons -->
         {#each customActions as action}
           <button 
-            on:click={action.handler}
+            on:click={() => {
+              console.log('DetailPanel: Custom action clicked:', action.label);
+              console.log('Action disabled?', action.disabled);
+              action.handler();
+            }}
             class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
             aria-label={action.label}
             disabled={action.disabled}

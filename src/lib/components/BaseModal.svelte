@@ -11,6 +11,11 @@
   
   const dispatch = createEventDispatcher();
   
+  // Debug logging
+  $: {
+    console.log('BaseModal - isOpen changed:', isOpen, 'title:', title);
+  }
+  
   function closeModal() {
     dispatch('close');
   }
@@ -33,7 +38,8 @@
 {#if isOpen}
   <!-- Modal backdrop -->
   <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-60 {customClass}"
+    class="fixed inset-0 bg-black bg-opacity-50 {customClass}"
+    style="z-index: 100;"
     on:click={handleBackdropClick}
     on:keydown={() => {}}
     role="button"
@@ -45,7 +51,8 @@
   
   <!-- Modal container -->
   <div 
-    class="fixed inset-0 z-60 flex items-center justify-center p-4 pointer-events-none {customClass}"
+    class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none {customClass}"
+    style="z-index: 101;"
     role="dialog"
     aria-modal="true"
     aria-labelledby={title ? 'modal-title' : undefined}

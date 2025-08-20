@@ -3,7 +3,7 @@
   Reduced from ~790 lines to ~480 lines using base components and utilities
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
   import { extractSurrealId } from '$lib/utils/surrealdb';
@@ -25,6 +25,31 @@
   export let isOpen = false;
   export let proposal: Fee | null = null;
   export let mode: 'create' | 'edit' = 'create';
+  
+  // Debug logging
+  onMount(() => {
+    console.log('ProposalModal mounted with props:', { isOpen, proposal, mode });
+  });
+  
+  $: {
+    console.log('ProposalModal reactive props changed:', { isOpen, proposal, mode });
+    if (proposal) {
+      console.log('ProposalModal: proposal.id in reactive block:', proposal.id);
+    }
+  }
+  
+  // Enhanced prop tracking
+  $: if (proposal !== null && proposal !== undefined) {
+    console.log('ProposalModal: Proposal prop is NOT null/undefined, id:', proposal.id);
+  }
+  
+  $: if (proposal === null) {
+    console.log('ProposalModal: WARNING - Proposal prop is NULL');
+  }
+  
+  $: if (proposal === undefined) {
+    console.log('ProposalModal: WARNING - Proposal prop is UNDEFINED');
+  }
   
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -99,6 +124,9 @@
   let pendingUpdateData: any = null;
   let formInitialized = false;
   let dataLoaded = false;
+  
+  // Failsafe: Store original proposal data when modal opens
+  let originalProposal: Fee | null = null;
   
   // Auto-export checkbox state (activated by default for new proposals)
   let autoExportToJson = true;
@@ -288,6 +316,7 @@
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
+    console.log('ProposalModal: handleSubmit called, mode:', mode);
     
     // If user typed in the project field but didn't select from dropdown, try to find a match
     if (projectSearchText && !formData.project_id) {
@@ -316,8 +345,10 @@
     }
     
     if (mode === 'create') {
+      console.log('ProposalModal: Calling handleCreate');
       handleCreate();
     } else {
+      console.log('ProposalModal: Calling handleUpdate');
       handleUpdate();
     }
   }
@@ -393,10 +424,20 @@
   
   // Update proposal with loading state  
   async function handleUpdate() {
-    if (!proposal) return;
+    console.log('ProposalModal: handleUpdate called');
+    console.log('ProposalModal: proposal data:', proposal);
+    
+    const activeProposal = proposal || originalProposal;
+    if (!activeProposal) {
+      console.error('ProposalModal: No proposal data available');
+      operationActions.setError('No proposal data available for update');
+      return;
+    }
     
     // Try multiple extraction approaches like ContactModal
-    const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
+    const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+    console.log('ProposalModal: extracted proposalId:', proposalId);
+    
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
       return;
@@ -413,7 +454,7 @@
       project_id: projectId,
       company_id: companyId,
       contact_id: contactId,
-      revisions: proposal?.revisions || []
+      revisions: activeProposal?.revisions || []
     };
     
     // Check if status has changed and would result in different project status
@@ -441,11 +482,12 @@
   
   // Delete proposal with loading state
   async function handleDelete() {
-    if (!proposal || !showDeleteConfirm) return;
+    const activeProposal = proposal || originalProposal;
+    if (!activeProposal || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
       // Try multiple extraction approaches like ContactModal
-      const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
       if (!proposalId) throw new Error('Invalid proposal ID');
       
       const result = await feesActions.delete(proposalId);
@@ -457,16 +499,73 @@
   
   // Handle project status sync confirmation
   async function handleProjectStatusSync(syncStatus: boolean) {
+    console.log('ProposalModal: handleProjectStatusSync called, syncStatus:', syncStatus);
+    console.log('ProposalModal: pendingUpdateData:', pendingUpdateData);
+    
+    // Enhanced debugging before clearing dialog
+    console.log('=== ENHANCED DEBUG: handleProjectStatusSync ===');
+    console.log('ProposalModal: proposal prop value:', proposal);
+    console.log('ProposalModal: proposal type:', typeof proposal);
+    console.log('ProposalModal: proposal is null?', proposal === null);
+    console.log('ProposalModal: proposal is undefined?', proposal === undefined);
+    if (proposal) {
+      console.log('ProposalModal: proposal.id value:', proposal.id);
+      console.log('ProposalModal: proposal.id type:', typeof proposal.id);
+      console.log('ProposalModal: proposal keys:', Object.keys(proposal));
+    }
+    console.log('ProposalModal: mode value:', mode);
+    console.log('ProposalModal: isOpen value:', isOpen);
+    console.log('=== END ENHANCED DEBUG ===');
+    
     showProjectStatusSync = false;
     
     await withLoadingState(async () => {
-      const proposalId = extractSurrealId(proposal);
-      if (!proposalId || !pendingUpdateData) {
+      // Debug the proposal object structure
+      console.log('ProposalModal: proposal object structure:', proposal);
+      console.log('ProposalModal: proposal.id structure:', proposal?.id);
+      console.log('ProposalModal: originalProposal fallback:', originalProposal);
+      
+      // Use failsafe: try current proposal first, then fall back to originalProposal
+      const activeProposal = proposal || originalProposal;
+      console.log('ProposalModal: activeProposal selected:', activeProposal);
+      
+      if (!activeProposal) {
+        console.error('ProposalModal: No proposal data available (both proposal and originalProposal are null)');
         throw new Error('No proposal data available for update');
       }
       
+      // Use the same ID extraction logic as handleUpdate
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      console.log('ProposalModal: extracted proposalId in handleProjectStatusSync:', proposalId);
+      
+      // If proposalId is still empty, try alternative extraction methods
+      if (!proposalId) {
+        console.error('ProposalModal: Failed to extract proposal ID');
+        console.error('ProposalModal: activeProposal:', activeProposal);
+        console.error('ProposalModal: activeProposal.id:', activeProposal?.id);
+        throw new Error('Invalid proposal ID');
+      }
+      
+      let updateData = pendingUpdateData;
+      if (!updateData) {
+        console.warn('ProposalModal: pendingUpdateData was null, recreating from form data');
+        // Recreate updateData from current form
+        const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
+        const companyId = formData.company_id || '';
+        const contactId = formData.contact_id || '';
+        
+        updateData = {
+          ...formData,
+          rev: parseInt(formData.rev) || 1,
+          project_id: projectId,
+          company_id: companyId,
+          contact_id: contactId,
+          revisions: activeProposal?.revisions || []
+        };
+      }
+      
       // Update the proposal first
-      await feesActions.update(proposalId, pendingUpdateData);
+      await feesActions.update(proposalId, updateData);
       
       // If user confirmed, also update the project status
       if (syncStatus && formData.project_id) {
@@ -506,12 +605,13 @@
   
   // Handle JSON export from alert
   async function handleJsonExportFromAlert() {
-    if (!proposal) return;
+    const activeProposal = proposal || originalProposal;
+    if (!activeProposal) return;
     
     showJsonExportAlert = false;
     
     try {
-      const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
       if (!proposalId) {
         operationActions.setError('Could not extract proposal ID for JSON export');
         return;
@@ -753,6 +853,12 @@
     previousContactCount = $contactsStore.length;
   }
   
+  // Capture original proposal when modal opens (failsafe)
+  $: if (proposal && isOpen && !originalProposal) {
+    originalProposal = JSON.parse(JSON.stringify(proposal)); // Deep copy
+    console.log('ProposalModal: Captured originalProposal:', originalProposal);
+  }
+  
   // Load form data when proposal changes - only when modal opens
   $: if (proposal && mode === 'edit' && isOpen && !dataLoaded) {
     loadProposalForEdit();
@@ -762,6 +868,7 @@
   $: if (!isOpen) {
     dataLoaded = false;
     originalStatus = '';
+    originalProposal = null; // Clear failsafe data
   }
 
   function loadProposalForEdit() {
