@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import type { Project, Fee, Company, Contact } from '../../types';
 
-// Mock data
+// Mock data - For development/testing only, not used in production store initialization
 const mockProjects: Project[] = [
   {
     id: '1',

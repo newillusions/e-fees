@@ -19,6 +19,7 @@
 //! - **Performance Optimization**: Connection pooling and query optimization
 
 pub mod utils;
+pub mod entities;
 
 //  
 // ## Architecture
@@ -76,6 +77,7 @@ use log::{error, info, warn};
 use chrono::{self, Datelike};
 use std::env;
 use crate::commands::CompanyUpdate;
+pub use crate::db::entities::{FeeUpdate};
 
 /// Interval for database connection health checks (30 seconds)
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
@@ -506,25 +508,7 @@ pub struct FeeCreate {
     pub revisions: Vec<Revision>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FeeUpdate {
-    pub name: String,
-    pub number: String,
-    pub rev: i32,
-    pub status: String, // 'Draft', 'Prepared', 'Active', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'
-    pub issue_date: String,
-    pub activity: String,
-    pub package: String,
-    pub project_id: String, // Project ID as string (e.g., "25_97107")
-    pub company_id: String, // Company ID as string (e.g., "EMITTIV")
-    pub contact_id: String, // Contact ID as string
-    pub staff_name: String,
-    pub staff_email: String,
-    pub staff_phone: String,
-    pub staff_position: String,
-    pub strap_line: String,
-    pub revisions: Vec<Revision>,
-}
+// FeeUpdate struct is now imported from entities.rs
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fee {
@@ -874,13 +858,13 @@ impl DatabaseClient {
             fee.contact_id.replace("'", "''"),
             fee.status.replace("'", "''"),
             fee.issue_date.replace("'", "''"),
-            fee.activity.replace("'", "''"),
-            fee.package.replace("'", "''"),
-            fee.strap_line.replace("'", "''"),
-            fee.staff_name.replace("'", "''"),
-            fee.staff_email.replace("'", "''"),
-            fee.staff_phone.replace("'", "''"),
-            fee.staff_position.replace("'", "''")
+            fee.activity.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.package.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.strap_line.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_name.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_email.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_phone.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_position.as_ref().unwrap_or(&String::new()).replace("'", "''")
         );
         
         info!("Executing update query: {}", query);

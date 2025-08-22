@@ -6,7 +6,7 @@
  * It replaces the duplicate company lookup logic found across components.
  */
 
-import type { Company } from '../../types';
+import type { Company, UnknownSurrealThing } from '../../types';
 import { extractId } from './index';
 
 /**
@@ -20,17 +20,17 @@ const companyCache = new Map<string, Company>();
  */
 export interface CompanyLookup {
   /** Get the full company name */
-  getCompanyName: (companyRef: any) => string;
+  getCompanyName: (companyRef: UnknownSurrealThing) => string;
   /** Get the short company name */
-  getCompanyShortName: (companyRef: any) => string;
+  getCompanyShortName: (companyRef: UnknownSurrealThing) => string;
   /** Get the company country */
-  getCompanyCountry: (companyRef: any) => string;
+  getCompanyCountry: (companyRef: UnknownSurrealThing) => string;
   /** Get the company city */
-  getCompanyCity: (companyRef: any) => string;
+  getCompanyCity: (companyRef: UnknownSurrealThing) => string;
   /** Get the company abbreviation */
-  getCompanyAbbreviation: (companyRef: any) => string;
+  getCompanyAbbreviation: (companyRef: UnknownSurrealThing) => string;
   /** Get the full company object */
-  getCompany: (companyRef: any) => Company | undefined;
+  getCompany: (companyRef: UnknownSurrealThing) => Company | undefined;
   /** Check if cache needs rebuilding */
   getCacheSize: () => number;
 }
@@ -74,7 +74,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
   });
 
   return {
-    getCompanyName: (companyRef: any): string => {
+    getCompanyName: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'Unknown Company';
       
@@ -82,7 +82,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       return company?.name || 'Unknown Company';
     },
     
-    getCompanyShortName: (companyRef: any): string => {
+    getCompanyShortName: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
       
@@ -90,7 +90,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       return company?.name_short || company?.name || 'N/A';
     },
     
-    getCompanyCountry: (companyRef: any): string => {
+    getCompanyCountry: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
       
@@ -98,7 +98,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       return company?.country || 'N/A';
     },
 
-    getCompanyCity: (companyRef: any): string => {
+    getCompanyCity: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
       
@@ -106,7 +106,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       return company?.city || 'N/A';
     },
 
-    getCompanyAbbreviation: (companyRef: any): string => {
+    getCompanyAbbreviation: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
       
@@ -114,7 +114,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       return company?.abbreviation || 'N/A';
     },
 
-    getCompany: (companyRef: any): Company | undefined => {
+    getCompany: (companyRef: UnknownSurrealThing): Company | undefined => {
       const id = extractId(companyRef);
       if (!id) return undefined;
       

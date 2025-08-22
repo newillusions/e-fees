@@ -85,7 +85,7 @@
       }, 3000);
       
     } catch (error) {
-      saveMessage = `Error: ${error.message || error}`;
+      saveMessage = `Error: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       isSaving = false;
     }

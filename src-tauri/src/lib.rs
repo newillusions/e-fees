@@ -59,6 +59,7 @@ use commands::{
     move_project_to_archive,
     list_projects_in_folder,
     validate_project_base_path,
+    log_message,
 };
 
 /// Load database configuration from the settings system.
@@ -273,7 +274,8 @@ pub fn run() {
             move_project_from_rfp,
             move_project_to_archive,
             list_projects_in_folder,
-            validate_project_base_path
+            validate_project_base_path,
+            log_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

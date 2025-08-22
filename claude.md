@@ -1,4 +1,9 @@
-# Fee Proposal Management System
+# E-Fees - Digital Fee Proposal Management System
+
+## 🚨 CRITICAL TESTING DIRECTIVE 🚨
+**ALL E2E TESTING MUST USE TAURI MCP SERVER - NEVER BROWSER-BASED TOOLS**
+See `CRITICAL_DIRECTIVE_TAURI_MCP_ONLY.md` for mandatory requirements.
+Browser testing (Playwright/Puppeteer/Selenium) DOES NOT WORK for Tauri apps.
 
 ## Overview
 Premium desktop application built with Tauri v2 and Svelte 5 for managing fee proposals, projects, companies, and contacts. Implements emittiv brand design system with SurrealDB integration.

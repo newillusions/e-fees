@@ -62,13 +62,13 @@
     showNewProjectModal = false;
   }
   
-  function handleEditProject(project: any) {
+  function handleEditProject(project: Project) {
     selectedProject = project;
     projectModalMode = 'edit';
     showProjectModal = true;
   }
   
-  function handleViewProject(project: any) {
+  function handleViewProject(project: Project) {
     selectedProject = project;
     isProjectDetailOpen = true;
   }
@@ -106,7 +106,7 @@
   const uniqueCities = $derived(getUniqueFieldValues($projectsStore, (project) => project.city));
   
   // Function to get full project folder path
-  function getFullProjectPath(project: any): string {
+  function getFullProjectPath(project: Project): string {
     const basePath = $settingsStore.project_folder_path;
     if (!basePath) return project.folder;
     
@@ -116,7 +116,7 @@
   }
   
   // Function to open project folder in explorer
-  async function openProjectFolder(project: any) {
+  async function openProjectFolder(project: Project) {
     const projectFolderPath = $settingsStore.project_folder_path;
     if (!projectFolderPath) {
       alert('Project folder path not configured. Please set it in Settings.');

@@ -57,3 +57,17 @@ screenshots/
 final_*.png
 *.png
 history.txt
+
+# Test coverage
+coverage/
+.nyc_output
+*.lcov
+test-results/
+playwright-report/
+
+# E2E Testing artifacts
+e2e/test-results/
+e2e/reports/
+e2e/test-projects/
+.playwright/
+pw-browsers/

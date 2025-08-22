@@ -13,7 +13,7 @@
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project } from '$lib/../types';
+  import type { Project, ProjectCreationResult } from '$lib/../types';
   import type { ProjectNumber } from '$lib/../types/database';
   
   const dispatch = createEventDispatcher();
@@ -75,7 +75,7 @@
   let isGenerating = false;
   let isModalReady = false;
   let showFolderConfirm = false;
-  let pendingProjectData: any = null;
+  let pendingProjectData: ProjectCreationResult | null = null;
   
   // Typeahead search states
   let countrySearchText = '';

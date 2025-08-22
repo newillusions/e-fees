@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { connectionStore } from '../stores';
   import { getConnectionStatus, getDbInfo } from '../api';
+  import { createComponentLogger } from '../services/logger';
+  
+  const logger = createComponentLogger('ConnectionStatus');
   
   let checkInterval: number;
   let showDebugInfo = false;
@@ -21,27 +24,38 @@
       
       // If we just connected for the first time, load data
       if (!wasConnected && nowConnected) {
-        console.log('Database connected via status check - loading data...');
+        await logger.info('Database connected via status check - loading data', {
+          action: 'loadDataOnConnection'
+        });
         const { loadAllData } = await import('../stores');
         await loadAllData();
       }
       
       // If still not connected and we have retries left, try again
       if (!status.is_connected && retries < 5) {
-        console.log(`Connection check ${retries + 1}/5 failed, retrying in ${2 + retries}s...`);
+        await logger.debug(`Connection check ${retries + 1}/5 failed, retrying in ${2 + retries}s`, {
+          action: 'retryConnection',
+          attempt: retries + 1,
+          maxAttempts: 5,
+          retryDelay: 2 + retries
+        });
         setTimeout(() => checkConnection(retries + 1), (2 + retries) * 1000);
       }
       
       // FALLBACK: If connection status check fails but this is first time, try loading data anyway
       // (backend might be working even if status check fails due to timing issues)
       if (!status.is_connected && retries === 0 && !wasConnected) {
-        console.log('Connection status shows disconnected, but attempting data load as fallback...');
+        await logger.info('Connection status shows disconnected, attempting data load as fallback', {
+          action: 'fallbackDataLoad',
+          reason: 'status_check_failed'
+        });
         try {
-          console.log('Starting fallback loadAllData...');
           const { loadAllData } = await import('../stores');
-          console.log('loadAllData function imported successfully');
           await loadAllData();
-          console.log('Fallback data loading succeeded - backend is actually working');
+          await logger.info('Fallback data loading succeeded - backend is actually working', {
+            action: 'fallbackDataLoad',
+            result: 'success'
+          });
           // Update connection status to reflect reality
           connectionStore.set({
             isConnected: true,
@@ -50,16 +64,26 @@
             errorMessage: undefined
           });
         } catch (dataError) {
-          console.log('Fallback data loading failed:', dataError);
-          console.error('Fallback data loading error details:', dataError);
+          await logger.warn('Fallback data loading failed', {
+            action: 'fallbackDataLoad',
+            attempt: 'first'
+          });
         }
       }
     } catch (error) {
-      console.error('Failed to check connection:', error);
+      await logger.error('Failed to check database connection', {
+        action: 'checkConnection',
+        attempt: retries + 1
+      }, error as Error);
       
       // On initial startup, retry a few times before showing error
       if (retries < 5) {
-        console.log(`Connection error ${retries + 1}/5, retrying in ${2 + retries}s...`);
+        await logger.debug(`Connection error ${retries + 1}/5, retrying in ${2 + retries}s`, {
+          action: 'retryAfterError',
+          attempt: retries + 1,
+          maxAttempts: 5,
+          retryDelay: 2 + retries
+        });
         connectionStore.set({
           isConnected: false,
           status: 'Connecting...',
@@ -69,13 +93,19 @@
         setTimeout(() => checkConnection(retries + 1), (2 + retries) * 1000);
       } else {
         // FALLBACK: Even if connection checks completely fail, try loading data
-        console.log('All connection checks failed, attempting fallback data load...');
+        await logger.warn('All connection checks failed, attempting final fallback data load', {
+          action: 'finalFallbackDataLoad',
+          totalRetries: retries,
+          reason: 'all_checks_failed'
+        });
         try {
-          console.log('Starting final fallback loadAllData...');
           const { loadAllData } = await import('../stores');
-          console.log('Final fallback loadAllData function imported successfully');
           await loadAllData();
-          console.log('Fallback data loading succeeded despite connection check failures');
+          await logger.info('Final fallback data loading succeeded despite connection check failures', {
+            action: 'finalFallbackDataLoad',
+            result: 'success',
+            totalRetries: retries
+          });
           connectionStore.set({
             isConnected: true,
             status: 'Connected',
@@ -83,8 +113,11 @@
             errorMessage: undefined
           });
         } catch (dataError) {
-          console.log('Fallback data loading also failed:', dataError);
-          console.error('Final fallback data loading error details:', dataError);
+          await logger.error('Final fallback data loading failed - all connection attempts exhausted', {
+            action: 'finalFallbackDataLoad',
+            attempt: 'final',
+            totalRetries: retries
+          }, dataError as Error);
           connectionStore.set({
             isConnected: false,
             status: 'Connection Error',

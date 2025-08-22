@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Fee Proposal Management v0.9.0",
+  "productName": "E-Fees v0.9.0",
   "version": "0.9.0",
-  "identifier": "com.emittiv.fee-proposal-manager",
+  "identifier": "com.emittiv.e-fees",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Fee Proposal Management v0.9.0",
+        "title": "E-Fees v0.9.0",
         "width": 1280,
         "height": 1200,
         "minWidth": 1000,

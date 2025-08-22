@@ -87,7 +87,7 @@ export function createFilterFunction<T>(
  * @param b - Second item to compare
  * @returns Sort comparison result
  */
-function defaultSortFunction<T>(a: any, b: any): number {
+function defaultSortFunction<T extends { time?: { updated_at?: string; created_at?: string } }>(a: T, b: T): number {
   const timeA = a.time?.updated_at || a.time?.created_at || '';
   const timeB = b.time?.updated_at || b.time?.created_at || '';
   return new Date(timeB).getTime() - new Date(timeA).getTime();

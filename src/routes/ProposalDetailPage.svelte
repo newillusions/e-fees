@@ -24,22 +24,20 @@
   let proposalModalMode: 'create' | 'edit' = 'edit';
   let selectedProposal: Fee | null = null;
   
-  // Debug modal state changes
-  $: {
+  // Debug modal state changes - avoid logging $state objects
+  $: if (import.meta.env.DEV) {
     console.log('Modal state changed - showProposalModal:', showProposalModal);
-    console.log('Selected proposal:', selectedProposal);
     console.log('Modal mode:', proposalModalMode);
-    if (selectedProposal) {
-      console.log('ProposalDetailPage: selectedProposal.id in reactive block:', selectedProposal.id);
-    }
+    console.log('Selected proposal id:', selectedProposal?.id);
+    console.log('Has selected proposal:', !!selectedProposal);
   }
   
-  // Track selectedProposal changes
-  $: if (selectedProposal !== null && selectedProposal !== undefined) {
+  // Track selectedProposal changes - avoid logging $state objects
+  $: if (import.meta.env.DEV && selectedProposal !== null && selectedProposal !== undefined) {
     console.log('ProposalDetailPage: selectedProposal is NOT null/undefined, id:', selectedProposal.id);
   }
   
-  $: if (selectedProposal === null) {
+  $: if (import.meta.env.DEV && selectedProposal === null) {
     console.log('ProposalDetailPage: WARNING - selectedProposal is NULL');
   }
 
@@ -115,15 +113,16 @@
 
   function handleEditFromDetail(event: CustomEvent) {
     // Open edit modal with the proposal from the detail panel
-    console.log('ProposalDetailPage: handleEditFromDetail called with event:', event);
-    console.log('Event detail:', event.detail);
+    if (import.meta.env.DEV) {
+      console.log('ProposalDetailPage: handleEditFromDetail called');
+      console.log('Event detail id:', event.detail?.id);
+    }
     selectedProposal = event.detail;
     proposalModalMode = 'edit';
     showProposalModal = true;
-    console.log('Modal state set - showProposalModal:', showProposalModal);
-    console.log('ProposalDetailPage: selectedProposal set to:', selectedProposal);
-    if (selectedProposal) {
-      console.log('ProposalDetailPage: selectedProposal.id:', selectedProposal.id);
+    if (import.meta.env.DEV) {
+      console.log('Modal state set - showProposalModal:', showProposalModal);
+      console.log('ProposalDetailPage: selectedProposal.id:', selectedProposal?.id);
     }
   }
 </script>

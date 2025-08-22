@@ -21,7 +21,7 @@ export interface ValidationRule<T> {
   /** Regular expression pattern to match */
   pattern?: RegExp;
   /** Custom validation function */
-  validator?: (value: any, formData: T) => string | null;
+  validator?: (value: unknown, formData: T) => string | null;
   /** Custom error message */
   errorMessage?: string;
 }
@@ -76,7 +76,7 @@ export function validateForm<T extends Record<string, any>>(
  * @returns Error message if validation fails, null if valid
  */
 function validateField<T>(
-  value: any,
+  value: unknown,
   rule: ValidationRule<T>,
   formData: T
 ): string | null {
