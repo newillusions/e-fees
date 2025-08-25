@@ -87,9 +87,9 @@ export const contactFormFields: FormFieldConfig[] = [
                 return nameMatch || shortNameMatch || abbreviationMatch;
               })
               .map(company => {
-                const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
+                const companyId = extractSurrealId(company.id) || company.id || '';
                 return {
-                  id: companyId,
+                  id: String(companyId),
                   name: company.name || '',
                   name_short: company.name_short || '',
                   abbreviation: company.abbreviation || ''

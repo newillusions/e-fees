@@ -279,7 +279,7 @@ describe('Tauri Commands Integration', () => {
       const result = await ApiClient.createContact(contactData);
 
       expect(invoke).toHaveBeenCalledWith('create_contact', { contact: expectedContactWithId });
-      expect(result.full_name).toBe('Jane Doe');
+      expect(result?.full_name).toBe('Jane Doe');
     });
 
     it('should update contact', async () => {
@@ -638,8 +638,8 @@ describe('Tauri Commands Integration', () => {
         revisions: []
       });
 
-      expect(result.issue_date).toBe('250821');
-      expect(result.time?.created_at).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
+      expect(result?.issue_date).toBe('250821');
+      expect(result?.time?.created_at).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
     });
 
     it('should handle null and undefined values', async () => {

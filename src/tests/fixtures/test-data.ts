@@ -170,7 +170,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Arab Emirates',
     city: 'Dubai',
     client_company: 'Emittiv Engineering Consultancy',
-    status: 'active',
+    status: 'Active',
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -181,7 +181,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'Saudi Arabia', 
     city: 'Riyadh',
     client_company: 'ACME Corporation',
-    status: 'active',
+    status: 'Active',
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -214,12 +214,12 @@ export const TEST_FEES: Fee[] = [
   {
     id: 'rfp:prop123',
     project_id: 'projects:25-97101',
-    company: 'company:emittiv123', 
+    company_id: 'company:emittiv123', 
     contact_id: 'contact:john123',
     rfp_number: 'RFP-25-97101-2025',
     issue_date: '2025-08-20',
-    status: 'draft',
-    stage: 'initial',
+    status: 'Draft',
+    stage: 'Draft',
     package: 'structural',
     staff_name: 'Martin Engineer',
     activity: 'Structural Design and Analysis for High-rise Building',
@@ -229,12 +229,12 @@ export const TEST_FEES: Fee[] = [
   {
     id: 'rfp:prop456',
     project_id: 'projects:25-96601',
-    company: 'company:acme456',
+    company_id: 'company:acme456',
     contact_id: 'contact:jane456',
     rfp_number: 'RFP-25-96601-2025',
     issue_date: '2025-08-21',
-    status: 'submitted',
-    stage: 'concept',
+    status: 'Sent',
+    stage: 'Sent',
     package: 'full_package',
     staff_name: 'Sarah Architect',
     activity: 'Complete Architectural and Engineering Package',
@@ -244,12 +244,12 @@ export const TEST_FEES: Fee[] = [
   {
     id: 'rfp:prop789',
     project_id: 'projects:25-44101',
-    company: 'company:tech789',
+    company_id: 'company:tech789',
     contact_id: 'contact:mike789',
     rfp_number: 'RFP-25-44101-2025',
     issue_date: '2025-08-19',
-    status: 'under_review',
-    stage: 'design_development',
+    status: 'Active',
+    stage: 'Under Review',
     package: 'mep',
     staff_name: 'David MEP Engineer',
     activity: 'MEP Design and Coordination',
@@ -271,10 +271,10 @@ export const TEST_CONNECTION_STATUS = {
 
 // Status/Stage/Package Enums for Testing
 export const TEST_ENUMS = {
-  fee_statuses: ['draft', 'submitted', 'under_review', 'approved', 'rejected'],
-  fee_stages: ['initial', 'concept', 'design_development', 'construction_documentation', 'construction_administration'],
+  fee_statuses: ['Draft', 'Sent', 'Active', 'Awarded', 'Lost'],
+  fee_stages: ['Draft', 'Prepared', 'Sent', 'Under Review', 'Negotiation', 'Awarded', 'Lost'],
   fee_packages: ['structural', 'architectural', 'mep', 'civil', 'full_package'],
-  project_statuses: ['planning', 'active', 'on_hold', 'completed', 'cancelled']
+  project_statuses: ['Draft', 'Active', 'On Hold', 'Completed', 'Cancelled']
 };
 
 // Helper functions for test data manipulation
@@ -307,7 +307,7 @@ export const TestDataHelpers = {
     country: 'United Arab Emirates',
     city: 'Dubai',
     client_company: 'Test Company',
-    status: 'active',
+    status: 'Active',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides
@@ -343,12 +343,12 @@ export const TestDataHelpers = {
   createTestFee: (overrides: Partial<Fee> = {}): Fee => ({
     id: `rfp:test-${Date.now()}`,
     project_id: 'projects:25-97101',
-    company: 'company:emittiv123',
+    company_id: 'company:emittiv123',
     contact_id: 'contact:john123',
     rfp_number: `RFP-TEST-${Date.now()}`,
     issue_date: new Date().toISOString().split('T')[0],
-    status: 'draft',
-    stage: 'initial',
+    status: 'Draft',
+    stage: 'Draft',
     package: 'structural',
     staff_name: 'Test Engineer',
     activity: 'Test Activity',

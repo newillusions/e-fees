@@ -27,7 +27,8 @@ import {
   filteredFeesStore,
   companiesWithContactsStore,
   statisticsStore,
-  loadAllData
+  loadAllData,
+  clearAllData
 } from './stores';
 import type { Project, Company, Contact, Fee, ConnectionState } from '../types';
 
@@ -127,7 +128,10 @@ describe('Store Management', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    // Reset all stores to initial state
+    // Reset all stores to initial state and clear optimistic updates
+    clearAllData();
+    
+    // Also reset the exported stores for backward compatibility
     projectsStore.set([]);
     projectsError.set(null);
     companiesStore.set([]);
@@ -233,7 +237,8 @@ describe('Store Management', () => {
         const errorMessage = 'Database connection failed';
         vi.mocked(api.getProjects).mockRejectedValueOnce(new Error(errorMessage));
 
-        await projectsActions.load();
+        // The load action throws after setting error state
+        await expect(projectsActions.load()).rejects.toThrow(errorMessage);
 
         expect(api.getProjects).toHaveBeenCalled();
         expect(get(projectsStore)).toEqual([]);
@@ -306,7 +311,10 @@ describe('Store Management', () => {
       });
 
       it('should update project successfully', async () => {
-        projectsStore.set([mockProject]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getProjects).mockResolvedValueOnce([mockProject]);
+        await projectsActions.load();
+        
         const updates = { status: 'Completed' as const };
         const updatedProject = { ...mockProject, ...updates };
         
@@ -320,7 +328,9 @@ describe('Store Management', () => {
       });
 
       it('should delete project successfully', async () => {
-        projectsStore.set([mockProject]);
+        // Set up initial data through the CRUD system  
+        vi.mocked(api.getProjects).mockResolvedValueOnce([mockProject]);
+        await projectsActions.load();
         
         vi.mocked(api.deleteProject).mockResolvedValueOnce(mockProject);
         vi.mocked(api.getProjects).mockResolvedValueOnce([]);
@@ -366,7 +376,10 @@ describe('Store Management', () => {
       });
 
       it('should update company successfully', async () => {
-        companiesStore.set([mockCompany]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getCompanies).mockResolvedValueOnce([mockCompany]);
+        await companiesActions.load();
+        
         const updates = { name: 'Updated Company Name' };
         const updatedCompany = { ...mockCompany, ...updates };
         
@@ -380,7 +393,9 @@ describe('Store Management', () => {
       });
 
       it('should delete company successfully', async () => {
-        companiesStore.set([mockCompany]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getCompanies).mockResolvedValueOnce([mockCompany]);
+        await companiesActions.load();
         
         vi.mocked(api.deleteCompany).mockResolvedValueOnce(mockCompany);
         vi.mocked(api.getCompanies).mockResolvedValueOnce([]);
@@ -432,7 +447,10 @@ describe('Store Management', () => {
       });
 
       it('should update contact successfully', async () => {
-        contactsStore.set([mockContact]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getContacts).mockResolvedValueOnce([mockContact]);
+        await contactsActions.load();
+        
         const updates = { position: 'Senior Manager' };
         const updatedContact = { ...mockContact, ...updates };
         
@@ -446,7 +464,9 @@ describe('Store Management', () => {
       });
 
       it('should delete contact successfully', async () => {
-        contactsStore.set([mockContact]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getContacts).mockResolvedValueOnce([mockContact]);
+        await contactsActions.load();
         
         vi.mocked(api.deleteContact).mockResolvedValueOnce(mockContact);
         vi.mocked(api.getContacts).mockResolvedValueOnce([]);
@@ -494,7 +514,10 @@ describe('Store Management', () => {
       });
 
       it('should update fee successfully', async () => {
-        feesStore.set([mockFee]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getFees).mockResolvedValueOnce([mockFee]);
+        await feesActions.load();
+        
         const updates = { status: 'Sent' as const };
         const updatedFee = { ...mockFee, ...updates };
         
@@ -508,7 +531,9 @@ describe('Store Management', () => {
       });
 
       it('should delete fee successfully', async () => {
-        feesStore.set([mockFee]);
+        // Set up initial data through the CRUD system
+        vi.mocked(api.getFees).mockResolvedValueOnce([mockFee]);
+        await feesActions.load();
         
         vi.mocked(api.deleteFee).mockResolvedValueOnce(mockFee);
         vi.mocked(api.getFees).mockResolvedValueOnce([]);
@@ -707,7 +732,8 @@ describe('Store Management', () => {
       const errorMessage = 'Network error';
       vi.mocked(api.getProjects).mockRejectedValueOnce(new Error(errorMessage));
 
-      await projectsActions.load();
+      // The load action throws after setting error state
+      await expect(projectsActions.load()).rejects.toThrow(errorMessage);
 
       expect(get(projectsStore)).toEqual([]);
       expect(get(projectsError)).toContain(errorMessage);
@@ -730,9 +756,12 @@ describe('Store Management', () => {
     it('should handle null/undefined API responses', async () => {
       vi.mocked(api.getProjects).mockResolvedValueOnce(null as any);
 
-      await projectsActions.load();
+      // The load action throws after setting error state for invalid data
+      await expect(projectsActions.load()).rejects.toThrow('items is not iterable');
 
-      expect(get(projectsStore)).toBeNull();
+      // Should set error state when API returns invalid data
+      expect(get(projectsStore)).toEqual([]);
+      expect(get(projectsError)).toContain('items is not iterable');
     });
   });
 });

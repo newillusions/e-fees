@@ -110,7 +110,7 @@
             return nameMatch || shortNameMatch || abbreviationMatch;
           })
           .map(company => {
-            const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
+            const companyId = extractSurrealId(company.id) || company.id || '';
             return {
               id: String(companyId),
               name: company.name || '',

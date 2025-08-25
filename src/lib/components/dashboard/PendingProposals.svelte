@@ -104,7 +104,7 @@
                 {daysAgo}d
               </div>
               <div class="proposal-date">
-                {new Date(fee.time.updated_at || fee.time.created_at).toLocaleDateString('en-US', { 
+                {new Date(fee.time!.updated_at || fee.time!.created_at).toLocaleDateString('en-US', { 
                   month: 'short', 
                   day: 'numeric'
                 })}
