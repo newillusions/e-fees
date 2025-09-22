@@ -379,7 +379,17 @@ describe('Enhanced CRUD Utilities', () => {
       });
 
       it('should support manual rollback', async () => {
-        const { store, actions } = useCrudStore(mockApi, { 
+        // Create a slower mock API for this test
+        const slowMockApi = {
+          ...mockApi,
+          async create(data: Omit<TestEntity, 'id'>): Promise<TestEntity> {
+            // Add delay to simulate slower API
+            await new Promise(resolve => setTimeout(resolve, 50));
+            return mockApi.create(data);
+          }
+        };
+
+        const { store, actions } = useCrudStore(slowMockApi, { 
           enableOptimistic: true 
         });
 

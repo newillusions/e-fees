@@ -308,6 +308,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             const tempIndex = items.findIndex(item => idExtractor(item.id) === tempId);
             if (tempIndex !== -1) {
               items[tempIndex] = newItem;
+            } else {
+              // Optimistic item was rolled back, add real item
+              items.push(newItem);
             }
           } else {
             items.push(newItem);
@@ -616,7 +619,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             );
             return {
               ...state,
-              items: searchResults,
               filteredItems,
               loading: false
             };
@@ -667,7 +669,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             );
             return {
               ...state,
-              items: filterResults,
               filteredItems,
               loading: false
             };
@@ -962,7 +963,7 @@ export function validateSurrealId(id: unknown): boolean {
   
   if (typeof id === 'object' && id !== null) {
     const thing = id as any;
-    return 'tb' in thing && 'id' in thing && thing.tb && thing.id;
+    return 'tb' in thing && 'id' in thing && !!thing.tb && !!thing.id;
   }
   
   return false;
