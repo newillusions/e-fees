@@ -18,6 +18,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:mcp": "vitest run e2e-mcp/tests/",
+    "test:webdriver": "wdio run ./wdio.conf.js",
+    "test:webdriver:build": "npm run build && cargo build --release --manifest-path=src-tauri/Cargo.toml",
     "test:e2e:mcp:ui": "vitest --ui e2e-mcp/tests/",
     "test:e2e:mcp:watch": "vitest --watch e2e-mcp/tests/",
     "test:e2e:mcp:coverage": "vitest run --coverage e2e-mcp/tests/",
@@ -53,6 +55,7 @@
   "license": "ISC",
   "description": "E-Fees - Digital Fee Proposal Management System",
   "devDependencies": {
+    "@crabnebula/tauri-driver": "^2.0.8",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@tauri-apps/cli": "^2.5.0",
     "@testing-library/jest-dom": "^6.8.0",
@@ -62,6 +65,10 @@
     "@types/node": "^24.0.1",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
+    "@wdio/cli": "^9.19.2",
+    "@wdio/local-runner": "^9.19.2",
+    "@wdio/mocha-framework": "^9.19.2",
+    "@wdio/spec-reporter": "^9.19.2",
     "autoprefixer": "^10.4.21",
     "happy-dom": "^18.0.1",
     "jsdom": "^26.1.0",
@@ -73,7 +80,8 @@
     "tslib": "^2.8.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "webdriverio": "^9.19.2"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",

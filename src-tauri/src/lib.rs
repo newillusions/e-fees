@@ -92,6 +92,21 @@ async fn load_database_config_from_settings(app_handle: &tauri::AppHandle) -> Re
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            info!("Single instance detected - bringing existing window to front");
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(e) = window.set_focus() {
+                    error!("Failed to set focus on window: {}", e);
+                }
+                if let Err(e) = window.unminimize() {
+                    error!("Failed to unminimize window: {}", e);
+                }
+                if let Err(e) = window.show() {
+                    error!("Failed to show window: {}", e);
+                }
+            }
+            info!("Single instance enforcement - prevented duplicate launch");
+        }))
         .setup(|app| {
             // Setup logging
             app.handle().plugin(

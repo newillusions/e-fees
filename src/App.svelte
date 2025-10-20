@@ -10,6 +10,7 @@
   import Contacts from './routes/Contacts.svelte';
   import ProjectDetailPage from './routes/ProjectDetailPage.svelte';
   import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
+  import DevMode from './routes/DevMode.svelte';
   import { onMount } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { fade } from 'svelte/transition';
@@ -40,7 +41,8 @@
     '/proposals': Proposals,
     '/proposals/:id': ProposalDetailPage,
     '/companies': Companies,
-    '/contacts': Contacts
+    '/contacts': Contacts,
+    '/dev': DevMode
   };
   
   async function handleSplashComplete() {
@@ -51,13 +53,11 @@
     setTimeout(async () => {
       try {
         if (import.meta.env.DEV) {
-          console.log('Starting app initialization...');
         }
         const { getSettings } = await import('$lib/api');
         
         const settings = await getSettings();
         if (import.meta.env.DEV) {
-          console.log('Settings loaded:', settings ? 'found' : 'not found');
         }
         
         const isFirstRun = !settings || 
@@ -68,33 +68,27 @@
         
         if (isFirstRun) {
           if (import.meta.env.DEV) {
-            console.log('First run detected - showing setup');
           }
           showFirstRun = true;
         } else {
           if (import.meta.env.DEV) {
-            console.log('Settings found - starting app');
           }
           appReady = true;
           // Data will be loaded automatically when ConnectionStatus detects first connection
           if (import.meta.env.DEV) {
-            console.log('App ready - data loading will happen after database connection confirmed');
           }
           
           // FALLBACK: Also attempt data loading directly after a delay
           // This ensures data loads even if ConnectionStatus fails
           setTimeout(async () => {
             if (import.meta.env.DEV) {
-              console.log('FALLBACK: Starting unconditional data loading after 5s delay...');
             }
             try {
               await loadAllData();
               if (import.meta.env.DEV) {
-                console.log('FALLBACK: Unconditional data loading completed successfully');
               }
             } catch (error) {
               if (import.meta.env.DEV) {
-                console.log('FALLBACK: Unconditional data loading failed:', error);
               }
             }
           }, 5000); // 5 second delay to allow ConnectionStatus to try first
@@ -103,7 +97,6 @@
         console.error('Failed during app initialization:', error);
         // If we can't load settings at all, show first run setup
         if (import.meta.env.DEV) {
-          console.log('Settings load failed - showing first run setup');
         }
         showFirstRun = true;
       }
@@ -124,7 +117,6 @@
     try {
       await setupPluginListeners();
       if (import.meta.env.DEV) {
-        console.log('MCP plugin listeners set up successfully');
       }
     } catch (error) {
       console.error('Failed to set up MCP plugin listeners:', error);

@@ -13,7 +13,6 @@
   
   // Debug logging
   $: if (import.meta.env.DEV) {
-    console.log('BaseModal - isOpen changed:', isOpen, 'title:', title);
   }
   
   function closeModal() {

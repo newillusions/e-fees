@@ -36,8 +36,8 @@ pub use folder_management::{
 use utils::execute_with_manager;
 use crate::crud_command;
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate};
-use crate::db::entities::FeeUpdate;
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate};
+// use crate::db::entities::FeeUpdate; // Temporarily disabled for testing
 use std::sync::{Arc, Mutex};
 use std::fs;
 use serde_json::Value;

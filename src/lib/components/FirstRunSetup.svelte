@@ -137,29 +137,29 @@
 </script>
 
 {#if isOpen}
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.8);">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-2" style="background: rgba(0, 0, 0, 0.8);">
     <div 
-      class="relative w-full max-h-[90vh] overflow-hidden rounded-lg shadow-2xl"
-      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); padding: 16px; max-width: 600px;"
+      class="relative w-full max-h-[95vh] overflow-hidden rounded-lg shadow-2xl flex flex-col"
+      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); max-width: 500px;"
       transition:fade={{ duration: 200 }}
     >
       <!-- Header -->
-      <div class="pb-4 mb-4 border-b" style="border-color: var(--emittiv-dark);">
-        <h2 class="text-xl font-bold" style="color: var(--emittiv-white);">
+      <div class="p-3 pb-2 border-b flex-shrink-0" style="border-color: var(--emittiv-dark);">
+        <h2 class="text-lg font-bold" style="color: var(--emittiv-white);">
           Welcome to Fee Proposal Management
         </h2>
-        <p class="text-sm mt-1" style="color: var(--emittiv-light);">
+        <p class="text-xs mt-1" style="color: var(--emittiv-light);">
           Let's set up your application for first use
         </p>
       </div>
       
       <!-- Progress Indicator -->
-      <div class="pb-3 mb-4 border-b" style="border-color: var(--emittiv-dark);">
+      <div class="p-3 pb-2 border-b flex-shrink-0" style="border-color: var(--emittiv-dark);">
         <div class="flex items-center justify-between">
           {#each Array(totalSteps) as _, i}
             <div class="flex items-center">
               <div 
-                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all"
+                class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all"
                 style="background: {i + 1 <= currentStep ? 'var(--emittiv-splash)' : 'var(--emittiv-dark)'}; 
                        color: {i + 1 <= currentStep ? 'var(--emittiv-black)' : 'var(--emittiv-light)'};"
               >
@@ -167,14 +167,14 @@
               </div>
               {#if i < totalSteps - 1}
                 <div 
-                  class="w-24 h-0.5 mx-2"
+                  class="w-16 h-0.5 mx-1"
                   style="background: {i + 1 < currentStep ? 'var(--emittiv-splash)' : 'var(--emittiv-dark)'};"
                 ></div>
               {/if}
             </div>
           {/each}
         </div>
-        <div class="flex justify-between mt-2">
+        <div class="flex justify-between mt-1">
           <span class="text-xs" style="color: var(--emittiv-light);">Database</span>
           <span class="text-xs" style="color: var(--emittiv-light);">Staff Info</span>
           <span class="text-xs" style="color: var(--emittiv-light);">Projects</span>
@@ -182,31 +182,31 @@
       </div>
       
       <!-- Content -->
-      <div class="overflow-y-auto" style="max-height: 400px;">
+      <div class="overflow-y-auto flex-grow p-3" style="min-height: 0;">
         {#if currentStep === 1}
           <div transition:slide={{ duration: 300 }}>
-            <h3 class="text-lg font-semibold mb-4" style="color: var(--emittiv-white);">
+            <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Database Configuration
             </h3>
             
-            <div class="space-y-4">
+            <div class="space-y-3">
               <div>
-                <label for="db-url" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="db-url" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Database URL
                 </label>
                 <input
                   id="db-url"
                   type="text"
                   bind:value={dbConfig.url}
-                  placeholder="e.g., ws://localhost:8000 or ws://your-server:8000"
-                  class="w-full px-3 py-2 rounded"
+                  placeholder="e.g., ws://localhost:8000"
+                  class="w-full px-2 py-1.5 rounded text-sm"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
               
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="db-namespace" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-namespace" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Namespace
                   </label>
                   <input
@@ -214,13 +214,13 @@
                     type="text"
                     bind:value={dbConfig.namespace}
                     placeholder="your-namespace"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
                 
                 <div>
-                  <label for="db-database" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-database" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Database
                   </label>
                   <input
@@ -228,15 +228,15 @@
                     type="text"
                     bind:value={dbConfig.database}
                     placeholder="your-database"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
               </div>
               
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="db-username" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-username" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Username
                   </label>
                   <input
@@ -244,13 +244,13 @@
                     type="text"
                     bind:value={dbConfig.username}
                     placeholder="username"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
                 
                 <div>
-                  <label for="db-password" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="db-password" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Password
                   </label>
                   <input
@@ -258,7 +258,7 @@
                     type="password"
                     bind:value={dbConfig.password}
                     placeholder="••••••••"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
@@ -277,13 +277,13 @@
           </div>
         {:else if currentStep === 2}
           <div transition:slide={{ duration: 300 }}>
-            <h3 class="text-lg font-semibold mb-4" style="color: var(--emittiv-white);">
+            <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Staff Information
             </h3>
             
-            <div class="space-y-4">
+            <div class="space-y-3">
               <div>
-                <label for="staff-name" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="staff-name" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Your Name
                 </label>
                 <input
@@ -291,13 +291,13 @@
                   type="text"
                   bind:value={staffInfo.name}
                   placeholder="John Doe"
-                  class="w-full px-3 py-2 rounded"
+                  class="w-full px-2 py-1.5 rounded text-sm"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
               
               <div>
-                <label for="staff-email" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="staff-email" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Email Address
                 </label>
                 <input
@@ -305,14 +305,14 @@
                   type="email"
                   bind:value={staffInfo.email}
                   placeholder="john.doe@company.com"
-                  class="w-full px-3 py-2 rounded"
+                  class="w-full px-2 py-1.5 rounded text-sm"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
               
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="staff-phone" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="staff-phone" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Phone Number
                   </label>
                   <input
@@ -320,13 +320,13 @@
                     type="tel"
                     bind:value={staffInfo.phone}
                     placeholder="+971 50 123 4567"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
                 
                 <div>
-                  <label for="staff-position" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label for="staff-position" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                     Position
                   </label>
                   <input
@@ -334,7 +334,7 @@
                     type="text"
                     bind:value={staffInfo.position}
                     placeholder="Project Manager"
-                    class="w-full px-3 py-2 rounded"
+                    class="w-full px-2 py-1.5 rounded text-sm"
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
@@ -343,21 +343,21 @@
           </div>
         {:else if currentStep === 3}
           <div transition:slide={{ duration: 300 }}>
-            <h3 class="text-lg font-semibold mb-4" style="color: var(--emittiv-white);">
+            <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Project Configuration
             </h3>
             
-            <div class="space-y-4">
+            <div class="space-y-3">
               <div>
-                <label for="project-path" class="block text-sm font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label for="project-path" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
                   Project Folder Path
                 </label>
                 <input
                   id="project-path"
                   type="text"
                   bind:value={projectPath}
-                  placeholder="e.g., /Users/username/Projects/ or C:\Projects\\"
-                  class="w-full px-3 py-2 rounded"
+                  placeholder="e.g., /Users/username/Projects/"
+                  class="w-full px-2 py-1.5 rounded text-sm"
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
                 <p class="text-xs mt-1" style="color: var(--emittiv-light);">
@@ -365,11 +365,11 @@
                 </p>
               </div>
               
-              <div class="p-4 rounded" style="background: var(--emittiv-dark);">
-                <h4 class="text-sm font-semibold mb-2" style="color: var(--emittiv-white);">
+              <div class="p-3 rounded" style="background: var(--emittiv-dark);">
+                <h4 class="text-sm font-semibold mb-1" style="color: var(--emittiv-white);">
                   Setup Complete!
                 </h4>
-                <p class="text-sm" style="color: var(--emittiv-light);">
+                <p class="text-xs" style="color: var(--emittiv-light);">
                   Your Fee Proposal Management system is ready to use. Click "Finish Setup" to save your configuration and start using the application.
                 </p>
               </div>
@@ -379,11 +379,11 @@
       </div>
       
       <!-- Footer -->
-      <div class="pt-4 mt-4 border-t flex justify-between" style="border-color: var(--emittiv-dark);">
+      <div class="p-3 border-t flex justify-between flex-shrink-0" style="border-color: var(--emittiv-dark);">
         <button
           onclick={previousStep}
           disabled={currentStep === 1}
-          class="px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
+          class="px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-50"
           style="background: var(--emittiv-dark); color: var(--emittiv-light);"
         >
           Previous
@@ -392,11 +392,11 @@
         <button
           onclick={saveAndContinue}
           disabled={isTestingConnection || isSaving}
-          class="px-4 py-2 rounded text-sm font-medium transition-colors"
+          class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
           style="background: var(--emittiv-splash); color: var(--emittiv-black);"
         >
           {#if currentStep === 1}
-            {isTestingConnection ? 'Testing...' : 'Test Connection & Continue'}
+            {isTestingConnection ? 'Testing...' : 'Test & Continue'}
           {:else if currentStep === 2}
             Continue
           {:else}

@@ -22,6 +22,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri = { version = "2.5.0", features = [ "macos-private-api", "config-toml"] }
 tauri-plugin-dialog = "2.2.2"
+tauri-plugin-single-instance = "2.2.2"
 tokio = { version = "1", features = ["full"] }
 surrealdb = { version = "2.3", features = ["kv-mem", "protocol-ws", "protocol-http", "rustls"] }
 log = "0.4"
