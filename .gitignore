@@ -12,12 +12,21 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
+# Environment variables - NEVER commit these files
+# Exception: Template and example files are allowed
 .env
 .env.local
+.env.dev
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+# Allow example and template files
+!.env.example
+!.env.*.example
+!.env.template
 
 # Editor directories and files
 .vscode/*
@@ -34,14 +43,15 @@ dist-ssr
 src-tauri/target/
 src-tauri/Cargo.lock
 
-# Additional security for environment files
-*.env
-!.env.template
-
 # Sensitive configuration files
 passwords.txt
 claude_desktop_config.json
-.claude/
+
+# Claude Code directory - keep documentation but ignore sensitive settings
+.claude/settings.local.json
+.claude/settings.local.json.backup
+.claude/conversations/
+.claude/*.local.json
 
 # Development artifacts  
 tauri-plugin-mcp/
