@@ -11,8 +11,8 @@
   export let customActions = [];
   export let show = true; // New prop to control visibility
   
-  // Debug logging
-  $: {
+  // Debug logging - avoid logging complex objects
+  $: if (import.meta.env.DEV) {
     console.log('DetailPanel props:', { isOpen, title, canEdit, show, customActionsCount: customActions.length });
   }
   
@@ -21,7 +21,9 @@
   }
   
   function handleEdit() {
-    console.log('DetailPanel: handleEdit called');
+    if (import.meta.env.DEV) {
+      console.log('DetailPanel: handleEdit called');
+    }
     dispatch('edit');
   }
   
@@ -62,8 +64,10 @@
         {#each customActions as action}
           <button 
             on:click={() => {
-              console.log('DetailPanel: Custom action clicked:', action.label);
-              console.log('Action disabled?', action.disabled);
+              if (import.meta.env.DEV) {
+                console.log('DetailPanel: Custom action clicked:', action.label);
+                console.log('Action disabled?', action.disabled);
+              }
               action.handler();
             }}
             class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"

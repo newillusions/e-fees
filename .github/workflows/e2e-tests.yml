@@ -1,0 +1,228 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  e2e-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libwebkit2gtk-4.1-dev \
+          build-essential \
+          curl \
+          wget \
+          libssl-dev \
+          libgtk-3-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev \
+          pkg-config \
+          xvfb
+
+    - name: Install SurrealDB
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          curl --proto '=https' --tlsv1.2 -sSf https://install.surrealdb.com | sh
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          brew install surrealdb/tap/surreal
+        else
+          # Windows - use precompiled binary
+          curl -L https://github.com/surrealdb/surrealdb/releases/latest/download/surreal-windows.exe -o surreal.exe
+          mkdir -p ~/.cargo/bin
+          mv surreal.exe ~/.cargo/bin/surreal.exe
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        fi
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Cache Tauri build
+      uses: actions/cache@v4
+      with:
+        path: src-tauri/target
+        key: ${{ runner.os }}-tauri-${{ hashFiles('src-tauri/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-tauri-
+
+    - name: Build Tauri application
+      run: npm run tauri:build
+      env:
+        TAURI_ENV_SURREALDB_URL: ws://localhost:8001
+        TAURI_ENV_SURREALDB_NS: test
+        TAURI_ENV_SURREALDB_DB: e2e
+
+    - name: Run unit tests
+      run: npm run test:run
+
+    - name: Run E2E tests (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: xvfb-run -a npm run test:e2e
+      env:
+        CI: true
+        PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
+
+    - name: Run E2E tests (macOS/Windows)
+      if: matrix.os != 'ubuntu-latest'
+      run: npm run test:e2e
+      env:
+        CI: true
+        PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-${{ matrix.os }}
+        path: |
+          e2e/test-results/
+          e2e/reports/
+        retention-days: 7
+
+    - name: Upload test coverage
+      uses: actions/upload-artifact@v4
+      if: matrix.os == 'ubuntu-latest'
+      with:
+        name: test-coverage
+        path: coverage/
+        retention-days: 7
+
+    - name: Comment PR with test results
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          try {
+            const resultsPath = path.join('e2e', 'reports', 'test-summary.json');
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              
+              const comment = `## 🧪 E2E Test Results
+              
+              **Status**: ${results.results.failed === 0 ? '✅ Passed' : '❌ Failed'}
+              
+              | Metric | Value |
+              |--------|--------|
+              | Total Tests | ${results.results.total} |
+              | Passed | ${results.results.passed} |
+              | Failed | ${results.results.failed} |
+              | Skipped | ${results.results.skipped} |
+              | Duration | ${Math.round(results.results.duration / 1000)}s |
+              
+              **Test Reports**: Available in the [build artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          } catch (error) {
+            console.log('Could not post test results:', error);
+          }
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run security audit
+      run: |
+        npm audit --audit-level=high
+        
+    - name: Check for known vulnerabilities
+      run: |
+        npx audit-ci --config .auditci.json || true
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+        npm ci
+        npx playwright install --with-deps chromium
+        
+    - name: Install SurrealDB
+      run: curl --proto '=https' --tlsv1.2 -sSf https://install.surrealdb.com | sh
+      
+    - name: Run performance tests
+      run: |
+        # This would run performance-specific E2E tests
+        # For now, we'll run regular E2E tests with performance monitoring
+        xvfb-run -a npm run test:e2e -- --grep "performance"
+      env:
+        CI: true
+        PERFORMANCE_MODE: true
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-results
+        path: e2e/reports/performance/
+        retention-days: 30

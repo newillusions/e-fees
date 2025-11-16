@@ -18,7 +18,7 @@
   import NewProjectModal from './NewProjectModal.svelte';
   import CompanyModal from './CompanyModal.svelte';
   import ContactModal from './ContactModal.svelte';
-  import type { Fee, Project, Company, Contact } from '$lib/../types';
+  import type { Fee, Project, Company, Contact, UnknownSurrealThing } from '$lib/../types';
   
   const dispatch = createEventDispatcher();
   
@@ -26,28 +26,32 @@
   export let proposal: Fee | null = null;
   export let mode: 'create' | 'edit' = 'create';
   
-  // Debug logging
+  // Debug logging - using $inspect for Svelte 5 compatibility
   onMount(() => {
-    console.log('ProposalModal mounted with props:', { isOpen, proposal, mode });
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal mounted with props:', { isOpen, mode, proposalId: proposal?.id });
+    }
   });
   
-  $: {
-    console.log('ProposalModal reactive props changed:', { isOpen, proposal, mode });
-    if (proposal) {
-      console.log('ProposalModal: proposal.id in reactive block:', proposal.id);
-    }
+  $: if (import.meta.env.DEV) {
+    console.log('ProposalModal reactive props changed:', { 
+      isOpen, 
+      mode, 
+      proposalId: proposal?.id,
+      hasProposal: !!proposal
+    });
   }
   
-  // Enhanced prop tracking
-  $: if (proposal !== null && proposal !== undefined) {
+  // Enhanced prop tracking - avoid logging $state objects
+  $: if (import.meta.env.DEV && proposal !== null && proposal !== undefined) {
     console.log('ProposalModal: Proposal prop is NOT null/undefined, id:', proposal.id);
   }
   
-  $: if (proposal === null) {
+  $: if (import.meta.env.DEV && proposal === null) {
     console.log('ProposalModal: WARNING - Proposal prop is NULL');
   }
   
-  $: if (proposal === undefined) {
+  $: if (import.meta.env.DEV && proposal === undefined) {
     console.log('ProposalModal: WARNING - Proposal prop is UNDEFINED');
   }
   
@@ -121,7 +125,7 @@
   let showProjectStatusSync = false;
   let showJsonExportAlert = false;
   let originalStatus = '';
-  let pendingUpdateData: any = null;
+  let pendingUpdateData: Partial<Fee> | null = null;
   let formInitialized = false;
   let dataLoaded = false;
   
@@ -151,7 +155,7 @@
   let contactOptions: typeof allContactOptions = [];
   
   // Helper function to extract ID from various formats
-  function extractId(value: any): string {
+  function extractId(value: UnknownSurrealThing): string {
     return extractSurrealId(value) || '';
   }
   
@@ -316,7 +320,9 @@
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
-    console.log('ProposalModal: handleSubmit called, mode:', mode);
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal: handleSubmit called, mode:', mode);
+    }
     
     // If user typed in the project field but didn't select from dropdown, try to find a match
     if (projectSearchText && !formData.project_id) {
@@ -345,10 +351,14 @@
     }
     
     if (mode === 'create') {
-      console.log('ProposalModal: Calling handleCreate');
+      if (import.meta.env.DEV) {
+        console.log('ProposalModal: Calling handleCreate');
+      }
       handleCreate();
     } else {
-      console.log('ProposalModal: Calling handleUpdate');
+      if (import.meta.env.DEV) {
+        console.log('ProposalModal: Calling handleUpdate');
+      }
       handleUpdate();
     }
   }
@@ -424,8 +434,10 @@
   
   // Update proposal with loading state  
   async function handleUpdate() {
-    console.log('ProposalModal: handleUpdate called');
-    console.log('ProposalModal: proposal data:', proposal);
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal: handleUpdate called');
+      console.log('ProposalModal: proposal id:', proposal?.id);
+    }
     
     const activeProposal = proposal || originalProposal;
     if (!activeProposal) {
@@ -436,7 +448,9 @@
     
     // Try multiple extraction approaches like ContactModal
     const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
-    console.log('ProposalModal: extracted proposalId:', proposalId);
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal: extracted proposalId:', proposalId);
+    }
     
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
@@ -499,35 +513,37 @@
   
   // Handle project status sync confirmation
   async function handleProjectStatusSync(syncStatus: boolean) {
-    console.log('ProposalModal: handleProjectStatusSync called, syncStatus:', syncStatus);
-    console.log('ProposalModal: pendingUpdateData:', pendingUpdateData);
-    
-    // Enhanced debugging before clearing dialog
-    console.log('=== ENHANCED DEBUG: handleProjectStatusSync ===');
-    console.log('ProposalModal: proposal prop value:', proposal);
-    console.log('ProposalModal: proposal type:', typeof proposal);
-    console.log('ProposalModal: proposal is null?', proposal === null);
-    console.log('ProposalModal: proposal is undefined?', proposal === undefined);
-    if (proposal) {
-      console.log('ProposalModal: proposal.id value:', proposal.id);
-      console.log('ProposalModal: proposal.id type:', typeof proposal.id);
-      console.log('ProposalModal: proposal keys:', Object.keys(proposal));
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal: handleProjectStatusSync called, syncStatus:', syncStatus);
+      console.log('ProposalModal: has pendingUpdateData:', !!pendingUpdateData);
+      
+      // Enhanced debugging before clearing dialog - avoid logging $state objects
+      console.log('=== ENHANCED DEBUG: handleProjectStatusSync ===');
+      console.log('ProposalModal: proposal is null?', proposal === null);
+      console.log('ProposalModal: proposal is undefined?', proposal === undefined);
+      if (proposal) {
+        console.log('ProposalModal: proposal.id value:', proposal.id);
+        console.log('ProposalModal: proposal.id type:', typeof proposal.id);
+      }
+      console.log('ProposalModal: mode value:', mode);
+      console.log('ProposalModal: isOpen value:', isOpen);
+      console.log('=== END ENHANCED DEBUG ===');
     }
-    console.log('ProposalModal: mode value:', mode);
-    console.log('ProposalModal: isOpen value:', isOpen);
-    console.log('=== END ENHANCED DEBUG ===');
     
     showProjectStatusSync = false;
     
     await withLoadingState(async () => {
-      // Debug the proposal object structure
-      console.log('ProposalModal: proposal object structure:', proposal);
-      console.log('ProposalModal: proposal.id structure:', proposal?.id);
-      console.log('ProposalModal: originalProposal fallback:', originalProposal);
+      if (import.meta.env.DEV) {
+        // Debug the proposal object structure - avoid logging $state objects
+        console.log('ProposalModal: proposal.id structure:', proposal?.id);
+        console.log('ProposalModal: has originalProposal fallback:', !!originalProposal);
+      }
       
       // Use failsafe: try current proposal first, then fall back to originalProposal
       const activeProposal = proposal || originalProposal;
-      console.log('ProposalModal: activeProposal selected:', activeProposal);
+      if (import.meta.env.DEV) {
+        console.log('ProposalModal: activeProposal selected, has ID:', !!activeProposal?.id);
+      }
       
       if (!activeProposal) {
         console.error('ProposalModal: No proposal data available (both proposal and originalProposal are null)');
@@ -536,19 +552,24 @@
       
       // Use the same ID extraction logic as handleUpdate
       const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
-      console.log('ProposalModal: extracted proposalId in handleProjectStatusSync:', proposalId);
+      if (import.meta.env.DEV) {
+        console.log('ProposalModal: extracted proposalId in handleProjectStatusSync:', proposalId);
+      }
       
       // If proposalId is still empty, try alternative extraction methods
       if (!proposalId) {
         console.error('ProposalModal: Failed to extract proposal ID');
-        console.error('ProposalModal: activeProposal:', activeProposal);
-        console.error('ProposalModal: activeProposal.id:', activeProposal?.id);
+        if (import.meta.env.DEV) {
+          console.error('ProposalModal: activeProposal.id:', activeProposal?.id);
+        }
         throw new Error('Invalid proposal ID');
       }
       
       let updateData = pendingUpdateData;
       if (!updateData) {
-        console.warn('ProposalModal: pendingUpdateData was null, recreating from form data');
+        if (import.meta.env.DEV) {
+          console.warn('ProposalModal: pendingUpdateData was null, recreating from form data');
+        }
         // Recreate updateData from current form
         const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
         const companyId = formData.company_id || '';
@@ -856,7 +877,9 @@
   // Capture original proposal when modal opens (failsafe)
   $: if (proposal && isOpen && !originalProposal) {
     originalProposal = JSON.parse(JSON.stringify(proposal)); // Deep copy
-    console.log('ProposalModal: Captured originalProposal:', originalProposal);
+    if (import.meta.env.DEV) {
+      console.log('ProposalModal: Captured originalProposal with id:', originalProposal?.id);
+    }
   }
   
   // Load form data when proposal changes - only when modal opens

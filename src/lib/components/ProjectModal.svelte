@@ -8,6 +8,7 @@
   import { extractSurrealId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import { logger } from '$lib/services/logger';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
@@ -145,7 +146,7 @@
       // Try to extract ID from project.id first, then from project itself
       const projectId = extractSurrealId(project.id) || extractSurrealId(project);
       if (!projectId) {
-        console.error('Failed to extract project ID from:', project);
+        logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');
       }
       
@@ -183,7 +184,7 @@
         try {
           folderResult = await moveProjectFolder(project.number.id, newStatus);
         } catch (error) {
-          console.error('Folder movement failed:', error);
+          logger.error('Folder movement failed', { error });
           folderResult = {
             success: false,
             message: `Failed to move folder: ${error}`,
@@ -205,7 +206,7 @@
             await feesActions.updateStatus(feeUpdate.id, feeUpdate.newStatus);
             updatedCount++;
           } catch (error) {
-            console.error(`Failed to update fee ${feeUpdate.id}:`, error);
+            logger.error('Failed to update fee', { feeId: feeUpdate.id, error });
           }
         }
       }
@@ -240,7 +241,7 @@
       // Try to extract ID from project.id first, then from project itself
       const projectId = extractSurrealId(project.id) || extractSurrealId(project);
       if (!projectId) {
-        console.error('Failed to extract project ID from:', project);
+        logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');
       }
       

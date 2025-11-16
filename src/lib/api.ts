@@ -34,6 +34,37 @@ import type {
   Company, 
   Contact, 
   Fee, 
+  ProjectCreate,
+  ProjectUpdate,
+  CompanyCreate,
+  CompanyUpdate,
+  ContactCreate,
+  ContactUpdate,
+  FeeCreate,
+  FeeUpdate,
+  ConnectionStatus,
+  DatabaseStats,
+  DatabaseInfo,
+  TableSchema,
+  CountrySearchResult,
+  ProjectCreationResult,
+  FileOperationResult
+} from '../types';
+
+// Re-export types for easy importing
+export type { 
+  Project, 
+  Company, 
+  Contact, 
+  Fee, 
+  ProjectCreate,
+  ProjectUpdate,
+  CompanyCreate,
+  CompanyUpdate,
+  ContactCreate,
+  ContactUpdate,
+  FeeCreate,
+  FeeUpdate,
   ConnectionStatus,
   DatabaseStats,
   DatabaseInfo,
@@ -274,7 +305,7 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createProject(project: Omit<Project, 'id'>): Promise<Project | null> {
+  static async createProject(project: ProjectCreate): Promise<Project | null> {
     try {
       const newProject = {
         ...project,
@@ -380,7 +411,7 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createCompany(company: Omit<Company, 'id' | 'time'>): Promise<Company | null> {
+  static async createCompany(company: CompanyCreate): Promise<Company | null> {
     try {
       // Only send the fields needed for creation (exclude auto-managed id and time)
       const newCompany = {
@@ -437,7 +468,7 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database or validation errors
    */
-  static async updateCompany(id: string, company: Partial<Company>): Promise<Company | null> {
+  static async updateCompany(id: string, company: CompanyUpdate): Promise<Company | null> {
     try {
       // Convert to the structure expected by backend
       const companyUpdate = {
@@ -588,7 +619,7 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createContact(contact: Omit<Contact, 'id'>): Promise<Contact | null> {
+  static async createContact(contact: ContactCreate): Promise<Contact | null> {
     try {
       const newContact = {
         ...contact,
@@ -610,7 +641,7 @@ export class ApiClient {
    * @param contactUpdate Partial contact data - only fields to update
    * @returns Promise<Contact | null> Updated contact or null on failure
    */
-  static async updateContact(id: string, contactUpdate: Partial<Contact>): Promise<Contact | null> {
+  static async updateContact(id: string, contactUpdate: ContactUpdate): Promise<Contact | null> {
     try {
       const updated = await invoke<Contact>('update_contact', { 
         id, 
@@ -730,7 +761,7 @@ export class ApiClient {
    * 
    * @throws Never throws - returns null on error for safe handling
    */
-  static async createFee(fee: Omit<Fee, 'id'>): Promise<Fee | null> {
+  static async createFee(fee: FeeCreate): Promise<Fee | null> {
     try {
       // Use FeeCreate format - remove id and time fields, ensure string IDs
       const feeCreate = {
@@ -785,13 +816,12 @@ export class ApiClient {
    * 
    * @throws Error - Re-throws database connection or validation errors
    */
-  static async updateFee(id: string, fee: Omit<Fee, 'id'>): Promise<Fee | null> {
+  static async updateFee(id: string, fee: FeeUpdate): Promise<Fee | null> {
     try {
       const updatedFee = {
         ...fee,
-        id: null, // Let backend handle ID
+        id: null, // Let backend handle ID and time
         time: {
-          ...fee.time,
           updated_at: new Date().toISOString()
         }
       };
@@ -1251,7 +1281,7 @@ export class ApiClient {
    * await ApiClient.saveSettings(settings);
    * ```
    */
-  static async saveSettings(settings: any): Promise<string> {
+  static async saveSettings(settings: Record<string, unknown>): Promise<string> {
     try {
       return await invoke<string>('save_settings', { settings });
     } catch (error) {
@@ -1586,7 +1616,7 @@ export class ApiClient {
     }
   }
 
-  static async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
+  static async updateProject(id: string, projectData: ProjectUpdate): Promise<Project> {
     try {
       const updated = await invoke<Project>('update_project', { id, projectUpdate: projectData });
       return updated;

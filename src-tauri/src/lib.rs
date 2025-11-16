@@ -59,6 +59,7 @@ use commands::{
     move_project_to_archive,
     list_projects_in_folder,
     validate_project_base_path,
+    log_message,
 };
 
 /// Load database configuration from the settings system.
@@ -91,6 +92,21 @@ async fn load_database_config_from_settings(app_handle: &tauri::AppHandle) -> Re
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            info!("Single instance detected - bringing existing window to front");
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(e) = window.set_focus() {
+                    error!("Failed to set focus on window: {}", e);
+                }
+                if let Err(e) = window.unminimize() {
+                    error!("Failed to unminimize window: {}", e);
+                }
+                if let Err(e) = window.show() {
+                    error!("Failed to show window: {}", e);
+                }
+            }
+            info!("Single instance enforcement - prevented duplicate launch");
+        }))
         .setup(|app| {
             // Setup logging
             app.handle().plugin(
@@ -273,7 +289,8 @@ pub fn run() {
             move_project_from_rfp,
             move_project_to_archive,
             list_projects_in_folder,
-            validate_project_base_path
+            validate_project_base_path,
+            log_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

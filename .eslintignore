@@ -1,0 +1,8 @@
+# CRITICAL: Browser testing configurations disabled per TAURI MCP DIRECTIVE
+# Browser testing DOES NOT WORK for Tauri applications - use MCP only
+playwright.config.ts
+e2e/
+performance/scripts/*playwright*
+
+# Active MCP-based E2E testing (DO NOT IGNORE)
+# e2e-mcp/  <- This should be linted and maintained

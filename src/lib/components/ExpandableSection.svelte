@@ -4,7 +4,7 @@
   export let title: string;
   export let totalCount: number;
   export let showAll: boolean = false;
-  export let items: any[] = [];
+  export let items: unknown[] = [];
   export let maxItems: number = 3;
   
   function toggleExpanded() {

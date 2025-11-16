@@ -111,6 +111,9 @@
   });
   
   function handleEdit() {
+    if (import.meta.env.DEV) {
+      console.log('ProposalDetail: handleEdit called with proposal id:', proposal?.id);
+    }
     dispatch('edit', proposal);
   }
   
@@ -127,6 +130,12 @@
   
   // Project creation workflow with existence check
   async function handleCreateProject() {
+    if (import.meta.env.DEV) {
+      console.log('ProposalDetail: handleCreateProject called');
+      console.log('Proposal id:', proposal?.id);
+      console.log('Related Project id:', relatedProject?.id);
+    }
+    
     if (!proposal || !relatedProject) {
       console.error('Cannot create project: missing proposal or related project data');
       return;
@@ -270,6 +279,11 @@
   
   // JSON export with safety checks
   async function handleExportToJson() {
+    if (import.meta.env.DEV) {
+      console.log('ProposalDetail: handleExportToJson called');
+      console.log('Proposal id:', proposal?.id);
+    }
+    
     if (!proposal) {
       console.error('Cannot export: no proposal data');
       return;
@@ -342,12 +356,20 @@
       disabled: !proposal
     }
   ];
+  
+  // Debug custom actions - avoid logging $state objects
+  $: if (import.meta.env.DEV) {
+    console.log('ProposalDetail: customActions updated, count:', customActions.length);
+    console.log('Proposal available:', !!proposal);
+    console.log('Related project available:', !!relatedProject);
+  }
 </script>
 
 <DetailPanel 
   {isOpen}
   show={!!proposal}
   title="proposal"
+  canEdit={true}
   {customActions}
   on:edit={handleEdit}
   on:close={handleClose}

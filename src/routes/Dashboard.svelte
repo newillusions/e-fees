@@ -1,117 +1,271 @@
 <script lang="ts">
   import Card from '$lib/components/Card.svelte';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
-  import { statisticsStore, isLoadingStore, recentFeesStore, loadAllData, projectsStore, companiesStore } from '$lib/stores';
+  import QuickActions from '$lib/components/dashboard/QuickActions.svelte';
+  import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
+  import PendingProposals from '$lib/components/dashboard/PendingProposals.svelte';
+  import { statisticsStore, isLoadingStore, loadAllData } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId, findEntityById, getEntityDisplayName } from '$lib/utils';
-  
-  // Helper functions for activity display
-  function getProjectName(projectId: any): string {
-    const project = findEntityById($projectsStore, projectId);
-    return getEntityDisplayName(project) || 'Unknown Project';
+import { push } from 'svelte-spa-router';
+
+  // Modal handling
+  let showProjectModal = false;
+  let showFeeModal = false;
+  let showCompanyModal = false;
+
+  function handleModalOpen(event: CustomEvent) {
+    const { type } = event.detail;
+    
+    switch (type) {
+      case 'project':
+        showProjectModal = true;
+        break;
+      case 'fee':
+        showFeeModal = true;
+        break;
+      case 'company':
+        showCompanyModal = true;
+        break;
+    }
   }
-  
-  function getCompanyName(companyId: any): string {
-    const company = findEntityById($companiesStore, companyId);
-    return getEntityDisplayName(company) || 'Unknown Company';
-  }
-  
-  
-  
+
   const statCards = [
     {
       title: 'Total Projects',
       key: 'totalProjects',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      color: 'text-blue-400'
+      color: 'text-blue-400',
+      route: '/projects'
     },
     {
       title: 'Active Fees',
       key: 'activeFees',
       icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-      color: 'status-connected'
+      color: 'status-connected',
+      route: '/proposals'
     },
     {
       title: 'Companies',
       key: 'totalCompanies',
       icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-      color: 'text-green-400'
+      color: 'text-green-400',
+      route: '/companies'
     },
     {
       title: 'Contacts',
       key: 'totalContacts',
       icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-      color: 'text-purple-400'
+      color: 'text-purple-400',
+      route: '/contacts'
     }
   ];
+
+  function handleStatCardClick(route: string) {
+    push(route);
+  }
 </script>
 
-<div class="p-8">
+<div class="dashboard-container">
+  
+  <!-- Quick Actions -->
+  <section class="dashboard-section">
+    <QuickActions on:openModal={handleModalOpen} />
+  </section>
   
   <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    {#each statCards as card}
-      <Card className="emittiv-card hover-lift">
-        {#if $isLoadingStore}
-          <LoadingSkeleton rows={2} />
-        {:else}
-          <div class="flex items-center justify-between mb-4">
-            <svg class="w-8 h-8 {card.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={card.icon} />
-            </svg>
-            <span class="text-2xl font-bold" style="color: var(--emittiv-white);">{($statisticsStore as any)[card.key]}</span>
-          </div>
-          <h3 class="font-medium" style="color: var(--emittiv-lighter);">{card.title}</h3>
-        {/if}
-      </Card>
-    {/each}
-  </div>
+  <section class="dashboard-section">
+    <div class="stats-grid">
+      {#each statCards as card}
+        <div class="stat-card" on:click={() => handleStatCardClick(card.route)} on:keydown={(e) => e.key === 'Enter' && handleStatCardClick(card.route)} role="button" tabindex="0">
+          {#if $isLoadingStore}
+            <LoadingSkeleton rows={2} />
+          {:else}
+            <div class="stat-card-content">
+              <div class="stat-icon">
+                <svg class="{card.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={card.icon} />
+                </svg>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{($statisticsStore as any)[card.key]}</div>
+                <div class="stat-label">{card.title}</div>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  </section>
   
-  <!-- Recent Activity -->
-  <Card className="emittiv-card mb-6">
-    <h2 class="text-xl font-heading font-semibold mb-4" style="color: var(--emittiv-white);">Recent Activity</h2>
-    {#if $isLoadingStore}
-      <LoadingSkeleton rows={4} />
-    {:else if $recentFeesStore.length > 0}
-      <div class="space-y-1">
-        {#each $recentFeesStore.slice(0, 5) as fee}
-          <div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-emittiv-darker/50 transition-colors cursor-pointer text-xs">
-            <!-- Status indicator -->
-            {#if fee.status === 'Awarded'}
-              <div class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
-            {:else if fee.status === 'Lost' || fee.status === 'Cancelled'}
-              <div class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></div>
-            {:else if fee.status === 'Active' || fee.status === 'Sent'}
-              <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
-            {:else}
-              <div class="w-1.5 h-1.5 rounded-full bg-gray-500 flex-shrink-0"></div>
-            {/if}
-            
-            <!-- Fee number -->
-            <span class="text-emittiv-white font-medium">{fee.number}</span>
-            
-            <!-- Status badge -->
-            <span class="px-1.5 py-0.5 rounded bg-emittiv-dark text-emittiv-lighter text-xs">{fee.status}</span>
-            
-            <!-- Project and company -->
-            <span class="text-emittiv-light truncate flex-1">
-              {getProjectName(fee.project_id)} • {getCompanyName(fee.company_id)}
-            </span>
-            
-            <!-- Date -->
-            <span class="text-emittiv-light flex-shrink-0">
-              {new Date(fee.time.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </span>
-          </div>
-        {/each}
+  <!-- Content Grid -->
+  <section class="dashboard-section">
+    <div class="content-grid">
+      <div class="content-panel">
+        <ActivityFeed isLoading={$isLoadingStore} />
       </div>
-    {:else}
-      <div class="text-center py-8">
-        <svg class="w-12 h-12 mx-auto mb-4" style="color: var(--emittiv-light);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-        <p style="color: var(--emittiv-light);">No recent activity</p>
+      
+      <div class="content-panel">
+        <PendingProposals isLoading={$isLoadingStore} />
       </div>
-    {/if}
-  </Card>
+    </div>
+  </section>
 </div>
+
+<!-- Modal Placeholders - These would be implemented when creating the modals -->
+{#if showProjectModal}
+  <!-- ProjectModal component would go here -->
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showProjectModal = false}>
+    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
+      <p class="text-emittiv-white">Project Modal - To be implemented</p>
+      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showProjectModal = false}>
+        Close
+      </button>
+    </div>
+  </div>
+{/if}
+
+{#if showFeeModal}
+  <!-- FeeModal component would go here -->
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showFeeModal = false}>
+    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
+      <p class="text-emittiv-white">Fee Modal - To be implemented</p>
+      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showFeeModal = false}>
+        Close
+      </button>
+    </div>
+  </div>
+{/if}
+
+{#if showCompanyModal}
+  <!-- CompanyModal component would go here -->
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showCompanyModal = false}>
+    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
+      <p class="text-emittiv-white">Company Modal - To be implemented</p>
+      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showCompanyModal = false}>
+        Close
+      </button>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .dashboard-section {
+    margin-bottom: 32px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .stat-card {
+    background: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  .stat-card:hover {
+    border-color: var(--emittiv-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 153, 0, 0.1);
+  }
+
+  .stat-card:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+  }
+
+  .stat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    padding: 12px;
+    background: rgba(255, 153, 0, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .stat-info {
+    flex: 1;
+  }
+
+  .stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--emittiv-white);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--emittiv-lighter);
+    line-height: 1.2;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .content-panel {
+    min-height: 400px;
+  }
+
+  @media (max-width: 1024px) {
+    .content-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-container {
+      padding: 16px;
+    }
+    
+    .dashboard-section {
+      margin-bottom: 24px;
+    }
+    
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .stat-card {
+      padding: 16px;
+    }
+    
+    .stat-number {
+      font-size: 24px;
+    }
+  }
+</style>

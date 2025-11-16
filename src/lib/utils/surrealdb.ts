@@ -6,6 +6,8 @@
  * across components and provide a single source of truth for SurrealDB data handling.
  */
 
+import type { SurrealThing, UnknownSurrealThing } from '../../types';
+
 /**
  * Extracts the string ID from a SurrealDB Thing object.
  * 
@@ -22,7 +24,7 @@
  * extractSurrealId({ tb: "projects", id: { String: "25_97107" } }) // Returns: "25_97107"
  * extractSurrealId({ tb: "company", id: "EMITTIV" }) // Returns: "EMITTIV"
  */
-export function extractSurrealId(thing: any): string | null {
+export function extractSurrealId(thing: UnknownSurrealThing): string | null {
   if (!thing) return null;
   
   // Handle simple string IDs
@@ -33,17 +35,17 @@ export function extractSurrealId(thing: any): string | null {
   // Handle SurrealDB Thing objects
   if (thing && typeof thing === 'object') {
     // Format: { tb: "table", id: { String: "value" } }
-    if (thing.tb && thing.id) {
+    if ('tb' in thing && 'id' in thing && thing.tb && thing.id) {
       if (typeof thing.id === 'string') {
         return thing.id;
-      } else if (thing.id && typeof thing.id === 'object' && thing.id.String) {
-        return thing.id.String;
+      } else if (thing.id && typeof thing.id === 'object' && 'String' in thing.id) {
+        return (thing.id as { String: string }).String;
       }
     }
     
     // Handle direct id objects: { String: "value" }
-    if (thing.String) {
-      return thing.String;
+    if ('String' in thing) {
+      return (thing as { String: string }).String;
     }
   }
   
@@ -64,7 +66,7 @@ export function extractSurrealId(thing: any): string | null {
  * compareSurrealIds("123", { tb: "table", id: "123" }) // Returns: true
  * compareSurrealIds(thingObj1, thingObj2) // Returns: true if same ID
  */
-export function compareSurrealIds(id1: any, id2: any): boolean {
+export function compareSurrealIds(id1: UnknownSurrealThing, id2: UnknownSurrealThing): boolean {
   const extractedId1 = extractSurrealId(id1);
   const extractedId2 = extractSurrealId(id2);
   
@@ -125,8 +127,8 @@ export function extractTableFromRelation(relation: string): string | null {
  * @param obj - Object to check
  * @returns True if the object is a SurrealDB Thing
  */
-export function isSurrealThing(obj: any): obj is { tb: string; id: any } {
-  return obj && typeof obj === 'object' && typeof obj.tb === 'string' && obj.id !== undefined;
+export function isSurrealThing(obj: UnknownSurrealThing): obj is SurrealThing {
+  return Boolean(obj && typeof obj === 'object' && 'tb' in obj && typeof obj.tb === 'string' && 'id' in obj && obj.id !== undefined);
 }
 
 /**
@@ -138,7 +140,7 @@ export function isSurrealThing(obj: any): obj is { tb: string; id: any } {
  * @example
  * thingToString({ tb: "projects", id: "25_97107" }) // Returns: "projects:25_97107"
  */
-export function thingToString(thing: any): string {
+export function thingToString(thing: UnknownSurrealThing): string {
   if (typeof thing === 'string') return thing;
   
   if (isSurrealThing(thing)) {

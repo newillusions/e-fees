@@ -46,11 +46,11 @@
    - **Est. Time**: 1-2 weeks
    - **Impact**: Professional revision management, audit trail
 
-4. **Complete Projects CRUD system**
-   - Create missing `ProjectModal.svelte` component
-   - Implement project update and delete functionality
-   - **Est. Time**: 1 day
-   - **Impact**: Feature parity across all data types
+4. **~~Complete Projects CRUD system~~** ✅ **COMPLETED**
+   - ProjectModal.svelte component exists with full functionality
+   - Update and delete operations fully implemented
+   - Status change synchronization with fee proposals working
+   - **Status**: DONE (verified in codebase)
 
 5. **Develop modules to create/manage/calculate stages/scope/pricing sections**
    - Dynamic pricing calculation engine
@@ -220,10 +220,11 @@
 **Priority**: Critical foundation work
 
 1. **✅ COMPREHENSIVE TESTING WITH TAURI MCP** (NEXT SESSION - 1-2 hours)
-2. **Clean up development artifacts** (1-2 hours)
-3. **Delete RFP table and test functionality** (2-3 hours) 
-4. **Complete Projects CRUD system** (1 day)
-5. **Fix page header and UI polish** (2-3 hours)
+2. **Clean up development artifacts** (1-2 hours) - .bak files, test SQL scripts identified
+3. **Delete RFP table references** (2-3 hours) - DB migration complete, 157 code references remain
+4. **~~Complete Projects CRUD system~~** ✅ **COMPLETED**
+5. **Fix 3 test failures** (30 minutes) - validateSurrealId function in crud.test.ts
+6. **Fix page header and UI polish** (2-3 hours)
 
 **Success Criteria**: 100% validated status change functionality, clean codebase, complete CRUD functionality, professional UI
 

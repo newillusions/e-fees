@@ -12,7 +12,6 @@ if (appDiv) {
 
     // Initialize security monitoring in development
     if (import.meta.env.DEV) {
-      console.log('Security Monitor initialized');
       
       // Make security report available globally for debugging
       (window as any).getSecurityReport = getSecurityReport;

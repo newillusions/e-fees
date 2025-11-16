@@ -12,8 +12,7 @@
   const dispatch = createEventDispatcher();
   
   // Debug logging
-  $: {
-    console.log('BaseModal - isOpen changed:', isOpen, 'title:', title);
+  $: if (import.meta.env.DEV) {
   }
   
   function closeModal() {

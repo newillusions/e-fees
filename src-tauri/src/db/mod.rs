@@ -19,6 +19,9 @@
 //! - **Performance Optimization**: Connection pooling and query optimization
 
 pub mod utils;
+#[cfg(test)]
+mod tests;
+// pub mod entities; // Temporarily disabled to test connection issue
 
 //  
 // ## Architecture
@@ -76,6 +79,7 @@ use log::{error, info, warn};
 use chrono::{self, Datelike};
 use std::env;
 use crate::commands::CompanyUpdate;
+// pub use crate::db::entities::{FeeUpdate}; // Temporarily disabled to test connection issue - now defined locally
 
 /// Interval for database connection health checks (30 seconds)
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
@@ -513,16 +517,16 @@ pub struct FeeUpdate {
     pub rev: i32,
     pub status: String, // 'Draft', 'Prepared', 'Active', 'Sent', 'Under Review', 'Clarification', 'Negotiation', 'Awarded', 'Lost', 'Cancelled'
     pub issue_date: String,
-    pub activity: String,
-    pub package: String,
+    pub activity: Option<String>,
+    pub package: Option<String>,
     pub project_id: String, // Project ID as string (e.g., "25_97107")
     pub company_id: String, // Company ID as string (e.g., "EMITTIV")
     pub contact_id: String, // Contact ID as string
-    pub staff_name: String,
-    pub staff_email: String,
-    pub staff_phone: String,
-    pub staff_position: String,
-    pub strap_line: String,
+    pub staff_name: Option<String>,
+    pub staff_email: Option<String>,
+    pub staff_phone: Option<String>,
+    pub staff_position: Option<String>,
+    pub strap_line: Option<String>,
     pub revisions: Vec<Revision>,
 }
 
@@ -874,13 +878,13 @@ impl DatabaseClient {
             fee.contact_id.replace("'", "''"),
             fee.status.replace("'", "''"),
             fee.issue_date.replace("'", "''"),
-            fee.activity.replace("'", "''"),
-            fee.package.replace("'", "''"),
-            fee.strap_line.replace("'", "''"),
-            fee.staff_name.replace("'", "''"),
-            fee.staff_email.replace("'", "''"),
-            fee.staff_phone.replace("'", "''"),
-            fee.staff_position.replace("'", "''")
+            fee.activity.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.package.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.strap_line.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_name.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_email.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_phone.as_ref().unwrap_or(&String::new()).replace("'", "''"),
+            fee.staff_position.as_ref().unwrap_or(&String::new()).replace("'", "''")
         );
         
         info!("Executing update query: {}", query);
@@ -1095,57 +1099,62 @@ impl DatabaseManager {
     // Connect to SurrealDB
     async fn connect(&mut self) -> Result<(), Error> {
         info!("Attempting to connect to SurrealDB at {}", self.config.url);
-        
-        // Use WebSocket connection (preferred for SurrealDB)
+
         let db = if self.config.url.starts_with("ws://") || self.config.url.starts_with("wss://") {
             let is_secure = self.config.url.starts_with("wss://");
-            info!("Connecting to SurrealDB using {} WebSocket at {}", 
-                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" }, 
+            info!("Attempting {} WebSocket connection to SurrealDB at {}",
+                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" },
                   self.config.url);
-            
-            // Warn about unencrypted connections
-            if !is_secure {
-                warn!("WARNING: Using unencrypted WebSocket connection (ws://). Data transmission is not secure!");
-            } else {
-                info!("Using encrypted WebSocket connection (wss://) with TLS certificate verification: {}", 
-                     self.config.verify_certificates);
-            }
-            
+
             // Parse URL to remove protocol for Ws connection
             let connection_address = self.config.url
                 .strip_prefix("ws://")
                 .or_else(|| self.config.url.strip_prefix("wss://"))
                 .unwrap_or(&self.config.url);
-            
+
+            // Try WebSocket connection first
             match Surreal::new::<Ws>(connection_address).await {
                 Ok(connection) => {
-                    info!("Successfully established {} WebSocket connection to SurrealDB at {}", 
-                          if is_secure { "secure" } else { "unencrypted" }, 
+                    info!("Successfully established {} WebSocket connection to SurrealDB at {}",
+                          if is_secure { "secure" } else { "unencrypted" },
                           connection_address);
+                    if !is_secure {
+                        warn!("WARNING: Using unencrypted WebSocket connection (ws://). Data transmission is not secure!");
+                    }
                     DatabaseClient::WebSocket(connection)
                 }
-                Err(err) => {
-                    // Provide more specific error messages for TLS-related failures
-                    let error_msg = err.to_string();
-                    if is_secure && (error_msg.contains("certificate") || error_msg.contains("tls") || error_msg.contains("ssl")) {
-                        error!("TLS/SSL connection failed to {}: {}. This may be due to:", connection_address, err);
-                        error!("  1. Server doesn't support TLS on this port");
-                        error!("  2. Invalid or self-signed certificate");
-                        error!("  3. Certificate hostname mismatch");
-                        error!("  4. Certificate verification settings");
-                        if !self.config.verify_certificates {
-                            info!("Certificate verification is disabled - this reduces security");
-                        }
+                Err(ws_err) => {
+                    warn!("WebSocket connection failed to {}: {}", connection_address, ws_err);
+                    warn!("Attempting HTTP fallback...");
+
+                    // Convert WebSocket URL to HTTP URL for fallback
+                    let http_url = if self.config.url.starts_with("ws://") {
+                        self.config.url.replace("ws://", "http://")
+                    } else if self.config.url.starts_with("wss://") {
+                        self.config.url.replace("wss://", "https://")
                     } else {
-                        error!("Failed to establish WebSocket connection to {}: {}", connection_address, err);
+                        self.config.url.clone()
+                    };
+
+                    info!("Trying HTTP connection to {}", http_url);
+                    match Surreal::new::<Http>(&http_url).await {
+                        Ok(connection) => {
+                            info!("Successfully established HTTP fallback connection to SurrealDB at {}", http_url);
+                            DatabaseClient::Http(connection)
+                        }
+                        Err(http_err) => {
+                            error!("Both WebSocket and HTTP connections failed:");
+                            error!("  WebSocket error: {}", ws_err);
+                            error!("  HTTP error: {}", http_err);
+                            return Err(ws_err); // Return the original WebSocket error
+                        }
                     }
-                    return Err(err);
                 }
             }
         } else {
-            // Fallback to HTTP if not a WebSocket URL
+            // Direct HTTP connection for http:// or https:// URLs
             info!("Connecting to SurrealDB using HTTP at {}", self.config.url);
-            
+
             match Surreal::new::<Http>(&self.config.url).await {
                 Ok(connection) => {
                     info!("Successfully established HTTP connection to SurrealDB at {}", self.config.url);

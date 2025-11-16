@@ -8,6 +8,9 @@
   import Proposals from './routes/Proposals.svelte';
   import Companies from './routes/Companies.svelte';
   import Contacts from './routes/Contacts.svelte';
+  import ProjectDetailPage from './routes/ProjectDetailPage.svelte';
+  import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
+  import DevMode from './routes/DevMode.svelte';
   import { onMount } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { fade } from 'svelte/transition';
@@ -34,9 +37,12 @@
   const routes = {
     '/': Dashboard,
     '/projects': Projects,
+    '/projects/:id': ProjectDetailPage,
     '/proposals': Proposals,
+    '/proposals/:id': ProposalDetailPage,
     '/companies': Companies,
-    '/contacts': Contacts
+    '/contacts': Contacts,
+    '/dev': DevMode
   };
   
   async function handleSplashComplete() {
@@ -46,11 +52,13 @@
     // The ConnectionStatus component will handle database connectivity display
     setTimeout(async () => {
       try {
-        console.log('Starting app initialization...');
+        if (import.meta.env.DEV) {
+        }
         const { getSettings } = await import('$lib/api');
         
         const settings = await getSettings();
-        console.log('Settings loaded:', settings ? 'found' : 'not found');
+        if (import.meta.env.DEV) {
+        }
         
         const isFirstRun = !settings || 
                           settings.surrealdb_user === 'placeholder' || 
@@ -59,30 +67,37 @@
                           settings.surrealdb_url === 'placeholder';
         
         if (isFirstRun) {
-          console.log('First run detected - showing setup');
+          if (import.meta.env.DEV) {
+          }
           showFirstRun = true;
         } else {
-          console.log('Settings found - starting app');
+          if (import.meta.env.DEV) {
+          }
           appReady = true;
           // Data will be loaded automatically when ConnectionStatus detects first connection
-          console.log('App ready - data loading will happen after database connection confirmed');
+          if (import.meta.env.DEV) {
+          }
           
           // FALLBACK: Also attempt data loading directly after a delay
           // This ensures data loads even if ConnectionStatus fails
           setTimeout(async () => {
-            console.log('FALLBACK: Starting unconditional data loading after 5s delay...');
+            if (import.meta.env.DEV) {
+            }
             try {
               await loadAllData();
-              console.log('FALLBACK: Unconditional data loading completed successfully');
+              if (import.meta.env.DEV) {
+              }
             } catch (error) {
-              console.log('FALLBACK: Unconditional data loading failed:', error);
+              if (import.meta.env.DEV) {
+              }
             }
           }, 5000); // 5 second delay to allow ConnectionStatus to try first
         }
       } catch (error) {
         console.error('Failed during app initialization:', error);
         // If we can't load settings at all, show first run setup
-        console.log('Settings load failed - showing first run setup');
+        if (import.meta.env.DEV) {
+        }
         showFirstRun = true;
       }
     }, 800); // Reduced delay since we're not trying to test connections
@@ -101,7 +116,8 @@
     // Set up MCP plugin event listeners
     try {
       await setupPluginListeners();
-      console.log('MCP plugin listeners set up successfully');
+      if (import.meta.env.DEV) {
+      }
     } catch (error) {
       console.error('Failed to set up MCP plugin listeners:', error);
     }

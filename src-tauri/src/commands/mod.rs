@@ -37,6 +37,7 @@ use utils::execute_with_manager;
 use crate::crud_command;
 
 use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate};
+// use crate::db::entities::FeeUpdate; // Temporarily disabled for testing
 use std::sync::{Arc, Mutex};
 use std::fs;
 use serde_json::Value;
@@ -3465,5 +3466,65 @@ pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -
             Err(e.to_string())
         }
     }
+}
+
+/// Frontend logging command for unified logging across frontend and backend.
+/// 
+/// This command allows the Svelte frontend to send log messages to the Rust
+/// logging system, providing centralized logging with proper levels and targets.
+/// 
+/// # Parameters
+/// - `level`: Log level (error, warn, info, debug, trace)
+/// - `target`: Log target (component name, module, etc.)
+/// - `message`: The log message
+/// - `context`: Optional JSON context for structured logging
+/// 
+/// # Frontend Usage
+/// ```typescript
+/// await invoke('log_message', {
+///   level: 'error',
+///   target: 'ProjectModal',
+///   message: 'Failed to create project',
+///   context: JSON.stringify({ userId: '123', action: 'create' })
+/// });
+/// ```
+#[tauri::command]
+pub async fn log_message(
+    level: String,
+    target: String,
+    message: String,
+    context: Option<String>
+) -> Result<(), String> {
+    // Parse log level
+    let log_level = match level.to_lowercase().as_str() {
+        "error" => log::Level::Error,
+        "warn" => log::Level::Warn,
+        "info" => log::Level::Info,
+        "debug" => log::Level::Debug,
+        "trace" => log::Level::Trace,
+        _ => log::Level::Info, // Default to info for unknown levels
+    };
+    
+    // Format message with context if provided
+    let formatted_message = if let Some(ctx) = context {
+        if ctx.trim().is_empty() || ctx == "null" {
+            message
+        } else {
+            format!("{} | Context: {}", message, ctx)
+        }
+    } else {
+        message
+    };
+    
+    // Log using the appropriate level
+    match log_level {
+        log::Level::Error => log::error!(target: &target, "{}", formatted_message),
+        log::Level::Warn => log::warn!(target: &target, "{}", formatted_message),
+        log::Level::Info => log::info!(target: &target, "{}", formatted_message),
+        log::Level::Debug => log::debug!(target: &target, "{}", formatted_message),
+        log::Level::Trace => log::trace!(target: &target, "{}", formatted_message),
+    }
+    
+    Ok(())
 }
 

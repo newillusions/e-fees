@@ -1,140 +1,148 @@
 <!--
-  Refactored Contact Modal using BaseModal, FormInput, and FormSelect components
-  Reduced from ~538 lines to ~300 lines using base components
+  Contact Modal using Generic CrudModal Component
+  
+  Replaces the original ContactModal with the new generic system.
+  Maintains all existing functionality with significantly reduced code.
 -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { contactsActions, companiesStore } from '$lib/stores';
-  import { extractSurrealId, formatSurrealRelation } from '$lib/utils/surrealdb';
-  import { validateForm, CommonValidationRules, hasValidationErrors } from '$lib/utils/validation';
-  import { useOperationState, withLoadingState } from '$lib/utils/crud';
-  import BaseModal from './BaseModal.svelte';
-  import FormInput from './FormInput.svelte';
-  import TypeaheadSelect from './TypeaheadSelect.svelte';
-  import Button from './Button.svelte';
+  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { CommonValidationRules } from '$lib/utils/validation';
+  import { get } from 'svelte/store';
+  import CrudModal from './base/CrudModal.svelte';
   import CompanyModal from './CompanyModal.svelte';
-  import type { Contact, Company } from '$lib/../types';
-  
+  import type { Contact } from '$lib/../types';
+  import type { FormFieldConfig } from './base/types';
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
   export let contact: Contact | null = null;
   export let mode: 'create' | 'edit' = 'create';
-  
-  // Use the new operation state utility
-  const { store: operationState, actions: operationActions } = useOperationState();
-  
-  // Form data with better typing
-  interface ContactFormData {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    position: string;
-    company: string;
-  }
-  
-  let formData: ContactFormData = {
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    position: '',
-    company: ''
+
+  // Company modal state
+  let showCompanyModal = false;
+
+  // Form field configuration
+  const fields: FormFieldConfig[] = [
+    {
+      type: 'group',
+      name: 'contact_info',
+      groupTitle: 'Contact Information',
+      fields: [
+        {
+          type: 'text',
+          name: 'first_name',
+          label: 'First Name',
+          placeholder: 'John',
+          required: true,
+          colSpan: 1
+        },
+        {
+          type: 'text',
+          name: 'last_name',
+          label: 'Last Name',
+          placeholder: 'Doe',
+          required: true,
+          colSpan: 1
+        },
+        {
+          type: 'computed',
+          name: 'full_name_display',
+          label: 'Full Name (Auto-generated)',
+          computeFn: (formData: any) => {
+            const firstName = formData.first_name || '';
+            const lastName = formData.last_name || '';
+            return `${firstName} ${lastName}`.trim();
+          },
+          colSpan: 2
+        },
+        {
+          type: 'email',
+          name: 'email',
+          label: 'Email',
+          placeholder: 'john.doe@company.com',
+          required: true,
+          colSpan: 2
+        },
+        {
+          type: 'tel',
+          name: 'phone',
+          label: 'Phone',
+          placeholder: '+971 50 123 4567',
+          required: false,
+          colSpan: 1
+        },
+        {
+          type: 'text',
+          name: 'position',
+          label: 'Position',
+          placeholder: 'Manager',
+          required: false,
+          colSpan: 1
+        }
+      ]
+    }
+  ];
+
+  // Enhanced company field with add button functionality
+  const companyField: FormFieldConfig = {
+    type: 'typeahead',
+    name: 'company',
+    label: 'Company',
+    placeholder: 'Search companies...',
+    required: true,
+    colSpan: 2,
+    displayFields: ['name'],
+    onSearch: async (searchText: string) => {
+      if (!searchText || searchText.length < 1) return [];
+      
+      try {
+        const searchLower = searchText.toLowerCase();
+        const companies = get(companiesStore);
+        
+        return companies
+          .filter(company => {
+            const nameMatch = company.name?.toLowerCase().includes(searchLower);
+            const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
+            const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
+            return nameMatch || shortNameMatch || abbreviationMatch;
+          })
+          .map(company => {
+            const companyId = extractSurrealId(company.id) || company.id || '';
+            return {
+              id: String(companyId),
+              name: company.name || '',
+              name_short: company.name_short || '',
+              abbreviation: company.abbreviation || ''
+            };
+          })
+          .slice(0, 10);
+      } catch (error) {
+        console.warn('Failed to search companies:', error);
+        return [];
+      }
+    }
   };
-  
-  // Validation setup using the new validation system
+
+  // Add company field to fields array
+  fields[0].fields?.push(companyField);
+
+  // Validation rules
   const validationRules = [
     CommonValidationRules.contact.firstName,
     CommonValidationRules.contact.lastName,
     CommonValidationRules.contact.email,
-    { field: 'company' as keyof ContactFormData, required: true, minLength: 1 },
+    { field: 'company', required: true, minLength: 1 }
   ];
-  
-  // Form validation state
-  let formErrors: Record<string, string> = {};
-  
-  // UI state
-  let showDeleteConfirm = false;
-  let showCompanyModal = false;
-  let dataLoaded = false;
-  
-  // Typeahead search states for company selection
-  let companySearchText = '';
-  let companyOptions: Array<{ id: string; name: string; name_short?: string; abbreviation?: string }> = [];
-  
-  // Computed values
-  $: fullName = `${formData.first_name} ${formData.last_name}`.trim();
-  
-  
-  // Company search handler for fuzzy search
-  async function handleCompanySearch(searchText: string) {
-    if (!searchText || searchText.length < 1) {
-      companyOptions = [];
-      return;
-    }
-    
-    try {
-      const searchLower = searchText.toLowerCase();
-      const filtered = $companiesStore
-        .filter(company => {
-          const nameMatch = company.name?.toLowerCase().includes(searchLower);
-          const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
-          const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
-          return nameMatch || shortNameMatch || abbreviationMatch;
-        })
-        .map(company => {
-          const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
-          return {
-            id: companyId,
-            name: company.name || '',
-            name_short: company.name_short || '',
-            abbreviation: company.abbreviation || ''
-          };
-        })
-        .slice(0, 10); // Limit to 10 results
-      
-      companyOptions = filtered;
-    } catch (error) {
-      console.warn('Failed to search companies:', error);
-      companyOptions = [];
-    }
-  }
-  
-  // Company selection handler
-  function handleCompanySelect(event: CustomEvent) {
-    formData.company = event.detail.id;
-    
-    // Clear any validation error for company field when a selection is made
-    if (formErrors.company) {
-      formErrors = { ...formErrors, company: '' };
-    }
-  }
-  
-  // Form submission handler
-  function handleSubmit(event: Event) {
-    event.preventDefault();
-    
-    // Validate using the new validation system
-    const errors = validateForm(formData, validationRules);
-    formErrors = errors;
-    
-    if (hasValidationErrors(errors)) {
-      operationActions.setError('Please fix the validation errors above.');
-      return;
-    }
+
+  // Save handler
+  async function handleSave(formData: any) {
+    const timestamp = new Date().toISOString();
+    const fullName = `${formData.first_name} ${formData.last_name}`.trim();
     
     if (mode === 'create') {
-      handleCreate();
-    } else {
-      handleUpdate();
-    }
-  }
-  
-  // Create contact with loading state
-  async function handleCreate() {
-    await withLoadingState(async () => {
-      const timestamp = new Date().toISOString();
       const contactData = {
         ...formData,
         full_name: fullName,
@@ -143,26 +151,13 @@
           updated_at: timestamp
         }
       };
-      
-      const result = await contactsActions.create(contactData);
-      operationActions.setMessage('Contact created successfully');
-      resetForm();
-      closeModal();
-      return result;
-    }, operationActions, 'saving');
-  }
-  
-  // Update contact with loading state  
-  async function handleUpdate() {
-    if (!contact) return;
-    
-    await withLoadingState(async () => {
-      // Try multiple extraction approaches
+      await contactsActions.create(contactData);
+    } else if (contact) {
       const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      if (!contactId) {
+        throw new Error('Invalid contact ID');
+      }
       
-      if (!contactId) throw new Error('Invalid contact ID');
-      
-      // Only send fields that the backend ContactUpdate struct supports
       const contactData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -172,356 +167,47 @@
         position: formData.position,
         company: formData.company
       };
-      
-      const result = await contactsActions.update(contactId, contactData);
-      operationActions.setMessage('Contact updated successfully');
-      closeModal();
-      return result;
-    }, operationActions, 'saving');
+      await contactsActions.update(String(contactId), contactData);
+    }
   }
-  
-  // Delete contact with loading state
-  async function handleDelete() {
-    if (!contact || !showDeleteConfirm) return;
-    
-    await withLoadingState(async () => {
-      // Try multiple extraction approaches
-      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
-      if (!contactId) throw new Error('Invalid contact ID');
-      
-      const result = await contactsActions.delete(contactId);
-      operationActions.setMessage('Contact deleted successfully');
-      closeModal();
-      return result;
-    }, operationActions, 'deleting');
+
+  // Delete handler
+  async function handleDelete(entity: Contact) {
+    const contactId = extractSurrealId(entity.id) || extractSurrealId(entity) || entity.id || '';
+    if (!contactId) {
+      throw new Error('Invalid contact ID');
+    }
+    await contactsActions.delete(String(contactId));
   }
-  
-  // Form management
-  function resetForm() {
-    formData = {
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      position: '',
-      company: ''
-    };
-    formErrors = {};
-    showDeleteConfirm = false;
-    
-    // Clear company search state
-    companySearchText = '';
-    companyOptions = [];
-  }
-  
-  function closeModal() {
-    resetForm();
-    operationActions.reset();
+
+  // Close handler
+  function handleClose() {
     dispatch('close');
   }
-  
+
   // Company modal handlers
   function handleAddCompany() {
     showCompanyModal = true;
   }
-  
+
   function handleCompanyModalClose() {
     showCompanyModal = false;
   }
-  
-  // Load form data when contact changes - only when modal opens
-  $: if (contact && mode === 'edit' && isOpen && !dataLoaded) {
-    loadContactForEdit();
-  }
-  
-  // Reset dataLoaded flag when modal closes
-  $: if (!isOpen) {
-    dataLoaded = false;
-  }
-  
-  function loadContactForEdit() {
-    if (!contact || dataLoaded) return;
-    dataLoaded = true;
-    
-    // Try multiple extraction approaches for company ID
-    const companyId = extractSurrealId(contact.company) || extractSurrealId(contact.company?.id) || contact.company?.id || contact.company || '';
-    
-    formData = {
-      first_name: contact.first_name || '',
-      last_name: contact.last_name || '',
-      email: contact.email || '',
-      phone: contact.phone || '',
-      position: contact.position || '',
-      company: companyId
-    };
-    
-    // Clear any existing validation errors when loading edit data
-    formErrors = {};
-    
-    // Set the company search text to show the selected company name
-    if (formData.company) {
-      const selectedCompany = $companiesStore.find(c => extractSurrealId(c.id) === formData.company);
-      
-      if (selectedCompany) {
-        companySearchText = selectedCompany.name || '';
-      }
-    }
-  }
-  
-  // Clear validation errors when modal opens in create mode
-  $: if (isOpen && mode === 'create') {
-    formErrors = {};
-  }
 </script>
 
-<BaseModal 
-  {isOpen} 
+<CrudModal
+  {isOpen}
+  entity={contact}
+  {mode}
   title={mode === 'create' ? 'New Contact' : 'Edit Contact'}
+  {fields}
+  {validationRules}
+  onSave={handleSave}
+  onDelete={mode === 'edit' ? handleDelete : null}
   maxWidth="500px"
   customClass="contact-modal"
-  on:close={closeModal}
->
-  <!-- Form -->
-  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
-    
-    <!-- CONTACT INFORMATION SECTION -->
-    <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
-        Contact Information
-      </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        
-        <!-- Name Fields -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
-          <FormInput
-            label="First Name"
-            bind:value={formData.first_name}
-            placeholder="John"
-            required
-            error={formErrors.first_name}
-          />
-          
-          <FormInput
-            label="Last Name"
-            bind:value={formData.last_name}
-            placeholder="Doe"
-            required
-            error={formErrors.last_name}
-          />
-        </div>
-        
-        <!-- Full Name Display -->
-        {#if fullName}
-          <div>
-            <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-              Full Name (Auto-generated)
-            </label>
-            <div class="w-full bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-light flex items-center" style="padding: 8px 12px; font-size: 12px; height: 32px; opacity: 0.6;">
-              {fullName}
-            </div>
-          </div>
-        {/if}
-        
-        <!-- Contact Details -->
-        <FormInput
-          label="Email"
-          type="email"
-          bind:value={formData.email}
-          placeholder="john.doe@company.com"
-          required
-          error={formErrors.email}
-        />
-        
-        <div class="grid grid-cols-2" style="gap: 12px;">
-          <FormInput
-            label="Phone"
-            type="tel"
-            bind:value={formData.phone}
-            placeholder="+971 50 123 4567"
-            error={formErrors.phone}
-          />
-          
-          <FormInput
-            label="Position"
-            bind:value={formData.position}
-            placeholder="Manager"
-            error={formErrors.position}
-          />
-        </div>
-        
-        <!-- Company Selection -->
-        <div>
-          <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-            Company *
-          </label>
-          <div class="flex" style="gap: 8px;">
-            <TypeaheadSelect
-              label=""
-              bind:value={formData.company}
-              bind:searchText={companySearchText}
-              options={companyOptions}
-              displayFields={['name']}
-              placeholder="Search companies..."
-              required
-              error={formErrors.company}
-              on:input={(e) => handleCompanySearch(e.detail)}
-              on:select={handleCompanySelect}
-            >
-              <svelte:fragment slot="option" let:option>
-                <div class="flex flex-col">
-                  <span class="font-medium">{option.name}</span>
-                  {#if option.name_short && option.name_short !== option.name}
-                    <span class="text-emittiv-light text-xs">{option.name_short}</span>
-                  {/if}
-                  {#if option.abbreviation}
-                    <span class="text-emittiv-splash text-xs">{option.abbreviation}</span>
-                  {/if}
-                </div>
-              </svelte:fragment>
-            </TypeaheadSelect>
-            
-            <button
-              type="button"
-              on:click={handleAddCompany}
-              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-colors flex items-center justify-center"
-              style="padding: 6px; width: 32px; height: 32px;"
-              title="Add new company"
-              aria-label="Add new company"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Error/Success Messages -->
-    {#if $operationState.error}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
-        {$operationState.error}
-      </div>
-    {/if}
-    
-    {#if $operationState.message}
-      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
-        {$operationState.message}
-      </div>
-    {/if}
-    
-    <!-- Delete Confirmation -->
-    {#if showDeleteConfirm && mode === 'edit'}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
-        <p class="font-medium mb-2">Are you sure you want to delete this contact?</p>
-        <p class="text-xs opacity-80">This action cannot be undone.</p>
-      </div>
-    {/if}
-    
-    <!-- Actions - Full Width Container -->
-    <div class="w-full" style="height: 40px;">
-      {#if mode === 'edit' && !showDeleteConfirm}
-        <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
-        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
-            on:click={() => showDeleteConfirm = true}
-            disabled={$operationState.saving || $operationState.deleting}
-          >
-            Delete
-          </Button>
-          
-          <div class="flex h-full" style="gap: 12px;">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
-              on:click={closeModal}
-              disabled={$operationState.saving || $operationState.deleting}
-            >
-              Cancel
-            </Button>
-            
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
-              disabled={$operationState.saving || $operationState.deleting}
-            >
-              {#if $operationState.saving}
-                <div 
-                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-                  style="width: 14px; height: 14px; margin-right: 6px;"
-                ></div>
-              {/if}
-              Update
-            </Button>
-          </div>
-        </div>
-      {:else if mode === 'edit' && showDeleteConfirm}
-        <!-- Delete Confirmation Mode -->
-        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
-            on:click={handleDelete}
-            disabled={$operationState.deleting}
-          >
-            {#if $operationState.deleting}
-              <div 
-                class="border-2 border-white border-t-transparent rounded-full animate-spin"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
-            {/if}
-            Confirm Delete
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
-            on:click={() => showDeleteConfirm = false}
-            disabled={$operationState.deleting}
-          >
-            Cancel
-          </Button>
-        </div>
-      {:else}
-        <!-- Create Mode: Just Cancel/Create buttons -->
-        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
-            on:click={closeModal}
-            disabled={$operationState.saving}
-          >
-            Cancel
-          </Button>
-          
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
-            disabled={$operationState.saving}
-          >
-            {#if $operationState.saving}
-              <div 
-                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
-            {/if}
-            Create Contact
-          </Button>
-        </div>
-      {/if}
-    </div>
-  </form>
-</BaseModal>
+  on:close={handleClose}
+/>
 
 <!-- Company Modal -->
 <CompanyModal

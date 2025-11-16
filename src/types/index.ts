@@ -7,7 +7,7 @@ export interface NavItem {
 
 export interface AppRoute {
   id: string;
-  component: any;
+  component: unknown; // Svelte component constructor
   title: string;
 }
 
@@ -23,41 +23,68 @@ export interface SurrealThing {
   id: string | { String: string };
 }
 
+// Union type for SurrealDB ID values (can be string or Thing object)
+export type SurrealId = string | SurrealThing;
+
+// Type for unknown SurrealDB Thing objects (before parsing)
+export type UnknownSurrealThing = {
+  tb?: string;
+  id?: unknown;
+  String?: string;
+} | string | null | undefined;
+
 export interface Project {
   id?: string | SurrealThing;
   name: string;
-  name_short: string;
-  status: 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
-  area: string;
+  name_short?: string;
+  status: 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'active';
+  area?: string;
   city: string;
   country: string;
-  folder: string;
-  number: {
+  folder?: string;
+  // Support both new and legacy field names
+  project_number?: string;
+  client_company?: string;
+  created_at?: string;
+  updated_at?: string;
+  number?: {
     year: number;
     country: number;
     seq: number;
     id: string;
   };
-  time: {
+  time?: {
     created_at: string;
     updated_at: string;
   };
 }
 
+// Create types for API operations
+export type ProjectCreate = Omit<Project, 'id' | 'time' | 'number'>;
+export type ProjectUpdate = Partial<ProjectCreate>;
+
 export interface Company {
   id?: string | SurrealThing;
   name: string;
-  name_short: string;
-  abbreviation: string;
+  name_short?: string;
+  abbreviation?: string;
   city: string;
   country: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
   reg_no?: string;
   tax_no?: string;
-  time: {
+  time?: {
     created_at: string;
     updated_at: string;
   };
 }
+
+// Create types for API operations
+export type CompanyCreate = Omit<Company, 'id' | 'time'>;
+export type CompanyUpdate = Partial<CompanyCreate>;
 
 export interface Contact {
   id?: string | SurrealThing;
@@ -68,35 +95,44 @@ export interface Contact {
   phone: string;
   position: string;
   company: string | SurrealThing;
-  time: {
+  time?: {
     created_at: string;
     updated_at: string;
   };
 }
 
+// Create types for API operations
+export type ContactCreate = Omit<Contact, 'id' | 'time' | 'full_name'>;
+export type ContactUpdate = Partial<ContactCreate>;
+
 export interface Fee {
   id?: string | SurrealThing;
   name: string;
   number: string;
-  rev: number;
-  status: 'Draft' | 'Sent' | 'Negotiation' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
+  rev?: number;
+  status: 'Draft' | 'Sent' | 'Negotiation' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'Active';
+  stage?: 'Draft' | 'Prepared' | 'Sent' | 'Under Review' | 'Clarification' | 'Negotiation' | 'Awarded' | 'Lost';
   issue_date: string;
-  activity: string;
-  package: string;
+  activity?: string;
+  package?: string;
   project_id: string | SurrealThing;
   company_id: string | SurrealThing;
   contact_id: string | SurrealThing;
-  staff_name: string;
-  staff_email: string;
-  staff_phone: string;
-  staff_position: string;
-  strap_line: string;
+  staff_name?: string;
+  staff_email?: string;
+  staff_phone?: string;
+  staff_position?: string;
+  strap_line?: string;
   revisions: Revision[];
-  time: {
+  time?: {
     created_at: string;
     updated_at: string;
   };
 }
+
+// Create types for API operations
+export type FeeCreate = Omit<Fee, 'id' | 'time'>;
+export type FeeUpdate = Partial<FeeCreate>;
 
 export interface Revision {
   revision_number: number;
@@ -172,7 +208,7 @@ export interface TableSchema {
     /** Whether the field is required */
     required: boolean;
     /** Default value if any */
-    default?: any;
+    default?: string | number | boolean | null;
     /** Additional constraints */
     constraints?: string[];
   }>;

@@ -11,7 +11,7 @@
   export let value: string = '';
   export let searchText: string = '';
   export let placeholder: string = 'Search...';
-  export let options: Array<{ id: string; [key: string]: any }> = [];
+  export let options: Array<{ id: string; [key: string]: unknown }> = [];
   export let displayFields: string[] = ['name'];
   export let required: boolean = false;
   export let error: string = '';

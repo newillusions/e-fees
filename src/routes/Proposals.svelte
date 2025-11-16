@@ -7,7 +7,7 @@
   import { feesStore, projectsStore, companiesStore, contactsStore, feesActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
-  import type { Fee } from '../types';
+  import type { Fee, UnknownSurrealThing } from '../types';
   
   // Modal states
   let showProposalModal = $state(false);
@@ -118,7 +118,7 @@
     }
   }
 
-  function getProjectName(projectRef: any): string {
+  function getProjectName(projectRef: UnknownSurrealThing): string {
     if (!projectRef) return 'N/A';
     
     // Convert the project reference to a string ID
@@ -182,7 +182,7 @@
     return projectIdStr;
   }
 
-  function getCompanyName(companyRef: any): string {
+  function getCompanyName(companyRef: UnknownSurrealThing): string {
     if (!companyRef) return '';
     
     // Convert the company reference to a string ID
@@ -246,7 +246,7 @@
     return companyIdStr;
   }
 
-  function getContactName(contactRef: any): string {
+  function getContactName(contactRef: UnknownSurrealThing): string {
     if (!contactRef) return '';
     
     // Convert the contact reference to a string ID
