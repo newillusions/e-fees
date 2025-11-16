@@ -19,6 +19,8 @@
 //! - **Performance Optimization**: Connection pooling and query optimization
 
 pub mod utils;
+#[cfg(test)]
+mod tests;
 // pub mod entities; // Temporarily disabled to test connection issue
 
 //  

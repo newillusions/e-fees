@@ -1,0 +1,71 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-config.schema.json",
+  "mcpServers": {
+    "SurrealDB": {
+      "command": "/Users/martin/.cargo/bin/surrealmcp",
+      "args": ["start"],
+      "env": {
+        "SURREALDB_URL": "ws://10.0.0.131:8000/rpc",
+        "SURREALDB_NS": "emittiv",
+        "SURREALDB_DB": "projects",
+        "SURREALDB_USER": "martin",
+        "SURREALDB_PASS": "th38ret3ch"
+      }
+    },
+    "tauri-mcp": {
+      "command": "/Users/martin/.cargo/bin/tauri-mcp",
+      "args": ["--app-path", "/Volumes/base/dev/e-fees", "serve"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Volumes/base/dev/e-fees",
+        "/tmp"
+      ]
+    },
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git",
+        "--repository",
+        "/Volumes/base/dev/e-fees"
+      ]
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "BSAvKQ3USiXiMGuhORumKk5UgQPMTLY"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    }
+  }
+}
