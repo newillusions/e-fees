@@ -1,0 +1,245 @@
+name: Release Build (Multi-Platform)
+
+# This workflow uses Gitea Actions (compatible with Gitea 1.19+)
+# It builds for multiple platforms and creates Gitea releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 0.10.0)'
+        required: true
+        default: '0.10.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.release_id }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Read release notes
+        id: release_notes
+        run: |
+          if [ -f "releases/v${{ steps.get_version.outputs.VERSION }}/RELEASE_NOTES.md" ]; then
+            echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+            cat "releases/v${{ steps.get_version.outputs.VERSION }}/RELEASE_NOTES.md" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "NOTES=Release v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Gitea Release
+        id: create-release
+        uses: actions/gitea-release-action@v1
+        with:
+          token: ${{ secrets.GITEA_TOKEN }}
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: E-Fees v${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.release_notes.outputs.NOTES }}
+          draft: false
+          prerelease: false
+
+  build-macos-arm:
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust (Apple Silicon)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          override: true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri app (Apple Silicon)
+        run: npm run tauri:build -- --target aarch64-apple-darwin
+
+      - name: Create checksums
+        run: |
+          cd src-tauri/target/aarch64-apple-darwin/release/bundle/dmg
+          shasum -a 256 *.dmg > checksums.txt
+          cat checksums.txt
+
+      - name: Upload to Gitea Release (DMG)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_aarch64.dmg
+          asset_content_type: application/x-apple-diskimage
+
+      - name: Upload checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/checksums.txt
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_aarch64.dmg.sha256
+          asset_content_type: text/plain
+
+  build-macos-intel:
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust (Intel)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          override: true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri app (Intel)
+        run: npm run tauri:build -- --target x86_64-apple-darwin
+
+      - name: Upload to Gitea Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_x64.dmg
+          asset_content_type: application/x-apple-diskimage
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Upload MSI to Gitea Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/release/bundle/msi/*.msi
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_x64.msi
+          asset_content_type: application/x-msi
+
+      - name: Upload NSIS installer to Gitea Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_x64-setup.exe
+          asset_content_type: application/x-msdownload
+
+  build-linux:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Upload AppImage to Gitea Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/release/bundle/appimage/*.AppImage
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_amd64.AppImage
+          asset_content_type: application/x-executable
+
+      - name: Upload DEB package to Gitea Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: src-tauri/target/release/bundle/deb/*.deb
+          asset_name: E-Fees_${{ needs.create-release.outputs.version }}_amd64.deb
+          asset_content_type: application/vnd.debian.binary-package
