@@ -57,7 +57,40 @@ Desktop applications like Tauri have platform-specific dependencies:
 
 ## Recommended Release Process
 
-### Option 1: Hybrid Approach (Recommended)
+### Option 1: GitHub Actions (Recommended - AUTOMATED)
+
+**✅ Best solution for macOS + Windows builds**
+
+Use GitHub's free runners to build, auto-upload to Gitea:
+
+```bash
+# 1. Update version
+npm run version:set 0.11.0
+git add -A && git commit -m "chore: Bump version to 0.11.0"
+
+# 2. Push to both remotes
+git push origin main    # Gitea
+git push github main    # GitHub
+
+# 3. Create tag (triggers build)
+git tag v0.11.0
+git push origin v0.11.0
+git push github v0.11.0   # Starts automated build
+
+# 4. Wait ~30 mins, builds upload to Gitea automatically
+```
+
+**Result:**
+- macOS ARM DMG ✅
+- macOS Intel DMG ✅
+- Windows MSI ✅
+- Windows NSIS installer ✅
+
+All uploaded to Gitea release automatically!
+
+**See:** [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md)
+
+### Option 2: Hybrid Approach (Manual)
 
 **For Linux builds** (automated):
 1. Tag the release: `git tag v0.11.0 && git push origin v0.11.0`
