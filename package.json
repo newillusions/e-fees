@@ -1,8 +1,10 @@
 {
   "name": "e-fees",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "main": "index.js",
   "scripts": {
+    "version:sync": "node scripts/sync-version.cjs",
+    "version:set": "node scripts/sync-version.cjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
