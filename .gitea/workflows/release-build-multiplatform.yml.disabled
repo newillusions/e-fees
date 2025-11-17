@@ -20,6 +20,7 @@ jobs:
     outputs:
       release_id: ${{ steps.create-release.outputs.release_id }}
       upload_url: ${{ steps.create-release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,9 +61,11 @@ jobs:
           draft: false
           prerelease: false
 
-  build-macos-arm:
-    needs: create-release
-    runs-on: macos-latest
+  # macOS builds disabled - no macOS runner available on Unraid
+  # Use GitHub Actions mirror or manual builds for macOS releases
+  # build-macos-arm:
+  #   needs: create-release
+  #   runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

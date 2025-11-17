@@ -73,6 +73,30 @@ npm run test:e2e:verify-clean # Check for leftover test data
 # SurrealDB runs embedded - no separate server needed
 ```
 
+### Slash Commands (On-Demand Tools)
+
+```bash
+# View all available slash commands
+/commands
+
+# Gitea release management (create releases, upload binaries)
+/gitea-release
+```
+
+**What are slash commands?**
+- Zero token cost until invoked
+- Load specialized context on-demand
+- Perfect for infrequent operations (releases, admin tasks)
+
+**Example usage:**
+```
+You: /gitea-release
+Claude: [Loads release management context]
+You: "Create a release for v0.11.0 and upload the DMG"
+```
+
+See `.claude/commands/README.md` for full documentation.
+
 ### Key Directories
 
 | Path | Purpose |

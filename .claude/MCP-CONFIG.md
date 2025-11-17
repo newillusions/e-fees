@@ -319,6 +319,53 @@ ls -la /Volumes/base/dev/e-fees/.git
 
 ---
 
+## On-Demand MCP Servers (Slash Commands)
+
+**Design Pattern:** Some MCP functionality is implemented as slash commands instead of always-loaded servers to optimize token usage.
+
+### When to Use Slash Commands vs Always-Loaded MCP
+
+| Use Case | Frequency | Implementation | Why |
+|----------|-----------|----------------|-----|
+| Database queries | Constant | MCP Server | Always needed |
+| Testing automation | Frequent | MCP Server | Used in development |
+| Release management | Occasional | Slash Command | Saves tokens |
+| One-off operations | Rare | Slash Command | No persistent overhead |
+
+### Available Slash Commands
+
+#### `/gitea-release` - Gitea Release Management
+
+**Purpose:** Create and manage releases on Gitea server (infrequent operation)
+
+**Location:** `.claude/commands/gitea-release.md`
+
+**Implements:** Gitea API integration for:
+- Creating releases
+- Uploading release assets (DMG, checksums)
+- Listing/viewing releases
+- Managing tags
+
+**MCP Server:** `mcp-servers/gitea-mcp/` (not loaded by default)
+
+**Token Savings:** ~2-3KB per session when not in use
+
+**Usage Example:**
+```
+# In Claude Code conversation:
+/gitea-release
+
+# Then ask:
+"Create a release for v0.11.0 and upload the DMG"
+```
+
+**See Also:**
+- `mcp-servers/gitea-mcp/README.md` - Full documentation
+- `scripts/create-gitea-release.sh` - Automated script
+- `docs/development/GITEA_RELEASES.md` - Complete guide
+
+---
+
 ## Related Files
 
 - **`.mcp-config.json`** - MCP server configuration (this directory)
@@ -351,6 +398,6 @@ claude-mcp
 
 ---
 
-**Last Updated:** November 16, 2025
-**MCP Servers:** 11 active
+**Last Updated:** November 17, 2025
+**MCP Servers:** 11 active (always-loaded) + 1 on-demand (slash command)
 **Config Location:** `/Volumes/base/dev/e-fees/.mcp-config.json`

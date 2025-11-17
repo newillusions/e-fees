@@ -338,6 +338,50 @@ npm run tauri build -- --help
 
 ---
 
+## 🚀 Release Management
+
+```bash
+# === Version Management ===
+
+# Update version across all files (package.json, Cargo.toml, tauri.conf.json)
+npm run version:set 0.11.0
+
+# Sync versions from package.json
+npm run version:sync
+
+# === Build Release ===
+
+# Build production release
+npm run tauri:build
+# Output: src-tauri/target/release/bundle/
+
+# === Gitea Release ===
+
+# Use slash command in Claude Code
+/gitea-release
+# Then: "Create release for v0.11.0 and upload DMG"
+
+# Or use automated script directly
+./scripts/create-gitea-release.sh 0.11.0
+
+# === Manual Release Steps ===
+
+# 1. Set version
+npm run version:set 0.11.0
+
+# 2. Build release
+npm run tauri:build
+
+# 3. Create git tag
+git tag -a v0.11.0 -m "Release v0.11.0"
+git push origin v0.11.0
+
+# 4. Create Gitea release (use /gitea-release or script)
+./scripts/create-gitea-release.sh 0.11.0
+```
+
+---
+
 ## 🔗 Quick Links
 
 - **Full documentation**: [claude.md](../claude.md)
