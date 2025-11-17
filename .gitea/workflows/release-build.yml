@@ -53,7 +53,7 @@ jobs:
         id: create-release
         uses: actions/gitea-release-action@v1
         with:
-          token: ${{ secrets.GITEA_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
           tag_name: v${{ steps.get_version.outputs.VERSION }}
           name: E-Fees v${{ steps.get_version.outputs.VERSION }}
           body: ${{ steps.release_notes.outputs.NOTES }}
@@ -94,7 +94,7 @@ jobs:
       - name: Upload to Gitea Release (DMG)
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
@@ -104,7 +104,7 @@ jobs:
       - name: Upload checksums
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/checksums.txt
@@ -139,7 +139,7 @@ jobs:
       - name: Upload to Gitea Release
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
@@ -173,7 +173,7 @@ jobs:
       - name: Upload MSI to Gitea Release
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/release/bundle/msi/*.msi
@@ -183,7 +183,7 @@ jobs:
       - name: Upload NSIS installer to Gitea Release
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/release/bundle/nsis/*-setup.exe
@@ -227,7 +227,7 @@ jobs:
       - name: Upload AppImage to Gitea Release
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/release/bundle/appimage/*.AppImage
@@ -237,7 +237,7 @@ jobs:
       - name: Upload DEB package to Gitea Release
         uses: actions/upload-release-asset@v1
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: src-tauri/target/release/bundle/deb/*.deb
