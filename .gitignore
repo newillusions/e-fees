@@ -82,3 +82,6 @@ e2e/test-projects/
 .playwright/
 pw-browsers/
 
+
+# Rust build artifacts
+target/
