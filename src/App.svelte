@@ -2,6 +2,7 @@
   import Layout from '$lib/components/Layout.svelte';
   import SplashScreen from '$lib/components/SplashScreen.svelte';
   import FirstRunSetup from '$lib/components/FirstRunSetup.svelte';
+  import UpdateNotification from '$lib/components/UpdateNotification.svelte';
   import Router, { location } from 'svelte-spa-router';
   import Dashboard from './routes/Dashboard.svelte';
   import Projects from './routes/Projects.svelte';
@@ -149,6 +150,8 @@
       {/key}
     </div>
   </Layout>
+  <!-- Update notification - checks for updates on app startup -->
+  <UpdateNotification />
 {/if}
 
 <style>
