@@ -28,6 +28,9 @@ jobs:
         target:
           - aarch64-apple-darwin  # Apple Silicon (M1/M2/M3)
           - x86_64-apple-darwin   # Intel
+    outputs:
+      sig-aarch64: ${{ steps.get_sig.outputs.sig_aarch64 }}
+      sig-x86_64: ${{ steps.get_sig.outputs.sig_x86_64 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,29 +58,48 @@ jobs:
           fi
 
       - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri:build -- --target ${{ matrix.target }}
 
       - name: Create archive name
         id: archive
         run: |
           if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
-            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_aarch64.dmg" >> $GITHUB_OUTPUT
+            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_aarch64" >> $GITHUB_OUTPUT
             echo "ARCH=aarch64" >> $GITHUB_OUTPUT
           else
-            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_x64.dmg" >> $GITHUB_OUTPUT
+            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_x64" >> $GITHUB_OUTPUT
             echo "ARCH=x64" >> $GITHUB_OUTPUT
           fi
 
-      - name: Find DMG file
-        id: find_dmg
+      - name: Find artifacts
+        id: find_artifacts
         run: |
           DMG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" | head -1)
+          TARGZ_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app.tar.gz" | head -1)
+          SIG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app.tar.gz.sig" | head -1)
           echo "DMG_PATH=$DMG_PATH" >> $GITHUB_OUTPUT
+          echo "TARGZ_PATH=$TARGZ_PATH" >> $GITHUB_OUTPUT
+          echo "SIG_PATH=$SIG_PATH" >> $GITHUB_OUTPUT
+
+      - name: Get signature
+        id: get_sig
+        run: |
+          if [ -f "${{ steps.find_artifacts.outputs.SIG_PATH }}" ]; then
+            SIG=$(cat "${{ steps.find_artifacts.outputs.SIG_PATH }}")
+            if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
+              echo "sig_aarch64=$SIG" >> $GITHUB_OUTPUT
+            else
+              echo "sig_x86_64=$SIG" >> $GITHUB_OUTPUT
+            fi
+          fi
 
       - name: Create checksum
         run: |
-          cd $(dirname "${{ steps.find_dmg.outputs.DMG_PATH }}")
-          shasum -a 256 $(basename "${{ steps.find_dmg.outputs.DMG_PATH }}") > ${{ steps.archive.outputs.NAME }}.sha256
+          cd $(dirname "${{ steps.find_artifacts.outputs.DMG_PATH }}")
+          shasum -a 256 $(basename "${{ steps.find_artifacts.outputs.DMG_PATH }}") > ${{ steps.archive.outputs.NAME }}.dmg.sha256
 
       - name: Upload to Gitea Release
         run: |
@@ -102,25 +124,38 @@ jobs:
           # Upload DMG
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            -F "attachment=@${{ steps.find_dmg.outputs.DMG_PATH }}" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}"
+            -F "attachment=@${{ steps.find_artifacts.outputs.DMG_PATH }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.dmg"
+
+          # Upload updater tar.gz (for auto-update)
+          if [ -f "${{ steps.find_artifacts.outputs.TARGZ_PATH }}" ]; then
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -F "attachment=@${{ steps.find_artifacts.outputs.TARGZ_PATH }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.app.tar.gz"
+          fi
 
           # Upload checksum
-          cd $(dirname "${{ steps.find_dmg.outputs.DMG_PATH }}")
+          cd $(dirname "${{ steps.find_artifacts.outputs.DMG_PATH }}")
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            -F "attachment=@${{ steps.archive.outputs.NAME }}.sha256" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.sha256"
+            -F "attachment=@${{ steps.archive.outputs.NAME }}.dmg.sha256" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.dmg.sha256"
 
       - name: Upload artifacts (GitHub backup)
         uses: actions/upload-artifact@v4
         with:
           name: macos-${{ steps.archive.outputs.ARCH }}
-          path: ${{ steps.find_dmg.outputs.DMG_PATH }}
+          path: |
+            ${{ steps.find_artifacts.outputs.DMG_PATH }}
+            ${{ steps.find_artifacts.outputs.TARGZ_PATH }}
+            ${{ steps.find_artifacts.outputs.SIG_PATH }}
 
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    outputs:
+      sig-windows: ${{ steps.get_sig.outputs.sig_windows }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,6 +182,9 @@ jobs:
           fi
 
       - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri:build
 
       - name: Find installers
@@ -155,8 +193,21 @@ jobs:
         run: |
           MSI_PATH=$(find src-tauri/target/release/bundle/msi -name "*.msi" | head -1)
           NSIS_PATH=$(find src-tauri/target/release/bundle/nsis -name "*-setup.exe" | head -1)
+          NSIS_ZIP=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip" | head -1)
+          NSIS_SIG=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip.sig" | head -1)
           echo "MSI_PATH=$MSI_PATH" >> $GITHUB_OUTPUT
           echo "NSIS_PATH=$NSIS_PATH" >> $GITHUB_OUTPUT
+          echo "NSIS_ZIP=$NSIS_ZIP" >> $GITHUB_OUTPUT
+          echo "NSIS_SIG=$NSIS_SIG" >> $GITHUB_OUTPUT
+
+      - name: Get signature
+        id: get_sig
+        shell: bash
+        run: |
+          if [ -f "${{ steps.find_installers.outputs.NSIS_SIG }}" ]; then
+            SIG=$(cat "${{ steps.find_installers.outputs.NSIS_SIG }}")
+            echo "sig_windows=$SIG" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload to Gitea Release
         shell: bash
@@ -191,6 +242,14 @@ jobs:
             -F "attachment=@${{ steps.find_installers.outputs.NSIS_PATH }}" \
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.exe"
 
+          # Upload NSIS zip for updater (if exists)
+          if [ -f "${{ steps.find_installers.outputs.NSIS_ZIP }}" ]; then
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -F "attachment=@${{ steps.find_installers.outputs.NSIS_ZIP }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
+          fi
+
       - name: Upload artifacts (GitHub backup)
         uses: actions/upload-artifact@v4
         with:
@@ -198,3 +257,61 @@ jobs:
           path: |
             ${{ steps.find_installers.outputs.MSI_PATH }}
             ${{ steps.find_installers.outputs.NSIS_PATH }}
+            ${{ steps.find_installers.outputs.NSIS_ZIP }}
+            ${{ steps.find_installers.outputs.NSIS_SIG }}
+
+  update-manifest:
+    name: Update manifest
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate update.json
+        run: |
+          cat > update.json << 'EOF'
+          {
+            "version": "${{ steps.version.outputs.VERSION }}",
+            "notes": "Release v${{ steps.version.outputs.VERSION }}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${{ needs.build-macos.outputs.sig-aarch64 }}",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${{ needs.build-macos.outputs.sig-x86_64 }}",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_x64.app.tar.gz"
+              },
+              "windows-x86_64": {
+                "signature": "${{ needs.build-windows.outputs.sig-windows }}",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
+              }
+            }
+          }
+          EOF
+
+          # Replace date placeholder
+          sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" update.json
+
+          cat update.json
+
+      - name: Commit and push update.json
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add update.json
+          git commit -m "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin main || echo "Failed to push - may need write access"

@@ -47,6 +47,15 @@
       "signingIdentity": null,
       "providerShortName": null,
       "entitlements": "entitlements.plist"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://git.mms.name/martin/fee-prop/raw/branch/main/update.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMyOTQxNDM5MTgyNEM4NkEKUldScXlDUVlPUlNVd2lCcDJUUUZYSVJoVlZGY2JhRERXUi9IcmlQaVdMSFM4bUw1Nlg3UVNXbUYK"
     }
   }
 }
