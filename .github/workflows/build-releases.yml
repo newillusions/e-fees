@@ -103,25 +103,54 @@ jobs:
 
       - name: Upload to Gitea Release
         run: |
-          # Get or create release
-          RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+          # Get or create release with retry logic for race conditions
+          MAX_RETRIES=5
+          RETRY_DELAY=5
+          RELEASE_ID=""
 
-          if echo "$RELEASE_JSON" | grep -q "\"id\""; then
-            RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
-            echo "Using existing release: $RELEASE_ID"
-          else
-            # Create release
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Getting or creating release..."
+
+            # Try to get existing release
+            RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+
+            echo "API Response: $RELEASE_JSON"
+
+            if echo "$RELEASE_JSON" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+              echo "Using existing release: $RELEASE_ID"
+              break
+            fi
+
+            # Release doesn't exist, try to create it
+            echo "Release not found, creating..."
             RELEASE_RESPONSE=$(curl -s -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -H "Content-Type: application/json" \
               "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
               -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
-            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-            echo "Created new release: $RELEASE_ID"
+
+            echo "Create Response: $RELEASE_RESPONSE"
+
+            if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+              echo "Created new release: $RELEASE_ID"
+              break
+            fi
+
+            # Failed, wait and retry (another job may have created it)
+            echo "Failed to get/create release, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "ERROR: Failed to get or create release after $MAX_RETRIES attempts"
+            exit 1
           fi
 
           # Upload DMG
+          echo "Uploading DMG..."
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
             -F "attachment=@${{ steps.find_artifacts.outputs.DMG_PATH }}" \
@@ -129,6 +158,7 @@ jobs:
 
           # Upload updater tar.gz (for auto-update)
           if [ -f "${{ steps.find_artifacts.outputs.TARGZ_PATH }}" ]; then
+            echo "Uploading tar.gz for updater..."
             curl -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -F "attachment=@${{ steps.find_artifacts.outputs.TARGZ_PATH }}" \
@@ -136,6 +166,7 @@ jobs:
           fi
 
           # Upload checksum
+          echo "Uploading checksum..."
           cd $(dirname "${{ steps.find_artifacts.outputs.DMG_PATH }}")
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
@@ -212,31 +243,61 @@ jobs:
       - name: Upload to Gitea Release
         shell: bash
         run: |
-          # Get or create release
-          RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+          # Get or create release with retry logic for race conditions
+          MAX_RETRIES=5
+          RETRY_DELAY=5
+          RELEASE_ID=""
 
-          if echo "$RELEASE_JSON" | grep -q "\"id\""; then
-            RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
-            echo "Using existing release: $RELEASE_ID"
-          else
-            # Create release
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Getting or creating release..."
+
+            # Try to get existing release
+            RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+
+            echo "API Response: $RELEASE_JSON"
+
+            if echo "$RELEASE_JSON" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+              echo "Using existing release: $RELEASE_ID"
+              break
+            fi
+
+            # Release doesn't exist, try to create it
+            echo "Release not found, creating..."
             RELEASE_RESPONSE=$(curl -s -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -H "Content-Type: application/json" \
               "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
               -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
-            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-            echo "Created new release: $RELEASE_ID"
+
+            echo "Create Response: $RELEASE_RESPONSE"
+
+            if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+              echo "Created new release: $RELEASE_ID"
+              break
+            fi
+
+            # Failed, wait and retry (another job may have created it)
+            echo "Failed to get/create release, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "ERROR: Failed to get or create release after $MAX_RETRIES attempts"
+            exit 1
           fi
 
           # Upload MSI
+          echo "Uploading MSI..."
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
             -F "attachment=@${{ steps.find_installers.outputs.MSI_PATH }}" \
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64.msi"
 
           # Upload NSIS installer
+          echo "Uploading NSIS installer..."
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
             -F "attachment=@${{ steps.find_installers.outputs.NSIS_PATH }}" \
@@ -244,6 +305,7 @@ jobs:
 
           # Upload NSIS zip for updater (if exists)
           if [ -f "${{ steps.find_installers.outputs.NSIS_ZIP }}" ]; then
+            echo "Uploading NSIS zip for updater..."
             curl -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -F "attachment=@${{ steps.find_installers.outputs.NSIS_ZIP }}" \
