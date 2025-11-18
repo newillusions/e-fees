@@ -38,11 +38,9 @@ jobs:
           node-version: '20'
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
 
       - name: Install dependencies
         run: npm install
@@ -115,7 +113,7 @@ jobs:
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.sha256"
 
       - name: Upload artifacts (GitHub backup)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-${{ steps.archive.outputs.ARCH }}
           path: ${{ steps.find_dmg.outputs.DMG_PATH }}
@@ -133,10 +131,7 @@ jobs:
           node-version: '20'
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: npm install
@@ -197,7 +192,7 @@ jobs:
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.exe"
 
       - name: Upload artifacts (GitHub backup)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
