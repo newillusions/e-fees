@@ -173,8 +173,9 @@ jobs:
             -F "attachment=@${{ steps.archive.outputs.NAME }}.dmg.sha256" \
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.dmg.sha256"
 
-      - name: Upload artifacts (GitHub backup)
+      - name: Upload artifacts (GitHub)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: macos-${{ steps.archive.outputs.ARCH }}
           path: |
@@ -312,8 +313,9 @@ jobs:
               "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
           fi
 
-      - name: Upload artifacts (GitHub backup)
+      - name: Upload artifacts (GitHub)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: windows
           path: |
