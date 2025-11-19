@@ -328,12 +328,8 @@ jobs:
     name: Update manifest
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
+    if: always() && needs.build-macos.result != 'cancelled' && needs.build-windows.result != 'cancelled'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITEA_TOKEN }}
-
       - name: Get version
         id: version
         run: |
@@ -343,39 +339,89 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate update.json
+      - name: Generate and display update.json
+        id: generate
         run: |
-          cat > update.json << 'EOF'
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SIG_AARCH64="${{ needs.build-macos.outputs.sig-aarch64 }}"
+          SIG_X64="${{ needs.build-macos.outputs.sig-x86_64 }}"
+          SIG_WIN="${{ needs.build-windows.outputs.sig-windows }}"
+
+          cat > update.json << EOF
           {
-            "version": "${{ steps.version.outputs.VERSION }}",
-            "notes": "Release v${{ steps.version.outputs.VERSION }}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "version": "$VERSION",
+            "notes": "Release v$VERSION",
+            "pub_date": "$PUB_DATE",
             "platforms": {
               "darwin-aarch64": {
-                "signature": "${{ needs.build-macos.outputs.sig-aarch64 }}",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_aarch64.app.tar.gz"
+                "signature": "$SIG_AARCH64",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_aarch64.app.tar.gz"
               },
               "darwin-x86_64": {
-                "signature": "${{ needs.build-macos.outputs.sig-x86_64 }}",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_x64.app.tar.gz"
+                "signature": "$SIG_X64",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64.app.tar.gz"
               },
               "windows-x86_64": {
-                "signature": "${{ needs.build-windows.outputs.sig-windows }}",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v${{ steps.version.outputs.VERSION }}/E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
+                "signature": "$SIG_WIN",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.nsis.zip"
               }
             }
           }
           EOF
 
-          # Replace date placeholder
-          sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" update.json
-
+          echo "Generated update.json:"
           cat update.json
 
-      - name: Commit and push update.json
+          # Base64 encode for API
+          CONTENT=$(base64 -w 0 update.json)
+          echo "content=$CONTENT" >> $GITHUB_OUTPUT
+
+      - name: Upload update.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-manifest
+          path: update.json
+
+      - name: Push to Gitea via API
+        continue-on-error: true
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add update.json
-          git commit -m "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" || echo "No changes to commit"
-          git push origin main || echo "Failed to push - may need write access"
+          echo "Attempting to push update.json to Gitea..."
+
+          # Get current file SHA (if exists)
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json?ref=main")
+
+          SHA=$(echo "$RESPONSE" | jq -r '.sha // empty')
+
+          # Prepare update payload
+          if [ -n "$SHA" ]; then
+            echo "Updating existing file (SHA: $SHA)"
+            PAYLOAD=$(jq -n \
+              --arg content "${{ steps.generate.outputs.content }}" \
+              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
+              --arg sha "$SHA" \
+              '{content: $content, message: $message, sha: $sha}')
+          else
+            echo "Creating new file"
+            PAYLOAD=$(jq -n \
+              --arg content "${{ steps.generate.outputs.content }}" \
+              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
+              '{content: $content, message: $message}')
+          fi
+
+          # Push to Gitea
+          RESULT=$(curl -s -X PUT \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json" \
+            -d "$PAYLOAD")
+
+          echo "API Response: $RESULT"
+
+          if echo "$RESULT" | jq -e '.content.sha' > /dev/null 2>&1; then
+            echo "✅ Successfully pushed update.json to Gitea"
+          else
+            echo "⚠️ Failed to push to Gitea (may need manual update)"
+            echo "The update.json artifact is available for manual upload"
+          fi
