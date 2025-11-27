@@ -1788,12 +1788,28 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
     }
     
     // Use app data directory for .env file when running from app bundle
+    // In debug mode, use .env.dev to separate dev and production configs
+    let env_filename = if cfg!(debug_assertions) {
+        ".env.dev"
+    } else {
+        ".env"
+    };
+
     let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-        app_data_dir.join(".env")
+        app_data_dir.join(env_filename)
     } else {
         // Fallback to current directory for development
-        PathBuf::from(".env")
+        PathBuf::from(env_filename)
     };
+
+    // Log which .env file is being loaded
+    info!("Loading environment configuration from: {:?}", env_path);
+    if cfg!(debug_assertions) {
+        info!("Running in DEBUG mode - using .env.dev");
+    } else {
+        info!("Running in RELEASE mode - using .env");
+    }
+
     let mut settings = AppSettings {
         surrealdb_url: None,
         surrealdb_ns: None,
@@ -1842,6 +1858,9 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
                     }
                 }
                 info!("Successfully loaded settings from .env file");
+                if let Some(ref url) = settings.surrealdb_url {
+                    info!("Database URL loaded: {}", url);
+                }
             }
             Err(e) => {
                 error!("Failed to read .env file: {}", e);

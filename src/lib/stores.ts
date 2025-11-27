@@ -309,16 +309,30 @@ export const feesActions = {
 // GLOBAL ACTIONS
 // ============================================================================
 
+// Global loading flag to prevent concurrent data loads
+let isLoadingData = false;
+
 // Load all data
 export const loadAllData = async () => {
-  const { settingsActions } = await import('./stores/settings');
-  await Promise.allSettled([
-    projectsActions.load(),
-    companiesActions.load(),
-    contactsActions.load(),
-    feesActions.load(),
-    settingsActions.load() // Load settings too
-  ]);
+  // Prevent concurrent loads
+  if (isLoadingData) {
+    console.log('[loadAllData] Already loading, skipping duplicate call');
+    return;
+  }
+
+  isLoadingData = true;
+  try {
+    const { settingsActions } = await import('./stores/settings');
+    await Promise.allSettled([
+      projectsActions.load(),
+      companiesActions.load(),
+      contactsActions.load(),
+      feesActions.load(),
+      settingsActions.load() // Load settings too
+    ]);
+  } finally {
+    isLoadingData = false;
+  }
 };
 
 // Convenience functions for individual data loading

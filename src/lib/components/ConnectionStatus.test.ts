@@ -30,6 +30,11 @@ vi.mock('../stores', async () => {
   };
 });
 
+// Mock the utils module for getAppVersion
+vi.mock('../utils', () => ({
+  getAppVersion: vi.fn().mockResolvedValue('0.10.4')
+}));
+
 import { getConnectionStatus, getDbInfo, getProjects, getCompanies, getContacts, getFees } from '../api';
 
 describe('ConnectionStatus Component', () => {
@@ -64,14 +69,16 @@ describe('ConnectionStatus Component', () => {
   });
 
   describe('Visual States', () => {
-    it('should show disconnected state initially', () => {
+    it('should show disconnected state initially', async () => {
       render(ConnectionStatus);
-      
+
       expect(screen.getByText('Disconnected')).toBeInTheDocument();
       expect(screen.getByText('Disconnected')).toHaveClass('text-xs', 'font-medium');
-      
-      // Should show version information
-      expect(screen.getByText('v0.9.0')).toBeInTheDocument();
+
+      // Should show version information (wait for async load)
+      await waitFor(() => {
+        expect(screen.getByText('v0.10.4')).toBeInTheDocument();
+      });
     });
 
     it('should show connected state', () => {
@@ -172,13 +179,13 @@ describe('ConnectionStatus Component', () => {
   describe('Connection Monitoring', () => {
     it('should start with initial delay on mount', async () => {
       render(ConnectionStatus);
-      
+
       // Should not call immediately
       expect(getConnectionStatus).not.toHaveBeenCalled();
-      
-      // Should call after 2 second delay
-      vi.advanceTimersByTime(2000);
-      
+
+      // Advance timers for initial 2 second delay
+      await vi.advanceTimersByTimeAsync(2000);
+
       await waitFor(() => {
         expect(getConnectionStatus).toHaveBeenCalledTimes(1);
       });
@@ -189,30 +196,34 @@ describe('ConnectionStatus Component', () => {
         is_connected: true,
         last_check: new Date().toISOString()
       };
-      
+
       vi.mocked(getConnectionStatus).mockResolvedValue(mockConnectionStatus);
-      
+
       render(ConnectionStatus);
-      
+
       // Initial check after delay
-      vi.advanceTimersByTime(2000);
+      await vi.advanceTimersByTimeAsync(2000);
       await waitFor(() => {
         expect(getConnectionStatus).toHaveBeenCalledTimes(1);
       });
-      
+
       // Periodic check every 30 seconds
-      vi.advanceTimersByTime(30000);
+      await vi.advanceTimersByTimeAsync(30000);
       await waitFor(() => {
         expect(getConnectionStatus).toHaveBeenCalledTimes(2);
       });
     });
 
-    it('should clean up interval on unmount', () => {
+    it('should clean up interval on unmount', async () => {
       const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-      
+
       const { unmount } = render(ConnectionStatus);
+
+      // Allow time for interval to be set up
+      await vi.advanceTimersByTimeAsync(2000);
+
       unmount();
-      
+
       expect(clearIntervalSpy).toHaveBeenCalled();
     });
   });
@@ -230,15 +241,17 @@ describe('ConnectionStatus Component', () => {
       expect(contentContainer).toBeInTheDocument();
     });
 
-    it('should render status text in correct structure', () => {
+    it('should render status text in correct structure', async () => {
       const { container } = render(ConnectionStatus);
-      
+
       // Should have flex column for status text
       const statusContainer = container.querySelector('.flex.flex-col');
       expect(statusContainer).toBeInTheDocument();
-      
-      // Should show version number
-      expect(screen.getByText('v0.9.0')).toBeInTheDocument();
+
+      // Should show version number (wait for async load)
+      await waitFor(() => {
+        expect(screen.getByText('v0.10.4')).toBeInTheDocument();
+      });
     });
   });
 });

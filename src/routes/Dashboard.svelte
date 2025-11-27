@@ -78,7 +78,13 @@ import { push } from 'svelte-spa-router';
       {#each statCards as card}
         <div class="stat-card" on:click={() => handleStatCardClick(card.route)} on:keydown={(e) => e.key === 'Enter' && handleStatCardClick(card.route)} role="button" tabindex="0">
           {#if $isLoadingStore}
-            <LoadingSkeleton rows={2} />
+            <div class="stat-card-content">
+              <div class="stat-icon skeleton-icon"></div>
+              <div class="stat-info">
+                <div class="skeleton-number"></div>
+                <div class="skeleton-label"></div>
+              </div>
+            </div>
           {:else}
             <div class="stat-card-content">
               <div class="stat-icon">
@@ -174,6 +180,7 @@ import { push } from 'svelte-spa-router';
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     min-width: 0;
+    min-height: 88px; /* Fixed height to prevent layout shift */
   }
 
   .stat-card:hover {
@@ -229,6 +236,38 @@ import { push } from 'svelte-spa-router';
     line-height: 1.2;
   }
 
+  /* Skeleton styles matching actual content dimensions */
+  .skeleton-icon {
+    background: rgba(255, 255, 255, 0.1);
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .skeleton-number {
+    height: 28px;
+    width: 60%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .skeleton-label {
+    height: 17px;
+    width: 80%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
   .content-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -237,6 +276,8 @@ import { push } from 'svelte-spa-router';
 
   .content-panel {
     min-height: 400px;
+    display: flex; /* Ensure consistent height during loading */
+    flex-direction: column;
   }
 
   @media (max-width: 1024px) {

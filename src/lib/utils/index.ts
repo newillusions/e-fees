@@ -1,4 +1,19 @@
 import type { SurrealThing } from '../../types';
+import { getVersion } from '@tauri-apps/api/app';
+
+/**
+ * Gets the application version from Tauri config
+ * @returns Promise resolving to version string (e.g., "0.10.4")
+ */
+export async function getAppVersion(): Promise<string> {
+  try {
+    return await getVersion();
+  } catch (error) {
+    // Fallback for dev/browser environments
+    console.warn('Could not get Tauri version, using fallback');
+    return '0.0.0';
+  }
+}
 
 /**
  * Extracts the actual ID from a SurrealDB Thing object or returns the string as-is

@@ -1,21 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { logo } from '../../assets';
-  import { connectionStore } from '../stores';
-  import { getConnectionStatus } from '../api';
+  import { getAppVersion } from '../utils';
   
   
   export let onComplete: () => void;
-  
+
   let connectionText = 'Initializing...';
   let dots = '';
   let isConnecting = true;
   let progress = 0;
+  let appVersion = '...';
   
   // Animated dots for connecting message
   let dotInterval: number;
   let progressInterval: number;
-  let statusCheckInterval: number;
   
   const connectionMessages = [
     'Initializing application...',
@@ -29,7 +28,10 @@
   
   let messageIndex = 0;
   
-  onMount(() => {
+  onMount(async () => {
+    // Load app version
+    appVersion = await getAppVersion();
+
     // Animate dots
     dotInterval = setInterval(() => {
       dots = dots.length >= 3 ? '' : dots + '.';
@@ -51,39 +53,16 @@
       }
     }, 800);
     
-    // Check actual connection status
-    statusCheckInterval = setInterval(async () => {
-      try {
-        const status = await getConnectionStatus();
-        connectionStore.set({
-          isConnected: status.is_connected,
-          status: status.is_connected ? 'Connected' : 'Connecting',
-          lastChecked: status.last_check ? new Date(status.last_check) : undefined,
-          errorMessage: status.error_message || undefined
-        });
-        
-        if (status.is_connected || messageIndex >= connectionMessages.length - 1) {
-          // Connection successful or timeout reached
-          progress = 100;
-          connectionText = status.is_connected ? 'Connected successfully!' : 'Using offline mode...';
-          
-          setTimeout(() => {
-            isConnecting = false;
-            onComplete();
-          }, 1000);
-        }
-      } catch (error) {
-        // If we can't check status, assume we need to continue loading
-        if (messageIndex >= connectionMessages.length - 1) {
-          progress = 100;
-          connectionText = 'Ready!';
-          setTimeout(() => {
-            isConnecting = false;
-            onComplete();
-          }, 1000);
-        }
-      }
-    }, 1000) as any;
+    // Simple timeout-based completion (ConnectionStatus will handle actual connection monitoring)
+    // Just show the splash for a reasonable amount of time
+    setTimeout(() => {
+      progress = 100;
+      connectionText = 'Ready!';
+      setTimeout(() => {
+        isConnecting = false;
+        onComplete();
+      }, 500);
+    }, 3000); // 3 second splash display
     
     // Fallback timeout to ensure splash screen doesn't hang
     setTimeout(() => {
@@ -99,7 +78,6 @@
     return () => {
       clearInterval(dotInterval);
       clearInterval(progressInterval);
-      clearInterval(statusCheckInterval);
       clearInterval(messageInterval);
     };
   });
@@ -140,7 +118,8 @@
     <h1 class="text-2xl font-bold mb-2 text-white">
       Fee<span class="text-orange-500">Pro</span>
     </h1>
-    <p class="text-sm mb-8 text-gray-400">by emittiv</p>
+    <p class="text-sm text-gray-400">by emittiv</p>
+    <p class="text-xs mb-8 text-gray-500">v{appVersion}</p>
     
     <!-- Progress Bar -->
     <div class="mb-6">
@@ -157,19 +136,6 @@
       <p class="text-sm transition-all duration-300 text-gray-300">
         {connectionText}<span class="inline-block w-6 text-left">{dots}</span>
       </p>
-    </div>
-    
-    <!-- Status Indicator -->
-    <div class="mt-4 flex items-center justify-center space-x-2">
-      <div 
-        class="w-2 h-2 rounded-full transition-all duration-500"
-        class:bg-orange-500={$connectionStore.isConnected}
-        class:bg-gray-400={!$connectionStore.isConnected}
-        class:animate-pulse={!$connectionStore.isConnected}
-      ></div>
-      <span class="text-xs text-gray-400">
-        {$connectionStore.isConnected ? 'Database Connected' : 'Connecting to Database'}
-      </span>
     </div>
   </div>
   

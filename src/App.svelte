@@ -78,21 +78,6 @@
           // Data will be loaded automatically when ConnectionStatus detects first connection
           if (import.meta.env.DEV) {
           }
-          
-          // FALLBACK: Also attempt data loading directly after a delay
-          // This ensures data loads even if ConnectionStatus fails
-          setTimeout(async () => {
-            if (import.meta.env.DEV) {
-            }
-            try {
-              await loadAllData();
-              if (import.meta.env.DEV) {
-              }
-            } catch (error) {
-              if (import.meta.env.DEV) {
-              }
-            }
-          }, 5000); // 5 second delay to allow ConnectionStatus to try first
         }
       } catch (error) {
         console.error('Failed during app initialization:', error);

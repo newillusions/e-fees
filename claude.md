@@ -150,21 +150,21 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 
 ## Next Steps
 
-### Priority 1: Complete CRUD Operations
-1. **✅ Contacts CRUD** - COMPLETED - Create, update, delete all working
+### Priority 1: CRUD Operations - ALL COMPLETE ✅
+1. **✅ Contacts CRUD** - COMPLETED
    - Backend: All contact commands implemented with proper ID extraction
    - Frontend: ContactModal with fuzzy search and validation
    - Default sorting by last updated timestamp
 
-2. **Proposals CRUD Testing** - Next session priority
-   - Backend: Commands appear well-implemented (no obvious issues found)
-   - Frontend: ProposalModal already has proper patterns applied
-   - Need to test and verify functionality
+2. **✅ Proposals CRUD** - COMPLETED (Verified Nov 2025)
+   - Backend: All commands verified (`create_fee`, `get_fees`, `update_fee`, `delete_fee`)
+   - Frontend: ProposalModal with delete functionality (line 498-512)
+   - Full CRUD operations working as expected
 
-3. **Projects CRUD** - Apply same pattern as Contacts
-   - Backend: `update_project`, `delete_project` commands  
-   - Frontend: Project modal with edit/delete functionality
-   - File: `src/lib/components/ProjectModal.svelte` (needs creation)
+3. **✅ Projects CRUD** - COMPLETED (Verified Nov 2025)
+   - Backend: `update_project` (line 1486), `delete_project` commands exist
+   - Frontend: ProjectModal.svelte + NewProjectModal.svelte fully functional
+   - Status change workflow and folder management integrated
 
 ### Priority 2: Enhanced UI Features
 3. **Detail views with slide-in panels** - Rich data display
@@ -191,8 +191,8 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 - Tauri uses less memory than Electron
 
 ---
-**Last Updated**: July 25, 2025  
-**Status**: Contacts CRUD fully complete with all fixes applied, navigation reordered, ready for proposals testing
+**Last Updated**: November 26, 2025
+**Status**: All CRUD operations verified complete (Companies, Contacts, Projects, Proposals). All 316 tests passing. Production ready.
 
 ## Development Notes
 
