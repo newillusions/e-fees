@@ -1,0 +1,291 @@
+{
+  "permissions": {
+    "allow": [
+
+      "// ================================================",
+      "// DEVELOPMENT COMMANDS",
+      "// ================================================",
+
+      "// Node & NPM",
+      "Bash(npm *)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(pnpm:*)",
+
+      "// Cargo & Rust",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+
+      "// Development servers (consolidated timeout variants)",
+      "Bash(timeout * npm run *)",
+      "Bash(PORT=* npm run *)",
+      "Bash(PORT=* timeout * npm run *)",
+      "Bash(RUST_LOG=* npm run *)",
+      "Bash(RUST_LOG=* timeout * npm run *)",
+      "Bash(RUST_LOG=* cargo *)",
+
+      "// ================================================",
+      "// FILE OPERATIONS",
+      "// ================================================",
+
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(rmdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(touch:*)",
+      "Bash(chmod:*)",
+      "Bash(ln:*)",
+
+      "// File content operations",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(echo:*)",
+
+      "// ================================================",
+      "// PROCESS MANAGEMENT",
+      "// ================================================",
+
+      "Bash(ps:*)",
+      "Bash(pgrep:*)",
+      "Bash(pkill:*)",
+      "Bash(kill:*)",
+      "Bash(killall:*)",
+      "Bash(jobs)",
+      "Bash(wait)",
+
+      "// ================================================",
+      "// GIT OPERATIONS",
+      "// ================================================",
+
+      "Bash(git *)",
+
+      "// ================================================",
+      "// NETWORK & SYSTEM",
+      "// ================================================",
+
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(nc:*)",
+      "Bash(nmap:*)",
+      "Bash(telnet:*)",
+      "Bash(ssh:*)",
+      "Bash(lsof:*)",
+      "Bash(ss:*)",
+
+      "// Network diagnostics",
+      "Bash(hostname:*)",
+      "Bash(ip route:*)",
+      "Bash(route:*)",
+      "Bash(traceroute:*)",
+      "Bash(arp:*)",
+      "Bash(ipconfig:*)",
+      "Bash(scutil:*)",
+
+      "// ================================================",
+      "// DATABASE OPERATIONS (using env vars)",
+      "// ================================================",
+
+      "// SurrealDB MCP (credentials via environment)",
+      "Bash(env SURREALDB_URL SURREALDB_NS SURREALDB_DB SURREALDB_USER SURREALDB_PASS npx -y surrealdb-mcp-server*)",
+      "Bash(env SURREALDB_URL SURREALDB_NS SURREALDB_DB SURREALDB_USER SURREALDB_PASS timeout * npx -y surrealdb-mcp-server*)",
+      "Bash(env SURREALDB_URL SURREALDB_NS SURREALDB_DB SURREALDB_USER SURREALDB_PASS gtimeout * npx -y surrealdb-mcp-server*)",
+
+      "// SurrealDB CLI",
+      "Bash(surreal *)",
+
+      "// ================================================",
+      "// MCP SERVERS",
+      "// ================================================",
+
+      "// Tauri MCP",
+      "Bash(tauri-mcp *)",
+      "Bash(/Users/martin/.cargo/bin/tauri-mcp *)",
+      "Bash(RUST_LOG=* /Users/martin/.cargo/bin/tauri-mcp *)",
+      "Bash(RUST_LOG=* tauri-mcp *)",
+
+      "// Claude MCP",
+      "Bash(claude-mcp:*)",
+      "Bash(claude *)",
+
+      "// ================================================",
+      "// TESTING",
+      "// ================================================",
+
+      "Bash(./test*.sh*)",
+      "Bash(./verify*.sh*)",
+      "Bash(./manual*.sh*)",
+      "Bash(./call_test.sh:*)",
+      "Bash(./check_latest_logs.sh:*)",
+      "Bash(./final_debug_test.sh:*)",
+      "Bash(./bundle_dmg.sh:*)",
+      "Bash(./validate_security_fixes.sh:*)",
+
+      "// Test scripts in project root",
+      "Bash(/Volumes/base/dev/claude-code-app-1/test*.sh*)",
+      "Bash(/Volumes/base/dev/claude-code-app-1/manual*.sh*)",
+
+      "// ================================================",
+      "// BUILD & DEPLOYMENT",
+      "// ================================================",
+
+      "Bash(open:*)",
+      "Bash(spctl:*)",
+      "Bash(xattr:*)",
+      "Bash(codesign:*)",
+
+      "// Application execution",
+      "Bash(./src-tauri/target/release/app)",
+      "Bash(./app)",
+      "Bash(\"./src-tauri/target/release/bundle/macos/Fee Proposal Management.app/Contents/MacOS/Fee Proposal Management\")",
+      "Bash(\"./src-tauri/target/release/bundle/macos/Fee Proposal Management.app/Contents/MacOS/app\")",
+      "Bash(\"/Applications/Fee Proposal Management v0.9.0.app/Contents/MacOS/Fee Proposal Management v0.9.0\")",
+      "Bash(\"/Applications/Fee Proposal Management v0.9.0.app/Contents/MacOS/app\")",
+      "Bash((\"/Applications/Fee Proposal Management v0.9.0.app/Contents/MacOS/app\" --help))",
+
+      "// ================================================",
+      "// MACOS SPECIFIC",
+      "// ================================================",
+
+      "Bash(brew:*)",
+      "Bash(osascript:*)",
+      "Bash(screencapture:*)",
+      "Bash(sw_vers)",
+      "Bash(log stream:*)",
+      "Bash(log show:*)",
+      "Bash(qlmanage:*)",
+      "Bash(sips:*)",
+      "Bash(iconutil:*)",
+      "Bash(rsvg-convert:*)",
+      "Bash(cliclick:*)",
+      "Bash(/usr/libexec/ApplicationFirewall/socketfilterfw:*)",
+
+      "// ================================================",
+      "// UTILITY COMMANDS",
+      "// ================================================",
+
+      "Bash(env)",
+      "Bash(true)",
+      "Bash(source:*)",
+      "Bash(bash:*)",
+      "Bash(for:*)",
+      "Bash(do)",
+      "Bash(done)",
+      "Bash(export *)",
+      "Bash(alias *)",
+      "Bash(compgen:*)",
+      "Bash(time *)",
+      "Bash(timeout:*)",
+      "Bash(gtimeout:*)",
+      "Bash(xargs *)",
+
+      "// Package managers",
+      "Bash(apt *)",
+      "Bash(pip *)",
+      "Bash(pkg-config:*)",
+
+      "// Development tools",
+      "Bash(python3:*)",
+      "Bash(java:*)",
+      "Bash(docker:*)",
+      "Bash(tauri-driver:*)",
+
+      "// ================================================",
+      "// SUDO OPERATIONS (use with caution)",
+      "// ================================================",
+
+      "Bash(sudo apt:*)",
+      "Bash(sudo npm *)",
+      "Bash(sudo lsof:*)",
+      "Bash(sudo xattr *)",
+      "Bash(sudo killall:*)",
+      "Bash(sudo rm:*)",
+
+      "// ================================================",
+      "// MCP TOOLS",
+      "// ================================================",
+
+      "// Desktop Commander",
+      "mcp__desktop-commander__*",
+
+      "// Filesystem",
+      "mcp__filesystem__*",
+
+      "// Browser automation",
+      "mcp__playwright__*",
+      "mcp__puppeteer__*",
+      "mcp__browser-mcp__*",
+
+      "// Database",
+      "mcp__SurrealDB__*",
+      "mcp__surrealdb-claude__*",
+      "mcp__surrealdb-emittiv__*",
+
+      "// Testing & automation",
+      "mcp__tauri-mcp__*",
+      "mcp__tauri-webdriver__*",
+
+      "// Knowledge & memory",
+      "mcp__memory__*",
+      "mcp__sequential-thinking__*",
+
+      "// Utilities",
+      "mcp__brave-search__*",
+      "mcp__context7__*",
+      "mcp__fetch__*",
+      "mcp__mcp-installer__*",
+      "mcp__macos-screenshot__*",
+      "mcp__macos-notification-mcp__*",
+      "mcp__pdf__*",
+      "mcp__hass-mcp__*",
+      "mcp__git__*",
+      "mcp__postgres__*",
+      "mcp__docker__*",
+      "mcp__n8n-research__*",
+      "mcp__n8n__*",
+      "mcp__mcp-ssh__*",
+      "mcp__mistral-ocr__*",
+
+      "// ================================================",
+      "// WEB FETCH DOMAINS",
+      "// ================================================",
+
+      "WebFetch(domain:surrealdb.com)",
+      "WebFetch(domain:docs.surrealdb.com)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:joshcollinsworth.com)",
+      "WebFetch(domain:lib.rs)",
+      "WebFetch(domain:lobehub.com)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:www.pulsemcp.com)",
+
+      "WebSearch",
+
+      "// ================================================",
+      "// FILE READ PERMISSIONS",
+      "// ================================================",
+
+      "Read(//tmp/**)",
+      "Read(//Users/martin/**)",
+      "Read(//Applications/**)"
+    ],
+
+    "deny": [],
+
+    "additionalDirectories": [
+      "/Volumes/base/dev"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": "0.10.5",
+  "notes": "Release v0.10.5",
+  "pub_date": "2025-11-27T09:10:10Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3FwL3BiNit0aFFFMUs2N2pCV1JWWHl1SFlzVnBZOUlNem5xUXpvSXpKMld6V1dEdVU5ckZ1am9WMXZWS2ZGTE44TExSZ3IyRFJyKzJpVTMraUY2ZkFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0MjM1NDkyCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKM1d1OWNINGdpblE5L1ZZQjQrc2hIbzhzOGNFK1Zyb3F5ZXRMZHpmU3V5YmhFd1ZUa05Zd3U1ZEpxYlRBdnFoRVpZZ0lGZDRvYjR2UW9GRE5oMkpiQWc9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.5/E-Fees_0.10.5_aarch64.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2hTajQ5ZUVsOXdnbjExZWlZSFUxdHZrd0FtUm1nYXBvaGtXb1JDbDdlMjBycDJlcTJhL3pwa2JmT3JqZVBKSmx3TUFDbmNGMVVqdkwxT1pFQ3lVK1FrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0MjM1Mzc4CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKRzE0VXB5OU9qZ3BoMFFESk00dXF0bkxsWGFBYXdZKzJ3M0ZiQjN3RitxWnRZNVZ5cFFPb0JvWDdTL2FZOGRpU3RRTXJwTWNhdXQ2YUZoczg1cFd1Q1E9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.5/E-Fees_0.10.5_x64.app.tar.gz"
+    }
+  }
+}

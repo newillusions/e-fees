@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>gitea-act-runner</Name>
+  <Repository>gitea/act_runner:latest</Repository>
+  <Registry>https://hub.docker.com/r/gitea/act_runner</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://docs.gitea.com/usage/actions/act-runner</Support>
+  <Project>https://gitea.com/gitea/act_runner</Project>
+  <Overview>
+    Gitea Actions Runner - Executes CI/CD workflows for your Gitea instance.
+
+    This container runs jobs triggered by Gitea Actions (CI/CD). It requires:
+    1. Access to Docker socket (to run workflow jobs in containers)
+    2. A registration token from your Gitea instance
+    3. Network access to your Gitea server
+
+    After starting, check logs to verify successful registration.
+
+    IMPORTANT: Update GITEA_INSTANCE_URL to match your Gitea server address.
+    Get registration token from: Settings → Actions → Runners in your repository.
+  </Overview>
+  <Category>Tools: Status:Beta</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/yourusername/unraid-templates/master/gitea-act-runner.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/go-gitea/gitea/main/public/assets/img/logo.svg</Icon>
+  <ExtraParams>--restart=always</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled></DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Runner Data" Target="/data" Default="/mnt/user/appdata/gitea-runner" Mode="rw" Description="Persistent storage for runner configuration and cache" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/gitea-runner</Config>
+  <Config Name="Docker Socket" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="rw" Description="Docker socket access - Required for running workflow jobs in containers. WARNING: This gives the runner significant host access." Type="Path" Display="always" Required="true" Mask="false">/var/run/docker.sock</Config>
+  <Config Name="Gitea Instance URL" Target="GITEA_INSTANCE_URL" Default="https://git.mms.name" Mode="" Description="URL of your Gitea instance (must be accessible from this container). Change if using custom domain or IP." Type="Variable" Display="always" Required="true" Mask="false">https://git.mms.name</Config>
+  <Config Name="Registration Token" Target="GITEA_RUNNER_REGISTRATION_TOKEN" Default="hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE" Mode="" Description="Runner registration token from Gitea. Get from: Repository Settings → Actions → Runners → Generate Token. This token expires, so you'll need to update it if the runner fails to register." Type="Variable" Display="always" Required="true" Mask="true">hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE</Config>
+  <Config Name="Runner Name" Target="GITEA_RUNNER_NAME" Default="unraid-runner-01" Mode="" Description="Friendly name for this runner (visible in Gitea UI)" Type="Variable" Display="always" Required="false" Mask="false">unraid-runner-01</Config>
+  <Config Name="Runner Labels" Target="GITEA_RUNNER_LABELS" Default="ubuntu-latest:docker://node:20-bullseye,ubuntu-22.04:docker://node:20-bullseye,linux:docker://node:20-bullseye" Mode="" Description="Comma-separated list of labels this runner supports. Format: label:docker://image. These must match 'runs-on' in your workflows." Type="Variable" Display="advanced" Required="false" Mask="false">ubuntu-latest:docker://node:20-bullseye,ubuntu-22.04:docker://node:20-bullseye,linux:docker://node:20-bullseye</Config>
+  <Config Name="Log Level" Target="GITEA_RUNNER_LOG_LEVEL" Default="info" Mode="" Description="Logging verbosity: trace, debug, info, warn, error, fatal" Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+</Container>

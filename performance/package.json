@@ -1,0 +1,43 @@
+{
+  "name": "e-fees-performance-testing",
+  "version": "1.0.0",
+  "description": "Performance testing infrastructure for E-Fees desktop application",
+  "private": true,
+  "scripts": {
+    "perf:install": "npm install && ./scripts/setup.sh",
+    "perf:generate-data": "node data/generators/generate-large-dataset.js",
+    "perf:test": "npm run perf:test:database && npm run perf:test:ui && npm run perf:test:workflows",
+    "perf:test:database": "k6 run tests/database/bulk-operations.js && k6 run tests/database/complex-queries.js",
+    "perf:test:ui": "playwright test tests/ui/large-lists.spec.js && playwright test tests/ui/search-performance.spec.js",
+    "perf:test:workflows": "k6 run tests/workflows/complete-workflows.js",
+    "perf:test:memory": "node tests/memory/memory-leak-detection.js",
+    "perf:test:regression": "node tests/regression/performance-regression.js",
+    "perf:baseline": "node utils/monitoring/create-baseline.js",
+    "perf:compare": "node utils/monitoring/compare-performance.js",
+    "perf:report": "node utils/reporters/generate-html-report.js",
+    "perf:monitor": "node utils/monitoring/live-performance-monitor.js",
+    "perf:clean": "rm -rf reports/* data/generated/*",
+    "perf:docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "perf:docker:down": "docker-compose -f docker/docker-compose.yml down"
+  },
+  "dependencies": {
+    "k6": "^0.52.0",
+    "playwright": "^1.54.1",
+    "surrealdb.js": "^1.0.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "csv-writer": "^1.6.0",
+    "fast-csv": "^5.0.1",
+    "faker": "^6.6.6",
+    "jest": "^29.7.0",
+    "lodash": "^4.17.21",
+    "node-html-parser": "^6.1.13",
+    "puppeteer": "^23.8.0",
+    "yargs": "^17.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

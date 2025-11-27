@@ -1,0 +1,55 @@
+# Codecov Configuration for E-Fees Application
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...95"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        base: auto
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+
+comment:
+  layout: "diff, files"
+  behavior: default
+  require_changes: true
+  require_base: no
+  require_head: yes
+
+ignore:
+  - "src/tests/**/*"
+  - "src/**/*.test.ts"
+  - "src/**/*.spec.ts" 
+  - "src/main.ts"
+  - "**/*.config.ts"
+  - "**/*.config.js"
+  - "src-tauri/**/*"
+  - "archive/**/*"
+  - "docs/**/*"
+  - "screenshots/**/*"
+
+flags:
+  frontend:
+    paths:
+      - src/lib/
+      - src/routes/
+      - src/components/
+    carryforward: true
+
+github_checks:
+  annotations: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no

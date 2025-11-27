@@ -1,0 +1,427 @@
+name: Build macOS and Windows Releases
+
+# This workflow runs on GitHub's free runners (macOS + Windows)
+# Builds are uploaded to Gitea releases automatically
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 0.10.0)'
+        required: true
+        default: '0.10.0'
+
+env:
+  GITEA_SERVER: https://git.mms.name
+  GITEA_OWNER: martin
+  GITEA_REPO: fee-prop
+
+jobs:
+  build-macos:
+    name: Build macOS (Apple Silicon + Intel)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin  # Apple Silicon (M1/M2/M3)
+          - x86_64-apple-darwin   # Intel
+    outputs:
+      sig-aarch64: ${{ steps.get_sig.outputs.sig_aarch64 }}
+      sig-x86_64: ${{ steps.get_sig.outputs.sig_x86_64 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri:build -- --target ${{ matrix.target }}
+
+      - name: Create archive name
+        id: archive
+        run: |
+          if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
+            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_aarch64" >> $GITHUB_OUTPUT
+            echo "ARCH=aarch64" >> $GITHUB_OUTPUT
+          else
+            echo "NAME=E-Fees_${{ steps.version.outputs.VERSION }}_x64" >> $GITHUB_OUTPUT
+            echo "ARCH=x64" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find artifacts
+        id: find_artifacts
+        run: |
+          DMG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" | head -1)
+          TARGZ_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app.tar.gz" | head -1)
+          SIG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app.tar.gz.sig" | head -1)
+          echo "DMG_PATH=$DMG_PATH" >> $GITHUB_OUTPUT
+          echo "TARGZ_PATH=$TARGZ_PATH" >> $GITHUB_OUTPUT
+          echo "SIG_PATH=$SIG_PATH" >> $GITHUB_OUTPUT
+
+      - name: Get signature
+        id: get_sig
+        run: |
+          if [ -f "${{ steps.find_artifacts.outputs.SIG_PATH }}" ]; then
+            SIG=$(cat "${{ steps.find_artifacts.outputs.SIG_PATH }}")
+            if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
+              echo "sig_aarch64=$SIG" >> $GITHUB_OUTPUT
+            else
+              echo "sig_x86_64=$SIG" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Create checksum
+        run: |
+          cd $(dirname "${{ steps.find_artifacts.outputs.DMG_PATH }}")
+          shasum -a 256 $(basename "${{ steps.find_artifacts.outputs.DMG_PATH }}") > ${{ steps.archive.outputs.NAME }}.dmg.sha256
+
+      - name: Upload to Gitea Release
+        run: |
+          # Get or create release with retry logic for race conditions
+          MAX_RETRIES=5
+          RETRY_DELAY=5
+          RELEASE_ID=""
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Getting or creating release..."
+
+            # Try to get existing release
+            RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+
+            echo "API Response: $RELEASE_JSON"
+
+            if echo "$RELEASE_JSON" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+              echo "Using existing release: $RELEASE_ID"
+              break
+            fi
+
+            # Release doesn't exist, try to create it
+            echo "Release not found, creating..."
+            RELEASE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
+              -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
+
+            echo "Create Response: $RELEASE_RESPONSE"
+
+            if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+              echo "Created new release: $RELEASE_ID"
+              break
+            fi
+
+            # Failed, wait and retry (another job may have created it)
+            echo "Failed to get/create release, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "ERROR: Failed to get or create release after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+          # Upload DMG
+          echo "Uploading DMG..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -F "attachment=@${{ steps.find_artifacts.outputs.DMG_PATH }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.dmg"
+
+          # Upload updater tar.gz (for auto-update)
+          if [ -f "${{ steps.find_artifacts.outputs.TARGZ_PATH }}" ]; then
+            echo "Uploading tar.gz for updater..."
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -F "attachment=@${{ steps.find_artifacts.outputs.TARGZ_PATH }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.app.tar.gz"
+          fi
+
+          # Upload checksum
+          echo "Uploading checksum..."
+          cd $(dirname "${{ steps.find_artifacts.outputs.DMG_PATH }}")
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -F "attachment=@${{ steps.archive.outputs.NAME }}.dmg.sha256" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=${{ steps.archive.outputs.NAME }}.dmg.sha256"
+
+      - name: Upload artifacts (GitHub)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-${{ steps.archive.outputs.ARCH }}
+          path: |
+            ${{ steps.find_artifacts.outputs.DMG_PATH }}
+            ${{ steps.find_artifacts.outputs.TARGZ_PATH }}
+            ${{ steps.find_artifacts.outputs.SIG_PATH }}
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    outputs:
+      sig-windows: ${{ steps.get_sig.outputs.sig_windows }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri:build
+
+      - name: Find installers
+        id: find_installers
+        shell: bash
+        run: |
+          MSI_PATH=$(find src-tauri/target/release/bundle/msi -name "*.msi" | head -1)
+          NSIS_PATH=$(find src-tauri/target/release/bundle/nsis -name "*-setup.exe" | head -1)
+          NSIS_ZIP=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip" | head -1)
+          NSIS_SIG=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip.sig" | head -1)
+          echo "MSI_PATH=$MSI_PATH" >> $GITHUB_OUTPUT
+          echo "NSIS_PATH=$NSIS_PATH" >> $GITHUB_OUTPUT
+          echo "NSIS_ZIP=$NSIS_ZIP" >> $GITHUB_OUTPUT
+          echo "NSIS_SIG=$NSIS_SIG" >> $GITHUB_OUTPUT
+
+      - name: Get signature
+        id: get_sig
+        shell: bash
+        run: |
+          if [ -f "${{ steps.find_installers.outputs.NSIS_SIG }}" ]; then
+            SIG=$(cat "${{ steps.find_installers.outputs.NSIS_SIG }}")
+            echo "sig_windows=$SIG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload to Gitea Release
+        shell: bash
+        run: |
+          # Get or create release with retry logic for race conditions
+          MAX_RETRIES=5
+          RETRY_DELAY=5
+          RELEASE_ID=""
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Getting or creating release..."
+
+            # Try to get existing release
+            RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/tags/v${{ steps.version.outputs.VERSION }}")
+
+            echo "API Response: $RELEASE_JSON"
+
+            if echo "$RELEASE_JSON" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
+              echo "Using existing release: $RELEASE_ID"
+              break
+            fi
+
+            # Release doesn't exist, try to create it
+            echo "Release not found, creating..."
+            RELEASE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
+              -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
+
+            echo "Create Response: $RELEASE_RESPONSE"
+
+            if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+              echo "Created new release: $RELEASE_ID"
+              break
+            fi
+
+            # Failed, wait and retry (another job may have created it)
+            echo "Failed to get/create release, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "ERROR: Failed to get or create release after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+          # Upload MSI
+          echo "Uploading MSI..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -F "attachment=@${{ steps.find_installers.outputs.MSI_PATH }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64.msi"
+
+          # Upload NSIS installer
+          echo "Uploading NSIS installer..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -F "attachment=@${{ steps.find_installers.outputs.NSIS_PATH }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.exe"
+
+          # Upload NSIS zip for updater (if exists)
+          if [ -f "${{ steps.find_installers.outputs.NSIS_ZIP }}" ]; then
+            echo "Uploading NSIS zip for updater..."
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+              -F "attachment=@${{ steps.find_installers.outputs.NSIS_ZIP }}" \
+              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
+          fi
+
+      - name: Upload artifacts (GitHub)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows
+          path: |
+            ${{ steps.find_installers.outputs.MSI_PATH }}
+            ${{ steps.find_installers.outputs.NSIS_PATH }}
+            ${{ steps.find_installers.outputs.NSIS_ZIP }}
+            ${{ steps.find_installers.outputs.NSIS_SIG }}
+
+  update-manifest:
+    name: Update manifest
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: always() && needs.build-macos.result != 'cancelled' && needs.build-windows.result != 'cancelled'
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate and display update.json
+        id: generate
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SIG_AARCH64="${{ needs.build-macos.outputs.sig-aarch64 }}"
+          SIG_X64="${{ needs.build-macos.outputs.sig-x86_64 }}"
+          SIG_WIN="${{ needs.build-windows.outputs.sig-windows }}"
+
+          cat > update.json << EOF
+          {
+            "version": "$VERSION",
+            "notes": "Release v$VERSION",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "$SIG_AARCH64",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "$SIG_X64",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64.app.tar.gz"
+              },
+              "windows-x86_64": {
+                "signature": "$SIG_WIN",
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.nsis.zip"
+              }
+            }
+          }
+          EOF
+
+          echo "Generated update.json:"
+          cat update.json
+
+          # Base64 encode for API
+          CONTENT=$(base64 -w 0 update.json)
+          echo "content=$CONTENT" >> $GITHUB_OUTPUT
+
+      - name: Upload update.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-manifest
+          path: update.json
+
+      - name: Push to Gitea via API
+        continue-on-error: true
+        run: |
+          echo "Attempting to push update.json to Gitea..."
+
+          # Get current file SHA (if exists)
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json?ref=main")
+
+          SHA=$(echo "$RESPONSE" | jq -r '.sha // empty')
+
+          # Prepare update payload
+          if [ -n "$SHA" ]; then
+            echo "Updating existing file (SHA: $SHA)"
+            PAYLOAD=$(jq -n \
+              --arg content "${{ steps.generate.outputs.content }}" \
+              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
+              --arg sha "$SHA" \
+              '{content: $content, message: $message, sha: $sha}')
+          else
+            echo "Creating new file"
+            PAYLOAD=$(jq -n \
+              --arg content "${{ steps.generate.outputs.content }}" \
+              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
+              '{content: $content, message: $message}')
+          fi
+
+          # Push to Gitea
+          RESULT=$(curl -s -X PUT \
+            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json" \
+            -d "$PAYLOAD")
+
+          echo "API Response: $RESULT"
+
+          if echo "$RESULT" | jq -e '.content.sha' > /dev/null 2>&1; then
+            echo "✅ Successfully pushed update.json to Gitea"
+          else
+            echo "⚠️ Failed to push to Gitea (may need manual update)"
+            echo "The update.json artifact is available for manual upload"
+          fi

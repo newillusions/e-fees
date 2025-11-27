@@ -1,0 +1,17 @@
+{
+  "name": "gitea-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Gitea API integration",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["mcp", "gitea", "releases"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "node-fetch": "^3.3.2"
+  }
+}

@@ -1,0 +1,12 @@
+docs: Add comprehensive security audit report
+
+- Complete analysis of security cleanup performed
+- Critical actions required before making repo public
+- Step-by-step instructions for token revocation
+- Git history cleaning options (fresh start vs BFG)
+- GitHub Actions billing solutions
+- Pre-public checklist
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

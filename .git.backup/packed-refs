@@ -1,0 +1,10 @@
+# pack-refs with: peeled fully-peeled sorted 
+7792ec5888c07d87e7b66298a59b4cf235035c83 refs/heads/main
+709f3d2593f6d4951586b02ead615a9dad96f215 refs/heads/refactor/code-cleanup-and-component-refactoring
+0f9c71d6a60d3f389eb0cb4aefb3830564a14d02 refs/remotes/origin/main
+709f3d2593f6d4951586b02ead615a9dad96f215 refs/remotes/origin/refactor/code-cleanup-and-component-refactoring
+0f930616a85c14d9fa8af39a5fac48f4287eac9f refs/stash
+5024aca428ca03ac7cd3f7e730ab577749253f3c refs/tags/v0.10.0
+^c6b5e3ee97d8f9bd8cc24f8da5b3ee3c2221a85e
+74f90c803312348d5ef512d396ada02cb6d3df6b refs/tags/v0.9.0-beta.1
+^7c58aa0b094dabd555defddce1cf983279ce1d9d

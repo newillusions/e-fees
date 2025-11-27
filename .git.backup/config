@@ -1,0 +1,44 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+[user]
+	name = martin
+	email = newillusions@gmail.com
+[remote "origin"]
+	url = https://git.mms.name/martin/fee-prop.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[credential]
+	helper = store
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "refactor/code-cleanup-and-component-refactoring"]
+	remote = origin
+	merge = refs/heads/refactor/code-cleanup-and-component-refactoring
+[secrets]
+	providers = git secrets --aws-provider
+	patterns = (A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}
+	patterns = (\"|')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)(\"|')?\\s*(:|=>|=)\\s*(\"|')?[A-Za-z0-9/\\+=]{40}(\"|')?
+	patterns = (\"|')?(AWS|aws|Aws)?_?(ACCOUNT|account|Account)_?(ID|id|Id)?(\"|')?\\s*(:|=>|=)\\s*(\"|')?[0-9]{4}\\-?[0-9]{4}\\-?[0-9]{4}(\"|')?
+	allowed = AKIAIOSFODNN7EXAMPLE
+	allowed = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+	patterns = th38ret3ch
+	patterns = [Pp]ass.*=.*
+	patterns = SURREALDB_PASS.*=.*[^\"]*password.*[^\"]*
+	allowed = label for=\"db-password\"
+	allowed = SURREALDB_PASS.*settings\\.surrealdb_pass
+	allowed = if let Some.*pass.*=.*&settings
+	allowed = SURREALDB_PASS=your_password
+	allowed = SURREALDB_PASS=your_secure_password
+	allowed = env::var.*SURREALDB_PASS
+	allowed = SURREALDB_PASS=secure_production_password
+	allowed = SURREALDB_PASS=staging_password
+	allowed = password = Some.*
+	allowed = surrealdb_pass.*
+	allowed = SURREALDB_PASS.*
+[remote "github"]
+	url = https://github.com/newillusions/e-fees.git
+	fetch = +refs/heads/*:refs/remotes/github/*
