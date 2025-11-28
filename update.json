@@ -1,19 +1,19 @@
 {
-  "version": "0.10.6",
-  "notes": "Release v0.10.6",
-  "pub_date": "2025-11-27T14:39:03Z",
+  "version": "0.10.7",
+  "notes": "Release v0.10.7",
+  "pub_date": "2025-11-28T06:59:33Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.6/E-Fees_0.10.6_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3ZsMURVbllHaXFIS3FLbXJTTEFhQzF6WjlTajlWOCtYM3ByLzFSeU8zN3Y0TVpyRXVCVHFXUUxFYWhjYmZaWVdxeGZuQnUvWDg5dlJwUzIzektya2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0MzEyNTk2CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKVmtwemRydXNEK1VDeG1SN0Z5WUMwZUphNVBtMGNlVGIrT2VaNjQ5TGpZVSs3elZmTG1MRHNmOW9rbzI1YmtpcW0vaWJVVmY4dG8wSU1EdUhBL2lERHc9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.7/E-Fees_0.10.7_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.6/E-Fees_0.10.6_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd21rU3BRZ3FqZTdSQzFqS0lqaW51ZytYYWwrMDZqbXVjMlZBRzhscTZmVTA4Yy9uUHFUVG5IMWZZa0E3QTNjWldVc2tSMlZwWWg5dG5laXdtTzRrQlFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0MzEyNjM1CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKNE1IZmNiN3hmOUI0Nm1CSytySnRzU3BmVDFyU1ZveEU2cndoUnNHa3NsQVcyQ2ZQajNEYlhnaDZHWkk0UURoWnBlZVJyVjlXNmI5ZWw1alRGcVRiRGc9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.7/E-Fees_0.10.7_x64.app.tar.gz"
     },
     "windows-x86_64": {
       "signature": "",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.6/E-Fees_0.10.6_x64-setup.nsis.zip"
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.7/E-Fees_0.10.7_x64-setup.nsis.zip"
     }
   }
 }
