@@ -225,11 +225,9 @@ jobs:
         run: |
           MSI_PATH=$(find src-tauri/target/release/bundle/msi -name "*.msi" | head -1)
           NSIS_PATH=$(find src-tauri/target/release/bundle/nsis -name "*-setup.exe" | head -1)
-          NSIS_ZIP=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip" | head -1)
-          NSIS_SIG=$(find src-tauri/target/release/bundle/nsis -name "*-setup.nsis.zip.sig" | head -1)
+          NSIS_SIG=$(find src-tauri/target/release/bundle/nsis -name "*-setup.exe.sig" | head -1)
           echo "MSI_PATH=$MSI_PATH" >> $GITHUB_OUTPUT
           echo "NSIS_PATH=$NSIS_PATH" >> $GITHUB_OUTPUT
-          echo "NSIS_ZIP=$NSIS_ZIP" >> $GITHUB_OUTPUT
           echo "NSIS_SIG=$NSIS_SIG" >> $GITHUB_OUTPUT
 
       - name: Get signature
@@ -297,21 +295,12 @@ jobs:
             -F "attachment=@${{ steps.find_installers.outputs.MSI_PATH }}" \
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64.msi"
 
-          # Upload NSIS installer
+          # Upload NSIS installer for download and updater
           echo "Uploading NSIS installer..."
           curl -X POST \
             -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
             -F "attachment=@${{ steps.find_installers.outputs.NSIS_PATH }}" \
             "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.exe"
-
-          # Upload NSIS zip for updater (if exists)
-          if [ -f "${{ steps.find_installers.outputs.NSIS_ZIP }}" ]; then
-            echo "Uploading NSIS zip for updater..."
-            curl -X POST \
-              -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-              -F "attachment=@${{ steps.find_installers.outputs.NSIS_ZIP }}" \
-              "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases/$RELEASE_ID/assets?name=E-Fees_${{ steps.version.outputs.VERSION }}_x64-setup.nsis.zip"
-          fi
 
       - name: Upload artifacts (GitHub)
         uses: actions/upload-artifact@v4
@@ -321,7 +310,6 @@ jobs:
           path: |
             ${{ steps.find_installers.outputs.MSI_PATH }}
             ${{ steps.find_installers.outputs.NSIS_PATH }}
-            ${{ steps.find_installers.outputs.NSIS_ZIP }}
             ${{ steps.find_installers.outputs.NSIS_SIG }}
 
   update-manifest:
@@ -364,7 +352,7 @@ jobs:
               },
               "windows-x86_64": {
                 "signature": "$SIG_WIN",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.nsis.zip"
+                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.exe"
               }
             }
           }
