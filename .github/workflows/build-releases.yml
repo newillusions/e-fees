@@ -73,6 +73,25 @@ jobs:
             codesign --verify --verbose=4 "$APP_PATH"
           fi
 
+      - name: Recreate DMG with fixed signature
+        run: |
+          # Find the old DMG and app
+          DMG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" | head -1)
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" -type d | head -1)
+
+          if [ -n "$DMG_PATH" ] && [ -n "$APP_PATH" ]; then
+            echo "Recreating DMG with re-signed app..."
+            DMG_DIR=$(dirname "$DMG_PATH")
+            DMG_NAME=$(basename "$DMG_PATH")
+
+            # Remove old DMG
+            rm "$DMG_PATH"
+
+            # Create new DMG with re-signed app
+            hdiutil create -volname "E-Fees" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
+            echo "Created new DMG: $DMG_PATH"
+          fi
+
       - name: Create archive name
         id: archive
         run: |
