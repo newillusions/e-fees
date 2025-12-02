@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 use log::{info, error};
 use tauri::Manager;
 
+// Auto-update test - v0.10.12
 mod db;
 mod commands;
 
