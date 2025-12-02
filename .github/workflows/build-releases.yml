@@ -63,6 +63,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri:build -- --target ${{ matrix.target }}
 
+      - name: Fix code signature
+        run: |
+          # Find the .app bundle
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "Re-signing $APP_PATH to fix CSResourcesFileMapped issue..."
+            codesign --force --deep --sign - --preserve-metadata=entitlements,requirements,flags,runtime "$APP_PATH"
+            codesign --verify --verbose=4 "$APP_PATH"
+          fi
+
       - name: Create archive name
         id: archive
         run: |
