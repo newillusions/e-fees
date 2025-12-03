@@ -12,6 +12,8 @@ export interface AppSettings {
   staff_phone?: string;
   staff_position?: string;
   project_folder_path?: string;
+  /** Development mode - enables verbose logging for debugging */
+  dev_mode?: boolean;
 }
 
 // Settings store

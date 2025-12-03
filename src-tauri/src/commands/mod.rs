@@ -152,6 +152,9 @@ pub struct AppSettings {
     pub staff_phone: Option<String>,
     pub staff_position: Option<String>,
     pub project_folder_path: Option<String>,
+    /// Development mode flag - enables verbose logging when true
+    #[serde(default)]
+    pub dev_mode: Option<bool>,
 }
 
 // ============================================================================
@@ -1821,6 +1824,7 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
         staff_phone: None,
         staff_position: None,
         project_folder_path: None,
+        dev_mode: None,
     };
     
     info!("Looking for .env file at: {:?}", env_path);
@@ -1853,6 +1857,7 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
                             "STAFF_PHONE" => settings.staff_phone = Some(value.to_string()),
                             "STAFF_POSITION" => settings.staff_position = Some(value.to_string()),
                             "PROJECT_FOLDER_PATH" => settings.project_folder_path = Some(value.to_string()),
+                            "DEV_MODE" => settings.dev_mode = Some(value.to_lowercase() == "true"),
                             _ => {} // Ignore unknown variables
                         }
                     }
@@ -1960,10 +1965,11 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                     // Skip our managed section headers to avoid duplicates
                     if line.starts_with('#') {
                         match line {
-                            "# SurrealDB Configuration" | 
+                            "# SurrealDB Configuration" |
                             "# TLS Configuration" |
-                            "# Staff Information" | 
-                            "# Project Configuration" => continue,
+                            "# Staff Information" |
+                            "# Project Configuration" |
+                            "# Developer Options" => continue,
                             _ => {
                                 lines.push(line.to_string());
                                 continue;
@@ -1976,11 +1982,11 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                         
                         // Skip our managed settings - we'll add them back
                         match key {
-                            "SURREALDB_URL" | "SURREALDB_NS" | "SURREALDB_DB" | 
+                            "SURREALDB_URL" | "SURREALDB_NS" | "SURREALDB_DB" |
                             "SURREALDB_USER" | "SURREALDB_PASS" |
                             "SURREALDB_VERIFY_CERTS" | "SURREALDB_ACCEPT_INVALID_HOSTNAMES" |
                             "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
-                            "PROJECT_FOLDER_PATH" => continue,
+                            "PROJECT_FOLDER_PATH" | "DEV_MODE" => continue,
                             _ => lines.push(line.to_string()),
                         }
                     } else {
@@ -2039,11 +2045,18 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     
     lines.push("".to_string());
     lines.push("# Project Configuration".to_string());
-    
+
     if let Some(folder_path) = &settings.project_folder_path {
         lines.push(format!("PROJECT_FOLDER_PATH=\"{}\"", folder_path));
     }
-    
+
+    lines.push("".to_string());
+    lines.push("# Developer Options".to_string());
+
+    // Write dev_mode setting (defaults to false if not set)
+    let dev_mode_value = settings.dev_mode.unwrap_or(false);
+    lines.push(format!("DEV_MODE=\"{}\"", dev_mode_value));
+
     // Write to file atomically
     let content = lines.join("\n");
     match fs::write(&env_path, content) {
@@ -2056,6 +2069,29 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
             Err(format!("Failed to write .env file: {}", e))
         }
     }
+}
+
+/// Get the current dev mode setting.
+///
+/// This command retrieves the development mode flag from settings. When dev mode
+/// is enabled, the application will output verbose logging for debugging purposes,
+/// particularly for the auto-updater functionality.
+///
+/// # Returns
+/// - `Ok(bool)`: true if dev mode is enabled, false otherwise
+/// - `Err(String)`: Error occurred while reading settings
+///
+/// # Frontend Usage
+/// ```typescript
+/// const devMode = await invoke<boolean>('get_dev_mode');
+/// if (devMode) {
+///   console.log('Development mode is enabled');
+/// }
+/// ```
+#[tauri::command]
+pub async fn get_dev_mode(app_handle: AppHandle) -> Result<bool, String> {
+    let settings = get_settings(app_handle).await?;
+    Ok(settings.dev_mode.unwrap_or(false))
 }
 
 /// Reload database configuration from the .env file and reinitialize connection.
@@ -3543,7 +3579,33 @@ pub async fn log_message(
         log::Level::Debug => log::debug!(target: &target, "{}", formatted_message),
         log::Level::Trace => log::trace!(target: &target, "{}", formatted_message),
     }
-    
+
+    // For updater logs, also write to dedicated log file
+    if target == "updater" {
+        if let Err(e) = write_updater_log(&level, &formatted_message) {
+            log::warn!("Failed to write to updater log file: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+/// Write a message to the updater log file.
+/// This provides persistent logging for debugging update issues in production.
+fn write_updater_log(level: &str, message: &str) -> Result<(), std::io::Error> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
+    let log_path = "/tmp/e-fees-updater.log";
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)?;
+
+    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    writeln!(file, "[{}] [{}] {}", timestamp, level.to_uppercase(), message)?;
+    file.flush()?;
+
     Ok(())
 }
 

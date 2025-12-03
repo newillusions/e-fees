@@ -19,7 +19,8 @@
     staff_email: '',
     staff_phone: '',
     staff_position: '',
-    project_folder_path: ''
+    project_folder_path: '',
+    dev_mode: false
   };
   
   // Loading states
@@ -43,7 +44,8 @@
       staff_email: $settingsStore.staff_email || '',
       staff_phone: $settingsStore.staff_phone || '',
       staff_position: $settingsStore.staff_position || '',
-      project_folder_path: $settingsStore.project_folder_path || ''
+      project_folder_path: $settingsStore.project_folder_path || '',
+      dev_mode: $settingsStore.dev_mode || false
     };
   }
   
@@ -335,6 +337,23 @@
                 Browse
               </button>
             </div>
+          </div>
+
+          <!-- Developer Options Section -->
+          <div>
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Developer Options</h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Advanced settings for debugging and development</p>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={settings.dev_mode}
+                class="w-4 h-4 rounded border-emittiv-dark bg-emittiv-dark text-emittiv-splash focus:ring-emittiv-splash focus:ring-offset-0"
+              />
+              <div>
+                <span class="text-emittiv-white" style="font-size: 12px;">Development Mode</span>
+                <p class="text-emittiv-light" style="font-size: 11px;">Enable verbose logging for auto-updater and other diagnostics. Logs written to /tmp/e-fees-updater.log</p>
+              </div>
+            </label>
           </div>
 
           <!-- Save Message -->

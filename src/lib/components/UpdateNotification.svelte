@@ -4,6 +4,7 @@
   import { cubicOut } from 'svelte/easing';
   import { check } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
+  import { invoke } from '@tauri-apps/api/core';
 
   let showModal = false;
   let updateAvailable = false;
@@ -15,22 +16,64 @@
   let readyToInstall = false;
   let error: string | null = null;
   let updateObject: any = null;
+  let devMode = false;
+
+  // Enhanced logging function - logs to console and backend
+  async function log(level: 'info' | 'debug' | 'error' | 'warn', message: string, data?: any) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] [UPDATER] ${message}`;
+
+    if (devMode || level === 'error') {
+      if (data) {
+        console[level](logMessage, data);
+      } else {
+        console[level](logMessage);
+      }
+
+      // Also log to backend for file logging
+      try {
+        await invoke('log_message', {
+          level,
+          target: 'updater',
+          message,
+          context: data ? JSON.stringify(data) : null
+        });
+      } catch (e) {
+        // Ignore logging errors
+      }
+    }
+  }
 
   // Check for updates on mount
   onMount(async () => {
+    // Check dev mode first
+    try {
+      devMode = await invoke<boolean>('get_dev_mode');
+      await log('info', `Dev mode: ${devMode}`);
+    } catch (e) {
+      // Default to false if can't get dev mode
+      devMode = false;
+    }
+
     // Wait a bit after app starts to check for updates
     setTimeout(checkForUpdates, 3000);
   });
 
   async function checkForUpdates() {
     try {
-      if (import.meta.env.DEV) {
-        console.log('Checking for updates...');
-      }
+      await log('info', 'Starting update check...');
+      await log('debug', 'Calling Tauri updater plugin check()');
 
       const update = await check();
 
       if (update) {
+        await log('info', `Update available: ${update.version}`, {
+          version: update.version,
+          currentVersion: update.currentVersion,
+          date: update.date,
+          body: update.body?.substring(0, 100) // First 100 chars of notes
+        });
+
         updateObject = update;
         updateAvailable = true;
         updateInfo = {
@@ -38,28 +81,29 @@
           notes: update.body || `New version ${update.version} is available`
         };
         showModal = true;
-
-        if (import.meta.env.DEV) {
-          console.log('Update available:', update.version);
-        }
       } else {
-        if (import.meta.env.DEV) {
-          console.log('No updates available');
-        }
+        await log('info', 'No updates available - app is up to date');
       }
     } catch (err) {
-      console.error('Failed to check for updates:', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      await log('error', `Failed to check for updates: ${errorMessage}`, err);
       // Don't show error to user for update check failures
     }
   }
 
   async function downloadAndInstall() {
-    if (!updateObject) return;
+    if (!updateObject) {
+      await log('warn', 'downloadAndInstall called but no updateObject available');
+      return;
+    }
 
+    await log('info', 'Starting download and install process...');
     downloading = true;
     error = null;
 
     try {
+      await log('debug', 'Calling updateObject.downloadAndInstall()');
+
       // Download the update with progress tracking
       await updateObject.downloadAndInstall((event: any) => {
         switch (event.event) {
@@ -67,44 +111,55 @@
             totalBytes = event.data.contentLength || 0;
             downloadedBytes = 0;
             downloadProgress = 0;
-            if (import.meta.env.DEV) {
-              console.log('Download started, total size:', totalBytes);
-            }
+            log('info', `Download started - Total size: ${totalBytes} bytes`);
             break;
           case 'Progress':
             downloadedBytes += event.data.chunkLength;
             if (totalBytes > 0) {
               downloadProgress = Math.round((downloadedBytes / totalBytes) * 100);
             }
+            // Log progress every 10%
+            if (downloadProgress % 10 === 0) {
+              log('debug', `Download progress: ${downloadProgress}% (${downloadedBytes}/${totalBytes} bytes)`);
+            }
             break;
           case 'Finished':
             downloadProgress = 100;
             readyToInstall = true;
-            if (import.meta.env.DEV) {
-              console.log('Download finished');
-            }
+            log('info', 'Download finished successfully');
             break;
         }
       });
 
+      await log('info', 'downloadAndInstall completed - ready to restart');
       // After download completes, prompt for restart
       readyToInstall = true;
       downloading = false;
 
     } catch (err) {
-      console.error('Failed to download update:', err);
-      error = err instanceof Error ? err.message : 'Failed to download update';
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorStack = err instanceof Error ? err.stack : undefined;
+      await log('error', `DOWNLOAD FAILED: ${errorMessage}`, {
+        error: errorMessage,
+        stack: errorStack,
+        downloadedBytes,
+        totalBytes,
+        downloadProgress
+      });
+      error = errorMessage || 'Failed to download update';
       downloading = false;
     }
   }
 
   async function installAndRestart() {
     try {
+      await log('info', 'Initiating app restart to apply update...');
       // Relaunch the app to apply the update
       await relaunch();
     } catch (err) {
-      console.error('Failed to relaunch:', err);
-      error = err instanceof Error ? err.message : 'Failed to restart application';
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      await log('error', `Failed to relaunch: ${errorMessage}`, err);
+      error = errorMessage || 'Failed to restart application';
     }
   }
 

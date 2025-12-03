@@ -191,8 +191,13 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 - Tauri uses less memory than Electron
 
 ---
-**Last Updated**: November 26, 2025
-**Status**: All CRUD operations verified complete (Companies, Contacts, Projects, Proposals). All 316 tests passing. Production ready.
+**Last Updated**: December 3, 2025
+**Status**: All CRUD operations complete. Auto-updater infrastructure implemented (v0.10.16 published). Update detection works but download fails silently - investigating with enhanced logging in v0.10.17.
+
+## Auto-Updater Documentation
+- **[AUTO_UPDATER_PROGRESS.md](./AUTO_UPDATER_PROGRESS.md)** - Current status, known issues, and debugging notes
+- **[RELEASE_PROCESS.md](./RELEASE_PROCESS.md)** - Step-by-step guide for publishing releases
+- **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)** - Comprehensive list of issues and workarounds
 
 ## Development Notes
 

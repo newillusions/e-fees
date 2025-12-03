@@ -2,9 +2,10 @@ use std::sync::{Arc, Mutex};
 use log::{info, error};
 use tauri::Manager;
 
-// Auto-update test - v0.10.16 (testing updater from v0.10.15)
+// Auto-update test - v0.10.17 (with dev mode and enhanced logging)
 mod db;
 mod commands;
+mod updater_logger;
 
 use db::{DatabaseManager, DatabaseConfig};
 use commands::{
@@ -34,6 +35,7 @@ use commands::{
     position_window_4k,
     get_settings,
     save_settings,
+    get_dev_mode,
     reload_database_config,
     select_folder,
     open_folder_in_explorer,
@@ -267,6 +269,7 @@ pub fn run() {
             position_window_4k,
             get_settings,
             save_settings,
+            get_dev_mode,
             reload_database_config,
             select_folder,
             open_folder_in_explorer,
@@ -276,7 +279,7 @@ pub fn run() {
             validate_project_number,
             create_project_with_template,
             copy_project_template,
-                    get_area_suggestions,
+            get_area_suggestions,
             get_all_cities,
             get_city_suggestions,
             write_fee_to_json,
