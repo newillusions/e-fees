@@ -17,7 +17,7 @@ echo "================================"
 # Get the latest run ID for this version
 echo "🔍 Finding GitHub Actions run for v$VERSION..."
 RUN_ID=$(gh run list --repo newillusions/e-fees --limit 10 --json databaseId,headBranch,displayTitle,conclusion,status \
-    --jq ".[] | select(.displayTitle | contains(\"$VERSION\")) | select(.conclusion == \"success\") | .databaseId" | head -1)
+    --jq ".[] | select(.headBranch == \"v$VERSION\") | select(.conclusion == \"success\") | .databaseId" | head -1)
 
 if [ -z "$RUN_ID" ]; then
     echo "❌ No successful run found for v$VERSION"
