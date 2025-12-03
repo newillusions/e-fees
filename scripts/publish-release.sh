@@ -74,13 +74,16 @@ fi
 
 # Windows
 if [ -d "$TEMP_DIR/windows" ]; then
-    # Find the Windows zip file (should be nsis.zip)
-    WIN_ZIP=$(find "$TEMP_DIR/windows" -name "*.nsis.zip" | head -1)
-    WIN_SIG=$(find "$TEMP_DIR/windows" -name "*.nsis.zip.sig" | head -1)
+    # Find the Windows NSIS installer (.exe)
+    WIN_EXE=$(find "$TEMP_DIR/windows" -name "*_x64-setup.exe" | head -1)
+    WIN_SIG=$(find "$TEMP_DIR/windows" -name "*_x64-setup.exe.sig" | head -1)
 
-    if [ -n "$WIN_ZIP" ]; then
-        cp -X "$WIN_ZIP" "$RELEASE_DIR/E-Fees_x64-setup.nsis.zip"
-        cp -X "$WIN_SIG" "$RELEASE_DIR/E-Fees_x64-setup.nsis.zip.sig"
+    if [ -n "$WIN_EXE" ]; then
+        mkdir -p "$RELEASE_DIR/windows"
+        cp -X "$WIN_EXE" "$RELEASE_DIR/windows/E-Fees_x64-setup.exe"
+        if [ -n "$WIN_SIG" ]; then
+            cp -X "$WIN_SIG" "$RELEASE_DIR/windows/E-Fees_x64-setup.exe.sig"
+        fi
         echo "  ✓ Windows binary copied"
     fi
 fi
@@ -92,7 +95,7 @@ WEB_BASE_URL="https://apache.mms.name/e-fees-releases"
 echo "🔐 Reading signatures..."
 MACOS_ARM64_SIG=$(cat "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
 MACOS_X64_SIG=$(cat "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
-WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
+WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/E-Fees_x64-setup.exe.sig" 2>/dev/null || echo "")
 
 # Generate update.json with web server URLs
 echo "📝 Generating update.json..."
@@ -112,7 +115,7 @@ cat > "$WEB_ROOT/update.json" <<EOF
     },
     "windows-x86_64": {
       "signature": "$WINDOWS_SIG",
-      "url": "$WEB_BASE_URL/$VERSION/windows/E-Fees.app.tar.gz"
+      "url": "$WEB_BASE_URL/$VERSION/windows/E-Fees_x64-setup.exe"
     }
   }
 }

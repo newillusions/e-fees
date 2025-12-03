@@ -1,7 +1,7 @@
 {
   "version": "0.10.17",
   "notes": "Release v0.10.17",
-  "pub_date": "2025-12-03T12:53:40Z",
+  "pub_date": "2025-12-03T13:01:48Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3JMakxURDdwTUFhWHpFZncwYm1oem5va2dpbmwyUDJnWnVDS1U2NUhvV3RDTEo3blpnbDJuREJPdFJFWGVxZEVHNlhxQ0FvT09BWndWcDhKT0FSSXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzY0MTk1CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKbjdrN1E5NlNiVTYzWTlxQitlS2w3NlpURUlWR3U1bEQwb003ZHR0TTdHdlJ5VXBvb3cxZWtqdk5iMTJqLy9NR1FFSXgxcUNtYkN3MFNnQzh2a2ZOQXc9PQo=",
@@ -12,8 +12,8 @@
       "url": "https://apache.mms.name/e-fees-releases/0.10.17/macos-x64/E-Fees.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "",
-      "url": "https://apache.mms.name/e-fees-releases/0.10.17/windows/E-Fees.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd282Q0FkRk9kaHp4WjVmOUxMMUxYWlBKS0E1WCtKOXJ6NVpZa3lDaEIxSmtvMy9jbHNtWW0vRlNSVmdWUHErMEh6V1hlUkNDNU4xV1lKdGVPU3o4NEEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzY0NjE2CWZpbGU6RS1GZWVzXzAuMTAuMTdfeDY0LXNldHVwLmV4ZQphM1NmTEo4Y2RYWHBlaVdoU0h4R2wxV3RoRFM2eFk4eldaQ2xQUEpxZnhuRTB5Y0N3V24xS2RoYy93ZitPNUk4aVdOdDIxRncrT1NYSno5Y3NMQmNEQT09Cg==",
+      "url": "https://apache.mms.name/e-fees-releases/0.10.17/windows/E-Fees_x64-setup.exe"
     }
   }
 }
