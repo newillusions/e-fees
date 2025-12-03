@@ -88,11 +88,11 @@ fi
 # Get the web server base URL
 WEB_BASE_URL="https://apache.mms.name/e-fees-releases"
 
-# Read signatures from copied files
+# Read signatures from copied files (they are already base64 encoded by Tauri)
 echo "🔐 Reading signatures..."
-MACOS_ARM64_SIG=$(cat "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz.sig" 2>/dev/null | base64 || echo "")
-MACOS_X64_SIG=$(cat "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz.sig" 2>/dev/null | base64 || echo "")
-WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/E-Fees.app.tar.gz.sig" 2>/dev/null | base64 || echo "")
+MACOS_ARM64_SIG=$(cat "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
+MACOS_X64_SIG=$(cat "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
+WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
 
 # Generate update.json with web server URLs
 echo "📝 Generating update.json..."
