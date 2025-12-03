@@ -11,7 +11,7 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-echo "📦 Publishing E-Fees v$VERSION"
+echo "📦 Publishing e-fees v$VERSION"
 echo "================================"
 
 # Get the latest run ID for this version
@@ -54,35 +54,40 @@ mkdir -p "$RELEASE_DIR"
 # Copy and rename files with proper architecture-specific names
 echo "📋 Copying files to web server..."
 
-# macOS arm64
+# macOS arm64 - find the .app.tar.gz file dynamically (handles E-Fees or e-fees)
 if [ -d "$TEMP_DIR/arm64/macos" ]; then
-    # Keep original filenames to preserve signature validity
     mkdir -p "$RELEASE_DIR/macos-aarch64"
-    cp -X "$TEMP_DIR/arm64/macos/E-Fees.app.tar.gz" "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz"
-    cp -X "$TEMP_DIR/arm64/macos/E-Fees.app.tar.gz.sig" "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz.sig"
-    echo "  ✓ macOS ARM64 binary copied"
+    MAC_ARM64_TAR=$(find "$TEMP_DIR/arm64/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
+    MAC_ARM64_SIG=$(find "$TEMP_DIR/arm64/macos" -name "*.app.tar.gz.sig" | head -1)
+    if [ -n "$MAC_ARM64_TAR" ]; then
+        cp -X "$MAC_ARM64_TAR" "$RELEASE_DIR/macos-aarch64/e-fees.app.tar.gz"
+        cp -X "$MAC_ARM64_SIG" "$RELEASE_DIR/macos-aarch64/e-fees.app.tar.gz.sig"
+        echo "  ✓ macOS ARM64 binary copied"
+    fi
 fi
 
-# macOS x64
+# macOS x64 - find the .app.tar.gz file dynamically
 if [ -d "$TEMP_DIR/x64/macos" ]; then
-    # Keep original filenames to preserve signature validity
     mkdir -p "$RELEASE_DIR/macos-x64"
-    cp -X "$TEMP_DIR/x64/macos/E-Fees.app.tar.gz" "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz"
-    cp -X "$TEMP_DIR/x64/macos/E-Fees.app.tar.gz.sig" "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz.sig"
-    echo "  ✓ macOS x64 binary copied"
+    MAC_X64_TAR=$(find "$TEMP_DIR/x64/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
+    MAC_X64_SIG=$(find "$TEMP_DIR/x64/macos" -name "*.app.tar.gz.sig" | head -1)
+    if [ -n "$MAC_X64_TAR" ]; then
+        cp -X "$MAC_X64_TAR" "$RELEASE_DIR/macos-x64/e-fees.app.tar.gz"
+        cp -X "$MAC_X64_SIG" "$RELEASE_DIR/macos-x64/e-fees.app.tar.gz.sig"
+        echo "  ✓ macOS x64 binary copied"
+    fi
 fi
 
-# Windows
+# Windows - find the NSIS installer dynamically
 if [ -d "$TEMP_DIR/windows" ]; then
-    # Find the Windows NSIS installer (.exe)
     WIN_EXE=$(find "$TEMP_DIR/windows" -name "*_x64-setup.exe" | head -1)
     WIN_SIG=$(find "$TEMP_DIR/windows" -name "*_x64-setup.exe.sig" | head -1)
 
     if [ -n "$WIN_EXE" ]; then
         mkdir -p "$RELEASE_DIR/windows"
-        cp -X "$WIN_EXE" "$RELEASE_DIR/windows/E-Fees_x64-setup.exe"
+        cp -X "$WIN_EXE" "$RELEASE_DIR/windows/e-fees_x64-setup.exe"
         if [ -n "$WIN_SIG" ]; then
-            cp -X "$WIN_SIG" "$RELEASE_DIR/windows/E-Fees_x64-setup.exe.sig"
+            cp -X "$WIN_SIG" "$RELEASE_DIR/windows/e-fees_x64-setup.exe.sig"
         fi
         echo "  ✓ Windows binary copied"
     fi
@@ -93,9 +98,9 @@ WEB_BASE_URL="https://apache.mms.name/e-fees-releases"
 
 # Read signatures from copied files (they are already base64 encoded by Tauri)
 echo "🔐 Reading signatures..."
-MACOS_ARM64_SIG=$(cat "$RELEASE_DIR/macos-aarch64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
-MACOS_X64_SIG=$(cat "$RELEASE_DIR/macos-x64/E-Fees.app.tar.gz.sig" 2>/dev/null || echo "")
-WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/E-Fees_x64-setup.exe.sig" 2>/dev/null || echo "")
+MACOS_ARM64_SIG=$(cat "$RELEASE_DIR/macos-aarch64/e-fees.app.tar.gz.sig" 2>/dev/null || echo "")
+MACOS_X64_SIG=$(cat "$RELEASE_DIR/macos-x64/e-fees.app.tar.gz.sig" 2>/dev/null || echo "")
+WINDOWS_SIG=$(cat "$RELEASE_DIR/windows/e-fees_x64-setup.exe.sig" 2>/dev/null || echo "")
 
 # Generate update.json with web server URLs
 echo "📝 Generating update.json..."
@@ -107,15 +112,15 @@ cat > "$WEB_ROOT/update.json" <<EOF
   "platforms": {
     "darwin-aarch64": {
       "signature": "$MACOS_ARM64_SIG",
-      "url": "$WEB_BASE_URL/$VERSION/macos-aarch64/E-Fees.app.tar.gz"
+      "url": "$WEB_BASE_URL/$VERSION/macos-aarch64/e-fees.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "$MACOS_X64_SIG",
-      "url": "$WEB_BASE_URL/$VERSION/macos-x64/E-Fees.app.tar.gz"
+      "url": "$WEB_BASE_URL/$VERSION/macos-x64/e-fees.app.tar.gz"
     },
     "windows-x86_64": {
       "signature": "$WINDOWS_SIG",
-      "url": "$WEB_BASE_URL/$VERSION/windows/E-Fees_x64-setup.exe"
+      "url": "$WEB_BASE_URL/$VERSION/windows/e-fees_x64-setup.exe"
     }
   }
 }

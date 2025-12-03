@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use log::{info, error};
 use tauri::Manager;
 
-// Auto-update test - v0.10.17 (with dev mode and enhanced logging)
+// v0.10.18 - lowercase branding, passive Windows installer (with dev mode and enhanced logging)
 mod db;
 mod commands;
 mod updater_logger;
