@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { invoke } from '@tauri-apps/api/core';
   import Card from '$lib/components/Card.svelte';
   import { validateProjectBasePath } from '$lib/api/folderManagement';
 
@@ -20,12 +21,11 @@
   async function handleOpenFolders() {
     try {
       const basePath = await validateProjectBasePath();
-      // For now, just show an alert with the base path
-      // In the future, could open the folder externally
-      alert(`Project base path: ${basePath}`);
+      // Open the folder in the native file explorer
+      await invoke('open_folder_in_explorer', { folderPath: basePath });
     } catch (error) {
       console.error('Failed to access project folders:', error);
-      alert('Failed to access project folders');
+      alert('Failed to access project folders: ' + (error as Error).message);
     }
   }
 
@@ -63,15 +63,12 @@
 
 <div class="quick-actions-section">
   <h2 class="section-title">Quick Actions</h2>
-  
+
   <div class="actions-grid">
     {#each quickActions as action}
-      <button
-        class="action-button"
-        on:click={action.handler}
-      >
+      <button class="action-button" on:click={action.handler}>
         <div class="action-icon">
-          <svg class="{action.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class={action.color} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={action.icon} />
           </svg>
         </div>
@@ -157,12 +154,12 @@
       grid-template-columns: 1fr;
       gap: 12px;
     }
-    
+
     .action-button {
       padding: 14px 16px;
       min-height: 56px;
     }
-    
+
     .action-icon {
       width: 28px;
       height: 28px;

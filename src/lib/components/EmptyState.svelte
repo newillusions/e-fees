@@ -12,12 +12,12 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={icon} />
     </svg>
   </div>
-  
+
   <h3 class="text-xl font-heading font-semibold text-emittiv-white mb-2">{title}</h3>
   <p class="text-emittiv-light mb-6 max-w-md">{description}</p>
-  
+
   {#if actionText && onAction}
-    <button 
+    <button
       on:click={onAction}
       class="px-6 py-3 bg-emittiv-splash text-emittiv-black font-medium rounded-lg hover:bg-orange-600 transition-smooth"
     >

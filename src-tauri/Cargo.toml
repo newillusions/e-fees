@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.10.18"
+version = "0.10.19"
 description = "e-fees - Fee Proposal Management System"
 authors = ["you"]
 license = ""
@@ -39,3 +39,6 @@ tauri-plugin-process = "2"
 argon2 = "0.5"
 rand = "0.8"
 base64 = "0.22"
+
+[dev-dependencies]
+serial_test = "3.1"

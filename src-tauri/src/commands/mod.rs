@@ -1646,11 +1646,22 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
     let contacts = manager_clone.get_contacts().await.unwrap_or_default();
     let fees = manager_clone.get_fees().await.unwrap_or_default();
     
-    // Calculate active fees (exclude Lost and Cancelled)
+    // Debug: Log all fee statuses to understand what's in the database
+    let mut status_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+    for fee in &fees {
+        *status_counts.entry(fee.status.clone()).or_insert(0) += 1;
+    }
+    info!("Fee status breakdown: {:?}", status_counts);
+
+    // Calculate active fees - only those truly in-progress
+    // Include: Draft (preparing), Sent (awaiting response), Negotiation (discussing terms)
+    // Exclude: Awarded, Completed, Lost, Cancelled, Revised, On Hold, Active (terminal/dormant states)
     let active_fees = fees.iter()
-        .filter(|f| f.status != "Lost" && f.status != "Cancelled")
+        .filter(|f| matches!(f.status.as_str(), "Draft" | "Sent" | "Negotiation"))
         .count();
-    
+
+    info!("Active fees count (Draft/Sent/Negotiation only): {}", active_fees);
+
     let stats = serde_json::json!({
         "totalProjects": projects.len(),
         "activeFees": active_fees,
@@ -1658,8 +1669,8 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
         "totalContacts": contacts.len(),
         "totalFees": fees.len()
     });
-    
-    info!("Successfully calculated statistics");
+
+    info!("Successfully calculated statistics: {:?}", stats);
     Ok(stats)
 }
 
@@ -1930,22 +1941,30 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
 #[tauri::command]
 pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Result<String, String> {
     info!("Saving settings to .env file");
-    
+
+    // Use same filename logic as get_settings for consistency
+    // In debug mode, use .env.dev to separate dev and production configs
+    let env_filename = if cfg!(debug_assertions) {
+        ".env.dev"
+    } else {
+        ".env"
+    };
+
     // Use app data directory for .env file when running from app bundle
     let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-        let env_file_path = app_data_dir.join(".env");
-        
+        let env_file_path = app_data_dir.join(env_filename);
+
         // Create app data directory if it doesn't exist
         if let Some(parent_dir) = env_file_path.parent() {
             if let Err(e) = fs::create_dir_all(parent_dir) {
                 return Err(format!("Failed to create app data directory: {}", e));
             }
         }
-        
+
         env_file_path
     } else {
         // Fallback to current directory for development
-        PathBuf::from(".env")
+        PathBuf::from(env_filename)
     };
     
     info!("Using .env file path: {:?}", env_path);

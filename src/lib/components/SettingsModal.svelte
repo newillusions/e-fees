@@ -347,7 +347,7 @@
               <input
                 type="checkbox"
                 bind:checked={settings.dev_mode}
-                class="w-4 h-4 rounded border-emittiv-dark bg-emittiv-dark text-emittiv-splash focus:ring-emittiv-splash focus:ring-offset-0"
+                class="emittiv-checkbox"
               />
               <div>
                 <span class="text-emittiv-white" style="font-size: 12px;">Development Mode</span>

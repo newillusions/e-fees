@@ -5,9 +5,17 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { projectsActions } from '$lib/stores';
-  import { generateNextProjectNumber, searchCountries, getAreaSuggestions, getCitySuggestions, checkProjectFolderExists, copyProjectTemplate } from '$lib/api';
+  import {
+    generateNextProjectNumber,
+    searchCountries,
+    getAreaSuggestions,
+    getCitySuggestions,
+    checkProjectFolderExists,
+    copyProjectTemplate
+  } from '$lib/api';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
@@ -15,20 +23,21 @@
   import Button from './Button.svelte';
   import type { Project, ProjectCreationResult } from '$lib/../types';
   import type { ProjectNumber } from '$lib/../types/database';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
   export let mode: 'create' = 'create';
-  
+  export let zIndex = 100; // Base z-index, can be increased for nested modals
+
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
-  
+
   // Form data with better typing
   interface ProjectFormData {
     name: string;
     name_short: string;
-    status: 'Draft' | 'RFP' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
+    status: ProjectStatus;
     area: string;
     city: string;
     country: string;
@@ -36,7 +45,7 @@
     project_number: string;
     folder: string;
   }
-  
+
   let formData: ProjectFormData = {
     name: '',
     name_short: '',
@@ -48,17 +57,7 @@
     project_number: '',
     folder: ''
   };
-  
-  // Status options
-  const statusOptions = [
-    { value: 'Draft', label: 'Draft' },
-    { value: 'RFP', label: 'RFP' },
-    { value: 'Active', label: 'Active' },
-    { value: 'On Hold', label: 'On Hold' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Cancelled', label: 'Cancelled' }
-  ];
-  
+
   // Validation setup
   const validationRules = [
     { field: 'name' as keyof ProjectFormData, required: true, minLength: 1, maxLength: 255 },
@@ -67,26 +66,26 @@
     { field: 'city' as keyof ProjectFormData, required: true, minLength: 1, maxLength: 50 },
     { field: 'country' as keyof ProjectFormData, required: true, minLength: 1, maxLength: 50 }
   ];
-  
+
   // Form validation state
   let formErrors: Record<string, string> = {};
-  
+
   // UI state
   let isGenerating = false;
   let isModalReady = false;
   let showFolderConfirm = false;
   let pendingProjectData: ProjectCreationResult | null = null;
-  
+
   // Typeahead search states
   let countrySearchText = '';
   let areaSearchText = '';
   let citySearchText = '';
-  
+
   // Options for typeahead components
   let countryOptions: Array<{ id: string; name: string; dial_code: string }> = [];
   let areaOptions: Array<{ id: string; name: string }> = [];
   let cityOptions: Array<{ id: string; name: string }> = [];
-  
+
   // Auto-populate folder name when project number or short name changes
   $: if (formData.project_number && formData.name_short) {
     formData.folder = `${formData.project_number} ${formData.name_short}`;
@@ -95,11 +94,11 @@
   } else {
     formData.folder = '';
   }
-  
+
   // Track previous country and year to detect changes
   let previousCountry = '';
   let previousYear = 0;
-  
+
   // Auto-generate project number when country or year changes
   $: if (isModalReady && formData.country && formData.year && !isGenerating) {
     // Check if country or year actually changed
@@ -109,16 +108,16 @@
       generateProjectNumber();
     }
   }
-  
+
   // Generate the next available project number
   async function generateProjectNumber() {
     if (!formData.country || !formData.year) {
       formData.project_number = '';
       return;
     }
-    
+
     isGenerating = true;
-    
+
     try {
       const projectNumber = await generateNextProjectNumber(formData.country, formData.year);
       formData.project_number = projectNumber;
@@ -135,14 +134,14 @@
     formData.project_number = ''; // Clear current number
     await generateProjectNumber(); // Generate new one
   }
-  
+
   // Country search handler
   async function handleCountrySearch(searchText: string) {
     if (!searchText || searchText.length < 2) {
       countryOptions = [];
       return;
     }
-    
+
     try {
       const results = await searchCountries(searchText);
       countryOptions = results.map(country => ({
@@ -155,14 +154,14 @@
       countryOptions = [];
     }
   }
-  
+
   // Area search handler - works independently
   async function handleAreaSearch(searchText: string) {
     if (!searchText || searchText.length < 2) {
       areaOptions = [];
       return;
     }
-    
+
     try {
       // Get suggestions for the selected country, or all if no country
       const country = formData.country || null;
@@ -176,14 +175,14 @@
       areaOptions = [];
     }
   }
-  
+
   // City search handler - works independently
   async function handleCitySearch(searchText: string) {
     if (!searchText || searchText.length < 2) {
       cityOptions = [];
       return;
     }
-    
+
     try {
       // Get suggestions for the selected country, or all if no country
       const country = formData.country || null;
@@ -197,11 +196,11 @@
       cityOptions = [];
     }
   }
-  
+
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
-    
+
     // If user typed in the fields but didn't select from dropdown, use the typed values
     if (countrySearchText && !formData.country) {
       formData.country = countrySearchText;
@@ -212,85 +211,97 @@
     if (areaSearchText && !formData.area) {
       formData.area = areaSearchText;
     }
-    
+
     // Validate using the validation system
     const errors = validateForm(formData, validationRules);
-    
+
     // Custom validation for project number
     if (!formData.project_number) {
       errors.project_number = 'Project number is required';
     }
-    
+
     formErrors = errors;
-    
+
     if (hasValidationErrors(errors)) {
       operationActions.setError('Please fix the validation errors above.');
       return;
     }
-    
+
     handleCreate();
   }
-  
+
   // Create project with loading state
   async function handleCreate() {
-    await withLoadingState(async () => {
-      // Parse project number to extract components
-      const parts = formData.project_number.split('-');
-      if (parts.length !== 2) {
-        throw new Error('Invalid project number format');
-      }
-      
-      const year = parseInt(parts[0]);
-      const countryCode = parts[1].substring(0, 3);
-      const seq = parseInt(parts[1].substring(3));
-      
-      // Construct ProjectNumber object for database
-      const projectNumber: ProjectNumber = {
-        year,
-        country: parseInt(countryCode),
-        seq,
-        id: formData.project_number
-      };
-      
-      // Construct Project object with required fields only
-      const project = {
-        name: formData.name,
-        name_short: formData.name_short,
-        status: formData.status,
-        area: formData.area,
-        city: formData.city,
-        country: formData.country,
-        number: projectNumber,
-        folder: formData.folder,
-        time: {
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+    await withLoadingState(
+      async () => {
+        // Parse project number to extract components
+        const parts = formData.project_number.split('-');
+        if (parts.length !== 2) {
+          throw new Error('Invalid project number format');
         }
-      };
-      
-      // Create project in database first
-      const result = await projectsActions.create(project);
-      
-      // Check if project folder already exists
-      const folderExists = await checkProjectFolderExists(formData.project_number, formData.name_short);
-      
-      if (folderExists) {
-        // Store project data and show confirmation dialog
-        pendingProjectData = { projectNumber: formData.project_number, projectShortName: formData.name_short };
-        showFolderConfirm = true;
-        operationActions.setMessage('Project created successfully! Folder already exists - confirm overwrite.');
-        return result;
-      } else {
-        // Create folder directly
-        await createProjectFolder(formData.project_number, formData.name_short);
-        operationActions.setMessage('Project and folder created successfully');
-        resetForm();
-        closeModal();
-        return result;
-      }
-    }, operationActions, 'saving');
+
+        const year = parseInt(parts[0]);
+        const countryCode = parts[1].substring(0, 3);
+        const seq = parseInt(parts[1].substring(3));
+
+        // Construct ProjectNumber object for database
+        const projectNumber: ProjectNumber = {
+          year,
+          country: parseInt(countryCode),
+          seq,
+          id: formData.project_number
+        };
+
+        // Construct Project object with required fields only
+        const project = {
+          name: formData.name,
+          name_short: formData.name_short,
+          status: formData.status,
+          area: formData.area,
+          city: formData.city,
+          country: formData.country,
+          number: projectNumber,
+          folder: formData.folder,
+          time: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+
+        // Create project in database first
+        const result = await projectsActions.create(project);
+
+        // Check if project folder already exists
+        const folderExists = await checkProjectFolderExists(
+          formData.project_number,
+          formData.name_short
+        );
+
+        if (folderExists) {
+          // Store project data and show confirmation dialog
+          pendingProjectData = {
+            projectNumber: formData.project_number,
+            projectShortName: formData.name_short
+          };
+          showFolderConfirm = true;
+          operationActions.setMessage(
+            'Project created successfully! Folder already exists - confirm overwrite.'
+          );
+          return result;
+        } else {
+          // Create folder directly
+          await createProjectFolder(formData.project_number, formData.name_short);
+          operationActions.setMessage('Project and folder created successfully');
+          resetForm();
+          closeModal();
+          return result;
+        }
+      },
+      operationActions,
+      'saving'
+    );
   }
-  
+
   // Create project folder
   async function createProjectFolder(projectNumber: string, projectShortName: string) {
     try {
@@ -301,28 +312,37 @@
       operationActions.setError(`Project created but folder creation failed: ${error}`);
     }
   }
-  
+
   // Handle folder confirmation dialog
   async function handleFolderConfirm(overwrite: boolean) {
     showFolderConfirm = false;
-    
+
     if (overwrite && pendingProjectData) {
-      await withLoadingState(async () => {
-        await createProjectFolder(pendingProjectData.projectNumber, pendingProjectData.projectShortName);
-        operationActions.setMessage('Project and folder created successfully (existing folder overwritten)');
-        resetForm();
-        closeModal();
-        return true;
-      }, operationActions, 'saving');
+      await withLoadingState(
+        async () => {
+          await createProjectFolder(
+            pendingProjectData.projectNumber,
+            pendingProjectData.projectShortName
+          );
+          operationActions.setMessage(
+            'Project and folder created successfully (existing folder overwritten)'
+          );
+          resetForm();
+          closeModal();
+          return true;
+        },
+        operationActions,
+        'saving'
+      );
     } else {
       operationActions.setMessage('Project created successfully (folder creation skipped)');
       resetForm();
       closeModal();
     }
-    
+
     pendingProjectData = null;
   }
-  
+
   // Form management
   function resetForm() {
     formData = {
@@ -336,16 +356,16 @@
       project_number: '',
       folder: ''
     };
-    
+
     formErrors = {};
     isModalReady = false; // Reset modal ready state
     showFolderConfirm = false;
     pendingProjectData = null;
-    
+
     // Reset tracking variables
     previousCountry = '';
     previousYear = 0;
-    
+
     // Clear search texts and options
     countrySearchText = '';
     areaSearchText = '';
@@ -354,7 +374,7 @@
     areaOptions = [];
     cityOptions = [];
   }
-  
+
   function closeModal() {
     resetForm();
     operationActions.reset();
@@ -370,7 +390,7 @@
   } else if (!isOpen) {
     isModalReady = false;
   }
-  
+
   // Sync search text with form values (in case they get out of sync)
   $: if (formData.country && !countrySearchText) {
     countrySearchText = formData.country;
@@ -381,7 +401,7 @@
   $: if (formData.area && !areaSearchText) {
     areaSearchText = formData.area;
   }
-  
+
   // Typeahead handlers
   function handleCountrySelect(event: CustomEvent) {
     formData.country = event.detail.option.name;
@@ -389,17 +409,17 @@
     // Don't clear area and city automatically - let user decide
     // This was causing the area field to be cleared unexpectedly
   }
-  
+
   function handleAreaSelect(event: CustomEvent) {
     formData.area = event.detail.option.name;
     areaSearchText = event.detail.option.name; // Keep search text in sync
   }
-  
+
   function handleCitySelect(event: CustomEvent) {
     formData.city = event.detail.option.name;
     citySearchText = event.detail.option.name; // Keep search text in sync
   }
-  
+
   // Clear handlers for typeahead fields
   function handleCountryClear() {
     formData.country = '';
@@ -410,34 +430,27 @@
     areaSearchText = '';
     citySearchText = '';
   }
-  
+
   function handleCityClear() {
     formData.city = '';
     citySearchText = '';
   }
-  
+
   function handleAreaClear() {
     formData.area = '';
     areaSearchText = '';
   }
 </script>
 
-<BaseModal 
-  {isOpen} 
-  title="New Project"
-  maxWidth="500px"
-  on:close={closeModal}
->
+<BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} on:close={closeModal}>
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
-    
     <!-- PROJECT INFORMATION SECTION -->
     <div>
       <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
         Project Information
       </h3>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        
         <!-- Project Name -->
         <FormInput
           label="Project Name"
@@ -446,7 +459,7 @@
           required
           error={formErrors.name}
         />
-        
+
         <!-- Short Name and Status -->
         <div class="grid grid-cols-2" style="gap: 12px;">
           <FormInput
@@ -456,15 +469,15 @@
             required
             error={formErrors.name_short}
           />
-          
+
           <FormSelect
             label="Status"
             bind:value={formData.status}
-            options={statusOptions}
+            options={PROJECT_STATUS_OPTIONS}
             required
           />
         </div>
-        
+
         <!-- Year and Project Number -->
         <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px;">
           <FormInput
@@ -476,9 +489,12 @@
             max="99"
             required
           />
-          
+
           <div>
-            <label class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+            <label
+              class="block font-medium text-emittiv-lighter"
+              style="font-size: 12px; margin-bottom: 4px;"
+            >
               Project Number *
             </label>
             <div class="relative flex" style="max-width: 100%;">
@@ -499,7 +515,7 @@
                 title="Regenerate project number"
               >
                 {#if isGenerating}
-                  <div 
+                  <div
                     class="border-2 border-current border-t-transparent rounded-full animate-spin"
                     style="width: 12px; height: 12px;"
                   ></div>
@@ -509,11 +525,13 @@
               </button>
             </div>
             {#if formErrors.project_number}
-              <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{formErrors.project_number}</p>
+              <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">
+                {formErrors.project_number}
+              </p>
             {/if}
           </div>
         </div>
-        
+
         <!-- Folder Name -->
         <FormInput
           label="Folder Name"
@@ -523,14 +541,13 @@
         />
       </div>
     </div>
-    
+
     <!-- LOCATION DETAILS SECTION -->
     <div>
       <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
         Location Details
       </h3>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        
         <!-- Country Selection -->
         <TypeaheadSelect
           label="Country"
@@ -541,7 +558,7 @@
           placeholder="Search countries..."
           required
           error={formErrors.country}
-          on:input={(e) => handleCountrySearch(e.detail)}
+          on:input={e => handleCountrySearch(e.detail)}
           on:select={handleCountrySelect}
           on:clear={handleCountryClear}
         >
@@ -550,7 +567,7 @@
             <span class="text-emittiv-light text-xs ml-auto">+{option.dial_code}</span>
           </svelte:fragment>
         </TypeaheadSelect>
-        
+
         <!-- City and Area -->
         <div class="grid grid-cols-2" style="gap: 12px;">
           <TypeaheadSelect
@@ -562,11 +579,11 @@
             placeholder="Search cities..."
             required
             error={formErrors.city}
-            on:input={(e) => handleCitySearch(e.detail)}
+            on:input={e => handleCitySearch(e.detail)}
             on:select={handleCitySelect}
             on:clear={handleCityClear}
           />
-          
+
           <TypeaheadSelect
             label="Area"
             value=""
@@ -576,34 +593,35 @@
             placeholder="Search areas..."
             required
             error={formErrors.area}
-            on:input={(e) => handleAreaSearch(e.detail)}
+            on:input={e => handleAreaSearch(e.detail)}
             on:select={handleAreaSelect}
             on:clear={handleAreaClear}
           />
         </div>
       </div>
     </div>
-    
+
     <!-- Error/Success Messages -->
     {#if $operationState.error}
       <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
         {$operationState.error}
       </div>
     {/if}
-    
+
     {#if $operationState.message}
       <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
         {$operationState.message}
       </div>
     {/if}
-    
+
     <!-- Folder Overwrite Confirmation -->
     {#if showFolderConfirm}
       <div class="text-yellow-400 text-sm bg-yellow-900/20 border border-yellow-500/30 rounded p-3">
         <p class="font-medium mb-2">Project folder already exists</p>
         <p class="text-xs opacity-80 mb-3">
-          A folder for project "{pendingProjectData?.projectNumber} {pendingProjectData?.projectShortName}" already exists. 
-          Do you want to overwrite it with a fresh template?
+          A folder for project "{pendingProjectData?.projectNumber}
+          {pendingProjectData?.projectShortName}" already exists. Do you want to overwrite it with a
+          fresh template?
         </p>
         <div class="flex gap-2">
           <button
@@ -627,7 +645,7 @@
         </div>
       </div>
     {/if}
-    
+
     <!-- Actions - Full Width Container -->
     <div class="w-full" style="height: 40px;">
       <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
@@ -640,7 +658,7 @@
         >
           Cancel
         </Button>
-        
+
         <Button
           type="submit"
           variant="primary"
@@ -649,7 +667,7 @@
           disabled={$operationState.saving || isGenerating || showFolderConfirm}
         >
           {#if $operationState.saving}
-            <div 
+            <div
               class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
               style="width: 14px; height: 14px; margin-right: 6px;"
             ></div>

@@ -3,6 +3,8 @@ export interface NavItem {
   label: string;
   icon: string;
   shortcut?: string;
+  /** If true, only show this nav item when dev_mode is enabled in settings */
+  devOnly?: boolean;
 }
 
 export interface AppRoute {
@@ -155,7 +157,7 @@ export interface Revision {
 export interface DatabaseStats {
   /** Total number of projects in the database */
   totalProjects: number;
-  /** Number of Fees with status 'Active' or 'Sent' */
+  /** Number of Fees in-progress (Draft, Sent, or Negotiation status) */
   activeFees: number;
   /** Total number of company records */
   totalCompanies: number;

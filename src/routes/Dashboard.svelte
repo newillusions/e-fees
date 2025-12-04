@@ -4,9 +4,12 @@
   import QuickActions from '$lib/components/dashboard/QuickActions.svelte';
   import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
   import PendingProposals from '$lib/components/dashboard/PendingProposals.svelte';
+  import NewProjectModal from '$lib/components/NewProjectModal.svelte';
+  import ProposalModal from '$lib/components/ProposalModal.svelte';
+  import CompanyModal from '$lib/components/CompanyModal.svelte';
   import { statisticsStore, isLoadingStore, loadAllData } from '$lib/stores';
   import { onMount } from 'svelte';
-import { push } from 'svelte-spa-router';
+  import { push } from 'svelte-spa-router';
 
   // Modal handling
   let showProjectModal = false;
@@ -117,49 +120,35 @@ import { push } from 'svelte-spa-router';
   </section>
 </div>
 
-<!-- Modal Placeholders - These would be implemented when creating the modals -->
-{#if showProjectModal}
-  <!-- ProjectModal component would go here -->
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showProjectModal = false}>
-    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
-      <p class="text-emittiv-white">Project Modal - To be implemented</p>
-      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showProjectModal = false}>
-        Close
-      </button>
-    </div>
-  </div>
-{/if}
+<!-- Real Modal Components -->
+<NewProjectModal
+  isOpen={showProjectModal}
+  mode="create"
+  on:close={() => showProjectModal = false}
+  on:created={() => showProjectModal = false}
+/>
 
-{#if showFeeModal}
-  <!-- FeeModal component would go here -->
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showFeeModal = false}>
-    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
-      <p class="text-emittiv-white">Fee Modal - To be implemented</p>
-      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showFeeModal = false}>
-        Close
-      </button>
-    </div>
-  </div>
-{/if}
+<ProposalModal
+  isOpen={showFeeModal}
+  mode="create"
+  proposal={null}
+  on:close={() => showFeeModal = false}
+  on:saved={() => showFeeModal = false}
+/>
 
-{#if showCompanyModal}
-  <!-- CompanyModal component would go here -->
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showCompanyModal = false}>
-    <div class="bg-emittiv-black border border-emittiv-dark rounded-lg p-6">
-      <p class="text-emittiv-white">Company Modal - To be implemented</p>
-      <button class="mt-4 px-4 py-2 bg-emittiv-splash text-white rounded" on:click={() => showCompanyModal = false}>
-        Close
-      </button>
-    </div>
-  </div>
-{/if}
+<CompanyModal
+  isOpen={showCompanyModal}
+  mode="create"
+  company={null}
+  on:close={() => showCompanyModal = false}
+  on:saved={() => showCompanyModal = false}
+/>
 
 <style>
   .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 24px;
-    min-height: 100vh;
   }
 
   .dashboard-section {

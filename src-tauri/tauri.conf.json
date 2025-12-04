@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "e-fees",
-  "version": "0.10.18",
+  "version": "0.10.19",
   "identifier": "com.emittiv.e-fees",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "e-fees v0.10.18",
+        "title": "e-fees v0.10.19",
         "width": 1280,
         "height": 1200,
         "minWidth": 1000,

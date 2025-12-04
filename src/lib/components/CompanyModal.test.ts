@@ -1,6 +1,6 @@
 /**
  * CompanyModal Component Tests
- * 
+ *
  * Tests for the Company modal component including CRUD operations,
  * form validation, country/city typeahead, and user interactions.
  */
@@ -77,7 +77,7 @@ describe('CompanyModal Component', () => {
   };
 
   const mockOperationState = {
-    subscribe: vi.fn((callback) => {
+    subscribe: vi.fn(callback => {
       callback({ saving: false, deleting: false, error: null, message: null });
       return { unsubscribe: vi.fn() };
     })
@@ -91,14 +91,14 @@ describe('CompanyModal Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mocks
     vi.mocked(searchCountries).mockResolvedValue(mockCountries);
     vi.mocked(getCitySuggestions).mockResolvedValue(mockCities);
     vi.mocked(validateForm).mockReturnValue({});
     vi.mocked(hasValidationErrors).mockReturnValue(false);
     vi.mocked(extractSurrealId).mockReturnValue('emt');
-    vi.mocked(withLoadingState).mockImplementation(async (fn) => await fn());
+    vi.mocked(withLoadingState).mockImplementation(async fn => await fn());
     vi.mocked(useOperationState).mockReturnValue({
       store: mockOperationState,
       actions: mockOperationActions
@@ -137,11 +137,11 @@ describe('CompanyModal Component', () => {
       expect(screen.getByText('Company Name')).toBeInTheDocument();
       expect(screen.getByText('Short Name')).toBeInTheDocument();
       expect(screen.getByText('Abbreviation')).toBeInTheDocument();
-      
+
       // Check placeholders for complex components like TypeaheadSelect
       expect(screen.getByPlaceholderText('Search countries...')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Search cities...')).toBeInTheDocument();
-      
+
       expect(screen.getByText('Registration No.')).toBeInTheDocument();
       expect(screen.getByText('Tax/VAT No.')).toBeInTheDocument();
     });
@@ -172,7 +172,7 @@ describe('CompanyModal Component', () => {
 
     it('should handle country search', async () => {
       render(CompanyModal, { isOpen: true, mode: 'create' });
-      
+
       // Country search input exists (within TypeaheadSelect)
       const countryInput = screen.getByPlaceholderText('Search countries...');
       expect(countryInput).toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('CompanyModal Component', () => {
 
     it('should handle city search', async () => {
       render(CompanyModal, { isOpen: true, mode: 'create' });
-      
+
       // City search input exists (within TypeaheadSelect)
       const cityInput = screen.getByPlaceholderText('Search cities...');
       expect(cityInput).toBeInTheDocument();
@@ -188,7 +188,7 @@ describe('CompanyModal Component', () => {
 
     it('should show city field when no country selected', () => {
       render(CompanyModal, { isOpen: true, mode: 'create' });
-      
+
       // Note: City field conditional disabling not implemented in CrudModal system yet
       const cityInput = screen.getByPlaceholderText('Search cities...');
       expect(cityInput).toBeInTheDocument();
@@ -206,9 +206,9 @@ describe('CompanyModal Component', () => {
 
     it('should update existing company', async () => {
       const user = userEvent.setup();
-      
+
       vi.mocked(companiesActions.update).mockResolvedValue(mockCompany);
-      
+
       render(CompanyModal, {
         isOpen: true,
         mode: 'edit',
@@ -223,7 +223,7 @@ describe('CompanyModal Component', () => {
 
     it('should show delete confirmation', async () => {
       const user = userEvent.setup();
-      
+
       render(CompanyModal, {
         isOpen: true,
         mode: 'edit',
@@ -239,9 +239,9 @@ describe('CompanyModal Component', () => {
 
     it('should delete company after confirmation', async () => {
       const user = userEvent.setup();
-      
+
       vi.mocked(companiesActions.delete).mockResolvedValue(true);
-      
+
       const { component } = render(CompanyModal, {
         isOpen: true,
         mode: 'edit',
@@ -283,7 +283,7 @@ describe('CompanyModal Component', () => {
 
     it('should show loading spinner during save', () => {
       const loadingState = {
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn(callback => {
           callback({ saving: true, deleting: false, error: null, message: null });
           return { unsubscribe: vi.fn() };
         })
@@ -298,7 +298,7 @@ describe('CompanyModal Component', () => {
 
       const createButton = screen.getByRole('button', { name: 'Create' });
       expect(createButton).toBeDisabled();
-      
+
       // Loading spinner should be present (div with animate-spin)
       const spinner = createButton.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
@@ -308,8 +308,13 @@ describe('CompanyModal Component', () => {
   describe('Error and Message Display', () => {
     it('should display error messages', () => {
       const errorState = {
-        subscribe: vi.fn((callback) => {
-          callback({ saving: false, deleting: false, error: 'Something went wrong', message: null });
+        subscribe: vi.fn(callback => {
+          callback({
+            saving: false,
+            deleting: false,
+            error: 'Something went wrong',
+            message: null
+          });
           return { unsubscribe: vi.fn() };
         })
       };
@@ -326,8 +331,13 @@ describe('CompanyModal Component', () => {
 
     it('should display success messages', () => {
       const messageState = {
-        subscribe: vi.fn((callback) => {
-          callback({ saving: false, deleting: false, error: null, message: 'Company created successfully' });
+        subscribe: vi.fn(callback => {
+          callback({
+            saving: false,
+            deleting: false,
+            error: null,
+            message: 'Company created successfully'
+          });
           return { unsubscribe: vi.fn() };
         })
       };
@@ -346,22 +356,22 @@ describe('CompanyModal Component', () => {
   describe('Modal Interactions', () => {
     it('should render cancel button for modal close', async () => {
       const user = userEvent.setup();
-      
+
       render(CompanyModal, { isOpen: true, mode: 'create' });
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       expect(cancelButton).toBeInTheDocument();
-      
+
       // Test clicking cancel button
       await user.click(cancelButton);
-      
+
       // Button should be clickable (this tests the functionality without $on)
       expect(cancelButton).toBeInTheDocument();
     });
 
     it('should have operation state utilities available', () => {
       render(CompanyModal, { isOpen: true, mode: 'create' });
-      
+
       // Component has access to operation actions from useOperationState
       expect(useOperationState).toHaveBeenCalled();
     });

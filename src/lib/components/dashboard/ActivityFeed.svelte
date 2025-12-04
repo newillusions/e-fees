@@ -28,36 +28,38 @@
       style: 'currency',
       currency: 'AED',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   }
 
   // Filter activity based on selected filters
-  $: filteredActivity = $recentFeesStore.filter(fee => {
-    // Time filter - skip if no time info
-    if (!fee.time) return false;
-    const createdDate = new Date(fee.time.created_at);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
-    
-    if (createdDate < cutoffDate) return false;
+  $: filteredActivity = $recentFeesStore
+    .filter(fee => {
+      // Time filter - skip if no time info
+      if (!fee.time) return false;
+      const createdDate = new Date(fee.time.created_at);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
 
-    // Activity type filter
-    if (activityFilter === 'all') return true;
-    if (activityFilter === 'sent' && fee.status === 'Sent') return true;
-    if (activityFilter === 'awarded' && fee.status === 'Awarded') return true;
-    if (activityFilter === 'closed' && (fee.status === 'Lost' || fee.status === 'Cancelled')) return true;
-    
-    return false;
-  })
-  .sort((a, b) => {
-    // Sort by newest first (most recent created_at or updated_at)
-    // Since we filtered out items without time, they should exist
-    const dateA = new Date(a.time!.updated_at || a.time!.created_at).getTime();
-    const dateB = new Date(b.time!.updated_at || b.time!.created_at).getTime();
-    return dateB - dateA; // Newest first
-  })
-  .slice(0, 10); // Show top 10
+      if (createdDate < cutoffDate) return false;
+
+      // Activity type filter
+      if (activityFilter === 'all') return true;
+      if (activityFilter === 'sent' && fee.status === 'Sent') return true;
+      if (activityFilter === 'awarded' && fee.status === 'Awarded') return true;
+      if (activityFilter === 'closed' && (fee.status === 'Lost' || fee.status === 'Cancelled'))
+        return true;
+
+      return false;
+    })
+    .sort((a, b) => {
+      // Sort by newest first (most recent created_at or updated_at)
+      // Since we filtered out items without time, they should exist
+      const dateA = new Date(a.time!.updated_at || a.time!.created_at).getTime();
+      const dateB = new Date(b.time!.updated_at || b.time!.created_at).getTime();
+      return dateB - dateA; // Newest first
+    })
+    .slice(0, 10); // Show top 10
 
   // Activity filter options
   const filterOptions = [
@@ -83,14 +85,14 @@
 <div class="activity-feed">
   <div class="feed-header">
     <h2 class="section-title">Recent Activity</h2>
-    
+
     <div class="filter-controls">
       <select bind:value={activityFilter} class="filter-select">
         {#each filterOptions as option}
           <option value={option.value}>{option.label}</option>
         {/each}
       </select>
-      
+
       <select bind:value={timeFilter} class="filter-select">
         {#each timeOptions as option}
           <option value={option.value}>{option.label}</option>
@@ -105,44 +107,49 @@
     {:else if filteredActivity.length > 0}
       <div class="activity-list">
         {#each filteredActivity as fee}
-          <div class="activity-item {fee.status.toLowerCase()}" on:click={() => handleFeeClick(fee)} on:keydown={(e) => e.key === 'Enter' && handleFeeClick(fee)} role="button" tabindex="0">
+          <div
+            class="activity-item {fee.status.toLowerCase()}"
+            on:click={() => handleFeeClick(fee)}
+            on:keydown={e => e.key === 'Enter' && handleFeeClick(fee)}
+            role="button"
+            tabindex="0"
+          >
             <div class="activity-status">
               <div class="status-indicator"></div>
               <span class="status-badge">{fee.status}</span>
             </div>
-            
+
             <div class="activity-details">
               <div class="activity-header">
                 <span class="fee-number">{fee.number}</span>
               </div>
-              
+
               <div class="activity-project">
                 <span class="project-name">{getProjectName(fee.project_id)}</span>
               </div>
-              
+
               <div class="activity-company">
                 <span class="company-name">{getCompanyName(fee.company_id)}</span>
               </div>
-              
             </div>
-            
+
             <div class="activity-date">
               <div class="primary-date">
-                {new Date(fee.time!.created_at).toLocaleDateString('en-US', { 
-                  month: 'short', 
+                {new Date(fee.time!.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
                   day: 'numeric'
                 })}
               </div>
               {#if fee.time!.updated_at !== fee.time!.created_at}
                 <div class="updated-date">
-                  Updated {new Date(fee.time!.updated_at).toLocaleDateString('en-US', { 
-                    month: 'short', 
+                  Updated {new Date(fee.time!.updated_at).toLocaleDateString('en-US', {
+                    month: 'short',
                     day: 'numeric'
                   })}
                 </div>
               {/if}
             </div>
-            
+
             {#if fee.package}
               <div class="activity-package-full">
                 <span class="fee-package-full">{fee.package}</span>
@@ -151,11 +158,15 @@
           </div>
         {/each}
       </div>
-      
     {:else}
       <div class="empty-state">
         <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          />
         </svg>
         <p class="empty-message">No activity found for the selected filters</p>
       </div>
@@ -404,7 +415,7 @@
     font-size: 13px;
     min-width: 0;
   }
-  
+
   .activity-company {
     margin-bottom: 4px;
     font-size: 12px;
@@ -475,7 +486,6 @@
     color: var(--emittiv-lighter);
   }
 
-
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -504,22 +514,22 @@
       align-items: flex-start;
       gap: 16px;
     }
-    
+
     .filter-controls {
       width: 100%;
       justify-content: space-between;
     }
-    
+
     .activity-item {
       flex-direction: column;
       gap: 12px;
     }
-    
+
     .activity-status {
       flex-direction: row;
       min-width: auto;
     }
-    
+
     .activity-date {
       text-align: left;
       min-width: auto;

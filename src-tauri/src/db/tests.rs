@@ -10,6 +10,7 @@
 #[cfg(test)]
 mod tests {
     use crate::db::DatabaseConfig;
+    use serial_test::serial;
     use std::env;
 
     // ============================================================================
@@ -147,6 +148,7 @@ mod tests {
     // ============================================================================
 
     #[test]
+    #[serial]
     fn test_database_config_from_env_success() {
         // Set up test environment variables
         env::set_var("SURREALDB_URL", "ws://localhost:8000");
@@ -176,6 +178,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_database_config_missing_required_vars() {
         // Ensure env vars are not set
         env::remove_var("SURREALDB_URL");
@@ -190,6 +193,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_database_config_tls_settings() {
         env::set_var("SURREALDB_URL", "wss://localhost:8000");
         env::set_var("SURREALDB_NS", "test");

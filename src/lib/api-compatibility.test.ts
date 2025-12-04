@@ -1,6 +1,6 @@
 /**
  * API Compatibility Test
- * 
+ *
  * This test uses the EXACT same test cases as the original API test
  * but runs them against the refactored API to verify 100% backward compatibility.
  */
@@ -177,14 +177,16 @@ describe('API Compatibility Test - Original Tests vs Refactored Implementation',
         const result = await ApiClient.createProject(newProject);
 
         expect(result).toEqual(createdProject);
-        expect(mockInvoke).toHaveBeenCalledWith('create_project', { project: {
-          ...newProject,
-          id: null,
-          time: {
-            created_at: expect.any(String),
-            updated_at: expect.any(String)
+        expect(mockInvoke).toHaveBeenCalledWith('create_project', {
+          project: {
+            ...newProject,
+            id: null,
+            time: {
+              created_at: expect.any(String),
+              updated_at: expect.any(String)
+            }
           }
-        }});
+        });
       });
 
       it('should handle creation failures', async () => {
@@ -197,7 +199,7 @@ describe('API Compatibility Test - Original Tests vs Refactored Implementation',
     });
   });
 
-  // Exact copy of original company tests  
+  // Exact copy of original company tests
   describe('Company CRUD Operations', () => {
     describe('getCompanies', () => {
       it('should return companies array when successful', async () => {
@@ -233,15 +235,17 @@ describe('API Compatibility Test - Original Tests vs Refactored Implementation',
         const result = await ApiClient.createCompany(newCompany);
 
         expect(result).toEqual(createdCompany);
-        expect(mockInvoke).toHaveBeenCalledWith('create_company', { company: {
-          name: 'New Company',
-          name_short: 'New Co',
-          abbreviation: 'NEW',
-          city: 'Dubai',
-          country: 'U.A.E.',
-          reg_no: null,
-          tax_no: null
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_company', {
+          company: {
+            name: 'New Company',
+            name_short: 'New Co',
+            abbreviation: 'NEW',
+            city: 'Dubai',
+            country: 'U.A.E.',
+            reg_no: null,
+            tax_no: null
+          }
+        });
       });
 
       it('should handle duplicate abbreviation errors', async () => {

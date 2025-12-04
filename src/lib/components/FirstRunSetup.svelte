@@ -3,15 +3,15 @@
   import { connectionStore } from '../stores';
   import { checkDbConnection, saveSettings, getSettings } from '../api';
   import { fade, slide } from 'svelte/transition';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
-  
+
   // Setup steps
   let currentStep = 1;
   const totalSteps = 3;
-  
+
   // Form data
   let dbConfig = {
     url: '',
@@ -20,22 +20,22 @@
     username: '',
     password: ''
   };
-  
+
   let staffInfo = {
     name: '',
     email: '',
     phone: '',
     position: ''
   };
-  
+
   let projectPath = '';
-  
+
   // State
   let isTestingConnection = false;
   let connectionTestResult: 'pending' | 'success' | 'error' = 'pending';
   let connectionTestMessage = '';
   let isSaving = false;
-  
+
   onMount(async () => {
     // Check if this is first run by testing connection
     const isConnected = await checkDbConnection();
@@ -47,12 +47,12 @@
       }
     }
   });
-  
+
   async function testConnection() {
     isTestingConnection = true;
     connectionTestResult = 'pending';
     connectionTestMessage = 'Testing connection...';
-    
+
     try {
       // Save temporary config
       await saveSettings({
@@ -67,10 +67,10 @@
         staff_position: staffInfo.position || 'User',
         project_folder_path: projectPath
       });
-      
+
       // Test connection
       const isConnected = await checkDbConnection();
-      
+
       if (isConnected) {
         connectionTestResult = 'success';
         connectionTestMessage = 'Connection successful!';
@@ -85,7 +85,7 @@
       isTestingConnection = false;
     }
   }
-  
+
   async function saveAndContinue() {
     if (currentStep === 1) {
       // Test connection before proceeding
@@ -99,10 +99,10 @@
       await saveConfiguration();
     }
   }
-  
+
   async function saveConfiguration() {
     isSaving = true;
-    
+
     try {
       await saveSettings({
         surrealdb_url: dbConfig.url,
@@ -116,10 +116,10 @@
         staff_position: staffInfo.position,
         project_folder_path: projectPath
       });
-      
+
       dispatch('complete');
       isOpen = false;
-      
+
       // Reload the page to apply new settings
       window.location.reload();
     } catch (error) {
@@ -128,7 +128,7 @@
       isSaving = false;
     }
   }
-  
+
   function previousStep() {
     if (currentStep > 1) {
       currentStep--;
@@ -137,8 +137,11 @@
 </script>
 
 {#if isOpen}
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-2" style="background: rgba(0, 0, 0, 0.8);">
-    <div 
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-2"
+    style="background: rgba(0, 0, 0, 0.8);"
+  >
+    <div
       class="relative w-full max-h-[95vh] overflow-hidden rounded-lg shadow-2xl flex flex-col"
       style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); max-width: 500px;"
       transition:fade={{ duration: 200 }}
@@ -152,23 +155,29 @@
           Let's set up your application for first use
         </p>
       </div>
-      
+
       <!-- Progress Indicator -->
       <div class="p-3 pb-2 border-b flex-shrink-0" style="border-color: var(--emittiv-dark);">
         <div class="flex items-center justify-between">
           {#each Array(totalSteps) as _, i}
             <div class="flex items-center">
-              <div 
+              <div
                 class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all"
-                style="background: {i + 1 <= currentStep ? 'var(--emittiv-splash)' : 'var(--emittiv-dark)'}; 
-                       color: {i + 1 <= currentStep ? 'var(--emittiv-black)' : 'var(--emittiv-light)'};"
+                style="background: {i + 1 <= currentStep
+                  ? 'var(--emittiv-splash)'
+                  : 'var(--emittiv-dark)'}; 
+                       color: {i + 1 <= currentStep
+                  ? 'var(--emittiv-black)'
+                  : 'var(--emittiv-light)'};"
               >
                 {i + 1}
               </div>
               {#if i < totalSteps - 1}
-                <div 
+                <div
                   class="w-16 h-0.5 mx-1"
-                  style="background: {i + 1 < currentStep ? 'var(--emittiv-splash)' : 'var(--emittiv-dark)'};"
+                  style="background: {i + 1 < currentStep
+                    ? 'var(--emittiv-splash)'
+                    : 'var(--emittiv-dark)'};"
                 ></div>
               {/if}
             </div>
@@ -180,7 +189,7 @@
           <span class="text-xs" style="color: var(--emittiv-light);">Projects</span>
         </div>
       </div>
-      
+
       <!-- Content -->
       <div class="overflow-y-auto flex-grow p-3" style="min-height: 0;">
         {#if currentStep === 1}
@@ -188,10 +197,14 @@
             <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Database Configuration
             </h3>
-            
+
             <div class="space-y-3">
               <div>
-                <label for="db-url" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label
+                  for="db-url"
+                  class="block text-xs font-medium mb-1"
+                  style="color: var(--emittiv-lighter);"
+                >
                   Database URL
                 </label>
                 <input
@@ -203,10 +216,14 @@
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
-              
+
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="db-namespace" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="db-namespace"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Namespace
                   </label>
                   <input
@@ -218,9 +235,13 @@
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="db-database" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="db-database"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Database
                   </label>
                   <input
@@ -233,10 +254,14 @@
                   />
                 </div>
               </div>
-              
+
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="db-username" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="db-username"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Username
                   </label>
                   <input
@@ -248,9 +273,13 @@
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="db-password" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="db-password"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Password
                   </label>
                   <input
@@ -263,11 +292,13 @@
                   />
                 </div>
               </div>
-              
+
               {#if connectionTestResult !== 'pending'}
-                <div 
+                <div
                   class="p-3 rounded text-sm"
-                  style="background: {connectionTestResult === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; 
+                  style="background: {connectionTestResult === 'success'
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)'}; 
                          color: {connectionTestResult === 'success' ? '#22c55e' : '#ef4444'};"
                 >
                   {connectionTestMessage}
@@ -280,10 +311,14 @@
             <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Staff Information
             </h3>
-            
+
             <div class="space-y-3">
               <div>
-                <label for="staff-name" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label
+                  for="staff-name"
+                  class="block text-xs font-medium mb-1"
+                  style="color: var(--emittiv-lighter);"
+                >
                   Your Name
                 </label>
                 <input
@@ -295,9 +330,13 @@
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
-              
+
               <div>
-                <label for="staff-email" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label
+                  for="staff-email"
+                  class="block text-xs font-medium mb-1"
+                  style="color: var(--emittiv-lighter);"
+                >
                   Email Address
                 </label>
                 <input
@@ -309,10 +348,14 @@
                   style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                 />
               </div>
-              
+
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label for="staff-phone" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="staff-phone"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Phone Number
                   </label>
                   <input
@@ -324,9 +367,13 @@
                     style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="staff-position" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                  <label
+                    for="staff-position"
+                    class="block text-xs font-medium mb-1"
+                    style="color: var(--emittiv-lighter);"
+                  >
                     Position
                   </label>
                   <input
@@ -346,10 +393,14 @@
             <h3 class="text-base font-semibold mb-3" style="color: var(--emittiv-white);">
               Project Configuration
             </h3>
-            
+
             <div class="space-y-3">
               <div>
-                <label for="project-path" class="block text-xs font-medium mb-1" style="color: var(--emittiv-lighter);">
+                <label
+                  for="project-path"
+                  class="block text-xs font-medium mb-1"
+                  style="color: var(--emittiv-lighter);"
+                >
                   Project Folder Path
                 </label>
                 <input
@@ -364,22 +415,26 @@
                   This is where project folders will be created and managed
                 </p>
               </div>
-              
+
               <div class="p-3 rounded" style="background: var(--emittiv-dark);">
                 <h4 class="text-sm font-semibold mb-1" style="color: var(--emittiv-white);">
                   Setup Complete!
                 </h4>
                 <p class="text-xs" style="color: var(--emittiv-light);">
-                  Your Fee Proposal Management system is ready to use. Click "Finish Setup" to save your configuration and start using the application.
+                  Your Fee Proposal Management system is ready to use. Click "Finish Setup" to save
+                  your configuration and start using the application.
                 </p>
               </div>
             </div>
           </div>
         {/if}
       </div>
-      
+
       <!-- Footer -->
-      <div class="p-3 border-t flex justify-between flex-shrink-0" style="border-color: var(--emittiv-dark);">
+      <div
+        class="p-3 border-t flex justify-between flex-shrink-0"
+        style="border-color: var(--emittiv-dark);"
+      >
         <button
           onclick={previousStep}
           disabled={currentStep === 1}
@@ -388,7 +443,7 @@
         >
           Previous
         </button>
-        
+
         <button
           onclick={saveAndContinue}
           disabled={isTestingConnection || isSaving}
@@ -413,7 +468,7 @@
     outline: none;
     border-color: var(--emittiv-splash) !important;
   }
-  
+
   button:not(:disabled):hover {
     opacity: 0.9;
   }

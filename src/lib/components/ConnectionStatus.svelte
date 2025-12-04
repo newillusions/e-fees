@@ -4,13 +4,13 @@
   import { getConnectionStatus, getDbInfo } from '../api';
   import { createComponentLogger } from '../services/logger';
   import { getAppVersion } from '../utils';
-  
+
   const logger = createComponentLogger('ConnectionStatus');
 
   let checkInterval: number;
   let showDebugInfo = false;
   let appVersion = '...';
-  
+
   let hasLoadedData = false; // Track if we've loaded data at least once
 
   async function checkConnection() {
@@ -36,9 +36,13 @@
         await loadAllData();
       }
     } catch (error) {
-      await logger.error('Failed to check database connection', {
-        action: 'checkConnection'
-      }, error as Error);
+      await logger.error(
+        'Failed to check database connection',
+        {
+          action: 'checkConnection'
+        },
+        error as Error
+      );
 
       connectionStore.set({
         isConnected: false,
@@ -48,7 +52,7 @@
       });
     }
   }
-  
+
   onMount(async () => {
     // Load app version
     appVersion = await getAppVersion();
@@ -61,7 +65,7 @@
     // Check connection every 30 seconds
     checkInterval = setInterval(() => checkConnection(), 30000) as any;
   });
-  
+
   onDestroy(() => {
     if (checkInterval) {
       clearInterval(checkInterval);
@@ -72,7 +76,6 @@
     const dbInfo = await getDbInfo();
     showDebugInfo = !showDebugInfo;
   }
-
 </script>
 
 <div class="flex items-center px-6 py-2">
@@ -81,7 +84,7 @@
     <!-- LED Indicator -->
     <div class="relative flex items-center justify-center w-5 h-5">
       <!-- Base LED centered in the icon space -->
-      <div 
+      <div
         class="w-1 h-1 rounded-full transition-all duration-300 relative z-10"
         class:led-connected={$connectionStore.isConnected}
         class:led-disconnected={!$connectionStore.isConnected}
@@ -91,7 +94,7 @@
         <div class="absolute w-1.5 h-1.5 rounded-full led-glow-connected animate-pulse"></div>
       {/if}
     </div>
-    
+
     <!-- Status Text -->
     <div class="flex flex-col">
       <span class="text-xs font-medium" style="color: var(--emittiv-light);">
@@ -103,8 +106,14 @@
         </span>
       {/if}
       {#if $connectionStore.errorMessage && !$connectionStore.isConnected}
-        <span class="text-xs" style="color: var(--emittiv-light); opacity: 0.7;" title={$connectionStore.errorMessage}>
-          {$connectionStore.errorMessage.substring(0, 25)}{$connectionStore.errorMessage.length > 25 ? '...' : ''}
+        <span
+          class="text-xs"
+          style="color: var(--emittiv-light); opacity: 0.7;"
+          title={$connectionStore.errorMessage}
+        >
+          {$connectionStore.errorMessage.substring(0, 25)}{$connectionStore.errorMessage.length > 25
+            ? '...'
+            : ''}
         </span>
       {/if}
       <!-- Version Display -->
@@ -112,7 +121,6 @@
         v{appVersion}
       </span>
     </div>
-    
   </div>
 </div>
 
@@ -122,22 +130,23 @@
     background-color: var(--emittiv-splash); /* Orange #f90 */
     box-shadow: 0 0 2px var(--emittiv-splash);
   }
-  
+
   .led-disconnected {
     background-color: #ef4444; /* Red */
     box-shadow: 0 0 2px #ef4444;
   }
-  
+
   /* Glow effect for connected state */
   .led-glow-connected {
     background-color: var(--emittiv-splash);
     filter: blur(2px);
     opacity: 0.5;
   }
-  
+
   /* Override the pulse animation for a smoother glow */
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.5;
       transform: scale(1);
     }

@@ -301,7 +301,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         const newItem = await api.create(data);
         
         store.update(state => {
-          let items = [...state.items];
+          const items = [...state.items];
           
           if (enableOptimistic && optimisticItem) {
             // Replace optimistic item with real item
@@ -738,7 +738,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       componentLogger?.info('Rolling back optimistic updates');
       store.update(state => {
         // Revert all optimistic updates
-        let items = [...state.items];
+        const items = [...state.items];
         state.optimisticUpdates.forEach((originalItem, id) => {
           const index = items.findIndex(item => idExtractor(item.id) === id);
           if (index !== -1) {

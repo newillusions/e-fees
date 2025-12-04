@@ -213,48 +213,48 @@ export const TEST_PROJECTS: Project[] = [
 export const TEST_FEES: Fee[] = [
   {
     id: 'rfp:prop123',
+    name: 'Dubai Marina Tower - Structural',
+    number: 'RFP-25-97101-001',
     project_id: 'projects:25-97101',
-    company_id: 'company:emittiv123', 
+    company_id: 'company:emittiv123',
     contact_id: 'contact:john123',
-    rfp_number: 'RFP-25-97101-2025',
-    issue_date: '2025-08-20',
+    issue_date: '250820',
     status: 'Draft',
     stage: 'Draft',
     package: 'structural',
     staff_name: 'Martin Engineer',
     activity: 'Structural Design and Analysis for High-rise Building',
-    // created_at: '2025-08-21T10:00:00Z',
-    // updated_at: '2025-08-21T10:00:00Z'
+    revisions: []
   },
   {
     id: 'rfp:prop456',
+    name: 'Riyadh Business Complex - Full Package',
+    number: 'RFP-25-96601-001',
     project_id: 'projects:25-96601',
     company_id: 'company:acme456',
     contact_id: 'contact:jane456',
-    rfp_number: 'RFP-25-96601-2025',
-    issue_date: '2025-08-21',
+    issue_date: '250821',
     status: 'Sent',
     stage: 'Sent',
     package: 'full_package',
     staff_name: 'Sarah Architect',
     activity: 'Complete Architectural and Engineering Package',
-    // created_at: '2025-08-21T10:00:00Z',
-    // updated_at: '2025-08-21T11:00:00Z'
+    revisions: []
   },
   {
     id: 'rfp:prop789',
+    name: 'London Office - MEP',
+    number: 'RFP-25-44101-001',
     project_id: 'projects:25-44101',
     company_id: 'company:tech789',
     contact_id: 'contact:mike789',
-    rfp_number: 'RFP-25-44101-2025',
-    issue_date: '2025-08-19',
-    status: 'Active',
+    issue_date: '250819',
+    status: 'Negotiation',
     stage: 'Under Review',
     package: 'mep',
     staff_name: 'David MEP Engineer',
     activity: 'MEP Design and Coordination',
-    // created_at: '2025-08-21T10:00:00Z',
-    // updated_at: '2025-08-21T12:00:00Z'
+    revisions: []
   }
 ];
 
@@ -342,18 +342,22 @@ export const TestDataHelpers = {
   // Create test fee with custom data
   createTestFee: (overrides: Partial<Fee> = {}): Fee => ({
     id: `rfp:test-${Date.now()}`,
+    name: 'Test Fee Proposal',
+    number: `RFP-TEST-${Date.now()}`,
     project_id: 'projects:25-97101',
     company_id: 'company:emittiv123',
     contact_id: 'contact:john123',
-    rfp_number: `RFP-TEST-${Date.now()}`,
-    issue_date: new Date().toISOString().split('T')[0],
+    issue_date: new Date().toISOString().slice(2, 10).replace(/-/g, ''),
     status: 'Draft',
     stage: 'Draft',
     package: 'structural',
     staff_name: 'Test Engineer',
     activity: 'Test Activity',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    revisions: [],
+    time: {
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
     ...overrides
   }),
 

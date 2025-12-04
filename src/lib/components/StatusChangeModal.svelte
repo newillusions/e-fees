@@ -273,7 +273,7 @@
                         type="checkbox"
                         bind:checked={selectedFeeUpdates[fee.id]}
                         disabled={!suggestedFeeStatus || fee.status === suggestedFeeStatus}
-                        class="w-3 h-3 rounded border-emittiv-light bg-emittiv-darker text-emittiv-splash focus:ring-1 focus:ring-emittiv-splash"
+                        class="emittiv-checkbox emittiv-checkbox-sm"
                       />
                       <div class="flex-1 flex items-center justify-between">
                         <span class="text-emittiv-white">{fee.number}</span>
@@ -308,7 +308,7 @@
                       type="checkbox"
                       bind:checked={selectedProjectUpdate}
                       disabled={!suggestedProjectStatus || project?.status === suggestedProjectStatus}
-                      class="w-3 h-3 rounded border-emittiv-light bg-emittiv-darker text-emittiv-splash focus:ring-1 focus:ring-emittiv-splash"
+                      class="emittiv-checkbox emittiv-checkbox-sm"
                     />
                     <div class="flex-1 flex items-center justify-between">
                       <span class="text-emittiv-white">{project?.number?.id} - {project?.name}</span>

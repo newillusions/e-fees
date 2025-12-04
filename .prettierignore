@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.svelte-kit
+src-tauri/target
+coverage
+performance
+tauri-plugin-mcp
+*.md
+package-lock.json

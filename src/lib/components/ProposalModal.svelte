@@ -10,6 +10,7 @@
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
+  import { PROPOSAL_STATUS_OPTIONS, type ProposalStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
@@ -64,7 +65,7 @@
     name: string;
     issue_date: string;
     rev: string;
-    status: 'Draft' | 'Sent' | 'Negotiation' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
+    status: ProposalStatus;
     package: string;
     staff_name: string;
     project_id: string;
@@ -95,18 +96,6 @@
     staff_position: ''
   };
   
-  // Status options
-  const statusOptions = [
-    { value: 'Draft', label: 'Draft' },
-    { value: 'Sent', label: 'Sent' },
-    { value: 'Negotiation', label: 'Negotiation' },
-    { value: 'Awarded', label: 'Awarded' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Lost', label: 'Lost' },
-    { value: 'Cancelled', label: 'Cancelled' },
-    { value: 'On Hold', label: 'On Hold' },
-    { value: 'Revised', label: 'Revised' }
-  ];
   
   // Validation setup
   const validationRules = [
@@ -1129,7 +1118,7 @@
           <FormSelect
             label="Status"
             bind:value={formData.status}
-            options={statusOptions}
+            options={PROPOSAL_STATUS_OPTIONS}
           />
           
           <FormInput
@@ -1208,7 +1197,7 @@
             type="checkbox"
             id="auto-export-json"
             bind:checked={autoExportToJson}
-            class="w-4 h-4 text-emittiv-splash bg-emittiv-dark border-emittiv-dark rounded focus:ring-emittiv-splash focus:ring-2"
+            class="emittiv-checkbox"
           />
           <label for="auto-export-json" class="text-emittiv-lighter text-sm cursor-pointer">
             Automatically export to project JSON file after creation
@@ -1404,37 +1393,32 @@
   </form>
 </BaseModal>
 
-<!-- Nested Modals with higher z-index -->
+<!-- Nested Modals with higher z-index (200 to appear above ProposalModal at 100) -->
 <!-- New Project Modal -->
-<NewProjectModal 
+<NewProjectModal
   bind:isOpen={showNewProjectModal}
+  zIndex={200}
   on:close={handleNewProjectClosed}
 />
 
 <!-- Company Modal -->
-<CompanyModal 
+<CompanyModal
   bind:isOpen={showCompanyModal}
   company={selectedCompany}
   mode={companyModalMode}
+  zIndex={200}
   on:close={handleCompanyModalClosed}
 />
 
 <!-- Contact Modal -->
-<ContactModal 
+<ContactModal
   bind:isOpen={showContactModal}
   contact={selectedContact}
   mode={contactModalMode}
+  zIndex={200}
   on:close={handleContactModalClosed}
 />
 
 <style>
-  /* Ensure nested modals appear above the proposal modal */
-  :global(.base-modal) {
-    z-index: 1000;
-  }
-  
-  /* Higher z-index for nested modals */
-  :global(.base-modal:last-child) {
-    z-index: 1100;
-  }
+  /* z-index for nested modals is now handled via props (zIndex={200}) */
 </style>

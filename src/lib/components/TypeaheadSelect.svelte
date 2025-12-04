@@ -138,12 +138,12 @@
 <div class="typeahead-select">
   <!-- Label -->
   {#if label}
-    <label 
-      for="typeahead-{label.replace(/\s+/g, '-').toLowerCase()}" 
-      class="block font-medium text-emittiv-lighter" 
-      style="font-size: 12px; margin-bottom: 4px;"
+    <label
+      for="typeahead-{label.replace(/\s+/g, '-').toLowerCase()}"
+      class="emittiv-label"
+      class:emittiv-label--required={required}
     >
-      {label}{required ? ' *' : ''}
+      {label}
     </label>
   {/if}
   
@@ -166,8 +166,8 @@
         autocorrect="off"
         autocapitalize="off"
         spellcheck="false"
-        class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all {error ? 'border-red-500' : ''} {disabled ? 'opacity-50 cursor-not-allowed' : ''}"
-        style="padding: 8px {searchText ? '30px' : '12px'} 8px 12px; font-size: 12px; height: 32px;"
+        class="emittiv-input {error ? 'emittiv-input--error' : ''}"
+        style="padding-right: {searchText ? '30px' : '12px'};"
       />
       
       <!-- Clear Button -->
@@ -226,7 +226,7 @@
   
   <!-- Error Message -->
   {#if error}
-    <p class="text-red-400" style="font-size: 10px; margin-top: 2px;">{error}</p>
+    <div class="emittiv-error">{error}</div>
   {/if}
 </div>
 

@@ -6,6 +6,7 @@
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { feesStore, projectsStore, companiesStore, contactsStore, feesActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import type { Fee, UnknownSurrealThing } from '../types';
   
@@ -21,6 +22,7 @@
     status: '',
     staff: ''
   });
+
   
   // Filter configuration for proposals
   const filterConfig: FilterConfig<Fee> = {
@@ -60,6 +62,14 @@
   // Get unique values for filters using optimized functions
   const uniqueStatuses = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.status).filter(Boolean));
   const uniqueStaff = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.staff_name).filter(Boolean));
+
+  // Count proposals per status for styling (bold for non-empty)
+  const statusCounts = $derived(
+    PROPOSAL_STATUSES.reduce((acc, status) => {
+      acc[status] = $feesStore.filter(p => p.status === status).length;
+      return acc;
+    }, {} as Record<string, number>)
+  );
   
   function handleNewProposal() {
     selectedProposal = null;
@@ -106,18 +116,6 @@
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
   
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'Draft': return 'text-yellow-400 bg-yellow-400/10';
-      case 'Active': return 'text-blue-400 bg-blue-400/10';
-      case 'Sent': return 'text-purple-400 bg-purple-400/10';
-      case 'Awarded': return 'text-green-400 bg-green-400/10';
-      case 'Lost': return 'text-red-400 bg-red-400/10';
-      case 'Cancelled': return 'text-gray-400 bg-gray-400/10';
-      default: return 'text-emittiv-light bg-emittiv-dark';
-    }
-  }
-
   function getProjectName(projectRef: UnknownSurrealThing): string {
     if (!projectRef) return 'N/A';
     
@@ -348,13 +346,15 @@
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-2">
     <!-- Status Filter -->
-    <select 
-      bind:value={filters.status} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+    <select
+      bind:value={filters.status}
+      class="status-filter px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
     >
       <option value="">All Status</option>
-      {#each uniqueStatuses as status}
-        <option value={status}>{status}</option>
+      {#each PROPOSAL_STATUSES as status}
+        <option value={status} class:has-items={statusCounts[status] > 0}>
+          {status}{statusCounts[status] > 0 ? ` (${statusCounts[status]})` : ''}
+        </option>
       {/each}
     </select>
     
@@ -378,6 +378,16 @@
     background-repeat: no-repeat;
     background-size: 16px 12px;
     appearance: none;
+  }
+
+  /* Style options with items as bold (browser support varies) */
+  select option.has-items {
+    font-weight: 600;
+  }
+
+  select option:not(.has-items) {
+    font-weight: 400;
+    color: #999;
   }
 </style>
   

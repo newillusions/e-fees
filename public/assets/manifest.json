@@ -1,6 +1,6 @@
 {
-  "name": "Fee Proposal Management",
-  "short_name": "FeePro",
+  "name": "e-fees",
+  "short_name": "e-fees",
   "description": "Professional fee proposal management system by emittiv",
   "start_url": "/",
   "display": "standalone",

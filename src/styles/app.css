@@ -96,35 +96,6 @@
     background: var(--gradient-content);
   }
   
-  /* Custom Scrollbars */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: var(--emittiv-black);
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: var(--emittiv-dark);
-    border-radius: 4px;
-    transition: var(--transition-smooth);
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--emittiv-light);
-  }
-  
-  ::-webkit-scrollbar-corner {
-    background: var(--emittiv-black);
-  }
-  
-  /* Firefox scrollbars */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--emittiv-dark) var(--emittiv-black);
-  }
 }
 
 @layer components {
@@ -341,4 +312,442 @@
     color: var(--emittiv-white);
     background-color: rgba(51, 51, 51, 0.5);
   }
+
+  /* Custom Checkbox Styling - Fixed pixel sizes for DPI consistency */
+  .emittiv-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px;
+    min-height: 14px;
+    max-width: 14px;
+    max-height: 14px;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease-in-out;
+    flex-shrink: 0;
+  }
+
+  .emittiv-checkbox:hover {
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-checkbox:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+  }
+
+  .emittiv-checkbox:checked {
+    background-color: var(--emittiv-splash);
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--emittiv-black);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .emittiv-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .emittiv-checkbox:disabled:hover {
+    border-color: var(--emittiv-dark);
+  }
+
+  /* Small checkbox variant */
+  .emittiv-checkbox-sm {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px;
+    min-height: 12px;
+    max-width: 12px;
+    max-height: 12px;
+  }
+
+  .emittiv-checkbox-sm:checked::after {
+    left: 3px;
+    top: 0px;
+    width: 3px;
+    height: 7px;
+    border-width: 0 1.5px 1.5px 0;
+  }
+
+  /* ========================================
+     FORM STYLES - Unified form element styling
+     Based on SettingsModal reference design
+     ======================================== */
+
+  /* Form Input - Standard text input styling */
+  .emittiv-input {
+    width: 100%;
+    height: 32px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    background-color: var(--emittiv-dark);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    transition: all 0.15s ease-in-out;
+  }
+
+  .emittiv-input::placeholder {
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-input:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 1px var(--emittiv-splash);
+  }
+
+  .emittiv-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .emittiv-input--readonly {
+    background-color: var(--emittiv-darker);
+    opacity: 0.6;
+  }
+
+  .emittiv-input--error {
+    border-color: #ef4444;
+  }
+
+  /* Form Select - Dropdown styling */
+  .emittiv-select {
+    width: 100%;
+    height: 32px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    background-color: var(--emittiv-dark);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 32px !important;
+  }
+
+  .emittiv-select:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 1px var(--emittiv-splash);
+  }
+
+  .emittiv-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .emittiv-select--error {
+    border-color: #ef4444;
+  }
+
+  /* Form Textarea - Multi-line input styling */
+  .emittiv-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    resize: vertical;
+    transition: border-color 0.15s ease-in-out;
+  }
+
+  .emittiv-textarea::placeholder {
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-textarea:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-textarea--error {
+    border-color: #ef4444;
+  }
+
+  /* Form Label - Consistent label styling */
+  .emittiv-label {
+    display: block;
+    font-size: 12px !important;
+    font-weight: 500;
+    color: var(--emittiv-lighter);
+    margin-bottom: 4px !important;
+  }
+
+  .emittiv-label--required::after {
+    content: ' *';
+    color: #ef4444;
+  }
+
+  /* Form Error Message */
+  .emittiv-error {
+    font-size: 10px !important;
+    color: #ef4444;
+    margin-top: 2px !important;
+  }
+
+  /* Form Section - Group of related fields */
+  .emittiv-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .emittiv-form-section__title {
+    font-size: 14px !important;
+    font-weight: 500;
+    color: var(--emittiv-white);
+    margin-bottom: 12px !important;
+  }
+
+  .emittiv-form-section__subtitle {
+    font-size: 11px !important;
+    color: var(--emittiv-light);
+    margin-top: -6px;
+    margin-bottom: 12px !important;
+  }
+
+  /* Form Grid - Two column layout */
+  .emittiv-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .emittiv-form-grid--full {
+    grid-column: span 2;
+  }
+
+  /* Form Actions - Button container at bottom */
+  .emittiv-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    margin-top: 8px;
+    border-top: 1px solid var(--emittiv-dark);
+  }
+
+  .emittiv-form-actions--spread {
+    justify-content: space-between;
+  }
+
+  /* Button Styles - Consistent button sizing */
+  .emittiv-btn {
+    height: 28px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .emittiv-btn--primary {
+    background-color: var(--emittiv-splash);
+    border: none;
+    color: var(--emittiv-black);
+  }
+
+  .emittiv-btn--primary:hover {
+    background-color: #e68a00;
+  }
+
+  .emittiv-btn--primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .emittiv-btn--secondary {
+    background-color: transparent;
+    border: 1px solid var(--emittiv-dark);
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-btn--secondary:hover {
+    border-color: var(--emittiv-light);
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-btn--danger {
+    background-color: #dc2626;
+    border: 1px solid #b91c1c;
+    color: white;
+  }
+
+  .emittiv-btn--danger:hover {
+    background-color: #b91c1c;
+  }
+
+  /* Modal Styles - Consistent modal appearance */
+  .emittiv-modal {
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 8px;
+    padding: 16px !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .emittiv-modal--sm {
+    max-width: 400px !important;
+  }
+
+  .emittiv-modal--md {
+    max-width: 450px !important;
+  }
+
+  .emittiv-modal--lg {
+    max-width: 500px !important;
+  }
+
+  .emittiv-modal--xl {
+    max-width: 600px !important;
+  }
+
+  .emittiv-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px !important;
+  }
+
+  .emittiv-modal__title {
+    font-size: 16px !important;
+    font-weight: 600;
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-modal__close {
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--emittiv-light);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .emittiv-modal__close:hover {
+    color: var(--emittiv-white);
+    background-color: var(--emittiv-dark);
+  }
+
+  /* Alert/Message Boxes */
+  .emittiv-alert {
+    padding: 8px 12px !important;
+    border-radius: 6px;
+    font-size: 11px !important;
+  }
+
+  .emittiv-alert--success {
+    background-color: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+  }
+
+  .emittiv-alert--error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+
+  .emittiv-alert--warning {
+    background-color: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    color: #fde047;
+  }
+
+  .emittiv-alert--info {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+  }
+
+  /* Loading Spinner */
+  .emittiv-spinner {
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  .emittiv-spinner--lg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+/* ============================================
+   SCROLLBAR STYLES - Outside @layer for highest specificity
+   ============================================ */
+
+/* Custom Scrollbars - Must be outside @layer to override defaults */
+*::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: #333 !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #999 !important;
+  border-radius: 4px !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #ccc !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #333 !important;
+}
+
+/* Firefox scrollbars */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #999 #333;
+}
+
+/* Main content - only show scrollbar when needed */
+.main-content-scroll {
+  overflow-y: auto !important;
 }

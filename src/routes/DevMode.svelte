@@ -2,394 +2,296 @@
   import CompanyModal from '$lib/components/CompanyModal.svelte';
   import ContactModal from '$lib/components/ContactModal.svelte';
   import NewProjectModal from '$lib/components/NewProjectModal.svelte';
-  import Card from '$lib/components/Card.svelte';
-  import { companiesActions, contactsActions, projectsActions } from '$lib/stores';
-  
-  // Form states for testing - AUTO-OPEN COMPANY FORM FOR DEMO
-  let activeForm = $state('company');
-  let showCompanyForm = $state(true);
+
+  // Form states
+  let activeForm = $state<string | null>(null);
+  let showCompanyForm = $state(false);
   let showContactForm = $state(false);
   let showProjectForm = $state(false);
 
-  // Form data for testing
-  let companyData = $state({
-    name: 'DELETE ME Test Company Ltd',
-    name_short: 'DELETE ME TestCo',
-    abbreviation: 'DMTC',
-    country: 'United Arab Emirates',
-    city: 'Dubai',
-    address: '123 Test Street, Business Bay',
-    phone: '+971 4 123 4567',
-    email: 'test@deletecompany.com',
-    website: 'www.deletecompany.com',
-    reg_no: 'REG-DELETE-123456',
-    tax_no: 'VAT-DELETE-789012'
-  });
-  
-  // Mock company for editing test
-  const mockCompany = {
-    id: 'test-company-1',
-    name: 'Test Company',
-    name_short: 'TestCo',
-    abbreviation: 'TC',
-    city: 'Dubai',
-    country: 'United Arab Emirates',
-    address: '123 Test Street',
-    phone: '+971 4 123 4567',
-    email: 'test@company.com',
-    website: 'www.testcompany.com',
-    reg_no: 'REG123456',
-    tax_no: 'TAX789012'
-  };
-  
-  async function handleFormSubmit(event: Event) {
-    event.preventDefault();
-
-    if (activeForm === 'company') {
-      try {
-        console.log('DEV MODE: Submitting company data:', companyData);
-        alert(`🔄 DEV MODE: Submitting company "${companyData.name}" to database...\n\nData: ${JSON.stringify(companyData, null, 2)}`);
-
-        const result = await companiesActions.create(companyData);
-        console.log('DEV MODE: Company creation result:', result);
-
-        alert(`✅ SUCCESS: Company "${companyData.name}" created successfully!\nResult: ${JSON.stringify(result, null, 2)}`);
-
-        // Reset form
-        handleFormClose();
-
-      } catch (error) {
-        console.error('DEV MODE: Company creation error:', error);
-        alert(`❌ ERROR: Failed to create company\nError: ${error.message || error}`);
-      }
-    } else {
-      console.log('DEV MODE: Form submitted for:', activeForm);
-      alert(`DEV MODE: ${activeForm.toUpperCase()} form submitted successfully!\nCheck console for details.`);
-    }
-  }
-  
   function handleFormClose() {
-    console.log('DEV MODE: handleFormClose called');
     showCompanyForm = false;
     showContactForm = false;
     showProjectForm = false;
-    console.log('DEV MODE: Form states after close - Company:', showCompanyForm, 'Contact:', showContactForm, 'Project:', showProjectForm);
+    activeForm = null;
   }
-  
+
   function openForm(formType: string) {
-    console.log('DEV MODE: Opening form type:', formType);
+    // Close any open form first
+    handleFormClose();
+
     activeForm = formType;
     switch (formType) {
       case 'company':
         showCompanyForm = true;
-        console.log('DEV MODE: Company form should be open, showCompanyForm =', showCompanyForm);
         break;
       case 'contact':
         showContactForm = true;
-        console.log('DEV MODE: Contact form should be open, showContactForm =', showContactForm);
         break;
       case 'project':
         showProjectForm = true;
-        console.log('DEV MODE: Project form should be open, showProjectForm =', showProjectForm);
         break;
     }
   }
+
+  function handleCompanySubmit() {
+    handleFormClose();
+  }
+
+  function handleContactSubmit() {
+    handleFormClose();
+  }
+
+  function handleProjectSubmit() {
+    handleFormClose();
+  }
 </script>
 
-<div class="p-8">
-  <div class="max-w-4xl mx-auto">
-    <!-- Dev Mode Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-emittiv-white mb-2">🛠️ Development Mode</h1>
-      <p class="text-emittiv-lighter">Test forms and modals in standalone mode without z-index issues</p>
-    </div>
-    
-    <!-- Form Selection -->
-    <div class="mb-8">
-      <h2 class="text-xl font-semibold text-emittiv-white mb-4">Select Form to Test</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <!-- Company Form -->
-        <Card>
-          <div class="text-center p-6">
-            <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-emittiv-white mb-2">Company Form</h3>
-            <p class="text-sm text-emittiv-light mb-4">Test company creation and editing</p>
-            <button
-              class="w-full px-4 py-2 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded-lg transition-colors"
-              on:click|stopPropagation={() => openForm('company')}
-            >
-              Open Company Form
-            </button>
+<div class="dev-container">
+  <!-- Form Selection Cards -->
+  <section class="dev-section">
+    <h2 class="section-title">Select Form to Test</h2>
+    <div class="form-cards-grid">
+
+      <!-- Company Form Card -->
+      <button
+        class="form-card"
+        class:active={activeForm === 'company'}
+        onclick={() => openForm('company')}
+      >
+        <div class="form-card-content">
+          <div class="form-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
           </div>
-        </Card>
-        
-        <!-- Contact Form -->
-        <Card>
-          <div class="text-center p-6">
-            <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0z" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-emittiv-white mb-2">Contact Form</h3>
-            <p class="text-sm text-emittiv-light mb-4">Test contact creation and editing</p>
-            <button
-              class="w-full px-4 py-2 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded-lg transition-colors"
-              on:click|stopPropagation={() => openForm('contact')}
-            >
-              Open Contact Form
-            </button>
+          <div class="form-info">
+            <div class="form-title">Company Form</div>
+            <div class="form-desc">Create and edit companies</div>
           </div>
-        </Card>
-        
-        <!-- Project Form -->
-        <Card>
-          <div class="text-center p-6">
-            <div class="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-emittiv-white mb-2">Project Form</h3>
-            <p class="text-sm text-emittiv-light mb-4">Test project creation and editing</p>
-            <button
-              class="w-full px-4 py-2 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded-lg transition-colors"
-              on:click|stopPropagation={() => openForm('project')}
-            >
-              Open Project Form
-            </button>
-          </div>
-        </Card>
-      </div>
-    </div>
-    
-    <!-- Active Form Display -->
-    {#if showCompanyForm || showContactForm || showProjectForm}
-      <div class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-emittiv-white">Active Form: {activeForm.toUpperCase()}</h2>
-          <button
-            class="px-3 py-1 bg-emittiv-dark hover:bg-emittiv-light text-emittiv-lighter rounded"
-            on:click|stopPropagation={() => handleFormClose()}
-          >
-            Close Form
-          </button>
         </div>
-        
-        <!-- Form Container -->
-        <div class="bg-emittiv-darker border border-emittiv-dark rounded-lg p-6">
-          <div class="mb-4 p-4 bg-green-800/20 border border-green-600 rounded">
-            <h3 class="text-green-400 font-semibold mb-2">🟢 Form Debug Info</h3>
-            <p class="text-sm text-green-300">
-              • showCompanyForm: {showCompanyForm}<br/>
-              • Form should render below this section<br/>
-              • Look for Company Information fields
-            </p>
+      </button>
+
+      <!-- Contact Form Card -->
+      <button
+        class="form-card"
+        class:active={activeForm === 'contact'}
+        onclick={() => openForm('contact')}
+      >
+        <div class="form-card-content">
+          <div class="form-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
           </div>
-
-          {#if showCompanyForm}
-            <div class="border-2 border-green-500 p-6 mb-4 bg-emittiv-dark rounded-lg">
-              <h4 class="text-green-400 font-semibold mb-4">📝 Company Form - Ready for Review</h4>
-              <p class="text-green-300 text-sm mb-4">✅ Form filled with test data - Please review before submission</p>
-
-              <!-- Direct Form Fields for Testing -->
-              <form class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Company Name *</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.name}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Full company name"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Short Name *</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.name_short}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Short name"
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Abbreviation *</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.abbreviation}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="ABC"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Country *</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.country}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Search countries..."
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">City *</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.city}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Search cities..."
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Registration No.</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.reg_no}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Company registration number (optional)"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-emittiv-white mb-2">Tax/VAT No.</label>
-                  <input
-                    type="text"
-                    bind:value={companyData.tax_no}
-                    class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                    placeholder="Tax identification number (optional)"
-                  />
-                </div>
-
-                <!-- Additional Fields ---->
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Address</label>
-                    <input
-                      type="text"
-                      bind:value={companyData.address}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="Full address (optional)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      bind:value={companyData.phone}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="+971 4 123 4567"
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Email</label>
-                    <input
-                      type="email"
-                      bind:value={companyData.email}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="company@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-emittiv-white mb-2">Website</label>
-                    <input
-                      type="url"
-                      bind:value={companyData.website}
-                      class="w-full px-3 py-2 bg-emittiv-darker border border-emittiv-light rounded-md text-emittiv-white placeholder-emittiv-light focus:outline-none focus:ring-2 focus:ring-emittiv-splash"
-                      placeholder="www.company.com"
-                    />
-                  </div>
-                </div>
-
-                <!-- Form Actions -->
-                <div class="flex justify-between pt-4 border-t border-emittiv-light">
-                  <button
-                    type="button"
-                    class="px-4 py-2 bg-emittiv-dark hover:bg-emittiv-light text-emittiv-lighter rounded-lg transition-colors"
-                    on:click|stopPropagation={() => handleFormClose()}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    class="px-6 py-2 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded-lg transition-colors font-semibold"
-                    on:click|stopPropagation|preventDefault={() => handleFormSubmit(event)}
-                  >
-                    Create Company
-                  </button>
-                </div>
-              </form>
-            </div>
-          {:else}
-            <div class="p-4 bg-gray-800 border border-gray-600 rounded">
-              <p class="text-gray-400">Form not open (showCompanyForm = false)</p>
-            </div>
-          {/if}
-          
-          {#if showContactForm}
-            <ContactModal 
-              isOpen={true}
-              onSubmit={handleFormSubmit}
-              onClose={handleFormClose}
-              mode="create"
-              contact={null}
-            />
-          {/if}
-          
-          {#if showProjectForm}
-            <NewProjectModal 
-              isOpen={true}
-              onSubmit={handleFormSubmit}
-              onClose={handleFormClose}
-              mode="create"
-            />
-          {/if}
+          <div class="form-info">
+            <div class="form-title">Contact Form</div>
+            <div class="form-desc">Create and edit contacts</div>
+          </div>
         </div>
-      </div>
-    {/if}
-    
-    <!-- Development Notes -->
-    <div class="mt-8 p-4 bg-emittiv-darker border border-emittiv-dark rounded-lg">
-      <h3 class="text-lg font-medium text-emittiv-white mb-2">🔧 Development Notes</h3>
-      <ul class="text-sm text-emittiv-light space-y-1">
-        <li>• Forms are rendered inline without modal overlays for easier testing</li>
-        <li>• All form submissions are logged to console and show alerts</li>
-        <li>• Forms use real store actions for database operations</li>
-        <li>• Create test data with "DELETE ME" prefixes for easy cleanup</li>
-        <li>• Close dev server when testing is complete</li>
+      </button>
+
+      <!-- Project Form Card -->
+      <button
+        class="form-card"
+        class:active={activeForm === 'project'}
+        onclick={() => openForm('project')}
+      >
+        <div class="form-card-content">
+          <div class="form-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div class="form-info">
+            <div class="form-title">Project Form</div>
+            <div class="form-desc">Create and edit projects</div>
+          </div>
+        </div>
+      </button>
+    </div>
+  </section>
+
+  <!-- Instructions Panel -->
+  <section class="dev-section">
+    <div class="info-panel">
+      <h3 class="info-title">Testing Guidelines</h3>
+      <ul class="info-list">
+        <li>Click a card above to open the corresponding modal</li>
+        <li>Use "DELETE ME" prefix for test data names</li>
+        <li>Forms connect to the live database</li>
+        <li>Press Escape or click outside to close modals</li>
       </ul>
     </div>
-  </div>
+  </section>
 </div>
 
+<!-- Modals rendered at root level for proper z-index -->
+<CompanyModal
+  isOpen={showCompanyForm}
+  mode="create"
+  company={null}
+  on:close={handleFormClose}
+  on:save={handleCompanySubmit}
+/>
+
+<ContactModal
+  isOpen={showContactForm}
+  mode="create"
+  contact={null}
+  on:close={handleFormClose}
+  on:save={handleContactSubmit}
+/>
+
+<NewProjectModal
+  isOpen={showProjectForm}
+  mode="create"
+  on:close={handleFormClose}
+  on:save={handleProjectSubmit}
+/>
+
 <style>
-  /* Ensure forms render properly in dev mode */
-  :global(.modal-content) {
-    position: relative !important;
-    transform: none !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    box-shadow: none !important;
+  .dev-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
   }
-  
-  :global(.modal-overlay) {
-    position: relative !important;
-    background: transparent !important;
-    padding: 0 !important;
+
+  .dev-section {
+    margin-bottom: 32px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--emittiv-lighter);
+    margin-bottom: 16px;
+  }
+
+  .form-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .form-card {
+    background: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-align: left;
+    min-height: 88px;
+  }
+
+  .form-card:hover {
+    border-color: var(--emittiv-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 153, 0, 0.1);
+  }
+
+  .form-card:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+  }
+
+  .form-card.active {
+    border-color: var(--emittiv-splash);
+    background: rgba(255, 153, 0, 0.05);
+  }
+
+  .form-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .form-icon {
+    width: 48px;
+    height: 48px;
+    padding: 12px;
+    background: rgba(255, 153, 0, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .form-icon svg {
+    width: 24px;
+    height: 24px;
+    color: var(--emittiv-splash);
+  }
+
+  .form-info {
+    flex: 1;
+  }
+
+  .form-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--emittiv-white);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .form-desc {
+    font-size: 14px;
+    color: var(--emittiv-lighter);
+    line-height: 1.2;
+  }
+
+  .info-panel {
+    background: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .info-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--emittiv-white);
+    margin-bottom: 12px;
+  }
+
+  .info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .info-list li {
+    font-size: 14px;
+    color: var(--emittiv-light);
+    padding: 4px 0;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .info-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--emittiv-splash);
+    border-radius: 50%;
+  }
+
+  @media (max-width: 768px) {
+    .dev-container {
+      padding: 16px;
+    }
+
+    .form-cards-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
   }
 </style>

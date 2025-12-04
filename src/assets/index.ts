@@ -6,7 +6,7 @@ export { default as logoWhite } from './images/logo-white.svg?url';
 
 // Alias exports for easier usage
 export { default as logo } from './images/logo-white.svg?url'; // Default logo (white)
-export { default as logoDark } from './images/logo-grey.svg?url'; // For light backgrounds  
+export { default as logoDark } from './images/logo-grey.svg?url'; // For light backgrounds
 export { default as logoLight } from './images/logo-white.svg?url'; // For dark backgrounds
 
 // Direct SVG imports for inline usage

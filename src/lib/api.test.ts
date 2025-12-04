@@ -1,6 +1,6 @@
 /**
  * API Client Tests
- * 
+ *
  * Comprehensive test suite for the ApiClient class covering all database operations,
  * connection management, and file system interactions.
  */
@@ -201,7 +201,7 @@ describe('ApiClient', () => {
 
       it('should return empty array for empty query', async () => {
         mockInvoke.mockResolvedValueOnce([]);
-        
+
         const result = await ApiClient.searchProjects('');
 
         expect(result).toEqual([]);
@@ -212,10 +212,7 @@ describe('ApiClient', () => {
         mockInvoke.mockRejectedValueOnce(new Error('Search failed'));
 
         await expect(ApiClient.searchProjects('test')).rejects.toThrow('Search failed');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to search projects:',
-          expect.any(Error)
-        );
+        expect(console.error).toHaveBeenCalledWith('Failed to search projects:', expect.any(Error));
       });
     });
 
@@ -243,14 +240,16 @@ describe('ApiClient', () => {
         const result = await ApiClient.createProject(newProject);
 
         expect(result).toEqual(createdProject);
-        expect(mockInvoke).toHaveBeenCalledWith('create_project', { project: {
-          ...newProject,
-          id: null,
-          time: {
-            created_at: expect.any(String),
-            updated_at: expect.any(String)
+        expect(mockInvoke).toHaveBeenCalledWith('create_project', {
+          project: {
+            ...newProject,
+            id: null,
+            time: {
+              created_at: expect.any(String),
+              updated_at: expect.any(String)
+            }
           }
-        }});
+        });
       });
 
       it('should handle creation failures', async () => {
@@ -259,10 +258,7 @@ describe('ApiClient', () => {
         const result = await ApiClient.createProject(newProject);
 
         expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to create project:',
-          expect.any(Error)
-        );
+        expect(console.error).toHaveBeenCalledWith('Failed to create project:', expect.any(Error));
       });
 
       it('should validate required fields', async () => {
@@ -272,10 +268,7 @@ describe('ApiClient', () => {
         const result = await ApiClient.createProject(invalidProject);
 
         expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to create project:',
-          expect.any(Error)
-        );
+        expect(console.error).toHaveBeenCalledWith('Failed to create project:', expect.any(Error));
       });
     });
   });
@@ -319,15 +312,17 @@ describe('ApiClient', () => {
         const result = await ApiClient.createCompany(newCompany);
 
         expect(result).toEqual(createdCompany);
-        expect(mockInvoke).toHaveBeenCalledWith('create_company', { company: {
-          name: 'New Company',
-          name_short: 'New Co',
-          abbreviation: 'NEW',
-          city: 'Dubai',
-          country: 'U.A.E.',
-          reg_no: null,
-          tax_no: null
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_company', {
+          company: {
+            name: 'New Company',
+            name_short: 'New Co',
+            abbreviation: 'NEW',
+            city: 'Dubai',
+            country: 'U.A.E.',
+            reg_no: null,
+            tax_no: null
+          }
+        });
       });
 
       it('should handle duplicate abbreviation errors', async () => {
@@ -336,10 +331,7 @@ describe('ApiClient', () => {
         const result = await ApiClient.createCompany(newCompany);
 
         expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to create company:',
-          expect.any(Error)
-        );
+        expect(console.error).toHaveBeenCalledWith('Failed to create company:', expect.any(Error));
       });
     });
 
@@ -370,11 +362,10 @@ describe('ApiClient', () => {
       it('should handle non-existent company', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Company not found'));
 
-        await expect(ApiClient.updateCompany('company:NONEXISTENT', companyUpdate)).rejects.toThrow('Company not found');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to update company:',
-          expect.any(Error)
+        await expect(ApiClient.updateCompany('company:NONEXISTENT', companyUpdate)).rejects.toThrow(
+          'Company not found'
         );
+        expect(console.error).toHaveBeenCalledWith('Failed to update company:', expect.any(Error));
       });
     });
 
@@ -391,11 +382,10 @@ describe('ApiClient', () => {
       it('should handle deletion errors', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Company has related records'));
 
-        await expect(ApiClient.deleteCompany('company:TEST')).rejects.toThrow('Company has related records');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to delete company:',
-          expect.any(Error)
+        await expect(ApiClient.deleteCompany('company:TEST')).rejects.toThrow(
+          'Company has related records'
         );
+        expect(console.error).toHaveBeenCalledWith('Failed to delete company:', expect.any(Error));
       });
     });
   });
@@ -443,15 +433,17 @@ describe('ApiClient', () => {
         const result = await ApiClient.createContact(newContact);
 
         expect(result).toEqual(createdContact);
-        expect(mockInvoke).toHaveBeenCalledWith('create_contact', { contact: {
-          first_name: 'Jane',
-          last_name: 'Smith',
-          email: 'jane.smith@example.com',
-          phone: '+971507654321',
-          position: 'Director',
-          company: 'company:TEST',
-          id: null
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_contact', {
+          contact: {
+            first_name: 'Jane',
+            last_name: 'Smith',
+            email: 'jane.smith@example.com',
+            phone: '+971507654321',
+            position: 'Director',
+            company: 'company:TEST',
+            id: null
+          }
+        });
       });
 
       it('should handle email validation errors', async () => {
@@ -538,24 +530,26 @@ describe('ApiClient', () => {
         const result = await ApiClient.createFee(newFee);
 
         expect(result).toEqual(createdFee);
-        expect(mockInvoke).toHaveBeenCalledWith('create_fee', { fee: {
-          name: 'New Fee Proposal',
-          number: '25-97103-R1',
-          rev: undefined,
-          status: 'Draft',
-          issue_date: '250816',
-          activity: undefined,
-          package: undefined,
-          staff_name: undefined,
-          staff_email: undefined,
-          staff_phone: undefined,
-          staff_position: undefined,
-          strap_line: undefined,
-          project_id: 'test_project', // cleaned ID
-          company_id: 'TEST', // cleaned ID  
-          contact_id: 'test_contact', // cleaned ID
-          revisions: []
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_fee', {
+          fee: {
+            name: 'New Fee Proposal',
+            number: '25-97103-R1',
+            rev: undefined,
+            status: 'Draft',
+            issue_date: '250816',
+            activity: undefined,
+            package: undefined,
+            staff_name: undefined,
+            staff_email: undefined,
+            staff_phone: undefined,
+            staff_position: undefined,
+            strap_line: undefined,
+            project_id: 'test_project', // cleaned ID
+            company_id: 'TEST', // cleaned ID
+            contact_id: 'test_contact', // cleaned ID
+            revisions: []
+          }
+        });
       });
 
       it('should handle foreign key constraint errors', async () => {
@@ -719,11 +713,9 @@ describe('ApiClient', () => {
         .mockResolvedValueOnce([mockContact]);
 
       // Promise.all rejects if any promise rejects, so we expect the whole operation to throw
-      await expect(Promise.all([
-        ApiClient.getProjects(),
-        ApiClient.getCompanies(),
-        ApiClient.getContacts()
-      ])).rejects.toThrow('Database error');
+      await expect(
+        Promise.all([ApiClient.getProjects(), ApiClient.getCompanies(), ApiClient.getContacts()])
+      ).rejects.toThrow('Database error');
     });
   });
 });

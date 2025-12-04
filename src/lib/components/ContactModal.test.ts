@@ -1,6 +1,6 @@
 /**
  * ContactModal Component Tests
- * 
+ *
  * Tests for the Contact modal component including CRUD operations,
  * form validation, company typeahead search, and user interactions.
  */
@@ -44,25 +44,25 @@ vi.mock('$lib/utils/validation', () => ({
     alphanumeric: /^[a-zA-Z0-9]+$/,
     numeric: /^\d+$/,
     projectNumber: /^\d{2}-\d{3}\d{2}$/,
-    dateYYMMDD: /^\d{6}$/,
+    dateYYMMDD: /^\d{6}$/
   },
   CommonValidationRules: {
     company: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
       email: { field: 'email', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ }
     },
     contact: {
       firstName: { field: 'first_name', required: true, minLength: 1, maxLength: 50 },
       lastName: { field: 'last_name', required: true, minLength: 1, maxLength: 50 },
       email: { field: 'email', required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ }
     },
     project: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
       nameShort: { field: 'name_short', required: true, minLength: 1, maxLength: 50 },
       city: { field: 'city', required: true, minLength: 1, maxLength: 50 },
-      country: { field: 'country', required: true, minLength: 1, maxLength: 50 },
+      country: { field: 'country', required: true, minLength: 1, maxLength: 50 }
     },
     fee: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
@@ -70,8 +70,8 @@ vi.mock('$lib/utils/validation', () => ({
       issueDate: { field: 'issue_date', required: true, pattern: /^\d{6}$/ },
       projectId: { field: 'project_id', required: true },
       companyId: { field: 'company_id', required: true },
-      contactId: { field: 'contact_id', required: true },
-    },
+      contactId: { field: 'contact_id', required: true }
+    }
   }
 }));
 
@@ -133,7 +133,7 @@ describe('ContactModal Component', () => {
   };
 
   const mockOperationState = {
-    subscribe: vi.fn((callback) => {
+    subscribe: vi.fn(callback => {
       callback({ saving: false, deleting: false, error: null, message: null });
       return { unsubscribe: vi.fn() };
     })
@@ -147,17 +147,17 @@ describe('ContactModal Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mocks
-    vi.mocked(companiesStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(companiesStore.subscribe).mockImplementation(callback => {
       callback(mockCompanies);
       return { unsubscribe: vi.fn() };
     });
-    
+
     vi.mocked(validateForm).mockReturnValue({});
     vi.mocked(hasValidationErrors).mockReturnValue(false);
     vi.mocked(extractSurrealId).mockReturnValue('test123');
-    vi.mocked(withLoadingState).mockImplementation(async (fn) => await fn());
+    vi.mocked(withLoadingState).mockImplementation(async fn => await fn());
     vi.mocked(useOperationState).mockReturnValue({
       store: mockOperationState,
       actions: mockOperationActions
@@ -199,7 +199,7 @@ describe('ContactModal Component', () => {
       expect(screen.getByText('Email')).toBeInTheDocument();
       expect(screen.getByText('Phone')).toBeInTheDocument();
       expect(screen.getByText('Position')).toBeInTheDocument();
-      
+
       // Company field exists as typeahead
       expect(screen.getByPlaceholderText('Search companies...')).toBeInTheDocument();
     });
@@ -230,7 +230,7 @@ describe('ContactModal Component', () => {
 
     it('should handle company typeahead search', () => {
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       // Company typeahead input exists
       const companyInput = screen.getByPlaceholderText('Search companies...');
       expect(companyInput).toBeInTheDocument();
@@ -239,17 +239,17 @@ describe('ContactModal Component', () => {
     it('should show company options during search', async () => {
       const user = userEvent.setup();
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       const companyInput = screen.getByPlaceholderText('Search companies...');
       await user.type(companyInput, 'emitt');
-      
+
       // Should show filtered company options
       expect(screen.getByText('Emittiv Engineering Consultants')).toBeInTheDocument();
     });
 
     it('should show add company button', () => {
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       // Note: CrudModal form fields may not render in test environment
       // Modal opening is verified, form functionality tested elsewhere
       expect(screen.getAllByRole('button', { name: 'Close modal' })).toHaveLength(2);
@@ -267,9 +267,9 @@ describe('ContactModal Component', () => {
 
     it('should update existing contact', async () => {
       const user = userEvent.setup();
-      
+
       vi.mocked(contactsActions.update).mockResolvedValue(mockContact);
-      
+
       render(ContactModal, {
         isOpen: true,
         mode: 'edit',
@@ -284,7 +284,7 @@ describe('ContactModal Component', () => {
 
     it('should show delete confirmation', async () => {
       const user = userEvent.setup();
-      
+
       render(ContactModal, {
         isOpen: true,
         mode: 'edit',
@@ -300,9 +300,9 @@ describe('ContactModal Component', () => {
 
     it('should delete contact after confirmation', async () => {
       const user = userEvent.setup();
-      
+
       vi.mocked(contactsActions.delete).mockResolvedValue(true);
-      
+
       render(ContactModal, {
         isOpen: true,
         mode: 'edit',
@@ -344,7 +344,7 @@ describe('ContactModal Component', () => {
 
     it('should show loading spinner during save', () => {
       const loadingState = {
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn(callback => {
           callback({ saving: true, deleting: false, error: null, message: null });
           return { unsubscribe: vi.fn() };
         })
@@ -359,7 +359,7 @@ describe('ContactModal Component', () => {
 
       const createButton = screen.getByRole('button', { name: 'Create' });
       expect(createButton).toBeDisabled();
-      
+
       // Loading spinner should be present (div with animate-spin)
       const spinner = createButton.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
@@ -369,8 +369,13 @@ describe('ContactModal Component', () => {
   describe('Error and Message Display', () => {
     it('should display error messages', () => {
       const errorState = {
-        subscribe: vi.fn((callback) => {
-          callback({ saving: false, deleting: false, error: 'Something went wrong', message: null });
+        subscribe: vi.fn(callback => {
+          callback({
+            saving: false,
+            deleting: false,
+            error: 'Something went wrong',
+            message: null
+          });
           return { unsubscribe: vi.fn() };
         })
       };
@@ -387,8 +392,13 @@ describe('ContactModal Component', () => {
 
     it('should display success messages', () => {
       const messageState = {
-        subscribe: vi.fn((callback) => {
-          callback({ saving: false, deleting: false, error: null, message: 'Contact created successfully' });
+        subscribe: vi.fn(callback => {
+          callback({
+            saving: false,
+            deleting: false,
+            error: null,
+            message: 'Contact created successfully'
+          });
           return { unsubscribe: vi.fn() };
         })
       };
@@ -408,10 +418,10 @@ describe('ContactModal Component', () => {
     it('should filter companies based on search text', async () => {
       const user = userEvent.setup();
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       const companyInput = screen.getByPlaceholderText('Search companies...');
       await user.type(companyInput, 'arabian');
-      
+
       // Should show only matching companies
       expect(screen.getByText('Arabian Engineering Corporation')).toBeInTheDocument();
       expect(screen.queryByText('Emittiv Engineering Consultants')).not.toBeInTheDocument();
@@ -420,14 +430,14 @@ describe('ContactModal Component', () => {
     it('should select company from typeahead', async () => {
       const user = userEvent.setup();
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       const companyInput = screen.getByPlaceholderText('Search companies...');
       await user.type(companyInput, 'emitt');
-      
+
       // Click on company option
       const companyOption = screen.getByText('Emittiv Engineering Consultants');
       await user.click(companyOption);
-      
+
       // Selection behavior varies in test environment
       // In real usage, this would update the form state
       expect(companyInput).toBeInTheDocument();
@@ -436,10 +446,10 @@ describe('ContactModal Component', () => {
     it('should show empty state when no companies match', async () => {
       const user = userEvent.setup();
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       const companyInput = screen.getByPlaceholderText('Search companies...');
       await user.type(companyInput, 'nonexistent');
-      
+
       // Should show no results
       expect(screen.queryByText('Emittiv Engineering Consultants')).not.toBeInTheDocument();
       expect(screen.queryByText('Arabian Engineering Corporation')).not.toBeInTheDocument();
@@ -449,22 +459,22 @@ describe('ContactModal Component', () => {
   describe('Modal Interactions', () => {
     it('should render cancel button for modal close', async () => {
       const user = userEvent.setup();
-      
+
       render(ContactModal, { isOpen: true, mode: 'create' });
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       expect(cancelButton).toBeInTheDocument();
-      
+
       // Test clicking cancel button
       await user.click(cancelButton);
-      
+
       // Button should be clickable (this tests the functionality without $on)
       expect(cancelButton).toBeInTheDocument();
     });
 
     it('should have operation state utilities available', () => {
       render(ContactModal, { isOpen: true, mode: 'create' });
-      
+
       // Component has access to operation actions from useOperationState
       expect(useOperationState).toHaveBeenCalled();
     });

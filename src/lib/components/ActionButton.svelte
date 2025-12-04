@@ -1,19 +1,19 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let type: 'edit' | 'view' | 'delete' | 'email' | 'phone' | 'custom' = 'custom';
   export let href: string = '';
   export let ariaLabel: string = '';
   export let size: number = 16;
   export let customIcon: string = '';
-  
+
   function handleClick(event: MouseEvent) {
     event.stopPropagation();
     dispatch('click');
   }
-  
+
   function getIcon(type: string): string {
     switch (type) {
       case 'edit':
@@ -33,22 +33,32 @@
 </script>
 
 {#if href}
-  <a 
+  <a
     {href}
     class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
     aria-label={ariaLabel}
   >
-    <svg style="width: {size}px; height: {size}px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      style="width: {size}px; height: {size}px;"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getIcon(type)} />
     </svg>
   </a>
 {:else}
-  <button 
+  <button
     on:click={handleClick}
     class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
     aria-label={ariaLabel}
   >
-    <svg style="width: {size}px; height: {size}px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      style="width: {size}px; height: {size}px;"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getIcon(type)} />
     </svg>
   </button>
