@@ -1,0 +1,76 @@
+#!/usr/bin/env sh
+
+# Pre-commit hook to prevent accidentally committing empty or corrupted component files
+# This was added after ProjectCard.svelte was accidentally wiped during v0.10.19
+
+echo "🔍 Running pre-commit checks..."
+
+# Minimum line count for Svelte components (empty component = corrupted)
+MIN_COMPONENT_LINES=10
+
+# Check all staged .svelte files in src/lib/components/
+FAILED=0
+
+for file in $(git diff --cached --name-only --diff-filter=ACM | grep -E '^src/lib/components/.*\.svelte$'); do
+    if [ -f "$file" ]; then
+        LINE_COUNT=$(wc -l < "$file" | tr -d ' ')
+
+        if [ "$LINE_COUNT" -lt "$MIN_COMPONENT_LINES" ]; then
+            echo ""
+            echo "❌ ERROR: Component file appears to be empty or corrupted!"
+            echo "   File: $file"
+            echo "   Lines: $LINE_COUNT (minimum: $MIN_COMPONENT_LINES)"
+            echo ""
+            echo "   This could indicate the file was accidentally wiped."
+            echo "   Please verify the file contents before committing."
+            echo ""
+            echo "   To bypass this check (if intentional), use:"
+            echo "   git commit --no-verify"
+            echo ""
+            FAILED=1
+        fi
+    fi
+done
+
+# Also check for components that became significantly smaller
+for file in $(git diff --cached --name-only --diff-filter=M | grep -E '^src/lib/components/.*\.svelte$'); do
+    if [ -f "$file" ]; then
+        # Get the line count in staged version
+        STAGED_LINES=$(git show ":$file" 2>/dev/null | wc -l | tr -d ' ')
+        # Get the line count in HEAD
+        HEAD_LINES=$(git show "HEAD:$file" 2>/dev/null | wc -l | tr -d ' ')
+
+        if [ -n "$HEAD_LINES" ] && [ "$HEAD_LINES" -gt 0 ]; then
+            # Calculate percentage reduction
+            if [ "$STAGED_LINES" -lt "$MIN_COMPONENT_LINES" ]; then
+                echo ""
+                echo "❌ ERROR: Component file size reduced dramatically!"
+                echo "   File: $file"
+                echo "   Previous lines: $HEAD_LINES"
+                echo "   New lines: $STAGED_LINES"
+                echo ""
+                echo "   This could indicate the file was accidentally wiped."
+                echo "   Please verify the file contents before committing."
+                echo ""
+                FAILED=1
+            elif [ "$STAGED_LINES" -lt $((HEAD_LINES / 2)) ]; then
+                echo ""
+                echo "⚠️  WARNING: Component file size reduced by more than 50%!"
+                echo "   File: $file"
+                echo "   Previous lines: $HEAD_LINES"
+                echo "   New lines: $STAGED_LINES"
+                echo ""
+                echo "   Please verify this change is intentional."
+                echo ""
+            fi
+        fi
+    fi
+done
+
+if [ "$FAILED" -eq 1 ]; then
+    echo "❌ Pre-commit check failed. Please fix the issues above."
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0
