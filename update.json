@@ -1,19 +1,19 @@
 {
-  "version": "0.10.18",
-  "notes": "Release v0.10.18",
-  "pub_date": "2025-12-03T13:32:27Z",
+  "version": "0.10.19",
+  "notes": "Release v0.10.19",
+  "pub_date": "2025-12-04T12:32:27Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3VQWXhWZ1hzOU0wRXE3dVpVOFdmOUFXZmhyWFQ0c1llQ09QaEx5V0U2emhGSms1a3hHRnFldEl3QnpPUkVWVTVUSDdFalEzcE5qdmtKWnRPV1BSRFFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzY4MzgwCWZpbGU6ZS1mZWVzLmFwcC50YXIuZ3oKYVVEV3ZaTUI0cEdCSFY5TVdRaGZOaGk5MzZFTXF3eTdtV3NVcmhLQkVqUzV5clNBOTRUNHFKMWYydHlZdENtQ2Nya1ZlMzdmU29waDNDb0hOMFovQVE9PQo=",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.18/E-Fees_0.10.18_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2xZUllTamVtQWpuWjB0RC9aRWRDTk5lU0VQTkVOK0RDR01NNEJvc1ZjOHEyRVd6aVdsNnRFeHQ0ZlZuVzVTRUwzRHdZTFZVdGR2VjFqQUxra3pVb2dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0ODUxMTMwCWZpbGU6ZS1mZWVzLmFwcC50YXIuZ3oKMnZJcVI4d2NZcEpNMHFwSERqWEMvcFd0aklyaXZkdkxEdm1BVENLK25tWGI3QzErMERrd3g5Z3hseDFiTTVWcmpsckZLNVY0Y0lLZlg0djMyVGcyQ2c9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.19/E-Fees_0.10.19_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3RPZ1RDaGxkbnVKOXdWWUx5dTlzTlNDdk9yTENTb21qWDN0MVRkQk9jU1RJY3F0UlZVVGc3ZVVNcFB3TVJMZ21EM3hKM1ViMkJ0eGdLMVMzSXZQSlE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzY4NTU3CWZpbGU6ZS1mZWVzLmFwcC50YXIuZ3oKYjc4eDdrZUU1Z3p4aU96UkZOM2hvSlNaU1lMcVo5UytWYnFTaElpYnYwbTlyNENqa09oQ0dKdUkxN0FydXIzRVhBcENQTGk5UDZKS0FaMXpNRlE0Qmc9PQo=",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.18/E-Fees_0.10.18_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd21nVVc3VlRESVFteGFFQjlpZGpCQW5CY1NVU2JIc21WWWtSYzFGOFVjRUdnSjVXV1VVTXREMVJ6QUNOTFZKTnE3cWpMbWdoQWpwblpsckdMVkwxVXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0ODUxMTE5CWZpbGU6ZS1mZWVzLmFwcC50YXIuZ3oKN2xWL3FYaElIaXF4YjFrL1hvOVlNckp5Nzl5QVRvaEt5OVZ3bWNhSGo0dWNIaUJQS1BSVzRTVS9sa2J2REIxYlNLR003VUE2dDNiRkFpc3dOQWk1Q1E9PQo=",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.19/E-Fees_0.10.19_x64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd252c0xBeDQ4ZUc0cHRoREFkeFdIYktseUcyNjFVVkluOTJCc0dQS29TQWdDZVR0VVpabFZ1OFhqdXZIV3JTMGRpKzFKWmtUZVZidHNmbzFsMDN0OXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzY4NzE4CWZpbGU6ZS1mZWVzXzAuMTAuMThfeDY0LXNldHVwLmV4ZQpLYm9rK1QxVGR1Rk9IRDhFeWdhLzVDclJ5ZktoUERxNW9UYVdYRnU2SEg2d1lBTHEyRFIwMG9HVTJVRHluM3hCUW1hNm9DQVVCaTN2dUwwOG9jMVdEdz09Cg==",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.18/E-Fees_0.10.18_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3VMSXZOQzVyK0NrM21DU3hTSTN3dEF3R1hYaForNC9TV1h6LzFLc3FUejhGc1NvbDhVa2o0R04xMzJmczJXRmRlaCtRQmZGVVdaVXhWU2grKzl6c1FrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0ODUxNTIxCWZpbGU6ZS1mZWVzXzAuMTAuMTlfeDY0LXNldHVwLmV4ZQpYamFlWkVzVjZ1TjdBTDdXT1Q3Qk14akpNY1Fjc1pFYjNlVWFxblR6Z0xPZmlYNFpRUkVCOWt4cTdvN290cmdDYlNGL3N2bkQrUTZDMzRIZHo4VzNCdz09Cg==",
+      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.19/E-Fees_0.10.19_x64-setup.exe"
     }
   }
 }
