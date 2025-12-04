@@ -10,6 +10,7 @@
   import { extractSurrealId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
   import { get } from 'svelte/store';
+  import { PROPOSAL_STATUS_OPTIONS_TYPEAHEAD } from '$lib/constants';
   import CrudModal from './base/CrudModal.svelte';
   import type { Fee } from '$lib/../types';
   import type { FormFieldConfig } from './base/types';
@@ -20,18 +21,6 @@
   export let proposal: Fee | null = null;
   export let mode: 'create' | 'edit' = 'create';
 
-  // Status options
-  const statusOptions = [
-    { id: 'Draft', name: 'Draft' },
-    { id: 'Sent', name: 'Sent' },
-    { id: 'Negotiation', name: 'Negotiation' },
-    { id: 'Awarded', name: 'Awarded' },
-    { id: 'Completed', name: 'Completed' },
-    { id: 'Lost', name: 'Lost' },
-    { id: 'Cancelled', name: 'Cancelled' },
-    { id: 'On Hold', name: 'On Hold' },
-    { id: 'Revised', name: 'Revised' }
-  ];
 
   // Form field configuration
   const fields: FormFieldConfig[] = [
@@ -69,7 +58,7 @@
           type: 'select',
           name: 'status',
           label: 'Status',
-          options: statusOptions,
+          options: PROPOSAL_STATUS_OPTIONS_TYPEAHEAD,
           required: true,
           colSpan: 1
         },

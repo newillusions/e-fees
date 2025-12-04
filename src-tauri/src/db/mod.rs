@@ -162,7 +162,7 @@ impl DatabaseConfig {
     pub fn from_env() -> Result<Self, String> {
         let url = env::var("SURREALDB_URL")
             .map_err(|_| "SURREALDB_URL environment variable is required but not set".to_string())?;
-        
+
         // Parse TLS verification settings from environment
         let verify_certificates = env::var("SURREALDB_VERIFY_CERTS")
             .map(|v| v.parse().unwrap_or(true))
@@ -219,7 +219,7 @@ impl DatabaseConfig {
         let url = settings.surrealdb_url.as_ref()
             .ok_or("SurrealDB URL not configured in settings".to_string())?
             .clone();
-        
+
         let namespace = settings.surrealdb_ns.as_ref()
             .ok_or("SurrealDB namespace not configured in settings".to_string())?
             .clone();

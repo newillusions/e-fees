@@ -18,8 +18,8 @@ export interface ProjectFolderInfo {
  * Get current location of a project folder
  */
 export async function getProjectFolderLocation(projectNumber: string): Promise<ProjectFolderInfo> {
-  return await invoke('get_project_folder_location', { 
-    projectNumber 
+  return await invoke('get_project_folder_location', {
+    projectNumber
   });
 }
 
@@ -27,12 +27,12 @@ export async function getProjectFolderLocation(projectNumber: string): Promise<P
  * Move a project folder to a new status location
  */
 export async function moveProjectFolder(
-  projectNumber: string, 
+  projectNumber: string,
   newStatus: string
 ): Promise<FolderOperationResult> {
-  return await invoke('move_project_folder', { 
-    projectNumber, 
-    newStatus 
+  return await invoke('move_project_folder', {
+    projectNumber,
+    newStatus
   });
 }
 
@@ -40,12 +40,13 @@ export async function moveProjectFolder(
  * Move project from RFP folder to current, archive, or inactive
  */
 export async function moveProjectFromRfp(
-  projectNumber: string, 
+  projectNumber: string,
   destination: 'current' | 'archive' | 'inactive'
 ): Promise<FolderOperationResult> {
-  return await invoke('move_project_from_rfp', { // backend command name kept for compatibility 
-    projectNumber, 
-    destination 
+  return await invoke('move_project_from_rfp', {
+    // backend command name kept for compatibility
+    projectNumber,
+    destination
   });
 }
 
@@ -53,8 +54,8 @@ export async function moveProjectFromRfp(
  * Move project from current to archive (completed projects)
  */
 export async function moveProjectToArchive(projectNumber: string): Promise<FolderOperationResult> {
-  return await invoke('move_project_to_archive', { 
-    projectNumber 
+  return await invoke('move_project_to_archive', {
+    projectNumber
   });
 }
 
@@ -62,8 +63,8 @@ export async function moveProjectToArchive(projectNumber: string): Promise<Folde
  * List all project folders in a specific status directory
  */
 export async function listProjectsInFolder(folderPath: string): Promise<string[]> {
-  return await invoke('list_projects_in_folder', { 
-    folderPath 
+  return await invoke('list_projects_in_folder', {
+    folderPath
   });
 }
 
@@ -76,24 +77,24 @@ export async function validateProjectBasePath(): Promise<string> {
 
 // Status to folder mapping for UI displays
 export const statusToFolder: Record<string, string> = {
-  'rfp': '01 RFPs', // Status "rfp" kept for existing data compatibility
-  'proposal': '01 RFPs', 
-  'submitted': '01 RFPs',
-  'active': '11 Current',
-  'current': '11 Current',
-  'awarded': '11 Current',
-  'ongoing': '11 Current',
-  'completed': '99 Completed',
-  'finished': '99 Completed',
-  'delivered': '99 Completed',
-  'cancelled': '00 Inactive',
-  'inactive': '00 Inactive',
-  'lost': '00 Inactive'
+  rfp: '01 RFPs', // Status "rfp" kept for existing data compatibility
+  proposal: '01 RFPs',
+  submitted: '01 RFPs',
+  active: '11 Current',
+  current: '11 Current',
+  awarded: '11 Current',
+  ongoing: '11 Current',
+  completed: '99 Completed',
+  finished: '99 Completed',
+  delivered: '99 Completed',
+  cancelled: '00 Inactive',
+  inactive: '00 Inactive',
+  lost: '00 Inactive'
 };
 
 export const folderToStatus: Record<string, string> = {
   '01 RFPs': 'rfp', // Folder maps to "rfp" status for compatibility
-  '11 Current': 'active', 
+  '11 Current': 'active',
   '99 Completed': 'completed',
   '00 Inactive': 'cancelled'
 };

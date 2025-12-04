@@ -19,6 +19,7 @@
   export let isOpen = false;
   export let company: Company | null = null;
   export let mode: 'create' | 'edit' = 'create';
+  export let zIndex = 100; // Base z-index, can be increased for nested modals
 
   // Form field configuration
   const fields: FormFieldConfig[] = [
@@ -124,7 +125,7 @@
   // Save handler
   async function handleSave(formData: any) {
     const timestamp = new Date().toISOString();
-    
+
     if (mode === 'create') {
       const companyData = {
         ...formData,
@@ -139,7 +140,7 @@
       if (!companyId) {
         throw new Error('Invalid company ID');
       }
-      
+
       const companyData = {
         ...formData,
         time: {
@@ -177,12 +178,10 @@
   onDelete={mode === 'edit' ? handleDelete : null}
   maxWidth="500px"
   customClass="company-modal"
+  {zIndex}
   on:close={handleClose}
 />
 
 <style>
-  /* Ensure CompanyModal appears above DetailPanel (z-50) */
-  :global(.company-modal) {
-    z-index: 65 !important;
-  }
+  /* z-index is now handled via the zIndex prop passed to CrudModal/BaseModal */
 </style>

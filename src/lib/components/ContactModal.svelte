@@ -20,6 +20,7 @@
   export let isOpen = false;
   export let contact: Contact | null = null;
   export let mode: 'create' | 'edit' = 'create';
+  export let zIndex = 100; // Base z-index, can be increased for nested modals
 
   // Company modal state
   let showCompanyModal = false;
@@ -97,11 +98,11 @@
     displayFields: ['name'],
     onSearch: async (searchText: string) => {
       if (!searchText || searchText.length < 1) return [];
-      
+
       try {
         const searchLower = searchText.toLowerCase();
         const companies = get(companiesStore);
-        
+
         return companies
           .filter(company => {
             const nameMatch = company.name?.toLowerCase().includes(searchLower);
@@ -141,7 +142,7 @@
   async function handleSave(formData: any) {
     const timestamp = new Date().toISOString();
     const fullName = `${formData.first_name} ${formData.last_name}`.trim();
-    
+
     if (mode === 'create') {
       const contactData = {
         ...formData,
@@ -153,11 +154,12 @@
       };
       await contactsActions.create(contactData);
     } else if (contact) {
-      const contactId = extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      const contactId =
+        extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
       if (!contactId) {
         throw new Error('Invalid contact ID');
       }
-      
+
       const contactData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -206,19 +208,13 @@
   onDelete={mode === 'edit' ? handleDelete : null}
   maxWidth="500px"
   customClass="contact-modal"
+  {zIndex}
   on:close={handleClose}
 />
 
 <!-- Company Modal -->
-<CompanyModal
-  isOpen={showCompanyModal}
-  mode="create"
-  on:close={handleCompanyModalClose}
-/>
+<CompanyModal isOpen={showCompanyModal} mode="create" on:close={handleCompanyModalClose} />
 
 <style>
-  /* Ensure ContactModal appears above DetailPanel (z-50) */
-  :global(.contact-modal) {
-    z-index: 65 !important;
-  }
+  /* z-index is now handled via the zIndex prop passed to CrudModal/BaseModal */
 </style>

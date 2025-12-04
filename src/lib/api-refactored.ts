@@ -1,28 +1,28 @@
 /**
  * Refactored API Client Module - Phase 2.3 Consolidation
- * 
+ *
  * This refactored module consolidates duplicate patterns, reduces LOC from 1,930 to ~600,
  * and implements a professional logging and error handling system while maintaining
  * 100% backward compatibility with existing method signatures.
- * 
+ *
  * Key Improvements:
  * - Generic base client eliminates 400+ lines of duplication
  * - Professional logging replaces 123 console.log statements
  * - Standardized error handling across all operations
  * - Entity-specific classes for better organization
  * - Zero breaking changes - all existing method signatures preserved
- * 
+ *
  * @fileoverview Consolidated API interface for database and system operations
  * @author Fee Proposal Management System
  * @version 2.1.0 - API Layer Consolidation
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { 
-  Project, 
-  Company, 
-  Contact, 
-  Fee, 
+import type {
+  Project,
+  Company,
+  Contact,
+  Fee,
   ProjectCreate,
   ProjectUpdate,
   CompanyCreate,
@@ -41,11 +41,11 @@ import type {
 } from '../types';
 
 // Re-export types for compatibility
-export type { 
-  Project, 
-  Company, 
-  Contact, 
-  Fee, 
+export type {
+  Project,
+  Company,
+  Contact,
+  Fee,
   ProjectCreate,
   ProjectUpdate,
   CompanyCreate,
@@ -68,7 +68,7 @@ export type {
  */
 enum LogLevel {
   ERROR = 'error',
-  WARN = 'warn', 
+  WARN = 'warn',
   INFO = 'info',
   DEBUG = 'debug'
 }
@@ -78,11 +78,12 @@ enum LogLevel {
  * Provides structured logging with context and conditional debug output
  */
 class Logger {
-  private static isDevelopment = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
-  
+  private static isDevelopment =
+    typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
+
   static log(level: LogLevel, operation: string, message: string, context?: any): void {
     if (!this.isDevelopment && level === LogLevel.DEBUG) return;
-    
+
     const timestamp = new Date().toISOString();
     const logEntry = {
       timestamp,
@@ -91,7 +92,7 @@ class Logger {
       message,
       ...(context && { context })
     };
-    
+
     switch (level) {
       case LogLevel.ERROR:
         console.error(`[${timestamp}] API ERROR [${operation}]:`, message, context || '');
@@ -107,19 +108,19 @@ class Logger {
         break;
     }
   }
-  
+
   static error(operation: string, message: string, context?: any): void {
     this.log(LogLevel.ERROR, operation, message, context);
   }
-  
+
   static warn(operation: string, message: string, context?: any): void {
     this.log(LogLevel.WARN, operation, message, context);
   }
-  
+
   static info(operation: string, message: string, context?: any): void {
     this.log(LogLevel.INFO, operation, message, context);
   }
-  
+
   static debug(operation: string, message: string, context?: any): void {
     this.log(LogLevel.DEBUG, operation, message, context);
   }
@@ -134,19 +135,14 @@ abstract class BaseApiClient {
    * Generic command invocation with standardized error handling and logging
    * Replaces 46 duplicate try-catch-log patterns throughout the original API
    */
-  protected static async invoke<T>(
-    command: string, 
-    params?: any, 
-    operation?: string
-  ): Promise<T> {
+  protected static async invoke<T>(command: string, params?: any, operation?: string): Promise<T> {
     const op = operation || command;
-    
+
     try {
       Logger.debug(op, `Invoking command: ${command}`, params);
       // Only pass params if they are provided to match original API behavior
-      const result = params !== undefined 
-        ? await invoke<T>(command, params)
-        : await invoke<T>(command);
+      const result =
+        params !== undefined ? await invoke<T>(command, params) : await invoke<T>(command);
       Logger.debug(op, `Command successful: ${command}`, { resultType: typeof result });
       return result;
     } catch (error) {
@@ -161,8 +157,8 @@ abstract class BaseApiClient {
    * Used for operations that should fail gracefully (create, update operations)
    */
   protected static async invokeSafe<T>(
-    command: string, 
-    params?: any, 
+    command: string,
+    params?: any,
     operation?: string
   ): Promise<T | null> {
     try {
@@ -194,11 +190,10 @@ abstract class BaseApiClient {
     try {
       const op = operation || command;
       Logger.debug(op, `Invoking command with fallback: ${command}`, params);
-      
-      const result = params !== undefined 
-        ? await invoke<T>(command, params)
-        : await invoke<T>(command);
-        
+
+      const result =
+        params !== undefined ? await invoke<T>(command, params) : await invoke<T>(command);
+
       Logger.debug(op, `Command successful: ${command}`, { resultType: typeof result });
       return result;
     } catch (error) {
@@ -229,7 +224,7 @@ class ConnectionApi extends BaseApiClient {
       last_check: undefined,
       error_message: 'Connection status unavailable'
     };
-    
+
     try {
       return await this.invoke<ConnectionStatus>('get_connection_status');
     } catch (error) {
@@ -263,7 +258,7 @@ class ProjectsApi extends BaseApiClient {
         updated_at: new Date().toISOString()
       }
     };
-    
+
     return this.invokeSafe<Project>('create_project', { project: projectData });
   }
 
@@ -295,7 +290,7 @@ class CompaniesApi extends BaseApiClient {
       reg_no: company.reg_no || null,
       tax_no: company.tax_no || null
     };
-    
+
     return this.invokeSafe<Company>('create_company', { company: companyData });
   }
 
@@ -309,7 +304,7 @@ class CompaniesApi extends BaseApiClient {
       reg_no: company.reg_no || null,
       tax_no: company.tax_no || null
     };
-    
+
     return this.invoke<Company>('update_company', { id, companyUpdate });
   }
 
@@ -319,7 +314,7 @@ class CompaniesApi extends BaseApiClient {
 }
 
 /**
- * Contact management operations  
+ * Contact management operations
  * Maintains exact method signatures for compatibility
  */
 class ContactsApi extends BaseApiClient {
@@ -332,7 +327,7 @@ class ContactsApi extends BaseApiClient {
       ...contact,
       id: null
     };
-    
+
     return this.invokeSafe<Contact>('create_contact', { contact: contactData });
   }
 
@@ -363,9 +358,18 @@ class FeesApi extends BaseApiClient {
       issue_date: fee.issue_date,
       activity: fee.activity,
       package: fee.package,
-      project_id: typeof fee.project_id === 'string' ? fee.project_id.replace('projects:', '') : fee.project_id?.toString() || '',
-      company_id: typeof fee.company_id === 'string' ? fee.company_id.replace('company:', '') : fee.company_id?.toString() || '',
-      contact_id: typeof fee.contact_id === 'string' ? fee.contact_id.replace('contacts:', '') : fee.contact_id?.toString() || '',
+      project_id:
+        typeof fee.project_id === 'string'
+          ? fee.project_id.replace('projects:', '')
+          : fee.project_id?.toString() || '',
+      company_id:
+        typeof fee.company_id === 'string'
+          ? fee.company_id.replace('company:', '')
+          : fee.company_id?.toString() || '',
+      contact_id:
+        typeof fee.contact_id === 'string'
+          ? fee.contact_id.replace('contacts:', '')
+          : fee.contact_id?.toString() || '',
       staff_name: fee.staff_name,
       staff_email: fee.staff_email,
       staff_phone: fee.staff_phone,
@@ -373,7 +377,7 @@ class FeesApi extends BaseApiClient {
       strap_line: fee.strap_line,
       revisions: fee.revisions || []
     };
-    
+
     return this.invokeSafe<Fee>('create_fee', { fee: feeCreate });
   }
 
@@ -385,7 +389,7 @@ class FeesApi extends BaseApiClient {
         updated_at: new Date().toISOString()
       }
     };
-    
+
     return this.invokeSafe<Fee>('update_fee', { id, fee: updatedFee });
   }
 
@@ -459,7 +463,9 @@ class FileSystemApi extends BaseApiClient {
   }
 
   static async openFolderInExplorer(folderPath: string): Promise<string> {
-    return this.invokeWithFallback('open_folder_in_explorer', 'Failed to open folder', { folderPath });
+    return this.invokeWithFallback('open_folder_in_explorer', 'Failed to open folder', {
+      folderPath
+    });
   }
 
   static async writeFeeToJson(feeId: string): Promise<string | null> {
@@ -470,24 +476,54 @@ class FileSystemApi extends BaseApiClient {
     return this.invokeSafe<string>('write_fee_to_json_safe', { feeId });
   }
 
-  static async checkProjectFolderExists(projectNumber: string, projectShortName: string): Promise<boolean> {
-    return this.invokeWithFallback('check_project_folder_exists', false, { projectNumber, projectShortName });
+  static async checkProjectFolderExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
+    return this.invokeWithFallback('check_project_folder_exists', false, {
+      projectNumber,
+      projectShortName
+    });
   }
 
-  static async checkVarJsonExists(projectNumber: string, projectShortName: string): Promise<boolean> {
-    return this.invokeWithFallback('check_var_json_exists', false, { projectNumber, projectShortName });
+  static async checkVarJsonExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
+    return this.invokeWithFallback('check_var_json_exists', false, {
+      projectNumber,
+      projectShortName
+    });
   }
 
-  static async checkVarJsonTemplateExists(projectNumber: string, projectShortName: string): Promise<boolean> {
-    return this.invokeWithFallback('check_var_json_template_exists', false, { projectNumber, projectShortName });
+  static async checkVarJsonTemplateExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
+    return this.invokeWithFallback('check_var_json_template_exists', false, {
+      projectNumber,
+      projectShortName
+    });
   }
 
-  static async renameFolderWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
-    return this.invoke<string>('rename_folder_with_old_suffix', { projectNumber, projectShortName });
+  static async renameFolderWithOldSuffix(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
+    return this.invoke<string>('rename_folder_with_old_suffix', {
+      projectNumber,
+      projectShortName
+    });
   }
 
-  static async renameVarJsonWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
-    return this.invoke<string>('rename_var_json_with_old_suffix', { projectNumber, projectShortName });
+  static async renameVarJsonWithOldSuffix(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
+    return this.invoke<string>('rename_var_json_with_old_suffix', {
+      projectNumber,
+      projectShortName
+    });
   }
 }
 
@@ -508,11 +544,18 @@ class ProjectWorkflowApi extends BaseApiClient {
     return this.invoke<Project>('create_project_with_template', { project });
   }
 
-  static async copyProjectTemplate(projectNumber: string, projectShortName: string): Promise<string> {
+  static async copyProjectTemplate(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return this.invoke<string>('copy_project_template', { projectNumber, projectShortName });
   }
 
-  static async populateProjectData(fpId: string, projectNumber: string, projectShortName: string): Promise<string> {
+  static async populateProjectData(
+    fpId: string,
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return this.invoke<string>('populate_project_data', { fpId, projectNumber, projectShortName });
   }
 
@@ -539,7 +582,7 @@ class ProjectWorkflowApi extends BaseApiClient {
 
 /**
  * Unified API Client - Maintains 100% backward compatibility
- * 
+ *
  * This class provides the exact same interface as the original ApiClient while using
  * the consolidated implementation underneath. All existing code will continue to work
  * without any changes.
@@ -647,23 +690,38 @@ export class ApiClient {
     return FileSystemApi.writeFeeToJsonSafe(feeId);
   }
 
-  static async checkProjectFolderExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+  static async checkProjectFolderExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
     return FileSystemApi.checkProjectFolderExists(projectNumber, projectShortName);
   }
 
-  static async checkVarJsonExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+  static async checkVarJsonExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
     return FileSystemApi.checkVarJsonExists(projectNumber, projectShortName);
   }
 
-  static async checkVarJsonTemplateExists(projectNumber: string, projectShortName: string): Promise<boolean> {
+  static async checkVarJsonTemplateExists(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<boolean> {
     return FileSystemApi.checkVarJsonTemplateExists(projectNumber, projectShortName);
   }
 
-  static async renameFolderWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
+  static async renameFolderWithOldSuffix(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return FileSystemApi.renameFolderWithOldSuffix(projectNumber, projectShortName);
   }
 
-  static async renameVarJsonWithOldSuffix(projectNumber: string, projectShortName: string): Promise<string> {
+  static async renameVarJsonWithOldSuffix(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return FileSystemApi.renameVarJsonWithOldSuffix(projectNumber, projectShortName);
   }
 
@@ -725,11 +783,18 @@ export class ApiClient {
     return ProjectWorkflowApi.createProjectWithTemplate(project);
   }
 
-  static async copyProjectTemplate(projectNumber: string, projectShortName: string): Promise<string> {
+  static async copyProjectTemplate(
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return ProjectWorkflowApi.copyProjectTemplate(projectNumber, projectShortName);
   }
 
-  static async populateProjectData(fpId: string, projectNumber: string, projectShortName: string): Promise<string> {
+  static async populateProjectData(
+    fpId: string,
+    projectNumber: string,
+    projectShortName: string
+  ): Promise<string> {
     return ProjectWorkflowApi.populateProjectData(fpId, projectNumber, projectShortName);
   }
 
@@ -761,26 +826,26 @@ export const {
   // Connection management
   checkDbConnection,
   getConnectionStatus,
-  
+
   // Project operations
   getProjects,
   searchProjects,
   createProject,
   updateProject,
   deleteProject,
-  
+
   // Company operations
   getCompanies,
   createCompany,
   updateCompany,
   deleteCompany,
-  
+
   // Contact operations
   getContacts,
   createContact,
   updateContact,
   deleteContact,
-  
+
   // Fee operations
   getFees,
   createFee,
@@ -788,13 +853,13 @@ export const {
   deleteFee,
   writeFeeToJson,
   writeFeeToJsonSafe,
-  
+
   // Statistics and monitoring
   getStats,
   healthCheck,
   getDbInfo,
   getTableSchema,
-  
+
   // System operations
   positionWindow4K,
   getSettings,
@@ -802,7 +867,7 @@ export const {
   reloadDatabaseConfig,
   selectFolder,
   openFolderInExplorer,
-  
+
   // Project workflow
   searchCountries,
   generateNextProjectNumber,
@@ -814,7 +879,7 @@ export const {
   checkVarJsonTemplateExists,
   renameFolderWithOldSuffix,
   renameVarJsonWithOldSuffix,
-  
+
   // Debugging and utilities
   investigateRecord,
   getAreaSuggestions,

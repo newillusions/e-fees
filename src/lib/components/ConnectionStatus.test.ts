@@ -1,6 +1,6 @@
 /**
  * ConnectionStatus Component Tests
- * 
+ *
  * Tests for the database connection status indicator including
  * connection states, LED visual feedback, and automatic monitoring.
  */
@@ -35,14 +35,21 @@ vi.mock('../utils', () => ({
   getAppVersion: vi.fn().mockResolvedValue('0.10.4')
 }));
 
-import { getConnectionStatus, getDbInfo, getProjects, getCompanies, getContacts, getFees } from '../api';
+import {
+  getConnectionStatus,
+  getDbInfo,
+  getProjects,
+  getCompanies,
+  getContacts,
+  getFees
+} from '../api';
 
 describe('ConnectionStatus Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.clearAllTimers();
     vi.useFakeTimers();
-    
+
     // Set up default mock returns
     vi.mocked(getConnectionStatus).mockResolvedValue({
       is_connected: false,
@@ -54,7 +61,7 @@ describe('ConnectionStatus Component', () => {
     vi.mocked(getCompanies).mockResolvedValue([]);
     vi.mocked(getContacts).mockResolvedValue([]);
     vi.mocked(getFees).mockResolvedValue([]);
-    
+
     // Reset connection store to initial state
     const initialState: ConnectionState = {
       isConnected: false,
@@ -88,12 +95,12 @@ describe('ConnectionStatus Component', () => {
         lastChecked: new Date()
       };
       connectionStore.set(connectedState);
-      
+
       render(ConnectionStatus);
-      
+
       expect(screen.getByText('Connected')).toBeInTheDocument();
       expect(screen.getByText('Connected')).toHaveClass('text-xs', 'font-medium');
-      
+
       // Should show last checked time
       const lastCheckedTime = connectedState.lastChecked?.toLocaleTimeString();
       expect(screen.getByText(lastCheckedTime!)).toBeInTheDocument();
@@ -105,9 +112,9 @@ describe('ConnectionStatus Component', () => {
         status: 'Connecting...'
       };
       connectionStore.set(connectingState);
-      
+
       render(ConnectionStatus);
-      
+
       expect(screen.getByText('Connecting...')).toBeInTheDocument();
       expect(screen.getByText('Connecting...')).toHaveClass('text-xs', 'font-medium');
     });
@@ -119,27 +126,28 @@ describe('ConnectionStatus Component', () => {
         errorMessage: 'Database connection failed'
       };
       connectionStore.set(errorState);
-      
+
       render(ConnectionStatus);
-      
+
       expect(screen.getByText('Connection Error')).toBeInTheDocument();
       expect(screen.getByText('Connection Error')).toHaveClass('text-xs', 'font-medium');
-      
+
       // Should show error message (truncated if long)
       expect(screen.getByTitle('Database connection failed')).toBeInTheDocument();
     });
 
     it('should truncate long error messages', () => {
-      const longErrorMessage = 'This is a very long error message that should be truncated when displayed';
+      const longErrorMessage =
+        'This is a very long error message that should be truncated when displayed';
       const errorState: ConnectionState = {
         isConnected: false,
         status: 'Connection Error',
         errorMessage: longErrorMessage
       };
       connectionStore.set(errorState);
-      
+
       render(ConnectionStatus);
-      
+
       // Should show truncated message with ellipsis
       const truncatedText = screen.getByText(/This is a very long error/);
       expect(truncatedText.textContent).toMatch(/\.\.\.$/);
@@ -150,7 +158,7 @@ describe('ConnectionStatus Component', () => {
   describe('LED Indicator', () => {
     it('should show disconnected LED state', () => {
       const { container } = render(ConnectionStatus);
-      
+
       const ledElement = container.querySelector('.led-disconnected');
       expect(ledElement).toBeInTheDocument();
       expect(ledElement).toHaveClass('w-1', 'h-1', 'rounded-full');
@@ -162,13 +170,13 @@ describe('ConnectionStatus Component', () => {
         status: 'Connected'
       };
       connectionStore.set(connectedState);
-      
+
       const { container } = render(ConnectionStatus);
-      
+
       const ledElement = container.querySelector('.led-connected');
       expect(ledElement).toBeInTheDocument();
       expect(ledElement).toHaveClass('w-1', 'h-1', 'rounded-full');
-      
+
       // Should show glow effect
       const glowElement = container.querySelector('.led-glow-connected');
       expect(glowElement).toBeInTheDocument();
@@ -231,11 +239,11 @@ describe('ConnectionStatus Component', () => {
   describe('Component Structure', () => {
     it('should render with correct container structure', () => {
       const { container } = render(ConnectionStatus);
-      
+
       // Should have main container with flex layout
       const mainContainer = container.querySelector('.flex.items-center.px-6.py-2');
       expect(mainContainer).toBeInTheDocument();
-      
+
       // Should have LED and status text container
       const contentContainer = container.querySelector('.flex.items-center.space-x-3');
       expect(contentContainer).toBeInTheDocument();

@@ -7,9 +7,9 @@
   export let disabled = false;
   export let required = false;
   export let className = '';
-  
+
   let inputElement: HTMLInputElement;
-  
+
   export function focus() {
     inputElement?.focus();
   }
@@ -22,7 +22,7 @@
       {#if required}<span class="text-emittiv-splash">*</span>{/if}
     </label>
   {/if}
-  
+
   <input
     bind:this={inputElement}
     bind:value
@@ -31,13 +31,15 @@
     {disabled}
     {required}
     id={label.toLowerCase()}
-    class="w-full px-4 py-2 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-smooth disabled:opacity-50 disabled:cursor-not-allowed {error ? 'border-red-500' : ''} {className}"
+    class="w-full px-4 py-2 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-smooth disabled:opacity-50 disabled:cursor-not-allowed {error
+      ? 'border-red-500'
+      : ''} {className}"
     on:input
     on:change
     on:focus
     on:blur
   />
-  
+
   {#if error}
     <p class="mt-1 text-sm text-red-500">{error}</p>
   {/if}

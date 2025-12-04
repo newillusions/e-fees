@@ -16,12 +16,15 @@
   import { loadAllData } from '$lib/stores';
   import { fade } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
-  import { setupPluginListeners, cleanupPluginListeners } from '../tauri-plugin-mcp/dist-js/index.js';
-  
+  import {
+    setupPluginListeners,
+    cleanupPluginListeners
+  } from '../tauri-plugin-mcp/dist-js/index.js';
+
   let showSplash = true;
   let appReady = false;
   let showFirstRun = false;
-  
+
   // Reset scroll position on route change
   $: if ($location && appReady) {
     // Use setTimeout to ensure the DOM has updated
@@ -33,7 +36,7 @@
       }
     }, 50);
   }
-  
+
   // Define routes for SPA
   const routes = {
     '/': Dashboard,
@@ -45,10 +48,10 @@
     '/contacts': Contacts,
     '/dev': DevMode
   };
-  
+
   async function handleSplashComplete() {
     showSplash = false;
-    
+
     // Simplified startup: just check settings and start the app
     // The ConnectionStatus component will handle database connectivity display
     setTimeout(async () => {
@@ -56,17 +59,18 @@
         if (import.meta.env.DEV) {
         }
         const { getSettings } = await import('$lib/api');
-        
+
         const settings = await getSettings();
         if (import.meta.env.DEV) {
         }
-        
-        const isFirstRun = !settings || 
-                          settings.surrealdb_user === 'placeholder' || 
-                          !settings.surrealdb_user ||
-                          !settings.surrealdb_url ||
-                          settings.surrealdb_url === 'placeholder';
-        
+
+        const isFirstRun =
+          !settings ||
+          settings.surrealdb_user === 'placeholder' ||
+          !settings.surrealdb_user ||
+          !settings.surrealdb_url ||
+          settings.surrealdb_url === 'placeholder';
+
         if (isFirstRun) {
           if (import.meta.env.DEV) {
           }
@@ -88,17 +92,17 @@
       }
     }, 800); // Reduced delay since we're not trying to test connections
   }
-  
+
   function handleFirstRunComplete() {
     showFirstRun = false;
     appReady = true;
     // Reload to apply new settings
     window.location.reload();
   }
-  
+
   onMount(async () => {
     // Initialize app-wide logic
-    
+
     // Set up MCP plugin event listeners
     try {
       await setupPluginListeners();
@@ -107,10 +111,10 @@
     } catch (error) {
       console.error('Failed to set up MCP plugin listeners:', error);
     }
-    
+
     // The splash screen will handle the initialization timing
     // Data loading will happen after splash completes
-    
+
     // Cleanup function for when component is destroyed
     return () => {
       cleanupPluginListeners();
@@ -145,7 +149,7 @@
     width: 100%;
     height: 100%;
   }
-  
+
   .route-content > :global(div) {
     position: absolute;
     top: 0;

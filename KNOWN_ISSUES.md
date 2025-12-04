@@ -1,60 +1,24 @@
 # Known Issues and Limitations
 
 **Last Updated**: 2025-12-03
-**Current Version**: v0.10.16
+**Current Version**: v0.10.18
 
 ## Critical Issues
 
-### 1. Auto-Updater Download Fails Silently
+### ~~1. Auto-Updater Download Fails Silently~~
 
-**Status**: 🔴 UNRESOLVED - Critical Priority
+**Status**: ✅ RESOLVED in v0.10.17/v0.10.18
 
-**Symptoms**:
-- Update dialog appears correctly
-- User clicks "Install"
-- Error message: "Failed to download update"
-- NO logs from Tauri updater plugin
-- Updater is completely silent (even with RUST_LOG=info)
+**Root Causes Found**:
+1. **Double base64 encoding**: Signatures were being base64 encoded twice in publish script
+2. **Windows artifact format**: Script looked for `.nsis.zip` but artifact is `.exe`
+3. **Windows URL format**: URLs pointed to macOS format instead of Windows exe
 
-**What We Know**:
-- ✅ Update detection works (v0.10.15 detects v0.10.16)
-- ✅ update.json is accessible and valid
-- ✅ Binaries are accessible (tested with curl and browser)
-- ✅ SSL certificate is valid (Let's Encrypt)
-- ❌ Download fails without any error logs
-- ❌ Tauri updater plugin produces zero log output
-
-**Hypotheses**:
-1. Updater plugin not properly initialized in production builds
-2. Configuration issue with updater endpoints
-3. Silent failure in download/signature verification
-4. Permission issue writing to update directory
-
-**Debugging Attempted**:
-```bash
-# Test 1: Run production app with logging
-RUST_LOG=info /Applications/E-Fees.app/Contents/MacOS/app
-# Result: No updater logs at all
-
-# Test 2: Manual file access
-curl https://apache.mms.name/e-fees-releases/0.10.16/E-Fees_aarch64.app.tar.gz
-# Result: Downloads successfully
-
-# Test 3: Certificate verification
-curl -v https://apache.mms.name/e-fees-releases/0.10.16/E-Fees_aarch64.app.tar.gz
-# Result: SSL valid, no certificate errors
-```
-
-**Next Steps**:
-- Build v0.10.17 with enhanced updater logging
-- Add custom logging wrapper around Tauri updater API calls
-- Implement dev mode toggle for verbose logging
-- Capture actual error details to diagnose root cause
-
-**Related Files**:
-- `src-tauri/tauri.conf.json` - Updater configuration
-- `src-tauri/src/lib.rs` - Application initialization
-- `update.json` - Update manifest
+**Fixes Applied**:
+- Removed extra `| base64` pipe from signature reading in publish script
+- Updated script to find `*_x64-setup.exe` files for Windows
+- Added `"installMode": "passive"` for Windows seamless updates
+- Rebranded to lowercase "e-fees" for consistency
 
 ---
 
@@ -150,7 +114,36 @@ Windows builds are created by GitHub Actions but have never been tested.
 
 ## Low Priority Issues
 
-### 5. Multiple Background Processes
+### 5. Configurable Download/Install Location
+
+**Status**: 🟡 FUTURE ENHANCEMENT
+
+**Description**:
+Users should be able to configure where downloaded update files are saved, and potentially customize the installation location.
+
+**Current Behavior**:
+- Update files downloaded to system temp directory
+- Windows installs to default location (AppData/Local/e-fees)
+- No user control over these paths
+
+**Proposed Solution**:
+- Add "Download Location" setting in Settings modal
+- Store preference in .env file
+- Pass custom path to updater when downloading
+- Consider custom install path option for Windows
+
+**Use Cases**:
+- Users with limited space on system drive
+- Corporate environments with specific installation policies
+- Users who prefer portable installations
+
+**Related Files**:
+- `src/lib/components/SettingsModal.svelte`
+- `src-tauri/src/commands/mod.rs` (AppSettings struct)
+
+---
+
+### 6. Multiple Background Processes (dev only)
 
 **Status**: 🟢 MINOR ANNOYANCE
 
@@ -171,7 +164,7 @@ killall "app" "E-Fees"
 
 ---
 
-### 6. Git Dual Remote Management
+### 7. Git Dual Remote Management
 
 **Status**: 🟢 OPERATIONAL BUT COMPLEX
 
@@ -198,7 +191,7 @@ git push github main
 
 ---
 
-### 7. Minisign Signature Filename Dependency
+### 8. Minisign Signature Filename Dependency
 
 **Status**: 🟢 UNDERSTOOD AND HANDLED
 

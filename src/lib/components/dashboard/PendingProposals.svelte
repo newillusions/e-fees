@@ -24,7 +24,7 @@
       style: 'currency',
       currency: 'AED',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   }
 
@@ -39,8 +39,11 @@
   $: pendingProposals = $feesStore
     .filter(fee => fee.status === 'Sent' || fee.status === 'Draft')
     .filter(fee => fee.time) // Filter out fees without time info
-    .sort((a, b) => new Date(b.time!.updated_at || b.time!.created_at).getTime() - 
-                    new Date(a.time!.updated_at || a.time!.created_at).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.time!.updated_at || b.time!.created_at).getTime() -
+        new Date(a.time!.updated_at || a.time!.created_at).getTime()
+    )
     .slice(0, 8); // Show top 8 pending
 
   // Calculate total pending count
@@ -55,7 +58,7 @@
 <div class="pending-proposals">
   <div class="proposals-header">
     <h2 class="section-title">Pending Proposals</h2>
-    
+
     {#if pendingProposals.length > 0}
       <div class="proposals-summary">
         <div class="summary-label">Pending Work</div>
@@ -73,44 +76,55 @@
       <div class="proposals-list">
         {#each pendingProposals as fee}
           {@const daysAgo = getDaysAgo(fee.time!.updated_at || fee.time!.created_at)}
-          <div class="proposal-item {fee.status.toLowerCase()}" on:click={() => handleProposalClick(fee)} on:keydown={(e) => e.key === 'Enter' && handleProposalClick(fee)} role="button" tabindex="0">
+          <div
+            class="proposal-item {fee.status.toLowerCase()}"
+            on:click={() => handleProposalClick(fee)}
+            on:keydown={e => e.key === 'Enter' && handleProposalClick(fee)}
+            role="button"
+            tabindex="0"
+          >
             <div class="proposal-status">
               <div class="status-indicator {fee.status.toLowerCase()}"></div>
               <span class="status-badge {fee.status.toLowerCase()}">{fee.status}</span>
             </div>
-            
+
             <div class="proposal-details">
               <div class="proposal-header">
                 <span class="fee-number">{fee.number}</span>
               </div>
-              
+
               <div class="proposal-project">
                 <span class="project-name">{getProjectName(fee.project_id)}</span>
               </div>
-              
+
               <div class="proposal-company">
                 <span class="company-name">{getCompanyName(fee.company_id)}</span>
               </div>
-              
             </div>
-            
+
             <div class="proposal-timing">
-              <div class="days-indicator {
-                daysAgo <= 7 ? 'recent' :
-                daysAgo <= 30 ? 'moderate' :
-                daysAgo <= 60 ? 'old' :
-                'stale'
-              }">
+              <div
+                class="days-indicator {daysAgo <= 7
+                  ? 'recent'
+                  : daysAgo <= 30
+                    ? 'moderate'
+                    : daysAgo <= 60
+                      ? 'old'
+                      : 'stale'}"
+              >
                 {daysAgo}d
               </div>
               <div class="proposal-date">
-                {new Date(fee.time!.updated_at || fee.time!.created_at).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric'
-                })}
+                {new Date(fee.time!.updated_at || fee.time!.created_at).toLocaleDateString(
+                  'en-US',
+                  {
+                    month: 'short',
+                    day: 'numeric'
+                  }
+                )}
               </div>
             </div>
-            
+
             {#if fee.package}
               <div class="proposal-package-full">
                 <span class="fee-package-full">{fee.package}</span>
@@ -119,11 +133,15 @@
           </div>
         {/each}
       </div>
-      
     {:else}
       <div class="empty-state">
         <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <p class="empty-message">No pending proposals</p>
         <p class="empty-subtitle">All proposals are either active or closed</p>
@@ -313,7 +331,7 @@
     font-size: 13px;
     min-width: 0;
   }
-  
+
   .proposal-company {
     margin-bottom: 4px;
     font-size: 12px;
@@ -400,7 +418,6 @@
     color: var(--emittiv-lighter);
   }
 
-
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -436,21 +453,21 @@
       align-items: flex-start;
       gap: 12px;
     }
-    
+
     .proposals-summary {
       text-align: left;
     }
-    
+
     .proposal-item {
       flex-direction: column;
       gap: 12px;
     }
-    
+
     .proposal-status {
       flex-direction: row;
       min-width: auto;
     }
-    
+
     .proposal-timing {
       text-align: left;
       min-width: auto;

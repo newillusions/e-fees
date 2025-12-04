@@ -2,8 +2,12 @@
   import type { NavItem } from '../../types';
   import { onMount } from 'svelte';
   import { location, push } from 'svelte-spa-router';
+  import { settingsStore } from '$lib/stores/settings';
   // import { positionWindow4K } from '../api'; // DISABLED for new environment
-  
+
+  // Check if dev mode is enabled
+  $: devModeEnabled = $settingsStore?.dev_mode ?? false;
+
   const navItems: NavItem[] = [
     {
       id: '/',
@@ -39,26 +43,30 @@
       id: '/dev',
       label: 'Dev Mode',
       icon: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-      shortcut: '6'
+      shortcut: '6',
+      devOnly: true
     }
   ];
-  
+
+  // Filter nav items based on dev mode setting
+  $: visibleNavItems = navItems.filter(item => !item.devOnly || devModeEnabled);
+
   function handleNavClick(route: string) {
     push(route);
   }
-  
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.ctrlKey || event.metaKey) {
       const key = event.key;
-      
-      // Handle navigation shortcuts
-      const item = navItems.find(item => item.shortcut === key);
+
+      // Handle navigation shortcuts (only for visible items)
+      const item = visibleNavItems.find(item => item.shortcut === key);
       if (item) {
         event.preventDefault();
         handleNavClick(item.id);
         return;
       }
-      
+
       // Window positioning shortcut (Cmd/Ctrl + W) - DISABLED for new environment
       // if (key === 'w' || key === 'W') {
       //   event.preventDefault();
@@ -69,7 +77,7 @@
       // }
     }
   }
-  
+
   onMount(() => {
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
@@ -78,7 +86,7 @@
 
 <nav class="flex-1">
   <ul class="space-y-1">
-    {#each navItems as item}
+    {#each visibleNavItems as item}
       <li>
         <button
           on:click={() => handleNavClick(item.id)}

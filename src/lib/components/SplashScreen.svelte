@@ -109,14 +109,14 @@
       {:else}
         <!-- Fallback logo placeholder -->
         <div class="w-32 h-16 mx-auto bg-gray-700 rounded flex items-center justify-center border border-gray-600">
-          <span class="text-xs text-gray-400">FeePro</span>
+          <span class="text-xs text-gray-400">e-fees</span>
         </div>
       {/if}
     </div>
     
     <!-- Company Name -->
     <h1 class="text-2xl font-bold mb-2 text-white">
-      Fee<span class="text-orange-500">Pro</span>
+      e-<span class="text-orange-500">fees</span>
     </h1>
     <p class="text-sm text-gray-400">by emittiv</p>
     <p class="text-xs mb-8 text-gray-500">v{appVersion}</p>

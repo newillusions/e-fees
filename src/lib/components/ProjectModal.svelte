@@ -9,6 +9,7 @@
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { logger } from '$lib/services/logger';
+  import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
@@ -38,7 +39,7 @@
     city: string;
     country: string;
     folder: string;
-    status: 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised';
+    status: ProjectStatus;
   }
   
   let formData: ProjectFormData = {
@@ -67,18 +68,6 @@
   // UI state
   let showDeleteConfirm = false;
   
-  // Status options
-  const statusOptions = [
-    { value: 'Draft', label: 'Draft' },
-    { value: 'RFP', label: 'RFP' },
-    { value: 'Active', label: 'Active' },
-    { value: 'Awarded', label: 'Awarded' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Lost', label: 'Lost' },
-    { value: 'Cancelled', label: 'Cancelled' },
-    { value: 'On Hold', label: 'On Hold' },
-    { value: 'Revised', label: 'Revised' }
-  ];
   
   // Form submission handler
   function handleSubmit(event: Event) {
@@ -393,7 +382,7 @@
             bind:value={formData.status}
             required
             error={formErrors.status}
-            options={statusOptions}
+            options={PROJECT_STATUS_OPTIONS}
           />
           
           <FormInput

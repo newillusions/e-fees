@@ -27,8 +27,9 @@
   export let validationRules: any[] = [];
   export let onSave: (data: any) => Promise<void>;
   export let onDelete: ((entity: any) => Promise<void>) | null = null;
-  export let maxWidth = "500px";
-  export let customClass = "";
+  export let maxWidth = '500px';
+  export let customClass = '';
+  export let zIndex = 100; // Base z-index, can be increased for nested modals
 
   // Operation state management
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -41,7 +42,7 @@
   // Initialize form data structure based on field configurations
   function initializeFormData() {
     const initialData: T = {};
-    
+
     function processField(field: FormFieldConfig, data: any) {
       if (field.type === 'group' && field.fields) {
         // For group fields, process nested fields
@@ -51,7 +52,7 @@
         data[field.name] = field.defaultValue ?? '';
       }
     }
-    
+
     fields.forEach(field => processField(field, initialData));
     return initialData;
   }
@@ -67,9 +68,9 @@
   // Load entity data into form (for edit mode)
   function loadEntityData() {
     if (!entity || mode !== 'edit') return;
-    
+
     formData = { ...initializeFormData() };
-    
+
     function processField(field: FormFieldConfig, data: any, source: any) {
       if (field.type === 'group' && field.fields) {
         // For group fields, process nested fields
@@ -79,7 +80,7 @@
         data[field.name] = source[field.name];
       }
     }
-    
+
     fields.forEach(field => processField(field, formData, entity));
     formErrors = {};
   }
@@ -87,35 +88,43 @@
   // Handle form submission
   async function handleSubmit(event: Event) {
     event.preventDefault();
-    
+
     // Validate form
     const errors = validateForm(formData, validationRules);
     formErrors = errors;
-    
+
     if (hasValidationErrors(errors)) {
       operationActions.setError('Please fix the validation errors above.');
       return;
     }
 
     // Perform save operation
-    await withLoadingState(async () => {
-      await onSave(formData);
-      operationActions.setMessage(
-        mode === 'create' ? 'Created successfully' : 'Updated successfully'
-      );
-      closeModal();
-    }, operationActions, 'saving');
+    await withLoadingState(
+      async () => {
+        await onSave(formData);
+        operationActions.setMessage(
+          mode === 'create' ? 'Created successfully' : 'Updated successfully'
+        );
+        closeModal();
+      },
+      operationActions,
+      'saving'
+    );
   }
 
   // Handle delete operation
   async function handleDelete() {
     if (!entity || !onDelete || !showDeleteConfirm) return;
-    
-    await withLoadingState(async () => {
-      await onDelete(entity);
-      operationActions.setMessage('Deleted successfully');
-      closeModal();
-    }, operationActions, 'deleting');
+
+    await withLoadingState(
+      async () => {
+        await onDelete(entity);
+        operationActions.setMessage('Deleted successfully');
+        closeModal();
+      },
+      operationActions,
+      'deleting'
+    );
   }
 
   // Close modal and reset state
@@ -139,41 +148,29 @@
   }
 </script>
 
-<BaseModal 
-  {isOpen} 
-  {title}
-  {maxWidth}
-  {customClass}
-  on:close={closeModal}
->
+<BaseModal {isOpen} {title} {maxWidth} {customClass} {zIndex} on:close={closeModal}>
   <!-- Form -->
-  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
-    
+  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 12px;">
     <!-- Dynamic Fields -->
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
       {#each fields as field}
-        <FormField 
-          {field}
-          bind:formData
-          error={formErrors[field.name]}
-          on:fieldChange
-        />
+        <FormField {field} bind:formData error={formErrors[field.name]} on:fieldChange />
       {/each}
     </div>
-    
+
     <!-- Error/Success Messages -->
     {#if $operationState.error}
       <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
         {$operationState.error}
       </div>
     {/if}
-    
+
     {#if $operationState.message}
       <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
         {$operationState.message}
       </div>
     {/if}
-    
+
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit' && onDelete}
       <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
@@ -181,7 +178,7 @@
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
     {/if}
-    
+
     <!-- Actions -->
     <div class="w-full" style="height: 40px;">
       {#if mode === 'edit' && onDelete && !showDeleteConfirm}
@@ -191,12 +188,12 @@
             variant="ghost"
             size="sm"
             className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
-            on:click={() => showDeleteConfirm = true}
+            on:click={() => (showDeleteConfirm = true)}
             disabled={$operationState.saving || $operationState.deleting}
           >
             Delete
           </Button>
-          
+
           <div class="flex h-full" style="gap: 12px;">
             <Button
               variant="secondary"
@@ -207,7 +204,7 @@
             >
               Cancel
             </Button>
-            
+
             <Button
               type="submit"
               variant="primary"
@@ -216,7 +213,7 @@
               disabled={$operationState.saving || $operationState.deleting}
             >
               {#if $operationState.saving}
-                <div 
+                <div
                   class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
@@ -236,7 +233,7 @@
             disabled={$operationState.deleting}
           >
             {#if $operationState.deleting}
-              <div 
+              <div
                 class="border-2 border-white border-t-transparent rounded-full animate-spin"
                 style="width: 14px; height: 14px; margin-right: 6px;"
               ></div>
@@ -247,7 +244,7 @@
             variant="secondary"
             size="sm"
             className="h-full !py-1 !flex !items-center !justify-center"
-            on:click={() => showDeleteConfirm = false}
+            on:click={() => (showDeleteConfirm = false)}
             disabled={$operationState.deleting}
           >
             Cancel
@@ -265,7 +262,7 @@
           >
             Cancel
           </Button>
-          
+
           <Button
             type="submit"
             variant="primary"
@@ -274,7 +271,7 @@
             disabled={$operationState.saving}
           >
             {#if $operationState.saving}
-              <div 
+              <div
                 class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
                 style="width: 14px; height: 14px; margin-right: 6px;"
               ></div>

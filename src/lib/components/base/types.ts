@@ -26,23 +26,25 @@ export interface FormFieldConfig {
   className?: string;
   /** Grid column span (for responsive layouts) */
   colSpan?: 1 | 2;
-  
+
   // Select field options
   /** Options for select fields */
   options?: Array<{ id: string; name: string; [key: string]: any }>;
-  
+
   // Typeahead field options
   /** Fields to display in typeahead options */
   displayFields?: string[];
   /** Search handler for typeahead fields */
-  onSearch?: (searchText: string) => Promise<Array<{ id: string; name: string; [key: string]: any }>>;
+  onSearch?: (
+    searchText: string
+  ) => Promise<Array<{ id: string; name: string; [key: string]: any }>>;
   /** Selection handler for typeahead fields */
   onSelect?: (selected: any) => void;
-  
+
   // Computed field options
   /** Computation function for computed fields */
   computeFn?: (formData: any) => string;
-  
+
   // Group field options
   /** Child fields for group fields */
   fields?: FormFieldConfig[];

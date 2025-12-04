@@ -1,6 +1,6 @@
 /**
  * API Client Refactored Tests
- * 
+ *
  * Test suite ensuring 100% backward compatibility of the refactored API client.
  * All existing method signatures and behaviors must be preserved.
  */
@@ -235,14 +235,16 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
         const result = await ApiClient.createProject(newProject);
 
         expect(result).toEqual(createdProject);
-        expect(mockInvoke).toHaveBeenCalledWith('create_project', { project: {
-          ...newProject,
-          id: null,
-          time: {
-            created_at: expect.any(String),
-            updated_at: expect.any(String)
+        expect(mockInvoke).toHaveBeenCalledWith('create_project', {
+          project: {
+            ...newProject,
+            id: null,
+            time: {
+              created_at: expect.any(String),
+              updated_at: expect.any(String)
+            }
           }
-        }});
+        });
       });
 
       it('should return null on creation failure', async () => {
@@ -272,15 +274,17 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
         const result = await ApiClient.createCompany(newCompany);
 
         expect(result).toEqual(createdCompany);
-        expect(mockInvoke).toHaveBeenCalledWith('create_company', { company: {
-          name: 'New Company',
-          name_short: 'New Co',
-          abbreviation: 'NEW',
-          city: 'Dubai',
-          country: 'U.A.E.',
-          reg_no: null,
-          tax_no: null
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_company', {
+          company: {
+            name: 'New Company',
+            name_short: 'New Co',
+            abbreviation: 'NEW',
+            city: 'Dubai',
+            country: 'U.A.E.',
+            reg_no: null,
+            tax_no: null
+          }
+        });
       });
 
       it('should return null on creation failure', async () => {
@@ -341,10 +345,12 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
         const result = await ApiClient.createContact(newContact);
 
         expect(result).toEqual(createdContact);
-        expect(mockInvoke).toHaveBeenCalledWith('create_contact', { contact: {
-          ...newContact,
-          id: null
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_contact', {
+          contact: {
+            ...newContact,
+            id: null
+          }
+        });
       });
 
       it('should return null on creation failure', async () => {
@@ -380,24 +386,26 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
         const result = await ApiClient.createFee(newFee);
 
         expect(result).toEqual(createdFee);
-        expect(mockInvoke).toHaveBeenCalledWith('create_fee', { fee: {
-          name: 'New Fee Proposal',
-          number: '25-97103-R1',
-          rev: undefined,
-          status: 'Draft',
-          issue_date: '250816',
-          activity: undefined,
-          package: undefined,
-          staff_name: undefined,
-          staff_email: undefined,
-          staff_phone: undefined,
-          staff_position: undefined,
-          strap_line: undefined,
-          project_id: 'test_project', // cleaned ID
-          company_id: 'TEST', // cleaned ID  
-          contact_id: 'test_contact', // cleaned ID
-          revisions: []
-        }});
+        expect(mockInvoke).toHaveBeenCalledWith('create_fee', {
+          fee: {
+            name: 'New Fee Proposal',
+            number: '25-97103-R1',
+            rev: undefined,
+            status: 'Draft',
+            issue_date: '250816',
+            activity: undefined,
+            package: undefined,
+            staff_name: undefined,
+            staff_email: undefined,
+            staff_phone: undefined,
+            staff_position: undefined,
+            strap_line: undefined,
+            project_id: 'test_project', // cleaned ID
+            company_id: 'TEST', // cleaned ID
+            contact_id: 'test_contact', // cleaned ID
+            revisions: []
+          }
+        });
       });
     });
   });
@@ -460,7 +468,7 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
 
     it('should provide structured error logging', async () => {
       const errorSpy = vi.spyOn(console, 'error');
-      
+
       mockInvoke.mockRejectedValueOnce(new Error('Test error'));
 
       await expect(ApiClient.getProjects()).rejects.toThrow();
@@ -471,7 +479,7 @@ describe('ApiClient Refactored - Backward Compatibility', () => {
         expect.stringContaining('get_projects'),
         expect.any(Object)
       );
-      
+
       errorSpy.mockRestore();
     });
   });

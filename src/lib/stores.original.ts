@@ -81,7 +81,8 @@ export const statisticsStore = derived(
   [projectsStore, feesStore, companiesStore, contactsStore],
   ([projects, fees, companies, contacts]) => ({
     totalProjects: projects.length,
-    activeFees: fees.filter(f => f.status !== 'Lost' && f.status !== 'Cancelled').length,
+    // Only count fees truly in-progress: Draft, Sent, Negotiation
+    activeFees: fees.filter(f => ['Draft', 'Sent', 'Negotiation'].includes(f.status)).length,
     totalCompanies: companies.length,
     totalContacts: contacts.length,
     totalFees: fees.length,
