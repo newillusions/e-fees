@@ -49,6 +49,8 @@
         suggestedFeeStatus = 'Lost';
       } else if (newStatus === 'On Hold') {
         suggestedFeeStatus = 'On Hold';
+      } else if (newStatus === 'RFP') {
+        suggestedFeeStatus = 'Sent';  // When project goes back to RFP, suggest Sent for fees
       } else {
         suggestedFeeStatus = '';
       }
