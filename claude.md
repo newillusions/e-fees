@@ -191,13 +191,24 @@ git push origin main  # To git.mms.name/martin/fee-prop.git
 - Tauri uses less memory than Electron
 
 ---
-**Last Updated**: December 3, 2025
-**Status**: All CRUD operations complete. Auto-updater infrastructure implemented (v0.10.16 published). Update detection works but download fails silently - investigating with enhanced logging in v0.10.17.
+**Last Updated**: December 8, 2025
+**Version**: 0.10.21 (deployed) / 0.10.22 (pending Windows installer fix)
+**Status**: Production-ready. Auto-updater working. Strategic planning complete.
+
+## Planning & Strategy Documentation
+- **[docs/planning/SITREP_2025-12-06.md](./docs/planning/SITREP_2025-12-06.md)** - Comprehensive situation report with architecture analysis, critical issues, and 12-week roadmap
+- **[docs/planning/HANDOVER_2025-12-08.md](./docs/planning/HANDOVER_2025-12-08.md)** - Session handover with pending tasks and next steps
 
 ## Auto-Updater Documentation
 - **[AUTO_UPDATER_PROGRESS.md](./AUTO_UPDATER_PROGRESS.md)** - Current status, known issues, and debugging notes
 - **[RELEASE_PROCESS.md](./RELEASE_PROCESS.md)** - Step-by-step guide for publishing releases
 - **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)** - Comprehensive list of issues and workarounds
+
+## Critical Scalability Issues (See SitRep for details)
+1. **Database Mutex Bottleneck** - `src-tauri/src/db/mod.rs` - Only 1 concurrent DB operation
+2. **No Pagination** - `src/lib/stores.ts:318` - Memory exhaustion risk with large datasets
+3. **N+1 Query Problem** - `src/lib/stores.ts:165-173` - Client-side joins with O(n*m) complexity
+4. **Large Files** - `api.ts` (1,962 lines), `db/mod.rs` (1,500+ lines) need splitting
 
 ## Development Notes
 
