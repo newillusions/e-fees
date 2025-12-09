@@ -561,6 +561,52 @@ pub struct Revision {
     pub notes: String,
 }
 
+/// Paginated response structure for lazy loading.
+///
+/// This struct provides pagination metadata alongside the data items,
+/// enabling efficient lazy loading and infinite scroll patterns in the frontend.
+///
+/// # Type Parameters
+/// - `T`: The type of items being paginated (Project, Company, Contact, Fee)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaginatedResponse<T> {
+    /// The items for the current page
+    pub items: Vec<T>,
+    /// Total number of records across all pages
+    pub total: usize,
+    /// Current page number (1-indexed)
+    pub page: usize,
+    /// Number of items per page
+    pub page_size: usize,
+    /// Whether there are more pages to load
+    pub has_more: bool,
+}
+
+impl<T> PaginatedResponse<T> {
+    /// Create a new paginated response from items and pagination parameters
+    pub fn new(items: Vec<T>, total: usize, page: usize, page_size: usize) -> Self {
+        let has_more = page * page_size < total;
+        Self {
+            items,
+            total,
+            page,
+            page_size,
+            has_more,
+        }
+    }
+}
+
+/// Entity counts for Dashboard statistics.
+/// Uses COUNT queries for efficient retrieval without loading all records.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityCounts {
+    pub total_projects: usize,
+    pub total_companies: usize,
+    pub total_contacts: usize,
+    pub total_fees: usize,
+    pub active_fees: usize,
+}
+
 // Database manager - using HTTP client as primary, WS as fallback
 #[derive(Clone)]
 pub struct DatabaseManager {
@@ -1333,6 +1379,251 @@ impl DatabaseManager {
         }
     }
 
+    /// Get a paginated page of projects.
+    ///
+    /// # Arguments
+    /// * `page` - Page number (1-indexed)
+    /// * `page_size` - Number of items per page (default: 50)
+    ///
+    /// # Returns
+    /// PaginatedResponse containing projects and pagination metadata
+    pub async fn get_projects_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Project>, Error> {
+        if let Some(client) = &self.client {
+            let offset = (page - 1) * page_size;
+            info!("Fetching projects page {} (offset: {}, limit: {})", page, offset, page_size);
+
+            // Get total count first
+            let count_query = "SELECT count() FROM projects GROUP ALL";
+            let total: usize = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                }
+            };
+
+            // Fetch paginated data with ORDER BY created_at DESC
+            let paginated_query = format!(
+                "SELECT * FROM projects ORDER BY time.created_at DESC LIMIT {} START {}",
+                page_size, offset
+            );
+
+            let items: Vec<Project> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&paginated_query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&paginated_query).await?;
+                    response.take(0)?
+                }
+            };
+
+            info!("Fetched {} projects for page {} (total: {})", items.len(), page, total);
+            Ok(PaginatedResponse::new(items, total, page, page_size))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Get a paginated page of companies.
+    pub async fn get_companies_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Company>, Error> {
+        if let Some(client) = &self.client {
+            let offset = (page - 1) * page_size;
+            info!("Fetching companies page {} (offset: {}, limit: {})", page, offset, page_size);
+
+            let count_query = "SELECT count() FROM company GROUP ALL";
+            let total: usize = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                }
+            };
+
+            let paginated_query = format!(
+                "SELECT * FROM company ORDER BY time.created_at DESC LIMIT {} START {}",
+                page_size, offset
+            );
+
+            let items: Vec<Company> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&paginated_query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&paginated_query).await?;
+                    response.take(0)?
+                }
+            };
+
+            info!("Fetched {} companies for page {} (total: {})", items.len(), page, total);
+            Ok(PaginatedResponse::new(items, total, page, page_size))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Get a paginated page of contacts.
+    pub async fn get_contacts_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Contact>, Error> {
+        if let Some(client) = &self.client {
+            let offset = (page - 1) * page_size;
+            info!("Fetching contacts page {} (offset: {}, limit: {})", page, offset, page_size);
+
+            let count_query = "SELECT count() FROM contacts GROUP ALL";
+            let total: usize = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                }
+            };
+
+            let paginated_query = format!(
+                "SELECT * FROM contacts ORDER BY time.created_at DESC LIMIT {} START {}",
+                page_size, offset
+            );
+
+            let items: Vec<Contact> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&paginated_query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&paginated_query).await?;
+                    response.take(0)?
+                }
+            };
+
+            info!("Fetched {} contacts for page {} (total: {})", items.len(), page, total);
+            Ok(PaginatedResponse::new(items, total, page, page_size))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Get a paginated page of fees.
+    pub async fn get_fees_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Fee>, Error> {
+        if let Some(client) = &self.client {
+            let offset = (page - 1) * page_size;
+            info!("Fetching fees page {} (offset: {}, limit: {})", page, offset, page_size);
+
+            let count_query = "SELECT count() FROM fee GROUP ALL";
+            let total: usize = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(count_query).await?;
+                    let result: Option<serde_json::Value> = response.take(0)?;
+                    result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+                }
+            };
+
+            let paginated_query = format!(
+                "SELECT * FROM fee ORDER BY time.created_at DESC LIMIT {} START {}",
+                page_size, offset
+            );
+
+            let items: Vec<Fee> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&paginated_query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&paginated_query).await?;
+                    response.take(0)?
+                }
+            };
+
+            info!("Fetched {} fees for page {} (total: {})", items.len(), page, total);
+            Ok(PaginatedResponse::new(items, total, page, page_size))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Fetch a single entity by ID (for on-demand related record loading).
+    pub async fn get_company_by_id(&self, id: &str) -> Result<Option<Company>, Error> {
+        if let Some(client) = &self.client {
+            info!("Fetching company by ID: {}", id);
+            // Use raw query to fetch single record by ID
+            let query = format!("SELECT * FROM company:{}", id);
+            let items: Vec<Company> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&query).await?;
+                    response.take(0)?
+                }
+            };
+            Ok(items.into_iter().next())
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Fetch a single contact by ID.
+    pub async fn get_contact_by_id(&self, id: &str) -> Result<Option<Contact>, Error> {
+        if let Some(client) = &self.client {
+            info!("Fetching contact by ID: {}", id);
+            let query = format!("SELECT * FROM contacts:{}", id);
+            let items: Vec<Contact> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&query).await?;
+                    response.take(0)?
+                }
+            };
+            Ok(items.into_iter().next())
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Fetch a single project by ID.
+    pub async fn get_project_by_id(&self, id: &str) -> Result<Option<Project>, Error> {
+        if let Some(client) = &self.client {
+            info!("Fetching project by ID: {}", id);
+            let query = format!("SELECT * FROM projects:{}", id);
+            let items: Vec<Project> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(&query).await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(&query).await?;
+                    response.take(0)?
+                }
+            };
+            Ok(items.into_iter().next())
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
     // Search projects with fuzzy-like matching
     pub async fn search_projects(&self, query: &str) -> Result<Vec<Project>, Error> {
         if let Some(client) = &self.client {
@@ -2084,6 +2375,73 @@ impl DatabaseManager {
             
             info!("Found {} total unique city suggestions", all_cities.len());
             Ok(all_cities)
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Get entity counts efficiently using COUNT queries.
+    /// Returns counts for projects, companies, contacts, and fees without loading all records.
+    pub async fn get_entity_counts(&self) -> Result<EntityCounts, Error> {
+        if let Some(client) = &self.client {
+            info!("Fetching entity counts using COUNT queries");
+
+            // Use a single multi-query for efficiency
+            let count_query = r#"
+                SELECT count() as count FROM projects GROUP ALL;
+                SELECT count() as count FROM company GROUP ALL;
+                SELECT count() as count FROM contacts GROUP ALL;
+                SELECT count() as count FROM rfp GROUP ALL;
+                SELECT count() as count FROM rfp WHERE status IN ['Draft', 'Sent', 'Negotiation'] GROUP ALL;
+            "#;
+
+            let extract_count = |result: Option<serde_json::Value>| -> usize {
+                result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+            };
+
+            let (projects, companies, contacts, fees, active_fees) = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client.query(count_query).await?;
+                    let projects: Option<serde_json::Value> = response.take(0)?;
+                    let companies: Option<serde_json::Value> = response.take(1)?;
+                    let contacts: Option<serde_json::Value> = response.take(2)?;
+                    let fees: Option<serde_json::Value> = response.take(3)?;
+                    let active: Option<serde_json::Value> = response.take(4)?;
+                    (
+                        extract_count(projects),
+                        extract_count(companies),
+                        extract_count(contacts),
+                        extract_count(fees),
+                        extract_count(active),
+                    )
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client.query(count_query).await?;
+                    let projects: Option<serde_json::Value> = response.take(0)?;
+                    let companies: Option<serde_json::Value> = response.take(1)?;
+                    let contacts: Option<serde_json::Value> = response.take(2)?;
+                    let fees: Option<serde_json::Value> = response.take(3)?;
+                    let active: Option<serde_json::Value> = response.take(4)?;
+                    (
+                        extract_count(projects),
+                        extract_count(companies),
+                        extract_count(contacts),
+                        extract_count(fees),
+                        extract_count(active),
+                    )
+                }
+            };
+
+            info!("Entity counts: projects={}, companies={}, contacts={}, fees={}, active_fees={}",
+                  projects, companies, contacts, fees, active_fees);
+
+            Ok(EntityCounts {
+                total_projects: projects,
+                total_companies: companies,
+                total_contacts: contacts,
+                total_fees: fees,
+                active_fees,
+            })
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

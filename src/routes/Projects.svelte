@@ -9,26 +9,70 @@
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import ProjectCard from '$lib/components/ProjectCard.svelte';
   import ProjectDetail from '$lib/components/ProjectDetail.svelte';
-  import { projectsStore, projectsActions } from '$lib/stores';
+  import { paginatedProjectsStore } from '$lib/stores';
+  import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import type { Project } from '../types';
-  import { onMount } from 'svelte';
-  
+  import { onMount, onDestroy } from 'svelte';
+
   // Modal states
   let showProjectModal = $state(false);
   let showNewProjectModal = $state(false);
   let projectModalMode: 'create' | 'edit' = $state('create');
   let isProjectDetailOpen = $state(false);
   let selectedProject: Project | null = $state(null);
-  
+
   // Filter states
   let searchQuery = $state('');
   let filters = $state({
     status: '',
     country: '',
     city: ''
+  });
+
+  // Scroll container ref for infinite scroll
+  let scrollContainer: HTMLDivElement | null = $state(null);
+
+  // Pagination state - synced from store via $effect
+  let projects: Project[] = $state([]);
+  let isLoading = $state(false);
+  let hasMore = $state(true);
+  let totalRecords = $state(0);
+  let initialized = $state(false);
+
+  // Effect to sync paginated store state to local runes
+  $effect(() => {
+    const unsubscribe = paginatedProjectsStore.store.subscribe((state: PaginatedStoreState<Project>) => {
+      projects = state.items;
+      isLoading = state.pagination.isLoading;
+      hasMore = state.pagination.hasMore;
+      totalRecords = state.pagination.totalRecords;
+      initialized = state.initialized;
+    });
+    return unsubscribe;
+  });
+
+  // Scroll handler for infinite scroll
+  function handleScroll() {
+    if (!scrollContainer || isLoading || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled past 80%
+    if (scrollPercentage >= 0.8) {
+      paginatedProjectsStore.actions.loadNextPage();
+    }
+  }
+
+  // Set up scroll listener when container is available
+  $effect(() => {
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer?.removeEventListener('scroll', handleScroll);
+    }
   });
   
   
@@ -49,7 +93,7 @@
   };
 
   // Reactive filtered projects using optimized filter function
-  const filteredProjects = $derived(createFilterFunction($projectsStore, searchQuery, filters, filterConfig));
+  const filteredProjects = $derived(createFilterFunction(projects, searchQuery, filters, filterConfig));
   
 
   
@@ -92,7 +136,10 @@
   
   // Load projects and settings on mount
   onMount(() => {
-    projectsActions.load();
+    // Load first page of projects using pagination
+    if (!initialized) {
+      paginatedProjectsStore.actions.loadInitialPage();
+    }
     settingsActions.load();
   });
   
@@ -101,14 +148,14 @@
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
   
   // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues($projectsStore, (project) => project.status));
-  const uniqueCountries = $derived(getUniqueFieldValues($projectsStore, (project) => project.country));
-  const uniqueCities = $derived(getUniqueFieldValues($projectsStore, (project) => project.city));
+  const uniqueStatuses = $derived(getUniqueFieldValues(projects, (project) => project.status));
+  const uniqueCountries = $derived(getUniqueFieldValues(projects, (project) => project.country));
+  const uniqueCities = $derived(getUniqueFieldValues(projects, (project) => project.city));
   
   // Function to get full project folder path
   function getFullProjectPath(project: Project): string {
     const basePath = $settingsStore.project_folder_path;
-    if (!basePath) return project.folder;
+    if (!basePath) return project.folder || '';
     
     // Use appropriate path separator based on platform
     const separator = basePath.includes('\\') ? '\\' : '/';
@@ -135,30 +182,38 @@
 </script>
 
 <div class="p-8">
-  <!-- Search and Add Button Row -->
-  <div class="flex justify-between items-center mb-6">
-    <div class="flex-1 max-w-2xl">
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search projects..."
-            bind:value={searchQuery}
-            class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-          />
-        </div>
-        <button 
-          class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
+  <!-- Search, Counter, and Add Button Row -->
+  <div class="flex justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-2 flex-1">
+      <div class="relative flex-1 max-w-md">
+        <input
+          type="text"
+          placeholder="Search projects..."
+          bind:value={searchQuery}
+          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+        />
       </div>
+      <button
+        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+      <ResultsCounter
+        totalItems={totalRecords}
+        filteredItems={filteredProjects.length}
+        hasFilters={hasFiltersActive}
+        entityName="projects"
+        loadedItems={projects.length}
+        hasMore={hasMore}
+        inline={true}
+        on:clear-filters={clearFilters}
+      />
     </div>
     <button
-      class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
       onclick={handleNewProject}
       aria-label="Add new project"
     >
@@ -215,15 +270,14 @@
   }
 </style>
   
-  <ResultsCounter 
-    totalItems={$projectsStore.length}
-    filteredItems={filteredProjects.length}
-    hasFilters={hasFiltersActive}
-    entityName="projects"
-    on:clear-filters={clearFilters}
-  />
-  
-  {#if $projectsStore.length === 0}
+
+  {#if isLoading && projects.length === 0}
+    <!-- Initial loading state -->
+    <div class="flex flex-col items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-2 border-emittiv-splash border-t-transparent mb-4"></div>
+      <p class="text-emittiv-light text-sm">Loading projects...</p>
+    </div>
+  {:else if projects.length === 0}
     <EmptyState 
       icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
       title="No Projects Yet"
@@ -246,15 +300,35 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-2">
+    <!-- Scrollable container for infinite scroll -->
+    <div
+      bind:this={scrollContainer}
+      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+    >
       {#each filteredProjects as project}
-        <ProjectCard 
+        <ProjectCard
           {project}
           onFolderClick={openProjectFolder}
           on:edit={(e) => handleEditProject(e.detail)}
           on:view={(e) => handleViewProject(e.detail)}
         />
       {/each}
+
+      <!-- Footer indicator -->
+      {#if projects.length > 0}
+        <div class="text-center py-4 text-emittiv-light text-xs opacity-60">
+          {#if isLoading && projects.length > 0}
+            <div class="flex items-center justify-center gap-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-emittiv-splash border-t-transparent"></div>
+              <span>Loading more...</span>
+            </div>
+          {:else if hasMore}
+            <span>Showing {projects.length} of {totalRecords} projects</span>
+          {:else}
+            <span>{totalRecords} projects</span>
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

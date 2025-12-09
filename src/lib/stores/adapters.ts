@@ -1,13 +1,13 @@
 /**
  * API Adapters for CRUD Store Integration
- * 
+ *
  * This module provides adapter implementations that bridge the existing API
  * functions with the enhanced CRUD store interface. Each adapter wraps the
  * current API functions to conform to the CrudApi<T> interface.
  */
 
 import type { CrudApi } from '../utils/crud';
-import type { Project, Company, Contact, Fee } from '../../types';
+import type { Project, Company, Contact, Fee, PaginatedResponse } from '../../types';
 import {
   getProjects,
   getCompanies,
@@ -24,8 +24,25 @@ import {
   deleteContact,
   createFee,
   updateFee,
-  deleteFee
+  deleteFee,
+  getProjectsPage,
+  getCompaniesPage,
+  getContactsPage,
+  getFeesPage,
+  getProjectById,
+  getCompanyById,
+  getContactById
 } from '../api';
+
+/**
+ * Pagination API interface for paginated data fetching.
+ */
+export interface PaginationApi<T> {
+  /** Fetch a page of data */
+  getPage(page: number, pageSize: number): Promise<PaginatedResponse<T>>;
+  /** Fetch a single item by ID (for on-demand loading) */
+  getById?(id: string): Promise<T | null>;
+}
 
 /**
  * Projects API adapter implementing CrudApi interface
@@ -134,3 +151,61 @@ export const projectsApi = new ProjectsApiAdapter();
 export const companiesApi = new CompaniesApiAdapter();
 export const contactsApi = new ContactsApiAdapter();
 export const feesApi = new FeesApiAdapter();
+
+// ============================================================================
+// PAGINATION API ADAPTERS
+// ============================================================================
+
+/**
+ * Projects pagination API adapter
+ */
+export class ProjectsPaginationAdapter implements PaginationApi<Project> {
+  async getPage(page: number, pageSize: number): Promise<PaginatedResponse<Project>> {
+    return await getProjectsPage(page, pageSize);
+  }
+
+  async getById(id: string): Promise<Project | null> {
+    return await getProjectById(id);
+  }
+}
+
+/**
+ * Companies pagination API adapter
+ */
+export class CompaniesPaginationAdapter implements PaginationApi<Company> {
+  async getPage(page: number, pageSize: number): Promise<PaginatedResponse<Company>> {
+    return await getCompaniesPage(page, pageSize);
+  }
+
+  async getById(id: string): Promise<Company | null> {
+    return await getCompanyById(id);
+  }
+}
+
+/**
+ * Contacts pagination API adapter
+ */
+export class ContactsPaginationAdapter implements PaginationApi<Contact> {
+  async getPage(page: number, pageSize: number): Promise<PaginatedResponse<Contact>> {
+    return await getContactsPage(page, pageSize);
+  }
+
+  async getById(id: string): Promise<Contact | null> {
+    return await getContactById(id);
+  }
+}
+
+/**
+ * Fees pagination API adapter
+ */
+export class FeesPaginationAdapter implements PaginationApi<Fee> {
+  async getPage(page: number, pageSize: number): Promise<PaginatedResponse<Fee>> {
+    return await getFeesPage(page, pageSize);
+  }
+}
+
+// Pre-instantiated pagination adapters
+export const projectsPaginationApi = new ProjectsPaginationAdapter();
+export const companiesPaginationApi = new CompaniesPaginationAdapter();
+export const contactsPaginationApi = new ContactsPaginationAdapter();
+export const feesPaginationApi = new FeesPaginationAdapter();

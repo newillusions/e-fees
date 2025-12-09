@@ -291,3 +291,42 @@ export interface FileOperationResult {
   /** Error details if operation failed */
   error?: string;
 }
+
+/**
+ * Paginated Response Structure
+ *
+ * Returned by paginated query endpoints for lazy loading and infinite scroll.
+ * Contains both the data items and pagination metadata.
+ */
+export interface PaginatedResponse<T> {
+  /** The items for the current page */
+  items: T[];
+  /** Total number of records across all pages */
+  total: number;
+  /** Current page number (1-indexed) */
+  page: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there are more pages to load */
+  has_more: boolean;
+}
+
+/**
+ * Pagination State for UI stores
+ *
+ * Tracks pagination state for lazy loading patterns.
+ */
+export interface PaginationState {
+  /** Current page number (1-indexed) */
+  currentPage: number;
+  /** Number of items per page */
+  pageSize: number;
+  /** Total number of records (from server) */
+  totalRecords: number;
+  /** Whether more records are available */
+  hasMore: boolean;
+  /** Set of loaded record IDs (for deduplication) */
+  loadedIds: Set<string>;
+  /** Whether a page load is in progress */
+  isLoading: boolean;
+}

@@ -48,7 +48,8 @@ import type {
   TableSchema,
   CountrySearchResult,
   ProjectCreationResult,
-  FileOperationResult
+  FileOperationResult,
+  PaginatedResponse
 } from '../types';
 
 // Re-export types for easy importing
@@ -71,7 +72,8 @@ export type {
   TableSchema,
   CountrySearchResult,
   ProjectCreationResult,
-  FileOperationResult
+  FileOperationResult,
+  PaginatedResponse
 } from '../types';
 
 /**
@@ -215,6 +217,105 @@ export class ApiClient {
       return projects;
     } catch (error) {
       console.error('Failed to fetch projects from database:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // PAGINATION METHODS
+  // ============================================================================
+
+  /**
+   * Fetches a paginated page of projects.
+   *
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Number of items per page (default: 50)
+   * @returns PaginatedResponse containing projects and metadata
+   */
+  static async getProjectsPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Project>> {
+    try {
+      const response = await invoke<PaginatedResponse<Project>>('get_projects_page', { page, page_size: pageSize });
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch projects page:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a paginated page of companies.
+   */
+  static async getCompaniesPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Company>> {
+    try {
+      const response = await invoke<PaginatedResponse<Company>>('get_companies_page', { page, page_size: pageSize });
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch companies page:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a paginated page of contacts.
+   */
+  static async getContactsPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Contact>> {
+    try {
+      const response = await invoke<PaginatedResponse<Contact>>('get_contacts_page', { page, page_size: pageSize });
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch contacts page:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a paginated page of fees.
+   */
+  static async getFeesPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Fee>> {
+    try {
+      const response = await invoke<PaginatedResponse<Fee>>('get_fees_page', { page, page_size: pageSize });
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch fees page:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a single company by ID (for on-demand related record loading).
+   */
+  static async getCompanyById(id: string): Promise<Company | null> {
+    try {
+      const company = await invoke<Company | null>('get_company_by_id', { id });
+      return company;
+    } catch (error) {
+      console.error('Failed to fetch company by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a single contact by ID.
+   */
+  static async getContactById(id: string): Promise<Contact | null> {
+    try {
+      const contact = await invoke<Contact | null>('get_contact_by_id', { id });
+      return contact;
+    } catch (error) {
+      console.error('Failed to fetch contact by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches a single project by ID.
+   */
+  static async getProjectById(id: string): Promise<Project | null> {
+    try {
+      const project = await invoke<Project | null>('get_project_by_id', { id });
+      return project;
+    } catch (error) {
+      console.error('Failed to fetch project by ID:', error);
       throw error;
     }
   }
@@ -1907,6 +2008,17 @@ export const {
   deleteFee,
   writeFeeToJson,
   writeFeeToJsonSafe,
+
+  // Pagination operations
+  getProjectsPage,
+  getCompaniesPage,
+  getContactsPage,
+  getFeesPage,
+
+  // Single entity fetch (for on-demand loading)
+  getProjectById,
+  getCompanyById,
+  getContactById,
 
   // Statistics and monitoring
   getStats,

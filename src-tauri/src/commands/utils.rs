@@ -147,8 +147,34 @@ macro_rules! crud_command {
         ) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move { 
-                    manager.$manager_method().await 
+                |manager| Box::pin(async move {
+                    manager.$manager_method().await
+                }),
+                $action,
+                $entity_name
+            ).await
+        }
+    };
+
+    // Command with page and page_size parameters (paginated queries)
+    (
+        $fn_name:ident,
+        $return_type:ty,
+        $manager_method:ident,
+        $action:literal,
+        $entity_name:literal,
+        paginated
+    ) => {
+        #[tauri::command]
+        pub async fn $fn_name(
+            page: usize,
+            page_size: usize,
+            state: State<'_, AppState>
+        ) -> Result<$return_type, String> {
+            $crate::commands::utils::execute_with_manager(
+                &state,
+                |manager| Box::pin(async move {
+                    manager.$manager_method(page, page_size).await
                 }),
                 $action,
                 $entity_name

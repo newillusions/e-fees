@@ -4,18 +4,19 @@
   import ProposalModal from '$lib/components/ProposalModal.svelte';
   import ProposalDetail from '$lib/components/ProposalDetail.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { feesStore, projectsStore, companiesStore, contactsStore, feesActions, projectsActions, companiesActions, contactsActions } from '$lib/stores';
+  import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
+  import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import type { Fee, UnknownSurrealThing } from '../types';
-  
+
   // Modal states
   let showProposalModal = $state(false);
   let proposalModalMode: 'create' | 'edit' = $state('create');
   let isProposalDetailOpen = $state(false);
   let selectedProposal: Fee | null = $state(null);
-  
+
   // Filter states
   let searchQuery = $state('');
   let filters = $state({
@@ -23,7 +24,49 @@
     staff: ''
   });
 
-  
+  // Scroll container ref for infinite scroll
+  let scrollContainer: HTMLDivElement | null = $state(null);
+
+  // Pagination state - synced from store via $effect
+  let fees: Fee[] = $state([]);
+  let isLoading = $state(false);
+  let hasMore = $state(true);
+  let totalRecords = $state(0);
+  let initialized = $state(false);
+
+  // Effect to sync paginated store state to local runes
+  $effect(() => {
+    const unsubscribe = paginatedFeesStore.store.subscribe((state: PaginatedStoreState<Fee>) => {
+      fees = state.items;
+      isLoading = state.pagination.isLoading;
+      hasMore = state.pagination.hasMore;
+      totalRecords = state.pagination.totalRecords;
+      initialized = state.initialized;
+    });
+    return unsubscribe;
+  });
+
+  // Scroll handler for infinite scroll
+  function handleScroll() {
+    if (!scrollContainer || isLoading || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled past 80%
+    if (scrollPercentage >= 0.8) {
+      paginatedFeesStore.actions.loadNextPage();
+    }
+  }
+
+  // Set up scroll listener when container is available
+  $effect(() => {
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer?.removeEventListener('scroll', handleScroll);
+    }
+  });
+
   // Filter configuration for proposals
   const filterConfig: FilterConfig<Fee> = {
     searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
@@ -41,32 +84,32 @@
         const day = parseInt(issueDate.substring(4, 6));
         return new Date(year, month, day).getTime();
       };
-      
+
       const aIssueDate = parseIssueDate(a.issue_date);
       const bIssueDate = parseIssueDate(b.issue_date);
-      
+
       if (bIssueDate !== aIssueDate) {
         return bIssueDate - aIssueDate;
       }
-      
+
       // Secondary sort: updated_at descending (if issue_date is the same)
       const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
       const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
       return bUpdated - aUpdated;
     }
   };
-  
+
   // Reactive filtered proposals using optimized filter function
-  const filteredProposals = $derived(createFilterFunction($feesStore, searchQuery, filters, filterConfig));
-  
+  const filteredProposals = $derived(createFilterFunction(fees, searchQuery, filters, filterConfig));
+
   // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues($feesStore, (proposal) => proposal.staff_name).filter(Boolean));
+  const uniqueStatuses = $derived(getUniqueFieldValues(fees, (proposal) => proposal.status).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name).filter(Boolean));
 
   // Count proposals per status for styling (bold for non-empty)
   const statusCounts = $derived(
     PROPOSAL_STATUSES.reduce((acc, status) => {
-      acc[status] = $feesStore.filter(p => p.status === status).length;
+      acc[status] = fees.filter(p => p.status === status).length;
       return acc;
     }, {} as Record<string, number>)
   );
@@ -107,7 +150,9 @@
   
   // Load proposals on mount
   onMount(() => {
-    feesActions.load();
+    if (!initialized) {
+      paginatedFeesStore.actions.loadInitialPage();
+    }
     projectsActions.load();
     companiesActions.load();
     contactsActions.load();
@@ -310,30 +355,38 @@
 </script>
 
 <div class="p-8">
-  <!-- Search and Add Button Row -->
-  <div class="flex justify-between items-center mb-6">
-    <div class="flex-1 max-w-2xl">
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search proposals..."
-            bind:value={searchQuery}
-            class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-          />
-        </div>
-        <button 
-          class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
+  <!-- Search, Counter, and Add Button Row -->
+  <div class="flex justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-2 flex-1">
+      <div class="relative flex-1 max-w-md">
+        <input
+          type="text"
+          placeholder="Search proposals..."
+          bind:value={searchQuery}
+          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+        />
       </div>
+      <button
+        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+      <ResultsCounter
+        totalItems={totalRecords}
+        filteredItems={filteredProposals.length}
+        hasFilters={hasFiltersActive}
+        entityName="proposals"
+        loadedItems={fees.length}
+        hasMore={hasMore}
+        inline={true}
+        on:clear-filters={clearFilters}
+      />
     </div>
     <button
-      class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
       onclick={handleNewProposal}
       aria-label="Add new proposal"
     >
@@ -391,16 +444,15 @@
   }
 </style>
   
-  <ResultsCounter 
-    totalItems={$feesStore.length}
-    filteredItems={filteredProposals.length}
-    hasFilters={hasFiltersActive}
-    entityName="proposals"
-    on:clear-filters={clearFilters}
-  />
   
-  {#if $feesStore.length === 0}
-    <EmptyState 
+  {#if isLoading && fees.length === 0}
+    <!-- Initial loading state -->
+    <div class="flex flex-col items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-2 border-emittiv-splash border-t-transparent mb-4"></div>
+      <p class="text-emittiv-light text-sm">Loading proposals...</p>
+    </div>
+  {:else if fees.length === 0}
+    <EmptyState
       icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
       title="No Proposals Yet"
       description="Create your first fee proposal to start managing professional fee requests and proposals."
@@ -414,7 +466,7 @@
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No proposals found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button 
+      <button
         onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
@@ -422,9 +474,13 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-2">
+    <!-- Scrollable container for infinite scroll -->
+    <div
+      bind:this={scrollContainer}
+      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+    >
       {#each filteredProposals as proposal}
-        <ProposalCard 
+        <ProposalCard
           {proposal}
           projectName={getProjectName(proposal.project_id)}
           companyName={getCompanyName(proposal.company_id)}
@@ -433,6 +489,22 @@
           on:view={(e) => handleViewProposal(e.detail)}
         />
       {/each}
+
+      <!-- Footer indicator -->
+      {#if fees.length > 0}
+        <div class="text-center py-4 text-emittiv-light text-xs opacity-60">
+          {#if isLoading && fees.length > 0}
+            <div class="flex items-center justify-center gap-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-emittiv-splash border-t-transparent"></div>
+              <span>Loading more...</span>
+            </div>
+          {:else if hasMore}
+            <span>Showing {fees.length} of {totalRecords} proposals</span>
+          {:else}
+            <span>{totalRecords} proposals</span>
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

@@ -7,14 +7,43 @@
   import NewProjectModal from '$lib/components/NewProjectModal.svelte';
   import ProposalModal from '$lib/components/ProposalModal.svelte';
   import CompanyModal from '$lib/components/CompanyModal.svelte';
-  import { statisticsStore, isLoadingStore, loadAllData } from '$lib/stores';
+  import { loadAllData, isLoadingStore } from '$lib/stores';
+  import { invoke } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
   import { push } from 'svelte-spa-router';
 
+  // Statistics from backend (efficient COUNT queries)
+  let stats = $state({
+    totalProjects: 0,
+    activeFees: 0,
+    totalCompanies: 0,
+    totalContacts: 0,
+    totalFees: 0
+  });
+  let isLoadingStats = $state(true);
+
   // Modal handling
-  let showProjectModal = false;
-  let showFeeModal = false;
-  let showCompanyModal = false;
+  let showProjectModal = $state(false);
+  let showFeeModal = $state(false);
+  let showCompanyModal = $state(false);
+
+  // Load stats from backend using efficient COUNT queries
+  async function loadStats() {
+    isLoadingStats = true;
+    try {
+      const result = await invoke<typeof stats>('get_stats');
+      stats = result;
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    } finally {
+      isLoadingStats = false;
+    }
+  }
+
+  onMount(() => {
+    loadStats();
+    loadAllData(); // Load data for ActivityFeed and PendingProposals
+  });
 
   function handleModalOpen(event: CustomEvent) {
     const { type } = event.detail;
@@ -80,7 +109,7 @@
     <div class="stats-grid">
       {#each statCards as card}
         <div class="stat-card" on:click={() => handleStatCardClick(card.route)} on:keydown={(e) => e.key === 'Enter' && handleStatCardClick(card.route)} role="button" tabindex="0">
-          {#if $isLoadingStore}
+          {#if isLoadingStats}
             <div class="stat-card-content">
               <div class="stat-icon skeleton-icon"></div>
               <div class="stat-info">
@@ -96,7 +125,7 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <div class="stat-number">{($statisticsStore as any)[card.key]}</div>
+                <div class="stat-number">{(stats as any)[card.key]}</div>
                 <div class="stat-label">{card.title}</div>
               </div>
             </div>
@@ -261,12 +290,18 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+    align-items: stretch;
   }
 
   .content-panel {
     min-height: 400px;
-    display: flex; /* Ensure consistent height during loading */
+    display: flex;
     flex-direction: column;
+  }
+
+  /* Ensure child components fill the panel */
+  .content-panel > :global(*) {
+    flex: 1;
   }
 
   @media (max-width: 1024px) {

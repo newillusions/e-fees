@@ -388,3 +388,95 @@ export const isDataLoaded = () => {
 // Export settings functionality
 export * from './stores/settings';
 
+// ============================================================================
+// PAGINATION EXPORTS
+// ============================================================================
+
+// Export pagination utilities and types
+export {
+  createPaginatedStore,
+  createOnDemandLoader,
+  createScrollTrigger,
+  sortByCreatedAt,
+  DEFAULT_PAGE_SIZE,
+  BACKGROUND_LOAD_DELAY,
+  type PaginatedStoreState,
+  type PaginatedStoreActions,
+} from './stores/pagination';
+
+// Export pagination adapters
+export {
+  projectsPaginationApi,
+  companiesPaginationApi,
+  contactsPaginationApi,
+  feesPaginationApi,
+  type PaginationApi,
+} from './stores/adapters';
+
+// Import for creating paginated stores
+import { createPaginatedStore, createOnDemandLoader } from './stores/pagination';
+import {
+  projectsPaginationApi as _projectsPagApi,
+  companiesPaginationApi as _companiesPagApi,
+  contactsPaginationApi as _contactsPagApi,
+  feesPaginationApi as _feesPagApi,
+} from './stores/adapters';
+
+// ============================================================================
+// PAGINATED STORE INSTANCES
+// ============================================================================
+
+/**
+ * Paginated projects store with lazy loading support.
+ * Use this instead of projectsStore when pagination is needed.
+ */
+export const paginatedProjectsStore = createPaginatedStore<Project>(
+  (page, pageSize) => _projectsPagApi.getPage(page, pageSize)
+);
+
+/**
+ * Paginated companies store with lazy loading support.
+ */
+export const paginatedCompaniesStore = createPaginatedStore<Company>(
+  (page, pageSize) => _companiesPagApi.getPage(page, pageSize)
+);
+
+/**
+ * Paginated contacts store with lazy loading support.
+ */
+export const paginatedContactsStore = createPaginatedStore<Contact>(
+  (page, pageSize) => _contactsPagApi.getPage(page, pageSize)
+);
+
+/**
+ * Paginated fees store with lazy loading support.
+ */
+export const paginatedFeesStore = createPaginatedStore<Fee>(
+  (page, pageSize) => _feesPagApi.getPage(page, pageSize)
+);
+
+// ============================================================================
+// ON-DEMAND LOADERS (for related record fetching)
+// ============================================================================
+
+/**
+ * On-demand company loader for fetching companies not in paginated store.
+ */
+export const companyOnDemandLoader = createOnDemandLoader<Company>(
+  (id) => _companiesPagApi.getById!(id)
+);
+
+/**
+ * On-demand contact loader for fetching contacts not in paginated store.
+ */
+export const contactOnDemandLoader = createOnDemandLoader<Contact>(
+  (id) => _contactsPagApi.getById!(id)
+);
+
+/**
+ * On-demand project loader for fetching projects not in paginated store.
+ */
+export const projectOnDemandLoader = createOnDemandLoader<Project>(
+  (id) => _projectsPagApi.getById!(id)
+);
+

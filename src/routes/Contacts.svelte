@@ -5,29 +5,73 @@
   import ContactDetail from '$lib/components/ContactDetail.svelte';
   import ContactModal from '$lib/components/ContactModal.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { contactsStore, companiesStore, contactsActions, companiesActions } from '$lib/stores';
+  import { paginatedContactsStore, companiesStore, companiesActions } from '$lib/stores';
+  import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { onMount } from 'svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import type { Contact } from '../types';
-  
-  // Filter states  
-  let searchQuery = '';
-  let filters = {
+
+  // Filter states
+  let searchQuery = $state('');
+  let filters = $state({
     company: '',
     country: '',
     position: ''
-  };
-  
+  });
+
+  // Scroll container ref for infinite scroll
+  let scrollContainer: HTMLDivElement | null = $state(null);
+
+  // Pagination state - synced from store via $effect
+  let contacts: Contact[] = $state([]);
+  let isLoading = $state(false);
+  let hasMore = $state(true);
+  let totalRecords = $state(0);
+  let initialized = $state(false);
+
   // Modal states
-  let isContactDetailOpen = false;
-  let isContactModalOpen = false;
-  let selectedContact: Contact | null = null;
-  let modalMode: 'create' | 'edit' = 'create';
-  
+  let isContactDetailOpen = $state(false);
+  let isContactModalOpen = $state(false);
+  let selectedContact: Contact | null = $state(null);
+  let modalMode: 'create' | 'edit' = $state('create');
+
+  // Effect to sync paginated store state to local runes
+  $effect(() => {
+    const unsubscribe = paginatedContactsStore.store.subscribe((state: PaginatedStoreState<Contact>) => {
+      contacts = state.items;
+      isLoading = state.pagination.isLoading;
+      hasMore = state.pagination.hasMore;
+      totalRecords = state.pagination.totalRecords;
+      initialized = state.initialized;
+    });
+    return unsubscribe;
+  });
+
+  // Scroll handler for infinite scroll
+  function handleScroll() {
+    if (!scrollContainer || isLoading || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled past 80%
+    if (scrollPercentage >= 0.8) {
+      paginatedContactsStore.actions.loadNextPage();
+    }
+  }
+
+  // Set up scroll listener when container is available
+  $effect(() => {
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer?.removeEventListener('scroll', handleScroll);
+    }
+  });
+
   // Create optimized company lookup when companies data changes
-  $: companyLookup = createCompanyLookup($companiesStore);
-  
+  const companyLookup = $derived(createCompanyLookup($companiesStore));
+
   // Filter configuration for contacts
   const filterConfig: FilterConfig<Contact> = {
     searchFields: ['full_name', 'first_name', 'last_name', 'email', 'phone', 'position'],
@@ -37,20 +81,20 @@
       position: (contact) => contact.position
     }
   };
-  
+
   // Reactive filtered contacts using optimized filter function
-  $: filteredContacts = createFilterFunction($contactsStore, searchQuery, filters, filterConfig);
-  
+  const filteredContacts = $derived(createFilterFunction(contacts, searchQuery, filters, filterConfig));
+
   // Get unique values for filters using optimized functions
-  $: uniqueCompanies = getUniqueFieldValues($contactsStore, (contact) => 
+  const uniqueCompanies = $derived(getUniqueFieldValues(contacts, (contact) =>
     companyLookup.getCompanyShortName(contact.company)
-  ).filter(name => name !== 'N/A');
-  
-  $: uniqueCountries = getUniqueFieldValues($contactsStore, (contact) => 
+  ).filter(name => name !== 'N/A'));
+
+  const uniqueCountries = $derived(getUniqueFieldValues(contacts, (contact) =>
     companyLookup.getCompanyCountry(contact.company)
-  ).filter(country => country !== 'N/A');
-  
-  $: uniquePositions = getUniqueFieldValues($contactsStore, (contact) => contact.position);
+  ).filter(country => country !== 'N/A'));
+
+  const uniquePositions = $derived(getUniqueFieldValues(contacts, (contact) => contact.position));
   
   function handleAddContact() {
     selectedContact = null;
@@ -84,13 +128,13 @@
   function handleCloseModal() {
     isContactModalOpen = false;
     // Refresh contacts list after modal closes
-    contactsActions.load();
-    
+    paginatedContactsStore.actions.refresh();
+
     // If we have a selected contact, update it with fresh data from the store
     if (selectedContact) {
       setTimeout(() => {
         if (selectedContact) {
-          const updatedContact = $contactsStore.find(c => c.id === selectedContact!.id);
+          const updatedContact = contacts.find(c => c.id === selectedContact!.id);
           if (updatedContact) {
             selectedContact = updatedContact;
           }
@@ -98,46 +142,56 @@
       }, 100);
     }
   }
-  
+
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
   }
-  
+
   // Check if any filters are active
-  $: hasFiltersActive = hasActiveFilters(filters, searchQuery);
-  
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
+
   // Load contacts and companies on mount
   onMount(() => {
-    contactsActions.load();
+    if (!initialized) {
+      paginatedContactsStore.actions.loadInitialPage();
+    }
     companiesActions.load();
   });
 </script>
 
 <div class="p-8">
-  <!-- Search and Add Button Row -->
-  <div class="flex justify-between items-center mb-6">
-    <div class="flex-1 max-w-2xl">
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search contacts..."
-            bind:value={searchQuery}
-            class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-          />
-        </div>
-        <button 
-          class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
+  <!-- Search, Counter, and Add Button Row -->
+  <div class="flex justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-2 flex-1">
+      <div class="relative flex-1 max-w-md">
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          bind:value={searchQuery}
+          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+        />
       </div>
+      <button
+        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+      <ResultsCounter
+        totalItems={totalRecords}
+        filteredItems={filteredContacts.length}
+        hasFilters={hasFiltersActive}
+        entityName="contacts"
+        loadedItems={contacts.length}
+        hasMore={hasMore}
+        inline={true}
+        on:clear-filters={clearFilters}
+      />
     </div>
     <button
-      class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
       on:click={handleAddContact}
       aria-label="Add new contact"
     >
@@ -194,16 +248,15 @@
   }
 </style>
   
-  <ResultsCounter 
-    totalItems={$contactsStore.length}
-    filteredItems={filteredContacts.length}
-    hasFilters={hasFiltersActive}
-    entityName="contacts"
-    on:clear-filters={clearFilters}
-  />
   
-  {#if $contactsStore.length === 0}
-    <EmptyState 
+  {#if isLoading && contacts.length === 0}
+    <!-- Initial loading state -->
+    <div class="flex flex-col items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-2 border-emittiv-splash border-t-transparent mb-4"></div>
+      <p class="text-emittiv-light text-sm">Loading contacts...</p>
+    </div>
+  {:else if contacts.length === 0}
+    <EmptyState
       icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
       title="No Contacts Yet"
       description="Add your first contact to start building your professional network and managing client relationships."
@@ -217,23 +270,43 @@
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No contacts found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button 
-        on:click={clearFilters}
+      <button
+        onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
         Clear all filters
       </button>
     </div>
   {:else}
-    <div class="grid gap-2">
+    <!-- Scrollable container for infinite scroll -->
+    <div
+      bind:this={scrollContainer}
+      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+    >
       {#each filteredContacts as contact}
-        <ContactCard 
+        <ContactCard
           {contact}
           companyName={companyLookup.getCompanyName(contact.company)}
           on:edit={(e) => handleEditContact(e.detail)}
           on:view={(e) => handleViewContact(e.detail)}
         />
       {/each}
+
+      <!-- Footer indicator -->
+      {#if contacts.length > 0}
+        <div class="text-center py-4 text-emittiv-light text-xs opacity-60">
+          {#if isLoading && contacts.length > 0}
+            <div class="flex items-center justify-center gap-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-emittiv-splash border-t-transparent"></div>
+              <span>Loading more...</span>
+            </div>
+          {:else if hasMore}
+            <span>Showing {contacts.length} of {totalRecords} contacts</span>
+          {:else}
+            <span>{totalRecords} contacts</span>
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

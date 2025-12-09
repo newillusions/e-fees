@@ -36,7 +36,7 @@ pub use folder_management::{
 use utils::execute_with_manager;
 use crate::crud_command;
 
-use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate};
+use crate::db::{DatabaseManager, ConnectionStatus, Project, NewProject, Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate, PaginatedResponse};
 // use crate::db::entities::FeeUpdate; // Temporarily disabled for testing
 use std::sync::{Arc, Mutex};
 use std::fs;
@@ -357,6 +357,91 @@ crud_command!(
     "create",
     "project",
     data: project
+);
+
+// ============================================================================
+// PAGINATION COMMANDS
+// ============================================================================
+
+/// Retrieve a paginated page of projects.
+///
+/// This command fetches a specific page of projects with pagination metadata.
+/// Used for lazy loading/infinite scroll patterns.
+///
+/// # Parameters
+/// - `page`: Page number (1-indexed)
+/// - `page_size`: Number of items per page (default: 50)
+///
+/// # Returns
+/// - `Ok(PaginatedResponse<Project>)`: Paginated projects with metadata
+/// - `Err(String)`: Database error or connection failure
+crud_command!(
+    get_projects_page,
+    PaginatedResponse<Project>,
+    get_projects_page,
+    "fetch page",
+    "projects",
+    paginated
+);
+
+/// Retrieve a paginated page of companies.
+crud_command!(
+    get_companies_page,
+    PaginatedResponse<Company>,
+    get_companies_page,
+    "fetch page",
+    "companies",
+    paginated
+);
+
+/// Retrieve a paginated page of contacts.
+crud_command!(
+    get_contacts_page,
+    PaginatedResponse<Contact>,
+    get_contacts_page,
+    "fetch page",
+    "contacts",
+    paginated
+);
+
+/// Retrieve a paginated page of fees.
+crud_command!(
+    get_fees_page,
+    PaginatedResponse<Fee>,
+    get_fees_page,
+    "fetch page",
+    "fees",
+    paginated
+);
+
+/// Fetch a single company by ID (for on-demand related record loading).
+crud_command!(
+    get_company_by_id,
+    Option<Company>,
+    get_company_by_id,
+    "fetch",
+    "company",
+    id: String
+);
+
+/// Fetch a single contact by ID.
+crud_command!(
+    get_contact_by_id,
+    Option<Contact>,
+    get_contact_by_id,
+    "fetch",
+    "contact",
+    id: String
+);
+
+/// Fetch a single project by ID.
+crud_command!(
+    get_project_by_id,
+    Option<Project>,
+    get_project_by_id,
+    "fetch",
+    "project",
+    id: String
 );
 
 // ============================================================================
@@ -1633,41 +1718,23 @@ pub async fn get_db_info(state: State<'_, AppState>) -> Result<serde_json::Value
 /// ```
 #[tauri::command]
 pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    info!("Fetching application statistics");
-    
+    info!("Fetching application statistics using efficient COUNT queries");
+
     let manager_clone = {
         let manager = state.lock().map_err(|e| e.to_string())?;
         manager.clone()
     }; // Lock is automatically dropped here when manager goes out of scope
-    
-    // Fetch all data in parallel for better performance
-    let projects = manager_clone.get_projects().await.unwrap_or_default();
-    let companies = manager_clone.get_companies().await.unwrap_or_default();
-    let contacts = manager_clone.get_contacts().await.unwrap_or_default();
-    let fees = manager_clone.get_fees().await.unwrap_or_default();
-    
-    // Debug: Log all fee statuses to understand what's in the database
-    let mut status_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
-    for fee in &fees {
-        *status_counts.entry(fee.status.clone()).or_insert(0) += 1;
-    }
-    info!("Fee status breakdown: {:?}", status_counts);
 
-    // Calculate active fees - only those truly in-progress
-    // Include: Draft (preparing), Sent (awaiting response), Negotiation (discussing terms)
-    // Exclude: Awarded, Completed, Lost, Cancelled, Revised, On Hold, Active (terminal/dormant states)
-    let active_fees = fees.iter()
-        .filter(|f| matches!(f.status.as_str(), "Draft" | "Sent" | "Negotiation"))
-        .count();
-
-    info!("Active fees count (Draft/Sent/Negotiation only): {}", active_fees);
+    // Use efficient COUNT queries instead of loading all records
+    let counts = manager_clone.get_entity_counts().await
+        .map_err(|e| format!("Failed to get entity counts: {}", e))?;
 
     let stats = serde_json::json!({
-        "totalProjects": projects.len(),
-        "activeFees": active_fees,
-        "totalCompanies": companies.len(),
-        "totalContacts": contacts.len(),
-        "totalFees": fees.len()
+        "totalProjects": counts.total_projects,
+        "activeFees": counts.active_fees,
+        "totalCompanies": counts.total_companies,
+        "totalContacts": counts.total_contacts,
+        "totalFees": counts.total_fees
     });
 
     info!("Successfully calculated statistics: {:?}", stats);

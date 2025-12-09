@@ -28,6 +28,15 @@ use commands::{
     create_fee,
     update_fee,
     delete_fee,
+    // Pagination commands
+    get_projects_page,
+    get_companies_page,
+    get_contacts_page,
+    get_fees_page,
+    // Single entity fetch (for on-demand loading)
+    get_project_by_id,
+    get_company_by_id,
+    get_contact_by_id,
     health_check,
     get_stats,
     get_db_info,
@@ -262,6 +271,15 @@ pub fn run() {
             create_fee,
             update_fee,
             delete_fee,
+            // Pagination commands
+            get_projects_page,
+            get_companies_page,
+            get_contacts_page,
+            get_fees_page,
+            // Single entity fetch (for on-demand loading)
+            get_project_by_id,
+            get_company_by_id,
+            get_contact_by_id,
             health_check,
             get_stats,
             get_db_info,

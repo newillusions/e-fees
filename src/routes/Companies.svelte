@@ -4,18 +4,62 @@
   import CompanyDetail from '$lib/components/CompanyDetail.svelte';
   import CompanyCard from '$lib/components/CompanyCard.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { companiesStore, companiesActions } from '$lib/stores';
+  import { paginatedCompaniesStore } from '$lib/stores';
+  import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
   import { onMount } from 'svelte';
   import type { Company } from '../types';
-  
+
   // Filter states
   let searchQuery = $state('');
   let filters = $state({
     country: '',
     city: ''
   });
-  
+
+  // Scroll container ref for infinite scroll
+  let scrollContainer: HTMLDivElement | null = $state(null);
+
+  // Pagination state - synced from store via $effect
+  let companies: Company[] = $state([]);
+  let isLoading = $state(false);
+  let hasMore = $state(true);
+  let totalRecords = $state(0);
+  let initialized = $state(false);
+
+  // Effect to sync paginated store state to local runes
+  $effect(() => {
+    const unsubscribe = paginatedCompaniesStore.store.subscribe((state: PaginatedStoreState<Company>) => {
+      companies = state.items;
+      isLoading = state.pagination.isLoading;
+      hasMore = state.pagination.hasMore;
+      totalRecords = state.pagination.totalRecords;
+      initialized = state.initialized;
+    });
+    return unsubscribe;
+  });
+
+  // Scroll handler for infinite scroll
+  function handleScroll() {
+    if (!scrollContainer || isLoading || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled past 80%
+    if (scrollPercentage >= 0.8) {
+      paginatedCompaniesStore.actions.loadNextPage();
+    }
+  }
+
+  // Set up scroll listener when container is available
+  $effect(() => {
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer?.removeEventListener('scroll', handleScroll);
+    }
+  });
+
   // Filter configuration for companies
   const filterConfig: FilterConfig<Company> = {
     searchFields: ['name', 'name_short', 'abbreviation', 'city', 'country'],
@@ -27,11 +71,11 @@
   };
 
   // Reactive filtered companies using optimized filter function
-  const filteredCompanies = $derived(createFilterFunction($companiesStore, searchQuery, filters, filterConfig));
-  
+  const filteredCompanies = $derived(createFilterFunction(companies, searchQuery, filters, filterConfig));
+
   // Get unique values for filters using optimized functions
-  const uniqueCountries = $derived(getUniqueFieldValues($companiesStore, (company) => company.country).filter(Boolean));
-  const uniqueCities = $derived(getUniqueFieldValues($companiesStore, (company) => company.city).filter(Boolean));
+  const uniqueCountries = $derived(getUniqueFieldValues(companies, (company) => company.country).filter(Boolean));
+  const uniqueCities = $derived(getUniqueFieldValues(companies, (company) => company.city).filter(Boolean));
   
   // Modal states
   let isCompanyModalOpen = $state(false);
@@ -82,38 +126,48 @@
   
   // Load companies on mount
   onMount(() => {
-    companiesActions.load();
+    if (!initialized) {
+      paginatedCompaniesStore.actions.loadInitialPage();
+    }
   });
-  
+
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
 </script>
 
 <div class="p-8">
-  <!-- Search and Add Button Row -->
-  <div class="flex justify-between items-center mb-6">
-    <div class="flex-1 max-w-2xl">
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search companies..."
-            bind:value={searchQuery}
-            class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-          />
-        </div>
-        <button 
-          class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
+  <!-- Search, Counter, and Add Button Row -->
+  <div class="flex justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-2 flex-1">
+      <div class="relative flex-1 max-w-md">
+        <input
+          type="text"
+          placeholder="Search companies..."
+          bind:value={searchQuery}
+          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+        />
       </div>
+      <button
+        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+      <ResultsCounter
+        totalItems={totalRecords}
+        filteredItems={filteredCompanies.length}
+        hasFilters={hasFiltersActive}
+        entityName="companies"
+        loadedItems={companies.length}
+        hasMore={hasMore}
+        inline={true}
+        on:clear-filters={clearFilters}
+      />
     </div>
     <button
-      class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
       onclick={handleAddCompany}
       aria-label="Add new company"
     >
@@ -159,16 +213,15 @@
   }
 </style>
   
-  <ResultsCounter 
-    totalItems={$companiesStore.length}
-    filteredItems={filteredCompanies.length}
-    hasFilters={hasFiltersActive}
-    entityName="companies"
-    on:clear-filters={clearFilters}
-  />
   
-  {#if $companiesStore.length === 0}
-    <EmptyState 
+  {#if isLoading && companies.length === 0}
+    <!-- Initial loading state -->
+    <div class="flex flex-col items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-2 border-emittiv-splash border-t-transparent mb-4"></div>
+      <p class="text-emittiv-light text-sm">Loading companies...</p>
+    </div>
+  {:else if companies.length === 0}
+    <EmptyState
       icon="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
       title="No Companies Yet"
       description="Add your first company to start organizing your clients and managing relationships."
@@ -182,7 +235,7 @@
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No companies found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button 
+      <button
         onclick={clearFilters}
         class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
       >
@@ -190,14 +243,34 @@
       </button>
     </div>
   {:else}
-    <div class="grid gap-2">
+    <!-- Scrollable container for infinite scroll -->
+    <div
+      bind:this={scrollContainer}
+      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+    >
       {#each filteredCompanies as company}
-        <CompanyCard 
+        <CompanyCard
           {company}
           on:edit={(e) => handleEditCompany(e.detail)}
           on:view={(e) => handleViewCompany(e.detail)}
         />
       {/each}
+
+      <!-- Footer indicator -->
+      {#if companies.length > 0}
+        <div class="text-center py-4 text-emittiv-light text-xs opacity-60">
+          {#if isLoading && companies.length > 0}
+            <div class="flex items-center justify-center gap-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-emittiv-splash border-t-transparent"></div>
+              <span>Loading more...</span>
+            </div>
+          {:else if hasMore}
+            <span>Showing {companies.length} of {totalRecords} companies</span>
+          {:else}
+            <span>{totalRecords} companies</span>
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
