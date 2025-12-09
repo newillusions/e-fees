@@ -234,7 +234,7 @@ export class ApiClient {
    */
   static async getProjectsPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Project>> {
     try {
-      const response = await invoke<PaginatedResponse<Project>>('get_projects_page', { page, page_size: pageSize });
+      const response = await invoke<PaginatedResponse<Project>>('get_projects_page', { page, pageSize });
       return response;
     } catch (error) {
       console.error('Failed to fetch projects page:', error);
@@ -247,7 +247,7 @@ export class ApiClient {
    */
   static async getCompaniesPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Company>> {
     try {
-      const response = await invoke<PaginatedResponse<Company>>('get_companies_page', { page, page_size: pageSize });
+      const response = await invoke<PaginatedResponse<Company>>('get_companies_page', { page, pageSize });
       return response;
     } catch (error) {
       console.error('Failed to fetch companies page:', error);
@@ -260,7 +260,7 @@ export class ApiClient {
    */
   static async getContactsPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Contact>> {
     try {
-      const response = await invoke<PaginatedResponse<Contact>>('get_contacts_page', { page, page_size: pageSize });
+      const response = await invoke<PaginatedResponse<Contact>>('get_contacts_page', { page, pageSize });
       return response;
     } catch (error) {
       console.error('Failed to fetch contacts page:', error);
@@ -273,7 +273,7 @@ export class ApiClient {
    */
   static async getFeesPage(page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<Fee>> {
     try {
-      const response = await invoke<PaginatedResponse<Fee>>('get_fees_page', { page, page_size: pageSize });
+      const response = await invoke<PaginatedResponse<Fee>>('get_fees_page', { page, pageSize });
       return response;
     } catch (error) {
       console.error('Failed to fetch fees page:', error);

@@ -50,6 +50,8 @@ export interface PaginatedStoreActions<T> {
   loadAllBackground(): Promise<void>;
   /** Reset pagination and reload from beginning */
   reset(): Promise<void>;
+  /** Refresh data - reloads from beginning while preserving scroll position */
+  refresh(): Promise<void>;
   /** Add a single item (from create operation) */
   addItem(item: T): void;
   /** Update an item in the store */
@@ -270,6 +272,25 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
     async reset(): Promise<void> {
       store.set(initialState);
       await actions.loadInitialPage();
+    },
+
+    async refresh(): Promise<void> {
+      // Get current page count to reload same amount of data
+      const currentState = get(store);
+      const pagesToReload = Math.max(1, currentState.pagination.currentPage);
+
+      // Reset to initial state
+      store.set(initialState);
+
+      // Reload the first page
+      await actions.loadInitialPage();
+
+      // Reload additional pages if user had scrolled
+      for (let i = 1; i < pagesToReload; i++) {
+        if (get(store).pagination.hasMore) {
+          await actions.loadNextPage();
+        }
+      }
     },
 
     addItem(item: T): void {

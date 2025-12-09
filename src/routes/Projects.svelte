@@ -137,7 +137,9 @@
   // Load projects and settings on mount
   onMount(() => {
     // Load first page of projects using pagination
-    if (!initialized) {
+    // Check store state directly to avoid race condition with $effect subscription
+    const storeState = paginatedProjectsStore.actions.getState();
+    if (!storeState.initialized) {
       paginatedProjectsStore.actions.loadInitialPage();
     }
     settingsActions.load();

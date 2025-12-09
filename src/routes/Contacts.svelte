@@ -152,7 +152,9 @@
 
   // Load contacts and companies on mount
   onMount(() => {
-    if (!initialized) {
+    // Check store state directly to avoid race condition with $effect subscription
+    const storeState = paginatedContactsStore.actions.getState();
+    if (!storeState.initialized) {
       paginatedContactsStore.actions.loadInitialPage();
     }
     companiesActions.load();
@@ -192,7 +194,7 @@
     </div>
     <button
       class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
-      on:click={handleAddContact}
+      onclick={handleAddContact}
       aria-label="Add new contact"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

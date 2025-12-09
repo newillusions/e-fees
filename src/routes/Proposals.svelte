@@ -150,7 +150,9 @@
   
   // Load proposals on mount
   onMount(() => {
-    if (!initialized) {
+    // Check store state directly to avoid race condition with $effect subscription
+    const storeState = paginatedFeesStore.actions.getState();
+    if (!storeState.initialized) {
       paginatedFeesStore.actions.loadInitialPage();
     }
     projectsActions.load();

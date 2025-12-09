@@ -126,7 +126,9 @@
   
   // Load companies on mount
   onMount(() => {
-    if (!initialized) {
+    // Check store state directly to avoid race condition with $effect subscription
+    const storeState = paginatedCompaniesStore.actions.getState();
+    if (!storeState.initialized) {
       paginatedCompaniesStore.actions.loadInitialPage();
     }
   });
