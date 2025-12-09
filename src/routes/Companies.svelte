@@ -6,7 +6,8 @@
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedCompaniesStore } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import { createCompanyFilterConfig } from '$lib/utils/search';
   import { onMount } from 'svelte';
   import type { Company } from '../types';
 
@@ -60,15 +61,18 @@
     }
   });
 
-  // Filter configuration for companies
-  const filterConfig: FilterConfig<Company> = {
-    searchFields: ['name', 'name_short', 'abbreviation', 'city', 'country'],
-    filterFields: {
-      country: (company) => company.country,
-      city: (company) => company.city
-    },
-    sortFunction: (a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime()
-  };
+  // Filter configuration for companies - uses unified search module
+  const filterConfig = (() => {
+    const baseConfig = createCompanyFilterConfig();
+    // Add filter fields for dropdowns
+    return {
+      ...baseConfig,
+      filterFields: {
+        country: (company: Company) => company.country,
+        city: (company: Company) => company.city
+      }
+    };
+  })();
 
   // Reactive filtered companies using optimized filter function
   const filteredCompanies = $derived(createFilterFunction(companies, searchQuery, filters, filterConfig));

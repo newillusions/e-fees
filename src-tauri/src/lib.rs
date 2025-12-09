@@ -59,6 +59,9 @@ use commands::{
     get_city_suggestions,
     write_fee_to_json,
     write_fee_to_json_safe,
+    // Activity log commands
+    create_activity_log,
+    get_activity_logs,
     check_project_folder_exists,
     check_var_json_exists,
     check_var_json_template_exists,
@@ -314,7 +317,10 @@ pub fn run() {
             move_project_to_archive,
             list_projects_in_folder,
             validate_project_base_path,
-            log_message
+            log_message,
+            // Activity log commands
+            create_activity_log,
+            get_activity_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

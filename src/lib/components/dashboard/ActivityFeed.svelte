@@ -1,162 +1,264 @@
 <script lang="ts">
-  import { recentFeesStore, projectsStore, companiesStore } from '$lib/stores';
-  import { extractId, findEntityById, getEntityDisplayName } from '$lib/utils';
-  import Card from '$lib/components/Card.svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
+  import { ApiClient, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
-  import type { UnknownSurrealThing, Fee } from '../../../types';
 
   export let isLoading = false;
 
+  const dispatch = createEventDispatcher();
+
+  // Emit event to open full activity log modal
+  function openFullActivityLog() {
+    dispatch('viewAll');
+  }
+
+  // Activity log state
+  let activities: ActivityLog[] = [];
+  let loading = true;
+  let error: string | null = null;
+
+  // Pagination state
+  let currentPage = 0;
+  let hasMore = true;
+  let loadingMore = false;
+  const PAGE_SIZE = 15;
+
   // Filter states
-  let activityFilter = 'all';
-  let timeFilter = 30; // days
+  let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = 'all';
 
-  // Helper functions for activity display
-  function getProjectName(projectId: UnknownSurrealThing): string {
-    const project = findEntityById($projectsStore, projectId);
-    return getEntityDisplayName(project) || 'Unknown Project';
+  // Scroll container reference
+  let scrollContainer: HTMLDivElement;
+
+  // Load activity logs (initial or reset)
+  async function loadActivities(reset = true) {
+    if (reset) {
+      loading = true;
+      currentPage = 0;
+      hasMore = true;
+      activities = [];
+    }
+    error = null;
+
+    try {
+      const entityType = entityFilter === 'all' ? undefined : entityFilter;
+      const offset = currentPage * PAGE_SIZE;
+      const newActivities = await ApiClient.getActivityLogs(PAGE_SIZE, entityType, offset);
+
+      if (reset) {
+        activities = newActivities;
+      } else {
+        activities = [...activities, ...newActivities];
+      }
+
+      // Check if there are more
+      hasMore = newActivities.length === PAGE_SIZE;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load activities';
+      if (reset) activities = [];
+    } finally {
+      loading = false;
+      loadingMore = false;
+    }
   }
 
-  function getCompanyName(companyId: UnknownSurrealThing): string {
-    const company = findEntityById($companiesStore, companyId);
-    return getEntityDisplayName(company) || 'Unknown Company';
+  // Load more activities
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    loadingMore = true;
+    currentPage++;
+    await loadActivities(false);
   }
 
-  function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+  // Handle scroll for infinite loading
+  function handleScroll(event: Event) {
+    const target = event.target as HTMLDivElement;
+    const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+
+    // Load more when within 100px of bottom
+    if (scrollBottom < 100 && hasMore && !loadingMore && !loading) {
+      loadMore();
+    }
   }
 
-  // Filter activity based on selected filters
-  $: filteredActivity = $recentFeesStore
-    .filter(fee => {
-      // Time filter - skip if no time info
-      if (!fee.time) return false;
-      const createdDate = new Date(fee.time.created_at);
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
+  onMount(() => {
+    loadActivities();
+  });
 
-      if (createdDate < cutoffDate) return false;
+  // Reload when filter changes
+  $: if (entityFilter !== undefined) {
+    loadActivities(true);
+  }
 
-      // Activity type filter
-      if (activityFilter === 'all') return true;
-      if (activityFilter === 'sent' && fee.status === 'Sent') return true;
-      if (activityFilter === 'awarded' && fee.status === 'Awarded') return true;
-      if (activityFilter === 'closed' && (fee.status === 'Lost' || fee.status === 'Cancelled'))
-        return true;
+  // Get icon for action type
+  function getActionIcon(action: string): string {
+    switch (action) {
+      case 'create': return 'M12 6v6m0 0v6m0-6h6m-6 0H6';
+      case 'update': return 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
+      case 'delete': return 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
+      case 'status_change': return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
+      default: return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+    }
+  }
 
-      return false;
-    })
-    .sort((a, b) => {
-      // Sort by newest first (most recent created_at or updated_at)
-      // Since we filtered out items without time, they should exist
-      const dateA = new Date(a.time!.updated_at || a.time!.created_at).getTime();
-      const dateB = new Date(b.time!.updated_at || b.time!.created_at).getTime();
-      return dateB - dateA; // Newest first
-    })
-    .slice(0, 10); // Show top 10
+  // Get color class for action type
+  function getActionColor(action: string): string {
+    switch (action) {
+      case 'create': return 'text-green-400 bg-green-400/20';
+      case 'update': return 'text-blue-400 bg-blue-400/20';
+      case 'delete': return 'text-red-400 bg-red-400/20';
+      case 'status_change': return 'text-orange-400 bg-orange-400/20';
+      default: return 'text-gray-400 bg-gray-400/20';
+    }
+  }
 
-  // Activity filter options
-  const filterOptions = [
-    { value: 'all', label: 'All Activity' },
-    { value: 'awarded', label: 'Awarded' },
-    { value: 'sent', label: 'Sent' },
-    { value: 'closed', label: 'Closed' }
+  // Get border color for action type
+  function getActionBorderColor(action: string): string {
+    switch (action) {
+      case 'create': return '#10b981';
+      case 'update': return '#3b82f6';
+      case 'delete': return '#ef4444';
+      case 'status_change': return '#f59e0b';
+      default: return '#6b7280';
+    }
+  }
+
+  // Format relative time
+  function formatRelativeTime(timestamp: string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // Handle click to navigate to entity
+  function handleActivityClick(activity: ActivityLog) {
+    const entityType = activity.entity_type;
+    const entityId = activity.entity_id.split(':')[1] || activity.entity_id;
+
+    switch (entityType) {
+      case 'project':
+        push(`/projects/${entityId}`);
+        break;
+      case 'fee':
+        push(`/proposals/${entityId}`);
+        break;
+      case 'company':
+        push(`/companies/${entityId}`);
+        break;
+      case 'contact':
+        push(`/contacts/${entityId}`);
+        break;
+    }
+  }
+
+  // Filter options
+  const entityOptions = [
+    { value: 'all', label: 'All Types' },
+    { value: 'project', label: 'Projects' },
+    { value: 'fee', label: 'Proposals' },
+    { value: 'company', label: 'Companies' },
+    { value: 'contact', label: 'Contacts' }
   ];
 
-  const timeOptions = [
-    { value: 7, label: 'Last 7 days' },
-    { value: 30, label: 'Last 30 days' },
-    { value: 90, label: 'Last 90 days' }
-  ];
-
-  function handleFeeClick(fee: Fee) {
-    const feeId = extractId(fee.id);
-    console.log('ActivityFeed: Navigating to proposal detail page for fee:', feeId);
-    push(`/proposals/${feeId}`); // Navigate to the specific proposal detail page
-  }
 </script>
 
 <div class="activity-feed">
   <div class="feed-header">
     <h2 class="section-title">Recent Activity</h2>
 
-    <div class="filter-controls">
-      <select bind:value={activityFilter} class="filter-select">
-        {#each filterOptions as option}
+    <div class="header-actions">
+      <select bind:value={entityFilter} class="filter-select">
+        {#each entityOptions as option}
           <option value={option.value}>{option.label}</option>
         {/each}
       </select>
 
-      <select bind:value={timeFilter} class="filter-select">
-        {#each timeOptions as option}
-          <option value={option.value}>{option.label}</option>
-        {/each}
-      </select>
+      <button class="view-all-button" on:click={openFullActivityLog}>
+        View All
+        <svg class="view-all-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
     </div>
   </div>
 
   <div class="feed-content">
-    {#if isLoading}
+    {#if isLoading || loading}
       <LoadingSkeleton rows={4} />
-    {:else if filteredActivity.length > 0}
-      <div class="activity-list">
-        {#each filteredActivity as fee}
+    {:else if error}
+      <div class="error-state">
+        <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p class="error-message">{error}</p>
+        <button class="retry-button" on:click={loadActivities}>Retry</button>
+      </div>
+    {:else if activities.length > 0}
+      <div class="activity-list" bind:this={scrollContainer} on:scroll={handleScroll}>
+        {#each activities as activity}
           <div
-            class="activity-item {fee.status.toLowerCase()}"
-            on:click={() => handleFeeClick(fee)}
-            on:keydown={e => e.key === 'Enter' && handleFeeClick(fee)}
+            class="activity-item"
+            style="border-left-color: {getActionBorderColor(activity.action)}"
+            on:click={() => handleActivityClick(activity)}
+            on:keydown={e => e.key === 'Enter' && handleActivityClick(activity)}
             role="button"
             tabindex="0"
           >
-            <div class="activity-status">
-              <div class="status-indicator"></div>
-              <span class="status-badge">{fee.status}</span>
+            <div class="activity-icon {getActionColor(activity.action)}">
+              <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getActionIcon(activity.action)} />
+              </svg>
             </div>
 
             <div class="activity-details">
               <div class="activity-header">
-                <span class="fee-number">{fee.number}</span>
+                <span class="entity-name">{activity.entity_name}</span>
+                <span class="entity-type">{activity.entity_type}</span>
               </div>
 
-              <div class="activity-project">
-                <span class="project-name">{getProjectName(fee.project_id)}</span>
+              <div class="activity-description">
+                {activity.description}
               </div>
 
-              <div class="activity-company">
-                <span class="company-name">{getCompanyName(fee.company_id)}</span>
-              </div>
-            </div>
-
-            <div class="activity-date">
-              <div class="primary-date">
-                {new Date(fee.time!.created_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric'
-                })}
-              </div>
-              {#if fee.time!.updated_at !== fee.time!.created_at}
-                <div class="updated-date">
-                  Updated {new Date(fee.time!.updated_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+              {#if activity.old_value && activity.new_value}
+                <div class="activity-change">
+                  <span class="old-value">{activity.old_value}</span>
+                  <svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  <span class="new-value">{activity.new_value}</span>
                 </div>
               {/if}
             </div>
 
-            {#if fee.package}
-              <div class="activity-package-full">
-                <span class="fee-package-full">{fee.package}</span>
-              </div>
-            {/if}
+            <div class="activity-meta">
+              <div class="activity-time">{formatRelativeTime(activity.timestamp)}</div>
+              <div class="activity-user">{activity.user}</div>
+            </div>
           </div>
         {/each}
+
+        {#if loadingMore}
+          <div class="loading-more">
+            <div class="spinner"></div>
+            <span>Loading more...</span>
+          </div>
+        {:else if !hasMore && activities.length > PAGE_SIZE}
+          <div class="end-of-list">
+            <span>No more activities</span>
+          </div>
+        {/if}
       </div>
     {:else}
       <div class="empty-state">
@@ -168,7 +270,8 @@
             d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <p class="empty-message">No activity found for the selected filters</p>
+        <p class="empty-message">No activity logged yet</p>
+        <p class="empty-hint">Activities will appear here as you create, update, or change entities</p>
       </div>
     {/if}
   </div>
@@ -202,12 +305,43 @@
     letter-spacing: -0.02em;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
   .filter-controls {
     display: flex;
     gap: 12px;
-    align-items: flex-end; /* Align with bottom of title */
-    min-height: 32px; /* Match the height of the proposals summary */
-    margin-left: 20px; /* Add space between title and first dropdown */
+    align-items: flex-end;
+    min-height: 32px;
+  }
+
+  .view-all-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 8px;
+    color: var(--emittiv-light);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .view-all-button:hover {
+    border-color: var(--emittiv-splash);
+    color: var(--emittiv-splash);
+    background: rgba(255, 153, 0, 0.08);
+  }
+
+  .view-all-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .filter-select {
@@ -225,7 +359,7 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L2 5h8z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 10px center;
-    min-width: 120px;
+    min-width: 100px;
   }
 
   .filter-select:hover {
@@ -272,26 +406,10 @@
     padding: 16px;
     background: var(--emittiv-black);
     border: 1px solid var(--emittiv-dark);
+    border-left: 3px solid;
     border-radius: 12px;
     transition: all 150ms ease;
     cursor: pointer;
-  }
-
-  .activity-item.awarded {
-    border-left: 3px solid #10b981; /* Green for awarded */
-  }
-
-  .activity-item.sent {
-    border-left: 3px solid #f59e0b; /* Orange for sent */
-  }
-
-  .activity-item.lost,
-  .activity-item.cancelled {
-    border-left: 3px solid #ef4444; /* Red for lost/cancelled */
-  }
-
-  .activity-item.draft {
-    border-left: 3px solid #6b7280; /* Gray for draft */
   }
 
   .activity-item:hover {
@@ -301,98 +419,24 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .activity-item.awarded:hover {
-    border-left-color: #10b981;
-  }
-
-  .activity-item.sent:hover {
-    border-left-color: #f59e0b;
-  }
-
-  .activity-item.lost:hover,
-  .activity-item.cancelled:hover {
-    border-left-color: #ef4444;
-  }
-
-  .activity-item.draft:hover {
-    border-left-color: #6b7280;
-  }
-
   .activity-item:focus {
     outline: none;
     background: rgba(255, 153, 0, 0.06);
     border-color: var(--emittiv-splash);
   }
 
-  .activity-item.awarded:focus {
-    border-left-color: #10b981;
-  }
-
-  .activity-item.sent:focus {
-    border-left-color: #f59e0b;
-  }
-
-  .activity-item.lost:focus,
-  .activity-item.cancelled:focus {
-    border-left-color: #ef4444;
-  }
-
-  .activity-item.draft:focus {
-    border-left-color: #6b7280;
-  }
-
-  .activity-status {
+  .activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    min-width: 60px;
+    justify-content: center;
   }
 
-  .status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--emittiv-light);
-  }
-
-  .activity-item.awarded .status-indicator {
-    background: #10b981;
-  }
-
-  .activity-item.sent .status-indicator {
-    background: #f59e0b;
-  }
-
-  .activity-item.lost .status-indicator,
-  .activity-item.cancelled .status-indicator {
-    background: #ef4444;
-  }
-
-  .status-badge {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    text-align: center;
-    background: rgba(156, 163, 175, 0.2);
-    color: #9ca3af;
-  }
-
-  .activity-item.awarded .status-badge {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-  }
-
-  .activity-item.sent .status-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
-  }
-
-  .activity-item.lost .status-badge,
-  .activity-item.cancelled .status-badge {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
+  .activity-icon .icon {
+    width: 18px;
+    height: 18px;
   }
 
   .activity-details {
@@ -401,87 +445,75 @@
   }
 
   .activity-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 4px;
   }
 
-  .fee-number {
+  .entity-name {
     font-weight: 600;
     color: var(--emittiv-white);
-    font-size: 15px;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .activity-project {
-    margin-bottom: 2px;
-    font-size: 13px;
-    min-width: 0;
-  }
-
-  .activity-company {
-    margin-bottom: 4px;
-    font-size: 12px;
-    min-width: 0;
-  }
-
-  .activity-package-full {
-    grid-column: 1 / -1;
-    margin-top: 4px;
-    width: 100%;
-  }
-
-  .fee-package-full {
+  .entity-type {
     font-size: 11px;
-    color: var(--emittiv-splash);
-    font-weight: 500;
-    background: rgba(255, 153, 0, 0.1);
     padding: 2px 6px;
     border-radius: 4px;
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-
-  .project-name {
+    background: var(--emittiv-dark);
     color: var(--emittiv-light);
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
-  }
-
-  .company-name {
-    color: var(--emittiv-lighter);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
-    font-size: 12px;
+    text-transform: capitalize;
   }
 
   .activity-description {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--emittiv-lighter);
-    margin: 0;
+    margin-bottom: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .activity-date {
-    text-align: right;
-    min-width: 80px;
+  .activity-change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
   }
 
-  .primary-date {
-    font-size: 13px;
+  .old-value {
+    color: var(--emittiv-light);
+    text-decoration: line-through;
+  }
+
+  .arrow-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--emittiv-light);
+  }
+
+  .new-value {
+    color: var(--emittiv-splash);
+    font-weight: 500;
+  }
+
+  .activity-meta {
+    text-align: right;
+    min-width: 70px;
+  }
+
+  .activity-time {
+    font-size: 12px;
     color: var(--emittiv-light);
     font-weight: 500;
     margin-bottom: 2px;
   }
 
-  .updated-date {
+  .activity-user {
     font-size: 11px;
     color: var(--emittiv-lighter);
   }
@@ -505,7 +537,80 @@
   .empty-message {
     color: var(--emittiv-light);
     font-size: 14px;
+    margin: 0 0 8px 0;
+  }
+
+  .empty-hint {
+    color: var(--emittiv-lighter);
+    font-size: 12px;
     margin: 0;
+  }
+
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  .error-icon {
+    width: 48px;
+    height: 48px;
+    color: #ef4444;
+    margin-bottom: 16px;
+  }
+
+  .error-message {
+    color: #ef4444;
+    font-size: 14px;
+    margin: 0 0 16px 0;
+  }
+
+  .retry-button {
+    padding: 8px 16px;
+    background: var(--emittiv-dark);
+    border: 1px solid var(--emittiv-light);
+    border-radius: 6px;
+    color: var(--emittiv-white);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .retry-button:hover {
+    background: var(--emittiv-splash);
+    border-color: var(--emittiv-splash);
+  }
+
+  .loading-more,
+  .end-of-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    color: var(--emittiv-light);
+    font-size: 12px;
+  }
+
+  .loading-more .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--emittiv-dark);
+    border-top-color: var(--emittiv-splash);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .end-of-list {
+    opacity: 0.6;
+    font-style: italic;
   }
 
   @media (max-width: 768px) {
@@ -518,21 +623,19 @@
     .filter-controls {
       width: 100%;
       justify-content: space-between;
+      margin-left: 0;
     }
 
     .activity-item {
-      flex-direction: column;
-      gap: 12px;
+      grid-template-columns: auto 1fr;
     }
 
-    .activity-status {
-      flex-direction: row;
-      min-width: auto;
-    }
-
-    .activity-date {
+    .activity-meta {
+      grid-column: 1 / -1;
       text-align: left;
-      min-width: auto;
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
     }
   }
 </style>

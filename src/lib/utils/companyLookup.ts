@@ -31,6 +31,8 @@ export interface CompanyLookup {
   getCompanyAbbreviation: (companyRef: UnknownSurrealThing) => string;
   /** Get the full company object */
   getCompany: (companyRef: UnknownSurrealThing) => Company | undefined;
+  /** Get searchable text for a company (name, abbreviation, name_short) */
+  getCompanySearchText: (companyRef: UnknownSurrealThing) => string;
   /** Check if cache needs rebuilding */
   getCacheSize: () => number;
 }
@@ -117,8 +119,23 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
     getCompany: (companyRef: UnknownSurrealThing): Company | undefined => {
       const id = extractId(companyRef);
       if (!id) return undefined;
-      
+
       return companyCache.get(id) || companyCache.get(`company:${id}`);
+    },
+
+    getCompanySearchText: (companyRef: UnknownSurrealThing): string => {
+      const id = extractId(companyRef);
+      if (!id) return '';
+
+      const company = companyCache.get(id) || companyCache.get(`company:${id}`);
+      if (!company) return '';
+
+      // Combine all searchable company fields
+      return [
+        company.name,
+        company.name_short,
+        company.abbreviation
+      ].filter(Boolean).join(' ');
     },
 
     getCacheSize: (): number => {

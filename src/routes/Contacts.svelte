@@ -8,7 +8,8 @@
   import { paginatedContactsStore, companiesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { onMount } from 'svelte';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import { createContactFilterConfig } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import type { Contact } from '../types';
 
@@ -72,15 +73,9 @@
   // Create optimized company lookup when companies data changes
   const companyLookup = $derived(createCompanyLookup($companiesStore));
 
-  // Filter configuration for contacts
-  const filterConfig: FilterConfig<Contact> = {
-    searchFields: ['full_name', 'first_name', 'last_name', 'email', 'phone', 'position'],
-    filterFields: {
-      company: (contact) => companyLookup.getCompanyShortName(contact.company),
-      country: (contact) => companyLookup.getCompanyCountry(contact.company),
-      position: (contact) => contact.position
-    }
-  };
+  // Filter configuration for contacts - uses unified search module
+  // This enables searching by company code (e.g., "ptg") and company name
+  const filterConfig = $derived(createContactFilterConfig({ companyLookup }));
 
   // Reactive filtered contacts using optimized filter function
   const filteredContacts = $derived(createFilterFunction(contacts, searchQuery, filters, filterConfig));

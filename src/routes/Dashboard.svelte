@@ -7,6 +7,7 @@
   import NewProjectModal from '$lib/components/NewProjectModal.svelte';
   import ProposalModal from '$lib/components/ProposalModal.svelte';
   import CompanyModal from '$lib/components/CompanyModal.svelte';
+  import ActivityLogModal from '$lib/components/ActivityLogModal.svelte';
   import { loadAllData, isLoadingStore } from '$lib/stores';
   import { invoke } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
@@ -26,6 +27,7 @@
   let showProjectModal = $state(false);
   let showFeeModal = $state(false);
   let showCompanyModal = $state(false);
+  let showActivityLogModal = $state(false);
 
   // Load stats from backend using efficient COUNT queries
   async function loadStats() {
@@ -139,7 +141,7 @@
   <section class="dashboard-section">
     <div class="content-grid">
       <div class="content-panel">
-        <ActivityFeed isLoading={$isLoadingStore} />
+        <ActivityFeed isLoading={$isLoadingStore} on:viewAll={() => showActivityLogModal = true} />
       </div>
       
       <div class="content-panel">
@@ -171,6 +173,11 @@
   company={null}
   on:close={() => showCompanyModal = false}
   on:saved={() => showCompanyModal = false}
+/>
+
+<ActivityLogModal
+  isOpen={showActivityLogModal}
+  on:close={() => showActivityLogModal = false}
 />
 
 <style>

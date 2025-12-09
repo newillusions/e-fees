@@ -330,3 +330,56 @@ export interface PaginationState {
   /** Whether a page load is in progress */
   isLoading: boolean;
 }
+
+// ============================================================================
+// ACTIVITY LOG TYPES
+// ============================================================================
+
+/**
+ * Activity Log Entry
+ *
+ * Represents a logged user action for display in the activity feed.
+ * Logs are stored in the database and synced across all machines.
+ */
+export interface ActivityLog {
+  /** Database record ID (e.g., 'activity_log:abc123') */
+  id?: string | SurrealThing;
+  /** Action type: create, update, delete, status_change */
+  action: 'create' | 'update' | 'delete' | 'status_change';
+  /** Entity type: project, fee, company, contact */
+  entity_type: 'project' | 'fee' | 'company' | 'contact';
+  /** Entity ID (e.g., 'projects:25-97105') */
+  entity_id: string;
+  /** Human-readable entity name for display */
+  entity_name: string;
+  /** Description of the action */
+  description: string;
+  /** Previous value (for updates/status changes) */
+  old_value?: string;
+  /** New value (for updates/status changes) */
+  new_value?: string;
+  /** User who performed the action */
+  user: string;
+  /** ISO timestamp of when the action occurred */
+  timestamp: string;
+  /** Additional metadata (JSON object) */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Activity Log Create
+ *
+ * Data structure for creating new activity log entries.
+ * The timestamp is automatically set by the database.
+ */
+export interface ActivityLogCreate {
+  action: 'create' | 'update' | 'delete' | 'status_change';
+  entity_type: 'project' | 'fee' | 'company' | 'contact';
+  entity_id: string;
+  entity_name: string;
+  description: string;
+  old_value?: string;
+  new_value?: string;
+  user?: string;
+  metadata?: Record<string, unknown>;
+}

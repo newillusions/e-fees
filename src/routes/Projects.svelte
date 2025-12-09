@@ -13,7 +13,8 @@
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import { createProjectFilterConfig } from '$lib/utils/search';
   import type { Project } from '../types';
   import { onMount, onDestroy } from 'svelte';
 
@@ -76,21 +77,19 @@
   });
   
   
-  // Filter configuration for projects
-  const filterConfig: FilterConfig<Project> = {
-    searchFields: ['name', 'name_short', 'area', 'city', 'country', 'folder'],
-    filterFields: {
-      status: (project) => project.status,
-      country: (project) => project.country,
-      city: (project) => project.city
-    },
-    sortFunction: (a, b) => {
-      // Sort by project number descending (newest numbers first)
-      const aNumber = a.number?.id || '';
-      const bNumber = b.number?.id || '';
-      return bNumber.localeCompare(aNumber);
-    }
-  };
+  // Filter configuration for projects - uses unified search module
+  const filterConfig = (() => {
+    const baseConfig = createProjectFilterConfig();
+    // Add filter fields for dropdowns
+    return {
+      ...baseConfig,
+      filterFields: {
+        status: (project: Project) => project.status,
+        country: (project: Project) => project.country,
+        city: (project: Project) => project.city
+      }
+    };
+  })();
 
   // Reactive filtered projects using optimized filter function
   const filteredProjects = $derived(createFilterFunction(projects, searchQuery, filters, filterConfig));

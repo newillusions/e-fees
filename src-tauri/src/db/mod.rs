@@ -607,6 +607,37 @@ pub struct EntityCounts {
     pub active_fees: usize,
 }
 
+/// Activity log entry for tracking user actions across entities.
+/// These logs are stored in the database for sync across all machines.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityLog {
+    pub id: Option<Thing>,
+    pub action: String,        // 'create', 'update', 'delete', 'status_change'
+    pub entity_type: String,   // 'project', 'fee', 'company', 'contact'
+    pub entity_id: String,
+    pub entity_name: String,
+    pub description: String,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub user: String,
+    pub timestamp: String,     // ISO datetime string
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Create structure for new activity log entries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityLogCreate {
+    pub action: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub entity_name: String,
+    pub description: String,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub user: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
 // Database manager - using HTTP client as primary, WS as fallback
 #[derive(Clone)]
 pub struct DatabaseManager {
@@ -2442,6 +2473,141 @@ impl DatabaseManager {
                 total_fees: fees,
                 active_fees,
             })
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    // ==================== Activity Log Methods ====================
+
+    /// Create a new activity log entry.
+    /// Logs are automatically timestamped by the database.
+    pub async fn create_activity_log(&self, log: ActivityLogCreate) -> Result<ActivityLog, Error> {
+        if let Some(client) = &self.client {
+            info!("Creating activity log: {} {} on {}", log.action, log.entity_type, log.entity_name);
+
+            // Clone values to avoid lifetime issues with the query builder
+            let action = log.action.clone();
+            let entity_type = log.entity_type.clone();
+            let entity_id = log.entity_id.clone();
+            let entity_name = log.entity_name.clone();
+            let description = log.description.clone();
+            let old_value = log.old_value.clone();
+            let new_value = log.new_value.clone();
+            let user = log.user.unwrap_or_else(|| "system".to_string());
+            let metadata_json = log.metadata.map(|m| m.to_string()).unwrap_or_else(|| "null".to_string());
+
+            let query = format!(
+                r#"CREATE activity_log CONTENT {{
+                    action: $action,
+                    entity_type: $entity_type,
+                    entity_id: $entity_id,
+                    entity_name: $entity_name,
+                    description: $description,
+                    old_value: $old_value,
+                    new_value: $new_value,
+                    user: $user,
+                    metadata: {}
+                }}"#,
+                metadata_json
+            );
+
+            let result: Option<ActivityLog> = match client {
+                DatabaseClient::Http(http_client) => {
+                    let mut response = http_client
+                        .query(&query)
+                        .bind(("action", action.clone()))
+                        .bind(("entity_type", entity_type.clone()))
+                        .bind(("entity_id", entity_id.clone()))
+                        .bind(("entity_name", entity_name.clone()))
+                        .bind(("description", description.clone()))
+                        .bind(("old_value", old_value.clone()))
+                        .bind(("new_value", new_value.clone()))
+                        .bind(("user", user.clone()))
+                        .await?;
+                    response.take(0)?
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    let mut response = ws_client
+                        .query(&query)
+                        .bind(("action", action))
+                        .bind(("entity_type", entity_type))
+                        .bind(("entity_id", entity_id))
+                        .bind(("entity_name", entity_name))
+                        .bind(("description", description))
+                        .bind(("old_value", old_value))
+                        .bind(("new_value", new_value))
+                        .bind(("user", user))
+                        .await?;
+                    response.take(0)?
+                }
+            };
+
+            result.ok_or_else(|| {
+                surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest(
+                    "Failed to create activity log".to_string()
+                ))
+            })
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Get recent activity logs with optional filtering and pagination.
+    /// Returns logs ordered by timestamp descending (newest first).
+    pub async fn get_activity_logs(&self, limit: Option<usize>, entity_type: Option<String>, offset: Option<usize>) -> Result<Vec<ActivityLog>, Error> {
+        if let Some(client) = &self.client {
+            let limit_val = limit.unwrap_or(50);
+            let offset_val = offset.unwrap_or(0);
+            info!("Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})", limit_val, entity_type, offset_val);
+
+            let (query, etype) = if let Some(et) = entity_type {
+                (
+                    format!(
+                        "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT {} START {}",
+                        limit_val, offset_val
+                    ),
+                    Some(et)
+                )
+            } else {
+                (
+                    format!(
+                        "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT {} START {}",
+                        limit_val, offset_val
+                    ),
+                    None
+                )
+            };
+
+            let logs: Vec<ActivityLog> = match client {
+                DatabaseClient::Http(http_client) => {
+                    if let Some(et) = etype.clone() {
+                        let mut response = http_client
+                            .query(&query)
+                            .bind(("entity_type", et))
+                            .await?;
+                        response.take(0)?
+                    } else {
+                        let mut response = http_client.query(&query).await?;
+                        response.take(0)?
+                    }
+                },
+                DatabaseClient::WebSocket(ws_client) => {
+                    if let Some(et) = etype {
+                        let mut response = ws_client
+                            .query(&query)
+                            .bind(("entity_type", et))
+                            .await?;
+                        response.take(0)?
+                    } else {
+                        let mut response = ws_client.query(&query).await?;
+                        response.take(0)?
+                    }
+                }
+            };
+
+            info!("Retrieved {} activity logs", logs.len());
+            Ok(logs)
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

@@ -6,7 +6,9 @@
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters, type FilterConfig } from '$lib/utils/filters';
+  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import { createFeeFilterConfig, createProjectLookup } from '$lib/utils/search';
+  import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import type { Fee, UnknownSurrealThing } from '../types';
@@ -67,37 +69,23 @@
     }
   });
 
-  // Filter configuration for proposals
-  const filterConfig: FilterConfig<Fee> = {
-    searchFields: ['name', 'number', 'activity', 'package', 'staff_name'],
-    filterFields: {
-      status: (proposal) => proposal.status,
-      staff: (proposal) => proposal.staff_name
-    },
-    sortFunction: (a, b) => {
-      // Primary sort: issue_date descending (most recent first)
-      // Convert YYMMDD format to comparable date
-      const parseIssueDate = (issueDate: string) => {
-        if (!issueDate || issueDate.length !== 6) return 0;
-        const year = 2000 + parseInt(issueDate.substring(0, 2));
-        const month = parseInt(issueDate.substring(2, 4)) - 1; // Month is 0-indexed
-        const day = parseInt(issueDate.substring(4, 6));
-        return new Date(year, month, day).getTime();
-      };
+  // Create lookups for company/project search
+  const companyLookup = $derived(createCompanyLookup($companiesStore));
+  const projectLookup = $derived(createProjectLookup($projectsStore));
 
-      const aIssueDate = parseIssueDate(a.issue_date);
-      const bIssueDate = parseIssueDate(b.issue_date);
-
-      if (bIssueDate !== aIssueDate) {
-        return bIssueDate - aIssueDate;
+  // Filter configuration for proposals - uses unified search module
+  // This enables searching by company code (e.g., "ptg") and project name
+  const filterConfig = $derived((() => {
+    const baseConfig = createFeeFilterConfig({ companyLookup, projectLookup });
+    // Add filter fields for dropdowns
+    return {
+      ...baseConfig,
+      filterFields: {
+        status: (proposal: Fee) => proposal.status,
+        staff: (proposal: Fee) => proposal.staff_name
       }
-
-      // Secondary sort: updated_at descending (if issue_date is the same)
-      const aUpdated = new Date(a.time?.updated_at || a.time?.created_at || 0).getTime();
-      const bUpdated = new Date(b.time?.updated_at || b.time?.created_at || 0).getTime();
-      return bUpdated - aUpdated;
-    }
-  };
+    };
+  })());
 
   // Reactive filtered proposals using optimized filter function
   const filteredProposals = $derived(createFilterFunction(fees, searchQuery, filters, filterConfig));

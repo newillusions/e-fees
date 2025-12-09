@@ -7,16 +7,17 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
-import type { 
-  Project, 
-  Company, 
-  Contact, 
-  Fee, 
-  ConnectionStatus 
+import type {
+  Project,
+  Company,
+  Contact,
+  Fee,
+  ConnectionStatus
 } from '../types';
 import { useCrudStore, createEntityStore } from './utils/crud';
 import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
 import { extractSurrealId } from './utils/surrealdb';
+import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
 
 // ============================================================================
 // CONNECTION STORE (UNCHANGED)
@@ -190,22 +191,47 @@ export const globalErrorStore = derived(
 // ACTION CREATORS - MIGRATED TO CRUD UTILITIES
 // ============================================================================
 
-// Export compatible actions interface
+// Export compatible actions interface with activity logging
 export const projectsActions = {
   async load() {
     return await projectsActionsInternal.load();
   },
 
   async create(project: Omit<Project, 'id'>) {
-    return await projectsActionsInternal.create(project);
+    const result = await projectsActionsInternal.create(project);
+    // Log activity (fire-and-forget)
+    projectLogger.onCreate(result as unknown as Record<string, unknown>);
+    return result;
   },
 
   async update(id: string, projectData: Partial<Project>) {
-    return await projectsActionsInternal.update(id, projectData);
+    // Get current project for status change detection
+    const currentProject = projectsActionsInternal.getById(id);
+    const result = await projectsActionsInternal.update(id, projectData);
+
+    // Check if this is a status change
+    if (currentProject && projectData.status && currentProject.status !== projectData.status) {
+      projectLogger.onStatusChange(
+        result as unknown as Record<string, unknown>,
+        currentProject.status,
+        projectData.status
+      );
+    } else {
+      // Log general update with changed fields
+      const changedFields = Object.keys(projectData);
+      projectLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    }
+    return result;
   },
 
   async delete(id: string) {
-    return await projectsActionsInternal.delete(id);
+    // Get project name before deletion
+    const project = projectsActionsInternal.getById(id);
+    const projectName = project?.name || project?.project_number || 'Unknown Project';
+    const result = await projectsActionsInternal.delete(id);
+    // Log activity (fire-and-forget)
+    projectLogger.onDelete(id, projectName);
+    return result;
   },
 
   async refresh() {
@@ -219,15 +245,28 @@ export const companiesActions = {
   },
 
   async create(company: Omit<Company, 'id'>) {
-    return await companiesActionsInternal.create(company);
+    const result = await companiesActionsInternal.create(company);
+    // Log activity (fire-and-forget)
+    companyLogger.onCreate(result as unknown as Record<string, unknown>);
+    return result;
   },
 
   async update(id: string, companyData: Partial<Company>) {
-    return await companiesActionsInternal.update(id, companyData);
+    const result = await companiesActionsInternal.update(id, companyData);
+    // Log update with changed fields
+    const changedFields = Object.keys(companyData);
+    companyLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    return result;
   },
 
   async delete(id: string) {
-    return await companiesActionsInternal.delete(id);
+    // Get company name before deletion
+    const company = companiesActionsInternal.getById(id);
+    const companyName = company?.name || 'Unknown Company';
+    const result = await companiesActionsInternal.delete(id);
+    // Log activity (fire-and-forget)
+    companyLogger.onDelete(id, companyName);
+    return result;
   },
 
   async refresh() {
@@ -241,15 +280,30 @@ export const contactsActions = {
   },
 
   async create(contact: Omit<Contact, 'id'>) {
-    return await contactsActionsInternal.create(contact);
+    const result = await contactsActionsInternal.create(contact);
+    // Log activity (fire-and-forget)
+    contactLogger.onCreate(result as unknown as Record<string, unknown>);
+    return result;
   },
 
   async update(id: string, contactData: Partial<Contact>) {
-    return await contactsActionsInternal.update(id, contactData);
+    const result = await contactsActionsInternal.update(id, contactData);
+    // Log update with changed fields
+    const changedFields = Object.keys(contactData);
+    contactLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    return result;
   },
 
   async delete(id: string) {
-    return await contactsActionsInternal.delete(id);
+    // Get contact name before deletion
+    const contact = contactsActionsInternal.getById(id);
+    const contactName = contact?.full_name ||
+      `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim() ||
+      'Unknown Contact';
+    const result = await contactsActionsInternal.delete(id);
+    // Log activity (fire-and-forget)
+    contactLogger.onDelete(id, contactName);
+    return result;
   },
 
   async refresh() {
@@ -264,15 +318,40 @@ export const feesActions = {
   },
 
   async create(fee: Omit<Fee, 'id'>) {
-    return await feesActionsInternal.create(fee);
+    const result = await feesActionsInternal.create(fee);
+    // Log activity (fire-and-forget)
+    feeLogger.onCreate(result as unknown as Record<string, unknown>);
+    return result;
   },
 
   async update(id: string, feeData: Partial<Fee>) {
-    return await feesActionsInternal.update(id, feeData);
+    // Get current fee for status change detection
+    const currentFee = feesActionsInternal.getById(id);
+    const result = await feesActionsInternal.update(id, feeData);
+
+    // Check if this is a status change
+    if (currentFee && feeData.status && currentFee.status !== feeData.status) {
+      feeLogger.onStatusChange(
+        result as unknown as Record<string, unknown>,
+        currentFee.status,
+        feeData.status
+      );
+    } else {
+      // Log general update with changed fields
+      const changedFields = Object.keys(feeData);
+      feeLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    }
+    return result;
   },
 
   async delete(id: string) {
-    return await feesActionsInternal.delete(id);
+    // Get fee name before deletion
+    const fee = feesActionsInternal.getById(id);
+    const feeName = fee?.name || fee?.number || 'Unknown Fee';
+    const result = await feesActionsInternal.delete(id);
+    // Log activity (fire-and-forget)
+    feeLogger.onDelete(id, feeName);
+    return result;
   },
 
   async refresh() {
@@ -281,13 +360,15 @@ export const feesActions = {
 
   // Preserved custom method for status updates
   async updateStatus(id: string, newStatus: string) {
-    // Get the current fee to preserve other fields  
+    // Get the current fee to preserve other fields
     const currentFee = feesActionsInternal.getById(id);
-    
+
     if (!currentFee) {
       throw new Error(`Fee with ID ${id} not found`);
     }
-    
+
+    const oldStatus = currentFee.status;
+
     // Update only the status field
     const updatedFeeData = {
       ...currentFee,
@@ -298,11 +379,20 @@ export const feesActions = {
         created_at: currentFee.time?.created_at || new Date().toISOString()
       }
     };
-    
+
     // Remove the id field for the update
     delete (updatedFeeData as any).id;
-    
-    return await feesActionsInternal.update(id, updatedFeeData);
+
+    const result = await feesActionsInternal.update(id, updatedFeeData);
+
+    // Log status change (fire-and-forget)
+    feeLogger.onStatusChange(
+      result as unknown as Record<string, unknown>,
+      oldStatus,
+      newStatus
+    );
+
+    return result;
   }
 };
 

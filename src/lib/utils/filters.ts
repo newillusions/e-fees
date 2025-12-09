@@ -1,13 +1,15 @@
 /**
  * Shared filtering utilities for consistent filtering across components.
- * 
+ *
  * This module provides reusable filtering functions that eliminate duplicate
  * code patterns across route components and ensure consistent filtering behavior.
  */
 
+import { normalizedMatch } from './searchNormalize';
+
 /**
  * Configuration interface for the filter function.
- * 
+ *
  * @template T - The type of items being filtered
  */
 export interface FilterConfig<T> {
@@ -17,6 +19,8 @@ export interface FilterConfig<T> {
   filterFields?: {
     [key: string]: (item: T) => string;
   };
+  /** Additional custom search functions that return strings to search against */
+  customSearchFunctions?: ((item: T) => string)[];
   /** Custom sort function (defaults to updated_at descending) */
   sortFunction?: (a: T, b: T) => number;
 }
@@ -60,14 +64,24 @@ export function createFilterFunction<T>(
   return items.filter(item => {
     // Apply search filter if query is provided
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = config.searchFields.some(field => {
+      const query = searchQuery.trim();
+
+      // Check direct field matches using normalized matching
+      // This allows "uae" to match "U.A.E." and "p&t" to match "P&T Group"
+      const matchesDirectFields = config.searchFields.some(field => {
         const value = item[field];
-        return typeof value === 'string' && value.toLowerCase().includes(query);
+        return typeof value === 'string' && normalizedMatch(value, query);
       });
-      if (!matchesSearch) return false;
+
+      // Check custom search functions (e.g., company name/code lookup)
+      const matchesCustomSearch = config.customSearchFunctions?.some(fn => {
+        const value = fn(item);
+        return typeof value === 'string' && normalizedMatch(value, query);
+      }) || false;
+
+      if (!matchesDirectFields && !matchesCustomSearch) return false;
     }
-    
+
     // Apply dynamic filters
     for (const [filterKey, filterValue] of Object.entries(filters)) {
       if (filterValue && config.filterFields?.[filterKey]) {
@@ -75,7 +89,7 @@ export function createFilterFunction<T>(
         if (itemValue !== filterValue) return false;
       }
     }
-    
+
     return true;
   }).sort(config.sortFunction || defaultSortFunction);
 }

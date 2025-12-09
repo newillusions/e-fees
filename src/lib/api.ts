@@ -49,7 +49,9 @@ import type {
   CountrySearchResult,
   ProjectCreationResult,
   FileOperationResult,
-  PaginatedResponse
+  PaginatedResponse,
+  ActivityLog,
+  ActivityLogCreate
 } from '../types';
 
 // Re-export types for easy importing
@@ -73,7 +75,9 @@ export type {
   CountrySearchResult,
   ProjectCreationResult,
   FileOperationResult,
-  PaginatedResponse
+  PaginatedResponse,
+  ActivityLog,
+  ActivityLogCreate
 } from '../types';
 
 /**
@@ -1947,6 +1951,80 @@ export class ApiClient {
       throw error;
     }
   }
+
+  // ============================================================================
+  // ACTIVITY LOG METHODS
+  // ============================================================================
+
+  /**
+   * Create a new activity log entry.
+   *
+   * Records user actions for the activity feed. Logs are automatically
+   * timestamped by the database and synced across all machines.
+   *
+   * @param log - Activity log entry data
+   * @returns Promise<ActivityLog> - Created log with database ID
+   *
+   * @example
+   * ```typescript
+   * await ApiClient.createActivityLog({
+   *   action: 'status_change',
+   *   entity_type: 'project',
+   *   entity_id: 'projects:25-97105',
+   *   entity_name: 'Conrad Hilton Hotel',
+   *   description: 'Project marked as completed',
+   *   old_value: 'Active',
+   *   new_value: 'Completed'
+   * });
+   * ```
+   */
+  static async createActivityLog(log: ActivityLogCreate): Promise<ActivityLog> {
+    try {
+      return await invoke<ActivityLog>('create_activity_log', { log });
+    } catch (error) {
+      console.error('Failed to create activity log:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent activity logs with optional filtering.
+   *
+   * Retrieves activity logs for display in the dashboard's Recent Activity
+   * panel. Logs are returned in reverse chronological order (newest first).
+   *
+   * @param limit - Maximum number of logs to return (default: 50)
+   * @param entityType - Optional filter by entity type
+   * @returns Promise<ActivityLog[]> - Array of activity logs
+   *
+   * @example
+   * ```typescript
+   * // Get last 20 activities
+   * const logs = await ApiClient.getActivityLogs(20);
+   *
+   * // Get only project-related activities
+   * const projectLogs = await ApiClient.getActivityLogs(50, 'project');
+   *
+   * // Get activities with offset for pagination
+   * const page2 = await ApiClient.getActivityLogs(20, undefined, 20);
+   * ```
+   */
+  static async getActivityLogs(
+    limit?: number,
+    entityType?: 'project' | 'fee' | 'company' | 'contact',
+    offset?: number
+  ): Promise<ActivityLog[]> {
+    try {
+      return await invoke<ActivityLog[]>('get_activity_logs', {
+        limit,
+        entityType,
+        offset
+      });
+    } catch (error) {
+      console.error('Failed to get activity logs:', error);
+      return [];
+    }
+  }
 }
 
 // ============================================================================
@@ -2050,7 +2128,11 @@ export const {
   investigateRecord,
   getAreaSuggestions,
   getCitySuggestions,
-  getAllCities
+  getAllCities,
+
+  // Activity log operations
+  createActivityLog,
+  getActivityLogs
 } = ApiClient;
 
 /**

@@ -2,12 +2,27 @@
   import Navigation from './Navigation.svelte';
   import ConnectionStatus from './ConnectionStatus.svelte';
   import SettingsModal from './SettingsModal.svelte';
+  import NotificationsDropdown from './NotificationsDropdown.svelte';
+  import GlobalSearchModal from './GlobalSearchModal.svelte';
   import { location } from 'svelte-spa-router';
   import { logoLight } from '../../assets';
   import { onMount, onDestroy } from 'svelte';
 
   // Settings modal state
   let isSettingsOpen = false;
+
+  // Notifications state
+  let isNotificationsOpen = false;
+
+  // Search modal state
+  let isSearchOpen = false;
+
+  // Blur/privacy mode state
+  let isBlurMode = false;
+
+  function toggleBlurMode() {
+    isBlurMode = !isBlurMode;
+  }
 
   function openSettings() {
     isSettingsOpen = true;
@@ -17,10 +32,25 @@
     isSettingsOpen = false;
   }
 
+  function openSearch() {
+    isSearchOpen = true;
+  }
+
+  function closeSearch() {
+    isSearchOpen = false;
+  }
+
   // Keyboard shortcuts handler
   function handleKeydown(event: KeyboardEvent) {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const modKey = isMac ? event.metaKey : event.ctrlKey;
+
+    // Cmd/Ctrl + K = Open Search (standard spotlight convention)
+    if (modKey && event.key === 'k') {
+      event.preventDefault();
+      openSearch();
+      return;
+    }
 
     // Cmd/Ctrl + , = Open Settings (standard macOS convention)
     if (modKey && event.key === ',') {
@@ -29,7 +59,7 @@
       return;
     }
 
-    // Escape = Close Settings modal
+    // Escape = Close modals (search handles its own escape)
     if (event.key === 'Escape' && isSettingsOpen) {
       event.preventDefault();
       closeSettings();
@@ -112,9 +142,11 @@
         <div class="flex items-center space-x-1">
           <!-- Search button -->
           <button
-            class="p-1 rounded-lg transition-smooth hover-lift"
+            class="search-button p-1 rounded-lg transition-smooth hover-lift"
             style="color: var(--emittiv-light);"
-            aria-label="Search"
+            on:click={openSearch}
+            aria-label="Search (Cmd+K)"
+            title="Search (Cmd+K)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -126,21 +158,48 @@
             </svg>
           </button>
 
-          <!-- Notifications button -->
+          <!-- Blur/Privacy mode toggle -->
           <button
             class="p-1 rounded-lg transition-smooth hover-lift"
+            class:blur-active={isBlurMode}
             style="color: var(--emittiv-light);"
-            aria-label="Notifications"
+            on:click={toggleBlurMode}
+            aria-label={isBlurMode ? "Show content" : "Hide sensitive content"}
+            title={isBlurMode ? "Show content (privacy mode on)" : "Hide sensitive content"}
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
+            {#if isBlurMode}
+              <!-- Eye with slash - privacy mode ON -->
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                />
+              </svg>
+            {:else}
+              <!-- Eye - privacy mode OFF -->
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+            {/if}
           </button>
+
+          <!-- Notifications dropdown -->
+          <NotificationsDropdown
+            bind:isOpen={isNotificationsOpen}
+          />
 
           <!-- Settings button -->
           <button
@@ -169,7 +228,7 @@
     </header>
 
     <!-- Content with enhanced gradient background -->
-    <div class="flex-1 main-content-scroll glass-content">
+    <div class="flex-1 main-content-scroll glass-content" class:privacy-blur={isBlurMode}>
       <div class="page-enter">
         <slot />
       </div>
@@ -180,11 +239,39 @@
 <!-- Settings Modal -->
 <SettingsModal bind:isOpen={isSettingsOpen} />
 
+<!-- Global Search Modal -->
+<GlobalSearchModal
+  bind:isOpen={isSearchOpen}
+  on:close={closeSearch}
+/>
+
 <style>
   /* Custom hover effects for header buttons */
   .hover-lift:hover {
     background-color: var(--emittiv-darker);
     color: var(--emittiv-white);
     transform: translateY(-1px);
+  }
+
+  /* Blur/privacy mode active state */
+  .blur-active {
+    color: var(--emittiv-splash) !important;
+    background-color: rgba(255, 153, 0, 0.15);
+  }
+
+  /* Privacy blur effect on content */
+  .privacy-blur {
+    filter: blur(8px);
+    pointer-events: none;
+    user-select: none;
+    transition: filter 0.3s ease;
+  }
+
+  .privacy-blur::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.1);
+    pointer-events: none;
   }
 </style>
