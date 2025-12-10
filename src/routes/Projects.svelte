@@ -14,6 +14,7 @@
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+import { getFolderForStatus } from '$lib/api/folderManagement';
   import { createProjectFilterConfig } from '$lib/utils/search';
   import type { Project } from '../types';
   import { onMount, onDestroy } from 'svelte';
@@ -157,10 +158,29 @@
   function getFullProjectPath(project: Project): string {
     const basePath = $settingsStore.project_folder_path;
     if (!basePath) return project.folder || '';
-    
-    // Use appropriate path separator based on platform
-    const separator = basePath.includes('\\') ? '\\' : '/';
-    return `${basePath}${separator}${project.folder}`;
+
+    // Normalize paths - remove trailing slashes from base and leading slashes from folder
+    const isWindows = basePath.includes('\\');
+    const separator = isWindows ? '\\' : '/';
+
+    // Normalize base path (remove trailing separators)
+    let normalizedBase = basePath;
+    while (normalizedBase.endsWith(separator) || normalizedBase.endsWith('/') || normalizedBase.endsWith('\\')) {
+      normalizedBase = normalizedBase.slice(0, -1);
+    }
+
+    // Normalize project folder (remove leading separators)
+    let normalizedFolder = project.folder || '';
+    while (normalizedFolder.startsWith('/') || normalizedFolder.startsWith('\\')) {
+      normalizedFolder = normalizedFolder.slice(1);
+    }
+
+    if (!normalizedFolder) return normalizedBase;
+
+    // Get the status-based subfolder (e.g., "01 RFPs", "11 Current")
+    const statusFolder = getFolderForStatus(project.status || 'rfp');
+
+    return `${normalizedBase}${separator}${statusFolder}${separator}${normalizedFolder}`;
   }
   
   // Function to open project folder in explorer
@@ -170,11 +190,16 @@
       alert('Project folder path not configured. Please set it in Settings.');
       return;
     }
-    
+
     const fullPath = getFullProjectPath(project);
-    
+    console.log('[openProjectFolder] Attempting to open:', fullPath);
+
     try {
-      await openFolderInExplorer(fullPath);
+      const result = await openFolderInExplorer(fullPath);
+      console.log('[openProjectFolder] Result:', result);
+      if (result.includes('Failed')) {
+        alert('Failed to open project folder. Please check the path exists.');
+      }
     } catch (error) {
       console.error('Failed to open project folder:', error);
       alert('Failed to open project folder. Please check the path exists.');

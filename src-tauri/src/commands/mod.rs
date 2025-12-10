@@ -2335,9 +2335,17 @@ pub async fn select_folder(app_handle: tauri::AppHandle) -> Result<Option<String
 #[tauri::command]
 pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, String> {
     info!("Opening folder in explorer: {}", folder_path);
-    
+
+    use std::path::Path;
     use std::process::Command;
-    
+
+    // Check if the folder exists first
+    let path = Path::new(&folder_path);
+    if !path.exists() {
+        error!("Folder does not exist: {}", folder_path);
+        return Err(format!("Folder does not exist: {}", folder_path));
+    }
+
     // Use platform-specific command to open folder
     let result = if cfg!(target_os = "windows") {
         Command::new("explorer")
@@ -2353,7 +2361,7 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, Stri
             .arg(&folder_path)
             .spawn()
     };
-    
+
     match result {
         Ok(_) => {
             info!("Successfully opened folder: {}", folder_path);
