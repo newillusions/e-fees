@@ -23,23 +23,6 @@
   let showProposalModal = false;
   let proposalModalMode: 'create' | 'edit' = 'edit';
   let selectedProposal: Fee | null = null;
-  
-  // Debug modal state changes - avoid logging $state objects
-  $: if (import.meta.env.DEV) {
-    console.log('Modal state changed - showProposalModal:', showProposalModal);
-    console.log('Modal mode:', proposalModalMode);
-    console.log('Selected proposal id:', selectedProposal?.id);
-    console.log('Has selected proposal:', !!selectedProposal);
-  }
-  
-  // Track selectedProposal changes - avoid logging $state objects
-  $: if (import.meta.env.DEV && selectedProposal !== null && selectedProposal !== undefined) {
-    console.log('ProposalDetailPage: selectedProposal is NOT null/undefined, id:', selectedProposal.id);
-  }
-  
-  $: if (import.meta.env.DEV && selectedProposal === null) {
-    console.log('ProposalDetailPage: WARNING - selectedProposal is NULL');
-  }
 
   // Extract the proposal ID from params
   $: proposalId = params.id;
@@ -113,17 +96,9 @@
 
   function handleEditFromDetail(event: CustomEvent) {
     // Open edit modal with the proposal from the detail panel
-    if (import.meta.env.DEV) {
-      console.log('ProposalDetailPage: handleEditFromDetail called');
-      console.log('Event detail id:', event.detail?.id);
-    }
     selectedProposal = event.detail;
     proposalModalMode = 'edit';
     showProposalModal = true;
-    if (import.meta.env.DEV) {
-      console.log('Modal state set - showProposalModal:', showProposalModal);
-      console.log('ProposalDetailPage: selectedProposal.id:', selectedProposal?.id);
-    }
   }
 </script>
 

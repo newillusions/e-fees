@@ -73,9 +73,8 @@
       
       // Reload database configuration in real-time
       try {
-        const reloadResult = await reloadDatabaseConfig();
-        console.log('Database configuration reloaded:', reloadResult);
-        
+        await reloadDatabaseConfig();
+
         // Refresh data with new connection
         await loadAllData();
         

@@ -305,8 +305,7 @@
   // Create project folder
   async function createProjectFolder(projectNumber: string, projectShortName: string) {
     try {
-      const result = await copyProjectTemplate(projectNumber, projectShortName);
-      console.log('Project folder created:', result);
+      await copyProjectTemplate(projectNumber, projectShortName);
     } catch (error) {
       console.error('Failed to create project folder:', error);
       operationActions.setError(`Project created but folder creation failed: ${error}`);

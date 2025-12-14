@@ -408,7 +408,6 @@ let isLoadingData = false;
 export const loadAllData = async () => {
   // Prevent concurrent loads
   if (isLoadingData) {
-    console.log('[loadAllData] Already loading, skipping duplicate call');
     return;
   }
 
