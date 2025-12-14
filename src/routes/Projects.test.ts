@@ -113,9 +113,10 @@ describe('TC-UI-001: Projects Page Pagination Integration', () => {
     expect(state.pagination.totalRecords).toBe(150);
 
     // Verify API called with pagination params
+    // Note: Frontend uses camelCase (pageSize), Tauri converts to snake_case for Rust
     expect(invoke).toHaveBeenCalledWith('get_projects_page', {
       page: 1,
-      page_size: 50
+      pageSize: 50
     });
   });
 
