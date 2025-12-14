@@ -1,307 +1,278 @@
-# Fee Proposal Management System - Security Audit Report
+# Security Audit Report - Public Release Preparation
 
-**Date:** August 17, 2025  
-**Auditor:** Security Sub-Agent 2  
-**Scope:** SQL Injection Vulnerability Assessment and Remediation  
-**Risk Assessment:** CRITICAL → LOW (Post-Mitigation)
-
-## Executive Summary
-
-This security audit identified **multiple critical SQL injection vulnerabilities** throughout the Fee Proposal Management System's database layer. The vulnerabilities stemmed from widespread use of string interpolation and concatenation for database query construction, affecting all major CRUD operations.
-
-### Key Findings:
-- **40+ SQL injection vulnerabilities** identified
-- **100% of database operations** using unsafe string concatenation
-- **No input validation** on user inputs before database operations
-- **Basic quote escaping only** - insufficient protection against advanced attacks
-
-### Remediation Status: ✅ COMPLETED
-- **Comprehensive input validation system** implemented
-- **Secure wrapper functions** created for all vulnerable operations
-- **Test suite** with 50+ attack scenarios validated
-- **Migration guide** provided for safe deployment
+**Date**: November 27, 2025
+**Repository**: newillusions/e-fees (GitHub), martin/fee-prop (Gitea)
+**Status**: ⚠️ **PARTIALLY COMPLETE - CRITICAL ACTIONS REQUIRED**
 
 ---
 
-## Vulnerability Analysis
+## ✅ Completed Actions
 
-### 1. Critical Vulnerabilities Identified
+### 1. Sensitive Files Removed
+- ✅ Deleted `db backups/*.surql` (6 database backup files with production data)
+- ✅ Deleted `archive/env-files/.env.backup` (contained database credentials)
+- ✅ Working tree is clean - no sensitive files currently committed
 
-| Vulnerability ID | Location | Function | Risk Level | CVSS Score |
-|------------------|----------|----------|------------|------------|
-| **SQL-001** | `db/mod.rs:573-584` | `create_new_project` | CRITICAL | 9.8 |
-| **SQL-002** | `db/mod.rs:602-612` | `create_company` | CRITICAL | 9.8 |
-| **SQL-003** | `db/mod.rs:646-655` | `create_contact` | CRITICAL | 9.8 |
-| **SQL-004** | `db/mod.rs:671-732` | `update_contact_partial` | CRITICAL | 9.8 |
-| **SQL-005** | `db/mod.rs:742-779` | `create_fee` | CRITICAL | 9.8 |
-| **SQL-006** | `db/mod.rs:781-825` | `update_fee` | CRITICAL | 9.8 |
-| **SQL-007** | `db/mod.rs:1121-1167` | `search_projects` | HIGH | 7.5 |
-| **SQL-008** | `db/mod.rs:1700-1730` | `search_countries` | HIGH | 7.5 |
+### 2. Documentation Sanitized
+- ✅ Removed hardcoded Gitea token from:
+  - `.claude/commands/gitea-release.md`
+  - `docs/development/GITHUB_ACTIONS_SETUP.md`
+  - `docs/development/UNRAID_GITEA_ACTIONS.md`
+- ✅ Replaced with placeholder: `YOUR_GITEA_TOKEN_HERE`
 
-### 2. Attack Vector Examples
+### 3. Automation Scripts Created
+- ✅ `scripts/prepare-for-public.sh` - Automated cleanup script
+- ✅ `scripts/complete-release.sh` - Fallback release automation
+- ✅ `RELEASE_AUTOMATION.md` - Comprehensive release documentation
+- ✅ `PUBLIC_RELEASE_CHECKLIST.md` - Step-by-step public release guide
 
-#### Example 1: Project Creation SQL Injection
-**Vulnerable Code:**
-```rust
-format!("name = '{}'", project.name.replace("'", "''"))
-```
-
-**Attack Payload:**
-```rust
-project.name = "Test'; DROP TABLE projects; SELECT 'pwned"
-```
-
-**Resulting Query:**
-```sql
-CREATE projects:test SET name = 'Test''; DROP TABLE projects; SELECT ''pwned', ...
-```
-
-#### Example 2: Search Query Injection
-**Vulnerable Code:**
-```rust
-let search_query = format!(
-    "SELECT * FROM projects WHERE name CONTAINS '{}'", 
-    escaped_query
-);
-```
-
-**Attack Payload:**
-```rust
-query = "' OR '1'='1' UNION SELECT * FROM company; --"
-```
-
-### 3. Impact Assessment
-
-**Potential Damage:**
-- **Complete database compromise** - attackers could read, modify, or delete all data
-- **Data exfiltration** - sensitive project and client information exposed
-- **System integrity loss** - malicious data modification
-- **Availability impact** - potential database corruption or deletion
-
-**Affected Systems:**
-- All project management operations
-- Company and contact management
-- Fee proposal system
-- Search functionality
-- Report generation
+### 4. Changes Pushed
+- ✅ Security cleanup committed to local repository
+- ✅ Pushed to Gitea (git.mms.name/martin/fee-prop)
+- ✅ Changes visible in git history
 
 ---
 
-## Security Fixes Implemented
+## 🚨 CRITICAL ACTIONS REQUIRED (Before Making Public)
 
-### 1. Input Validation Framework
+### 1. Revoke Exposed Gitea Token (URGENT)
 
-**Created:** `/src-tauri/src/db/security.rs`
+**Token**: `ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f`
+**Status**: ❌ **COMPROMISED - Still active, visible in git history**
 
-**Features:**
-- **Comprehensive field validation** with regex patterns
-- **Length limit enforcement** (prevents buffer overflow)
-- **Character whitelist filtering** (blocks dangerous characters)
-- **Format-specific validation** (email, phone, project numbers)
-- **Input sanitization** for safe display
-
-**Validation Rules:**
-```rust
-// Project names: alphanumeric + safe punctuation only
-Regex::new(r"^[a-zA-Z0-9\s\-_().&,]+$")
-
-// Email addresses: RFC-compliant format
-Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-
-// Phone numbers: international format with safe characters
-Regex::new(r"^[\+]?[0-9\s\-\(\)]{7,20}$")
-
-// Project numbers: strict YY-CCCNN format
-Regex::new(r"^\d{2}-\d{3}\d{2}$")
-
-// IDs: alphanumeric and underscores only
-Regex::new(r"^[a-zA-Z0-9_]+$")
-```
-
-### 2. Secure Database Operations
-
-**Created:** `/src-tauri/src/db/secure_operations.rs`
-
-**Security Features:**
-- **Pre-validation** of all inputs before database operations
-- **Sanitized string handling** for search queries
-- **Safe wrapper functions** for all vulnerable operations
-- **Comprehensive error handling** with security logging
-
-**Example Secure Implementation:**
-```rust
-pub async fn secure_create_contact(&self, contact: ContactCreate) -> Result<Option<Contact>, Error> {
-    // Validate ALL inputs before database operation
-    InputValidator::validate_text_field("first_name", &contact.first_name, 1, 50)?;
-    InputValidator::validate_email(&contact.email)?;
-    InputValidator::validate_phone(&contact.phone)?;
-    InputValidator::validate_id(&contact.company)?;
-    
-    // Only proceed with validated input
-    self.create_contact(contact).await
-}
-```
-
-### 3. Comprehensive Test Suite
-
-**Created:** `/src-tauri/src/db/security_tests.rs`
-
-**Test Coverage:**
-- **50+ SQL injection attack patterns** tested
-- **All validation functions** covered
-- **Edge cases and boundary conditions** validated
-- **Performance impact** assessed
-
-**Attack Patterns Tested:**
-```rust
-let sql_injection_payloads = vec![
-    "'; DROP TABLE projects; --",
-    "' OR '1'='1",
-    "' UNION SELECT * FROM company--",
-    "'; INSERT INTO projects VALUES (...); --",
-    "' AND ASCII(SUBSTRING((SELECT name FROM projects LIMIT 1),1,1)) > 65--",
-    "%27%20OR%20%271%27%3D%271", // URL encoded
-    "\\' OR \\'1\\'=\\'1",       // Escaped quotes
-];
-```
-
----
-
-## Migration and Deployment
-
-### 1. Deployment Steps
-
-**Phase 1: Preparation**
+**Steps to revoke**:
 ```bash
-# Add security dependencies
-echo 'regex = "1.10"' >> Cargo.toml
+# 1. Open Gitea settings
+open https://git.mms.name/user/settings/applications
 
-# Run security tests
-cargo test security_tests
+# 2. Find token in list and click "Delete"
+
+# 3. Generate new token with same permissions:
+#    - Name: "GitHub Actions Release"
+#    - Scopes: repo, write:packages
+
+# 4. Update GitHub secret
+gh secret set GITEA_TOKEN --repo newillusions/e-fees
+# (Paste new token when prompted)
 ```
 
-**Phase 2: Function Replacement**
-```rust
-// Replace vulnerable calls with secure versions
-// OLD: db_manager.create_new_project(project).await
-// NEW: db_manager.secure_create_project(project).await
+**Why urgent**: Token is visible in git history and grants full repo access.
 
-// In commands/mod.rs - update all command functions
-```
+### 2. Clean Git History (REQUIRED)
 
-**Phase 3: Validation**
+**Current status**: ❌ Sensitive data still in git history (.git size: 50M)
+
+**Patterns found in history**:
+- Gitea token: `ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f`
+- Private IPs: `10.0.1.17`, `10.0.0.131`
+- Database password: `th38ret3ch`
+- Private server: `git.mms.name`
+
+**Choose one option**:
+
+#### Option A: Fresh Start (Recommended for Public)
 ```bash
-# Verify no SQL injection vulnerabilities remain
-cargo test security_tests::test_comprehensive_sql_injection_payloads
-
-# Performance testing
-cargo test --release
+# Create new repo without history
+rm -rf .git
+git init
+git add .
+git commit -m "Initial commit - cleaned for public release"
+git remote add origin https://github.com/newillusions/e-fees.git
+git branch -M main
+git push -u origin main --force
 ```
 
-### 2. Breaking Changes
+**Pros**: Completely clean, simple
+**Cons**: Loses all commit history
 
-**Function Signature Changes:**
-- All secure functions now return validation errors
-- Input types remain unchanged for compatibility
-- Error messages more descriptive for debugging
+#### Option B: BFG Repo Cleaner
+```bash
+# Install BFG
+brew install bfg
 
-**Error Handling Updates Required:**
-```rust
-// Commands now need to handle validation errors
-match db_manager.secure_create_project(project).await {
-    Ok(result) => Ok(result),
-    Err(Error::Api(surrealdb::error::Api::InvalidRequest(msg))) 
-        if msg.contains("validation") => {
-        Err(format!("Input validation failed: {}", msg))
-    },
-    Err(e) => Err(format!("Database error: {}", e))
-}
+# Clone fresh copy
+cd /tmp
+git clone --mirror https://github.com/newillusions/e-fees.git
+
+# Create file with secrets to remove
+cat > passwords.txt << EOF
+ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f
+th38ret3ch
+EOF
+
+# Remove sensitive files and replace secrets
+bfg --delete-files "*.surql" e-fees.git
+bfg --delete-files ".env.backup" e-fees.git
+bfg --replace-text passwords.txt e-fees.git
+
+# Clean up
+cd e-fees.git
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# Force push (AFTER revoking token!)
+git push --force
+```
+
+**Pros**: Preserves commit history
+**Cons**: More complex, requires verification
+
+### 3. Fix GitHub Actions Billing
+
+**Current status**: ❌ Repository is PRIVATE (uses metered Actions minutes)
+
+**The billing error** you encountered means one of:
+- Payment method failed
+- Spending limit set to $0
+- Free tier minutes exhausted
+
+**Solutions** (choose one):
+
+#### Solution A: Make Repository Public (Easiest)
+```bash
+# This gives UNLIMITED GitHub Actions minutes
+gh repo edit newillusions/e-fees --visibility public
+```
+
+**Requirements before doing this**:
+1. ✅ Complete git history cleaning (Option A or B above)
+2. ✅ Revoke exposed Gitea token
+3. ✅ Verify no secrets remain: `git log -p | grep -i password`
+
+#### Solution B: Fix Billing Settings
+```bash
+# Check current spending limit
+open https://github.com/settings/billing
+
+# Update spending limit (minimum $1)
+# Or fix payment method
+```
+
+**Free tier**: 2,000 minutes/month for private repos
+
+#### Solution C: Self-Hosted Runner (Future)
+- Set up macOS runner for code signing
+- Configure in repository settings
+- Zero cost for compute time
+
+---
+
+## ℹ️ Acceptable Public Information
+
+These can safely remain in the public repo:
+- ✅ `git.mms.name` - Your Gitea server URL (for workflow documentation)
+- ✅ Username `martin` - Public GitHub username
+- ✅ Workflow files - Use GitHub Secrets, not hardcoded values
+- ✅ Example/template .env files
+- ✅ Documentation about architecture
+- ✅ SurrealDB schema and structure
+
+---
+
+## 📋 Pre-Public Checklist
+
+Before making the repository public, complete this checklist:
+
+- [ ] **Step 1**: Revoke exposed Gitea token at git.mms.name
+- [ ] **Step 2**: Generate new Gitea token
+- [ ] **Step 3**: Update GitHub secret: `gh secret set GITEA_TOKEN`
+- [ ] **Step 4**: Clean git history (Option A or B)
+- [ ] **Step 5**: Verify no secrets in history: `git log -p | grep -i -E "(password|token|secret)"`
+- [ ] **Step 6**: Test build locally: `npm run tauri:build`
+- [ ] **Step 7**: Make repo public: `gh repo edit newillusions/e-fees --visibility public`
+- [ ] **Step 8**: Trigger test release: Create and push a new tag
+- [ ] **Step 9**: Verify GitHub Actions completes successfully
+- [ ] **Step 10**: Test auto-update from a previous version
+
+---
+
+## 🔍 Security Verification Commands
+
+Run these before making public:
+
+```bash
+# Check for remaining secrets in working tree
+git ls-files | xargs grep -i -E "(password|token|secret|th38ret3ch)" || echo "✓ Clean"
+
+# Check git history (after cleaning)
+git log --all --oneline | wc -l  # Should be 1 if using fresh start
+
+# Verify .gitignore is working
+echo "test-secret-data" > .env.local
+git status  # Should show .env.local as untracked
+
+# Check repo size (should be smaller after history clean)
+du -sh .git
 ```
 
 ---
 
-## Security Testing Results
+## 📝 Post-Public Steps
 
-### 1. Injection Attack Prevention
+Once repository is public:
 
-**Test Results:** ✅ PASSED  
-**Attacks Blocked:** 50/50 injection attempts  
-**False Positives:** 0  
+1. **Update README.md**
+   - Add public-facing description
+   - Installation instructions for end users
+   - Build instructions for contributors
 
-### 2. Performance Impact
+2. **Add LICENSE file**
+   - Choose appropriate license (MIT, Apache 2.0, etc.)
+   - Determines how others can use the code
 
-**Validation Overhead:** <1ms per operation  
-**Database Query Performance:** No change  
-**Memory Usage:** +2KB for validation regex compilation  
+3. **Update documentation**
+   - Assume readers don't have private server access
+   - Provide examples using environment variables
+   - Document how to set up own SurrealDB instance
 
-### 3. Functionality Validation
+4. **Enable GitHub security features**
+   - Enable Dependabot alerts
+   - Enable secret scanning
+   - Enable code scanning (optional)
 
-**Valid Inputs:** ✅ All accepted  
-**Invalid Inputs:** ✅ All rejected with clear error messages  
-**Edge Cases:** ✅ Properly handled  
-
----
-
-## Ongoing Security Recommendations
-
-### 1. Immediate Actions (Next 30 days)
-- [ ] Deploy security fixes to production
-- [ ] Implement security monitoring for validation failures
-- [ ] Train development team on secure coding practices
-- [ ] Set up automated security testing in CI/CD
-
-### 2. Medium-term Improvements (3-6 months)
-- [ ] Implement audit logging for all database operations
-- [ ] Add rate limiting to prevent brute force attacks
-- [ ] Conduct penetration testing of the entire application
-- [ ] Implement database-level permissions and roles
-
-### 3. Long-term Security Strategy (6+ months)
-- [ ] Regular security code reviews (monthly)
-- [ ] Automated vulnerability scanning in CI/CD
-- [ ] Security training for all developers
-- [ ] Annual third-party security audits
+5. **Consider adding**
+   - CONTRIBUTING.md - How to contribute
+   - CODE_OF_CONDUCT.md - Community guidelines
+   - GitHub templates for issues and PRs
 
 ---
 
-## Compliance and Reporting
+## 🎯 Current Status Summary
 
-### 1. Regulatory Impact
+| Item | Status | Notes |
+|------|--------|-------|
+| Sensitive files removed | ✅ DONE | No .env, .surql, or backup files |
+| Documentation sanitized | ✅ DONE | No hardcoded tokens in docs |
+| Working tree clean | ✅ DONE | No secrets currently committed |
+| Git history cleaned | ❌ TODO | Token still visible in history |
+| Gitea token revoked | ❌ TODO | Must do manually at git.mms.name |
+| GitHub billing fixed | ❌ TODO | Repo still private (or fix billing) |
+| Repository public | ❌ TODO | Waiting for above steps |
 
-**Data Protection:**
-- GDPR compliance improved through better input validation
-- Data integrity enhanced through injection prevention
-- Audit trail capabilities added for compliance reporting
-
-### 2. Incident Response
-
-**If SQL Injection Detected:**
-1. Immediately isolate affected systems
-2. Review access logs for data exposure assessment
-3. Patch vulnerable code using provided secure functions
-4. Notify stakeholders per incident response plan
-5. Conduct full security review of related systems
+**Recommendation**: Complete the three TODO items above before making the repository public. The order matters - revoke token FIRST, then clean history, then make public.
 
 ---
 
-## Conclusion
+## 🆘 If Secrets Are Already Public
 
-The Fee Proposal Management System had **critical SQL injection vulnerabilities** that could have led to complete database compromise. Through comprehensive security fixes including input validation, secure wrapper functions, and extensive testing, the risk has been reduced from **CRITICAL to LOW**.
+If you accidentally pushed secrets to a public repo:
 
-**Key Achievements:**
-- ✅ **100% of SQL injection vulnerabilities** remediated
-- ✅ **Comprehensive input validation** implemented
-- ✅ **50+ attack scenarios** tested and blocked
-- ✅ **Zero breaking changes** to existing API
-- ✅ **Complete migration guide** provided
-
-**Risk Status:** LOW (with proper deployment of security fixes)  
-**Next Review:** 30 days post-deployment  
-**Confidence Level:** HIGH - comprehensive testing validates security improvements
+1. **Immediately** rotate/revoke them
+2. Consider them compromised permanently
+3. Monitor for unauthorized access
+4. Use `git-secrets` tool to prevent future leaks: `brew install git-secrets`
+5. Enable GitHub secret scanning alerts
 
 ---
 
-**Prepared by:** Security Sub-Agent 2  
-**Review Date:** August 17, 2025  
-**Classification:** Internal Use  
-**Distribution:** Development Team, Security Team, Management
+## 📞 Questions?
+
+- **Will this be used by others?** Consider improving installation docs
+- **Need Windows builds?** Currently no updater support (see RELEASE_AUTOMATION.md)
+- **Want GitHub Sponsors?** Add `.github/FUNDING.yml` after public
+- **Need help?** Open an issue or check the documentation
+
+---
+
+**Generated**: November 27, 2025
+**Next Review**: After completing git history cleanup

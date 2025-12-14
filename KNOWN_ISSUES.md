@@ -1,7 +1,7 @@
 # Known Issues and Limitations
 
-**Last Updated**: 2025-12-03
-**Current Version**: v0.10.18
+**Last Updated**: 2025-12-14
+**Current Version**: v0.10.24
 
 ## Critical Issues
 
