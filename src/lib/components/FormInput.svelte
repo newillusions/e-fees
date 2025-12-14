@@ -11,7 +11,7 @@
   export let maxlength: number | undefined = undefined;
   export let min: number | undefined = undefined;
   export let max: number | undefined = undefined;
-  export let autocomplete = '';
+  export let autocomplete: string | undefined = undefined;
   export let className = '';
 
   // Generate ID if not provided
@@ -45,7 +45,7 @@
     {maxlength}
     {min}
     {max}
-    {autocomplete}
+    autocomplete={autocomplete as any}
     bind:value
     class={inputClasses}
   />

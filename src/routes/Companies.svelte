@@ -4,7 +4,7 @@
   import CompanyDetail from '$lib/components/CompanyDetail.svelte';
   import CompanyCard from '$lib/components/CompanyCard.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { paginatedCompaniesStore } from '$lib/stores';
+  import { paginatedCompaniesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   import { createCompanyFilterConfig } from '$lib/utils/search';

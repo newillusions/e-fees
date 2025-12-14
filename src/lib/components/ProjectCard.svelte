@@ -83,8 +83,8 @@
         </button>
       {/if}
       <span>Short Name:<br/>{project.name_short || '—'}</span>
-      <span>Created:<br/>{new Date(project.time.created_at).toISOString().slice(2,10).replace(/-/g,'')}</span>
-      <span>Updated:<br/>{new Date(project.time.updated_at).toISOString().slice(2,10).replace(/-/g,'')}</span>
+      <span>Created:<br/>{project.time?.created_at ? new Date(project.time.created_at).toISOString().slice(2,10).replace(/-/g,'') : '—'}</span>
+      <span>Updated:<br/>{project.time?.updated_at ? new Date(project.time.updated_at).toISOString().slice(2,10).replace(/-/g,'') : '—'}</span>
     </div>
   </svelte:fragment>
 </BaseListCard>

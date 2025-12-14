@@ -142,7 +142,7 @@
       const projectData = {
         ...formData,
         time: {
-          created_at: project.time.created_at,
+          created_at: project.time?.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
       };
@@ -155,7 +155,7 @@
   }
   
   // Handle status change confirmation
-  async function handleStatusChangeConfirm(event) {
+  async function handleStatusChangeConfirm(event: CustomEvent) {
     const { project: projectData, newStatus, folderChangeRequired, affectedFees, feesToUpdate, suggestedFeeStatus } = event.detail;
     
     // Update the form data with the new status
@@ -217,7 +217,7 @@
   // Handle status change cancellation
   function handleStatusChangeCancel() {
     // Revert the status back to original
-    formData.status = originalProject?.status || 'Draft';
+    formData.status = (originalProject?.status as ProjectStatus) || 'Draft';
     showStatusChangeModal = false;
     pendingStatusChange = '';
   }
@@ -309,7 +309,7 @@
       city: project.city || '',
       country: project.country || '',
       folder: project.folder || '',
-      status: project.status || 'Draft'
+      status: (project.status as ProjectStatus) || 'Draft'
     };
   }
 </script>

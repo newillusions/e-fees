@@ -36,7 +36,7 @@
 
   // Form state
   let formData: T = {};
-  let formErrors: Record<string, string> = {};
+  let formErrors: Partial<Record<string, string>> = {};
   let showDeleteConfirm = false;
 
   // Initialize form data structure based on field configurations

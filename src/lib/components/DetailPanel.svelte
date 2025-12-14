@@ -3,12 +3,20 @@
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
+  interface CustomAction {
+    handler: () => void;
+    label: string;
+    disabled?: boolean;
+    tooltip?: string;
+    icon: string;
+  }
+
   const dispatch = createEventDispatcher();
 
   export let isOpen = false;
   export let title = '';
   export let canEdit = true;
-  export let customActions = [];
+  export let customActions: CustomAction[] = [];
   export let show = true; // New prop to control visibility
 
   function closePanel() {

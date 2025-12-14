@@ -21,8 +21,14 @@
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project, ProjectCreationResult } from '$lib/../types';
+  import type { Project } from '$lib/../types';
   import type { ProjectNumber } from '$lib/../types/database';
+
+  // Local interface for pending folder confirmation
+  interface PendingFolderData {
+    projectNumber: string;
+    projectShortName: string;
+  }
 
   const dispatch = createEventDispatcher();
 
@@ -74,7 +80,7 @@
   let isGenerating = false;
   let isModalReady = false;
   let showFolderConfirm = false;
-  let pendingProjectData: ProjectCreationResult | null = null;
+  let pendingProjectData: PendingFolderData | null = null;
 
   // Typeahead search states
   let countrySearchText = '';
@@ -82,7 +88,7 @@
   let citySearchText = '';
 
   // Options for typeahead components
-  let countryOptions: Array<{ id: string; name: string; dial_code: string }> = [];
+  let countryOptions: Array<{ id: string; name: string; dial_code: number }> = [];
   let areaOptions: Array<{ id: string; name: string }> = [];
   let cityOptions: Array<{ id: string; name: string }> = [];
 
@@ -317,12 +323,13 @@
     showFolderConfirm = false;
 
     if (overwrite && pendingProjectData) {
+      // Capture values for use in async callback (TypeScript type narrowing)
+      const projectNumber = pendingProjectData.projectNumber;
+      const projectShortName = pendingProjectData.projectShortName;
+
       await withLoadingState(
         async () => {
-          await createProjectFolder(
-            pendingProjectData.projectNumber,
-            pendingProjectData.projectShortName
-          );
+          await createProjectFolder(projectNumber, projectShortName);
           operationActions.setMessage(
             'Project and folder created successfully (existing folder overwritten)'
           );
@@ -484,8 +491,8 @@
             type="number"
             bind:value={formData.year}
             placeholder="25"
-            min="20"
-            max="99"
+            min={20}
+            max={99}
             required
           />
 

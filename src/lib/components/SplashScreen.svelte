@@ -28,9 +28,11 @@
   
   let messageIndex = 0;
   
-  onMount(async () => {
-    // Load app version
-    appVersion = await getAppVersion();
+  onMount(() => {
+    // Load app version (async but not blocking)
+    getAppVersion().then(version => {
+      appVersion = version;
+    });
 
     // Animate dots
     dotInterval = setInterval(() => {

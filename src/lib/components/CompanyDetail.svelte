@@ -96,7 +96,7 @@
           return id1 === id2 || feeCompanyId === companyIdStr;
         })
         .sort(
-          (a, b) => new Date(b.time.created_at).getTime() - new Date(a.time.created_at).getTime()
+          (a, b) => new Date(b.time?.created_at || 0).getTime() - new Date(a.time?.created_at || 0).getTime()
         )
     : [];
 
@@ -139,7 +139,7 @@
           });
         })
         .sort(
-          (a, b) => new Date(b.time.updated_at).getTime() - new Date(a.time.updated_at).getTime()
+          (a, b) => new Date(b.time?.updated_at || 0).getTime() - new Date(a.time?.updated_at || 0).getTime()
         )
     : [];
 
@@ -188,8 +188,8 @@
           { label: 'Location', value: `${company.city}, ${company.country}` },
           { label: 'Registration Number', value: company.reg_no || '—' },
           { label: 'Tax Number', value: company.tax_no || '—' },
-          { label: 'Created', value: company.time.created_at, type: 'date' },
-          { label: 'Last Updated', value: company.time.updated_at, type: 'date' },
+          { label: 'Created', value: company.time?.created_at, type: 'date' },
+          { label: 'Last Updated', value: company.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(company.id), type: 'id' }
         ]}
       />

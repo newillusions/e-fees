@@ -516,7 +516,8 @@ describe('ApiClient', () => {
         company_id: 'company:TEST',
         contact_id: 'contacts:test_contact',
         status: 'Draft' as const,
-        issue_date: '250816'
+        issue_date: '250816',
+        revisions: []
       };
 
       it('should create fee successfully', async () => {

@@ -12,7 +12,7 @@
   import ProjectDetailPage from './routes/ProjectDetailPage.svelte';
   import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
   import DevMode from './routes/DevMode.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { fade } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
@@ -106,19 +106,17 @@
     // Set up MCP plugin event listeners
     try {
       await setupPluginListeners();
-      if (import.meta.env.DEV) {
-      }
     } catch (error) {
       console.error('Failed to set up MCP plugin listeners:', error);
     }
 
     // The splash screen will handle the initialization timing
     // Data loading will happen after splash completes
+  });
 
-    // Cleanup function for when component is destroyed
-    return () => {
-      cleanupPluginListeners();
-    };
+  // Cleanup function for when component is destroyed
+  onDestroy(() => {
+    cleanupPluginListeners();
   });
 </script>
 

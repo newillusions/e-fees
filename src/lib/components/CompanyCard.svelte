@@ -67,16 +67,16 @@
         <span>VAT:<br />{company.tax_no}</span>
       {/if}
       <span
-        >Created:<br />{new Date(company.time.created_at)
+        >Created:<br />{company.time ? new Date(company.time.created_at)
           .toISOString()
           .slice(2, 10)
-          .replace(/-/g, '')}</span
+          .replace(/-/g, '') : '—'}</span
       >
       <span
-        >Updated:<br />{new Date(company.time.updated_at)
+        >Updated:<br />{company.time ? new Date(company.time.updated_at)
           .toISOString()
           .slice(2, 10)
-          .replace(/-/g, '')}</span
+          .replace(/-/g, '') : '—'}</span
       >
     </div>
   </svelte:fragment>

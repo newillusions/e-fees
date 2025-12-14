@@ -12,7 +12,7 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
   import ListCard from './ListCard.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import WarningModal from './WarningModal.svelte';
-  import type { Project, FeeProposal } from '../../types';
+  import type { Project, Fee } from '../../types';
   
   const dispatch = createEventDispatcher();
   
@@ -20,7 +20,15 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
   export let project: Project | null = null;
   
   // Modal state
-  let warningModal = {
+  let warningModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: (() => void | Promise<void>) | null;
+    onCancel: (() => void) | null;
+  } = {
     isOpen: false,
     title: 'Warning',
     message: '',
@@ -297,8 +305,8 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
           { label: 'Project Number', value: project.number?.id || '—' },
           { label: 'Status', value: project.status },
           { label: 'Folder', value: project.folder || '—', clickable: true },
-          { label: 'Created', value: project.time.created_at, type: 'date' },
-          { label: 'Last Updated', value: project.time.updated_at, type: 'date' },
+          { label: 'Created', value: project.time?.created_at, type: 'date' },
+          { label: 'Last Updated', value: project.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(project.id), type: 'id' }
         ]}
         on:field-click={handleFieldClick}

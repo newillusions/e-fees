@@ -8,6 +8,8 @@
   export let ariaLabel: string = '';
   export let size: number = 16;
   export let customIcon: string = '';
+  let className: string = '';
+  export { className as class };
 
   function handleClick(event: MouseEvent) {
     event.stopPropagation();
@@ -35,7 +37,7 @@
 {#if href}
   <a
     {href}
-    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all {className}"
     aria-label={ariaLabel}
   >
     <svg
@@ -50,7 +52,7 @@
 {:else}
   <button
     on:click={handleClick}
-    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all {className}"
     aria-label={ariaLabel}
   >
     <svg

@@ -17,7 +17,15 @@
   export let proposal: Fee | null = null;
   
   // Modal state
-  let warningModal = {
+  let warningModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: (() => void | Promise<void>) | null;
+    onCancel: (() => void) | null;
+  } = {
     isOpen: false,
     title: 'Warning',
     message: '',
@@ -362,7 +370,7 @@
         location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
         stats={[
           { label: 'Revision', value: proposal.rev || 0 },
-          { label: 'Days Active', value: Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) }
+          { label: 'Days Active', value: proposal.time?.created_at ? Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0 }
         ]}
       />
     {/if}
@@ -377,26 +385,26 @@
         fields={[
           { label: 'FP Number', value: proposal.number },
           { label: 'Status', value: proposal.status },
-          { label: 'Revision', value: proposal.rev.toString() },
+          { label: 'Revision', value: (proposal.rev ?? 0).toString() },
           { label: 'Issue Date', value: formatIssueDate(proposal.issue_date) },
           { label: 'Staff Member', value: proposal.staff_name || '—' },
-          { label: 'Created', value: proposal.time.created_at, type: 'date' },
-          { label: 'Last Updated', value: proposal.time.updated_at, type: 'date' },
+          { label: 'Created', value: proposal.time?.created_at, type: 'date' },
+          { label: 'Last Updated', value: proposal.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(proposal.id), type: 'id' }
         ]}
       />
     
     <!-- Project Information Section -->
     {#if relatedProject}
-      <InfoCard 
-        title="Related Project" 
+      <InfoCard
+        title="Related Project"
         columns={3}
         fields={[
           { label: 'Project Number', value: relatedProject.number?.id || '—' },
           { label: 'Project Name', value: relatedProject.name },
-          { label: 'Short Name', value: relatedProject.name_short },
+          { label: 'Short Name', value: relatedProject.name_short || '—' },
           { label: 'Status', value: relatedProject.status },
-          { label: 'Area', value: relatedProject.area },
+          { label: 'Area', value: relatedProject.area || '—' },
           { label: 'Location', value: `${relatedProject.city}, ${relatedProject.country}` }
         ]}
       />
@@ -414,13 +422,13 @@
     
     <!-- Company Information Section -->
     {#if relatedCompany}
-      <InfoCard 
-        title="Client Company" 
+      <InfoCard
+        title="Client Company"
         columns={3}
         fields={[
           { label: 'Company Name', value: relatedCompany.name },
-          { label: 'Short Name', value: relatedCompany.name_short },
-          { label: 'Abbreviation', value: relatedCompany.abbreviation },
+          { label: 'Short Name', value: relatedCompany.name_short || '—' },
+          { label: 'Abbreviation', value: relatedCompany.abbreviation || '—' },
           { label: 'Location', value: `${relatedCompany.city}, ${relatedCompany.country}` },
           { label: 'Registration', value: relatedCompany.reg_no || '—' },
           { label: 'Tax Number', value: relatedCompany.tax_no || '—' }

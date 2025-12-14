@@ -91,7 +91,7 @@ export function createFilterFunction<T>(
     }
 
     return true;
-  }).sort(config.sortFunction || defaultSortFunction);
+  }).sort(config.sortFunction || (defaultSortFunction as (a: T, b: T) => number));
 }
 
 /**

@@ -133,15 +133,21 @@ describe('ContactModal Component', () => {
   };
 
   const mockOperationState = {
-    subscribe: vi.fn(callback => {
+    subscribe: vi.fn((callback: (value: any) => void) => {
       callback({ saving: false, deleting: false, error: null, message: null });
-      return { unsubscribe: vi.fn() };
-    })
+      return vi.fn(); // Unsubscriber is just () => void
+    }),
+    set: vi.fn(),
+    update: vi.fn()
   };
 
   const mockOperationActions = {
+    setLoading: vi.fn(),
+    setSaving: vi.fn(),
+    setDeleting: vi.fn(),
     setError: vi.fn(),
     setMessage: vi.fn(),
+    clearMessages: vi.fn(),
     reset: vi.fn()
   };
 
@@ -151,7 +157,7 @@ describe('ContactModal Component', () => {
     // Setup default mocks
     vi.mocked(companiesStore.subscribe).mockImplementation(callback => {
       callback(mockCompanies);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
 
     vi.mocked(validateForm).mockReturnValue({});
@@ -159,7 +165,7 @@ describe('ContactModal Component', () => {
     vi.mocked(extractSurrealId).mockReturnValue('test123');
     vi.mocked(withLoadingState).mockImplementation(async fn => await fn());
     vi.mocked(useOperationState).mockReturnValue({
-      store: mockOperationState,
+      store: mockOperationState as any,
       actions: mockOperationActions
     });
   });
@@ -301,7 +307,7 @@ describe('ContactModal Component', () => {
     it('should delete contact after confirmation', async () => {
       const user = userEvent.setup();
 
-      vi.mocked(contactsActions.delete).mockResolvedValue(true);
+      vi.mocked(contactsActions.delete).mockResolvedValue(mockContact);
 
       render(ContactModal, {
         isOpen: true,
@@ -344,14 +350,16 @@ describe('ContactModal Component', () => {
 
     it('should show loading spinner during save', () => {
       const loadingState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({ saving: true, deleting: false, error: null, message: null });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: loadingState,
+        store: loadingState as any,
         actions: mockOperationActions
       });
 
@@ -369,19 +377,21 @@ describe('ContactModal Component', () => {
   describe('Error and Message Display', () => {
     it('should display error messages', () => {
       const errorState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({
             saving: false,
             deleting: false,
             error: 'Something went wrong',
             message: null
           });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: errorState,
+        store: errorState as any,
         actions: mockOperationActions
       });
 
@@ -392,19 +402,21 @@ describe('ContactModal Component', () => {
 
     it('should display success messages', () => {
       const messageState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({
             saving: false,
             deleting: false,
             error: null,
             message: 'Contact created successfully'
           });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: messageState,
+        store: messageState as any,
         actions: mockOperationActions
       });
 

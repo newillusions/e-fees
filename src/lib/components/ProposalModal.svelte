@@ -262,8 +262,9 @@
   }
   
   // Get the mapped project status for a proposal status
-  function getProjectStatusFromProposalStatus(proposalStatus: string): string {
-    const proposalToProjectMapping: Record<string, string> = {
+  type ProjectStatus = 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'active';
+  function getProjectStatusFromProposalStatus(proposalStatus: string): ProjectStatus {
+    const proposalToProjectMapping: Record<string, ProjectStatus> = {
       'Draft': 'Draft',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
@@ -274,7 +275,7 @@
       'On Hold': 'On Hold',
       'Revised': 'Revised'
     };
-    return proposalToProjectMapping[proposalStatus] || proposalStatus;
+    return proposalToProjectMapping[proposalStatus] || (proposalStatus as ProjectStatus);
   }
   
   // Form submission handler
@@ -393,7 +394,7 @@
     }
 
     // Try multiple extraction approaches like ContactModal
-    const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+    const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
     
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
@@ -444,7 +445,7 @@
     
     await withLoadingState(async () => {
       // Try multiple extraction approaches like ContactModal
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
       if (!proposalId) throw new Error('Invalid proposal ID');
       
       const result = await feesActions.delete(proposalId);
@@ -468,7 +469,7 @@
       }
 
       // Use the same ID extraction logic as handleUpdate
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
 
       if (!proposalId) {
         console.error('ProposalModal: Failed to extract proposal ID');
@@ -539,7 +540,7 @@
     showJsonExportAlert = false;
     
     try {
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
       if (!proposalId) {
         operationActions.setError('Could not extract proposal ID for JSON export');
         return;
@@ -1015,16 +1016,16 @@
             label="Issue Date"
             bind:value={formData.issue_date}
             placeholder="YYMMDD format"
-            maxlength="6"
+            maxlength={6}
             required
             error={formErrors.issue_date}
           />
-          
+
           <FormInput
             label="Release"
             bind:value={formData.rev}
             placeholder="1"
-            min="1"
+            min={1}
           />
         </div>
         

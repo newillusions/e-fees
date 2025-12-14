@@ -15,6 +15,7 @@
  */
 export const PROPOSAL_STATUSES = [
   'Draft',
+  'Active',
   'Sent',
   'Negotiation',
   'Awarded',

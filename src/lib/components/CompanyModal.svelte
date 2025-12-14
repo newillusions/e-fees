@@ -144,7 +144,7 @@
       const companyData = {
         ...formData,
         time: {
-          created_at: company.time.created_at,
+          created_at: company.time?.created_at || timestamp,
           updated_at: timestamp
         }
       };

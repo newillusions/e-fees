@@ -131,8 +131,8 @@
           { label: 'First Name', value: contact.first_name || '—' },
           { label: 'Last Name', value: contact.last_name || '—' },
           { label: 'Phone', value: contact.phone || '—' },
-          { label: 'Created', value: contact.time.created_at, type: 'date' },
-          { label: 'Last Updated', value: contact.time.updated_at, type: 'date' },
+          { label: 'Created', value: contact.time?.created_at, type: 'date' },
+          { label: 'Last Updated', value: contact.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(contact.id), type: 'id' }
         ]}
       />

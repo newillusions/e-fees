@@ -82,7 +82,7 @@
       ...baseConfig,
       filterFields: {
         status: (proposal: Fee) => proposal.status,
-        staff: (proposal: Fee) => proposal.staff_name
+        staff: (proposal: Fee) => proposal.staff_name || ''
       }
     };
   })());
@@ -92,7 +92,7 @@
 
   // Get unique values for filters using optimized functions
   const uniqueStatuses = $derived(getUniqueFieldValues(fees, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name || '').filter(Boolean));
 
   // Count proposals per status for styling (bold for non-empty)
   const statusCounts = $derived(
@@ -164,8 +164,8 @@
       if (projectRef.tb && projectRef.id) {
         if (typeof projectRef.id === 'string') {
           projectIdStr = `${projectRef.tb}:${projectRef.id}`;
-        } else if (projectRef.id.String) {
-          projectIdStr = `${projectRef.tb}:${projectRef.id.String}`;
+        } else if (typeof projectRef.id === 'object' && 'String' in projectRef.id) {
+          projectIdStr = `${projectRef.tb}:${(projectRef.id as { String: string }).String}`;
         }
       }
       // Handle simple { id: 'projects:PROJECT_ID' } format
@@ -190,8 +190,8 @@
         if (p.id.tb && p.id.id) {
           if (typeof p.id.id === 'string') {
             pIdStr = `${p.id.tb}:${p.id.id}`;
-          } else if (p.id.id.String) {
-            pIdStr = `${p.id.tb}:${p.id.id.String}`;
+          } else if (typeof p.id.id === 'object' && 'String' in p.id.id) {
+            pIdStr = `${p.id.tb}:${(p.id.id as { String: string }).String}`;
           }
         }
       }
@@ -228,8 +228,8 @@
       if (companyRef.tb && companyRef.id) {
         if (typeof companyRef.id === 'string') {
           companyIdStr = `${companyRef.tb}:${companyRef.id}`;
-        } else if (companyRef.id.String) {
-          companyIdStr = `${companyRef.tb}:${companyRef.id.String}`;
+        } else if (typeof companyRef.id === 'object' && 'String' in companyRef.id) {
+          companyIdStr = `${companyRef.tb}:${(companyRef.id as { String: string }).String}`;
         }
       }
       // Handle simple { id: 'company:ABBREVIATION' } format
@@ -254,8 +254,8 @@
         if (c.id.tb && c.id.id) {
           if (typeof c.id.id === 'string') {
             cIdStr = `${c.id.tb}:${c.id.id}`;
-          } else if (c.id.id.String) {
-            cIdStr = `${c.id.tb}:${c.id.id.String}`;
+          } else if (typeof c.id.id === 'object' && 'String' in c.id.id) {
+            cIdStr = `${c.id.tb}:${(c.id.id as { String: string }).String}`;
           }
         }
       }
@@ -292,8 +292,8 @@
       if (contactRef.tb && contactRef.id) {
         if (typeof contactRef.id === 'string') {
           contactIdStr = `${contactRef.tb}:${contactRef.id}`;
-        } else if (contactRef.id.String) {
-          contactIdStr = `${contactRef.tb}:${contactRef.id.String}`;
+        } else if (typeof contactRef.id === 'object' && 'String' in contactRef.id) {
+          contactIdStr = `${contactRef.tb}:${(contactRef.id as { String: string }).String}`;
         }
       }
       // Handle simple { id: 'contacts:CONTACT_ID' } format
@@ -318,8 +318,8 @@
         if (c.id.tb && c.id.id) {
           if (typeof c.id.id === 'string') {
             cIdStr = `${c.id.tb}:${c.id.id}`;
-          } else if (c.id.id.String) {
-            cIdStr = `${c.id.tb}:${c.id.id.String}`;
+          } else if (typeof c.id.id === 'object' && 'String' in c.id.id) {
+            cIdStr = `${c.id.tb}:${(c.id.id as { String: string }).String}`;
           }
         }
       }
