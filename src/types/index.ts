@@ -383,3 +383,8 @@ export interface ActivityLogCreate {
   user?: string;
   metadata?: Record<string, unknown>;
 }
+
+// ============================================================================
+// FOLDER SYNC TYPES
+// ============================================================================
+export * from './folderSync';

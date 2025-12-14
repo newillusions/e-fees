@@ -21,6 +21,7 @@
 
 pub mod utils;
 pub mod folder_management;
+pub mod folder_sync;
 
 // Re-export folder management commands
 pub use folder_management::{
@@ -30,6 +31,12 @@ pub use folder_management::{
     move_project_to_archive,
     list_projects_in_folder,
     validate_project_base_path,
+};
+
+// Re-export folder sync commands
+pub use folder_sync::{
+    scan_folder_sync,
+    resolve_folder_inconsistency,
 };
 
 // Import the utility functions and macros

@@ -3,6 +3,10 @@
   import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
   import { reloadDatabaseConfig } from '$lib/api';
   import { loadAllData } from '$lib/stores';
+  import FolderSyncModal from './FolderSyncModal.svelte';
+
+  // Folder sync modal state
+  let showFolderSyncModal = false;
   
   const dispatch = createEventDispatcher();
   
@@ -337,6 +341,21 @@
                 Browse
               </button>
             </div>
+            <!-- Folder Sync Button -->
+            <button
+              type="button"
+              on:click={() => showFolderSyncModal = true}
+              class="bg-emittiv-dark border-emittiv-dark text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-smooth"
+              style="margin-top: 12px; width: 100%; padding: 8px 16px; font-size: 12px; height: 32px; border: 1px solid; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"
+              style:opacity={!settings.project_folder_path ? '0.5' : '1'}
+              style:cursor={!settings.project_folder_path ? 'not-allowed' : 'pointer'}
+              disabled={!settings.project_folder_path}
+            >
+              <svg style="width: 14px; height: 14px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Check Folder Consistency
+            </button>
           </div>
 
           <!-- Developer Options Section -->
@@ -393,3 +412,9 @@
     </div>
   </div>
 {/if}
+
+<!-- Folder Sync Modal (rendered outside main modal for proper z-index) -->
+<FolderSyncModal
+  isOpen={showFolderSyncModal}
+  on:close={() => showFolderSyncModal = false}
+/>

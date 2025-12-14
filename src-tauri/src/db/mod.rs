@@ -1920,8 +1920,22 @@ impl DatabaseManager {
     pub async fn delete_project(&self, id: &str) -> Result<Project, Error> {
         if let Some(client) = &self.client {
             let deleted: Option<Project> = client.delete_project(id).await?;
-            
+
             deleted.ok_or_else(|| surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("Failed to delete project".to_string())))
+        } else {
+            Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
+        }
+    }
+
+    /// Execute a raw SQL query without deserializing the result.
+    /// Useful for UPDATE/DELETE statements where we don't need the result.
+    pub async fn execute_raw_query(&self, query: &str) -> Result<(), Error> {
+        if let Some(client) = &self.client {
+            let _response = match client {
+                DatabaseClient::Http(client) => client.query(query).await?,
+                DatabaseClient::WebSocket(client) => client.query(query).await?,
+            };
+            Ok(())
         } else {
             Err(surrealdb::Error::Api(surrealdb::error::Api::InvalidRequest("No database connection".to_string())))
         }

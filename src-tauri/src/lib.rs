@@ -74,6 +74,9 @@ use commands::{
     move_project_to_archive,
     list_projects_in_folder,
     validate_project_base_path,
+    // Folder sync commands
+    scan_folder_sync,
+    resolve_folder_inconsistency,
     log_message,
 };
 
@@ -317,6 +320,9 @@ pub fn run() {
             move_project_to_archive,
             list_projects_in_folder,
             validate_project_base_path,
+            // Folder sync commands
+            scan_folder_sync,
+            resolve_folder_inconsistency,
             log_message,
             // Activity log commands
             create_activity_log,
