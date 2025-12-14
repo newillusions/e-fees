@@ -30,12 +30,31 @@ model: sonnet              # Optional model override
 
 | Agent | Purpose | Key Responsibilities |
 |-------|---------|---------------------|
-| **mcp-specialist** | MCP socket & protocol debugging | Socket health, tool registration, E2E test MCP failures |
-| **tauri-developer** | Rust backend & desktop integration | Tauri commands, IPC, file system operations, window management |
+| **tdd-enforcer** | TDD workflow gatekeeper | Ensures tests exist BEFORE implementation begins |
+| **test-planner** | Test specification design | Creates test specs, identifies edge cases, defines acceptance criteria |
 | **testing-specialist** | E2E testing & test data management | "DELETE ME" pattern, test scenarios, test cleanup |
-| **database-specialist** | SurrealDB queries & schema | Thing objects, query optimization, schema design |
-| **code-reviewer** | Code quality & architecture | Code smells, refactoring, best practices, consistency |
+| **surrealdb-specialist** | SurrealDB syntax & best practices | Correct query syntax, indexing, schema design |
+| **database-specialist** | Database queries & optimization | Thing objects, query optimization, schema design |
 | **frontend-specialist** | Svelte UI & DPI scaling | Components, Tailwind CSS, responsive design, DPI fixes |
+| **tauri-developer** | Rust backend & desktop integration | Tauri commands, IPC, file system operations, window management |
+| **mcp-specialist** | MCP socket & protocol debugging | Socket health, tool registration, E2E test MCP failures |
+| **code-reviewer** | Code quality & architecture | Code smells, refactoring, best practices, consistency |
+
+## TDD Workflow (MANDATORY)
+
+For any new feature implementation, this workflow MUST be followed:
+
+```
+1. tdd-enforcer    → Verify TDD gate conditions
+2. test-planner    → Create test specification (docs/test-specs/)
+3. testing-specialist → Write tests from spec
+4. Run tests       → Verify RED phase (tests fail)
+5. Implementation  → Write code to pass tests
+6. Run tests       → Verify GREEN phase (tests pass)
+7. code-reviewer   → Review and refactor
+```
+
+**No implementation without tests first.**
 
 ## Usage
 
