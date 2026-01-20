@@ -30,6 +30,28 @@ macro_rules! delegate_to_client {
     };
 }
 
+/// Macro for delete operations on a table with ID.
+/// QUAL-H1: Reduces match statement duplication for delete patterns.
+macro_rules! delegate_delete {
+    ($self:expr, $table:expr, $id:expr) => {
+        match $self {
+            DatabaseClient::Http(client) => client.delete(($table, $id)).await,
+            DatabaseClient::WebSocket(client) => client.delete(($table, $id)).await,
+        }
+    };
+}
+
+/// Macro for update operations with merge.
+/// QUAL-H1: Reduces match statement duplication for update patterns.
+macro_rules! delegate_update_merge {
+    ($self:expr, $table:expr, $id:expr, $data:expr) => {
+        match $self {
+            DatabaseClient::Http(client) => client.update(($table, $id)).merge($data).await,
+            DatabaseClient::WebSocket(client) => client.update(($table, $id)).merge($data).await,
+        }
+    };
+}
+
 impl DatabaseClient {
     /// Connect via WebSocket with HTTP fallback.
     pub async fn connect(url: &str) -> Result<Self, Error> {
@@ -202,17 +224,11 @@ impl DatabaseClient {
     }
 
     pub async fn update_project(&self, id: &str, project_data: ProjectUpdate) -> Result<Option<Project>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.update(("projects", id)).merge(project_data).await,
-            DatabaseClient::WebSocket(client) => client.update(("projects", id)).merge(project_data).await,
-        }
+        delegate_update_merge!(self, "projects", id, project_data)
     }
 
     pub async fn delete_project(&self, id: &str) -> Result<Option<Project>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.delete(("projects", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("projects", id)).await,
-        }
+        delegate_delete!(self, "projects", id)
     }
 
     pub async fn search_projects(&self, query_str: &str) -> Result<Vec<Project>, Error> {
@@ -274,17 +290,11 @@ impl DatabaseClient {
     }
 
     pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Option<Company>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.update(("company", id)).merge(company_update).await,
-            DatabaseClient::WebSocket(client) => client.update(("company", id)).merge(company_update).await,
-        }
+        delegate_update_merge!(self, "company", id, company_update)
     }
 
     pub async fn delete_company(&self, id: &str) -> Result<Option<Company>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.delete(("company", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("company", id)).await,
-        }
+        delegate_delete!(self, "company", id)
     }
 
     // ==================== Contact Operations ====================
@@ -368,10 +378,7 @@ impl DatabaseClient {
     }
 
     pub async fn delete_contact(&self, id: &str) -> Result<Option<Contact>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.delete(("contacts", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("contacts", id)).await,
-        }
+        delegate_delete!(self, "contacts", id)
     }
 
     // ==================== Fee Operations ====================
@@ -452,10 +459,7 @@ impl DatabaseClient {
     }
 
     pub async fn delete_fee(&self, id: &str) -> Result<Option<Fee>, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.delete(("fee", id)).await,
-            DatabaseClient::WebSocket(client) => client.delete(("fee", id)).await,
-        }
+        delegate_delete!(self, "fee", id)
     }
 
     // ==================== Country/Reference Operations ====================
