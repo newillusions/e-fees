@@ -23,8 +23,32 @@ use log::{info, error, warn};
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 use regex::Regex;
+use once_cell::sync::Lazy;
 
 use crate::commands::AppState;
+
+// ============================================================================
+// STATIC REGEX PATTERNS (compiled once at startup)
+// ============================================================================
+
+/// Pattern to match project folder names: YY-NNNNN followed by space and project name
+/// Examples: "25-97108 RAK Beach District", "24-96601 Some Project"
+static PROJECT_FOLDER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{2}-\d{5}\s+.+")
+        .expect("Invalid PROJECT_FOLDER_PATTERN regex - this is a compile-time constant")
+});
+
+/// Pattern to extract project number from folder name
+static PROJECT_NUMBER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(\d{2}-\d{5})")
+        .expect("Invalid PROJECT_NUMBER_PATTERN regex - this is a compile-time constant")
+});
+
+/// Pattern to extract project name from folder name (after number and space)
+static PROJECT_NAME_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{2}-\d{5}\s+(.+)$")
+        .expect("Invalid PROJECT_NAME_PATTERN regex - this is a compile-time constant")
+});
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -147,22 +171,19 @@ fn get_status_from_folder(folder: &str) -> Option<&'static str> {
 fn is_project_folder(folder_name: &str) -> bool {
     // Pattern: 2 digits, hyphen, 5 digits, space, then project name
     // Examples: "25-97108 RAK Beach District", "24-96601 Some Project"
-    let re = Regex::new(r"^\d{2}-\d{5}\s+.+").unwrap();
-    re.is_match(folder_name)
+    PROJECT_FOLDER_PATTERN.is_match(folder_name)
 }
 
 /// Extract project number from folder name
 fn extract_project_number(folder_name: &str) -> Option<String> {
-    let re = Regex::new(r"^(\d{2}-\d{5})").unwrap();
-    re.captures(folder_name)
+    PROJECT_NUMBER_PATTERN.captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
 }
 
 /// Extract project name from folder name (after the number and space)
 fn extract_project_name(folder_name: &str) -> String {
-    let re = Regex::new(r"^\d{2}-\d{5}\s+(.+)$").unwrap();
-    re.captures(folder_name)
+    PROJECT_NAME_PATTERN.captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
         .unwrap_or_else(|| folder_name.to_string())
