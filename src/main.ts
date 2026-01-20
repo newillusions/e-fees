@@ -36,13 +36,20 @@ if (appDiv) {
     }
   } catch (error) {
     console.error('Failed to create Svelte app:', error);
-    // Fallback to show error
-    appDiv.innerHTML = `
-      <div style="color: white; padding: 20px; background: linear-gradient(135deg, #000, #333); min-height: 100vh;">
-        <h1>Svelte Error</h1>
-        <p>Failed to load Svelte app: ${error}</p>
-      </div>
-    `;
+    // SEC-M2: Use textContent instead of innerHTML to prevent XSS
+    const errorContainer = document.createElement('div');
+    errorContainer.style.cssText = 'color: white; padding: 20px; background: linear-gradient(135deg, #000, #333); min-height: 100vh;';
+
+    const heading = document.createElement('h1');
+    heading.textContent = 'Svelte Error';
+
+    const message = document.createElement('p');
+    // Safely display error message using textContent (prevents XSS)
+    message.textContent = `Failed to load Svelte app: ${error instanceof Error ? error.message : String(error)}`;
+
+    errorContainer.appendChild(heading);
+    errorContainer.appendChild(message);
+    appDiv.appendChild(errorContainer);
   }
 } else {
   console.error('Could not find app div!');
