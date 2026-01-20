@@ -19,6 +19,14 @@ import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import type { UnknownSurrealThing } from '../../types';
 
+/**
+ * Type-safe helper to access a property by key on an object.
+ * Returns undefined if the property doesn't exist.
+ */
+function getPropertyValue<T extends object>(obj: T, key: string): unknown {
+  return (obj as Record<string, unknown>)[key];
+}
+
 // ============================================================================
 // TYPE DEFINITIONS AND INTERFACES
 // ============================================================================
@@ -200,7 +208,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
         filtered = filtered.filter(item => {
-          const itemValue = (item as any)[key];
+          const itemValue = getPropertyValue(item, key);
           if (typeof value === 'string' && typeof itemValue === 'string') {
             return itemValue.toLowerCase().includes(value.toLowerCase());
           }
@@ -219,13 +227,21 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     if (!sort) return items;
 
     return [...items].sort((a, b) => {
-      const aValue = (a as any)[sort.field];
-      const bValue = (b as any)[sort.field];
-      
+      const aValue = getPropertyValue(a, sort.field);
+      const bValue = getPropertyValue(b, sort.field);
+
       let comparison = 0;
-      if (aValue < bValue) comparison = -1;
-      else if (aValue > bValue) comparison = 1;
-      
+      // Handle null/undefined values (push them to the end)
+      const aIsEmpty = aValue === undefined || aValue === null;
+      const bIsEmpty = bValue === undefined || bValue === null;
+
+      if (aIsEmpty && !bIsEmpty) comparison = 1;
+      else if (!aIsEmpty && bIsEmpty) comparison = -1;
+      else if (!aIsEmpty && !bIsEmpty) {
+        if (aValue < bValue) comparison = -1;
+        else if (aValue > bValue) comparison = 1;
+      }
+
       return sort.direction === 'desc' ? -comparison : comparison;
     });
   };
@@ -955,20 +971,31 @@ export async function withLoadingState<T>(
 // ============================================================================
 
 /**
+ * Type guard for SurrealDB Thing objects.
+ */
+function isSurrealThingLike(id: unknown): id is { tb: unknown; id: unknown } {
+  return (
+    typeof id === 'object' &&
+    id !== null &&
+    'tb' in id &&
+    'id' in id
+  );
+}
+
+/**
  * Validates SurrealDB ID format.
  */
 export function validateSurrealId(id: unknown): boolean {
   if (!id) return false;
-  
+
   if (typeof id === 'string') {
     return id.length > 0;
   }
-  
-  if (typeof id === 'object' && id !== null) {
-    const thing = id as any;
-    return 'tb' in thing && 'id' in thing && !!thing.tb && !!thing.id;
+
+  if (isSurrealThingLike(id)) {
+    return !!id.tb && !!id.id;
   }
-  
+
   return false;
 }
 

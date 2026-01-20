@@ -63,7 +63,7 @@
     }, 2000); // 2 second delay for backend initialization
 
     // Check connection every 30 seconds
-    checkInterval = setInterval(() => checkConnection(), 30000) as any;
+    checkInterval = window.setInterval(() => checkConnection(), 30000);
   });
 
   onDestroy(() => {

@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { projectsStore, projectsActions, companiesStore, companiesActions, contactsStore, contactsActions } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId } from '$lib/utils';
+  import { extractId, findEntityById } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
@@ -10,12 +10,12 @@
   import InfoCard from './InfoCard.svelte';
   import WarningModal from './WarningModal.svelte';
   import type { Fee, Project, Company, Contact } from '../../types';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
   export let proposal: Fee | null = null;
-  
+
   // Modal state
   let warningModal: {
     isOpen: boolean;
@@ -34,82 +34,22 @@
     onConfirm: null,
     onCancel: null
   };
-  
+
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
-  
-  // Find related project
-  $: relatedProject = proposal ? $projectsStore.find(p => {
-    if (!proposal.project_id || !p?.id) return false;
-    
-    let projectIdStr = '';
-    if (typeof p.id === 'string') {
-      projectIdStr = p.id;
-    } else if (p.id && typeof p.id === 'object') {
-      if ((p.id as any).tb && (p.id as any).id) {
-        if (typeof (p.id as any).id === 'string') {
-          projectIdStr = `${(p.id as any).tb}:${(p.id as any).id}`;
-        } else if ((p.id as any).id.String) {
-          projectIdStr = `${(p.id as any).tb}:${(p.id as any).id.String}`;
-        }
-      }
-    }
-    
-    let feeProjectId = '';
-    if (typeof proposal.project_id === 'string') {
-      feeProjectId = proposal.project_id;
-    } else if (proposal.project_id && typeof proposal.project_id === 'object') {
-      if ((proposal.project_id as any).tb && (proposal.project_id as any).id) {
-        if (typeof (proposal.project_id as any).id === 'string') {
-          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id}`;
-        } else if ((proposal.project_id as any).id.String) {
-          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeProjectId.replace('projects:', '');
-    const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || feeProjectId === projectIdStr;
-  }) : null;
-  
+
+  // Find related project using type-safe utility
+  $: relatedProject = proposal?.project_id
+    ? findEntityById($projectsStore, proposal.project_id)
+    : null;
+
   // Find related company
   $: relatedCompany = proposal ? companyLookup.getCompany(proposal.company_id) : null;
-  
-  // Find related contact
-  $: relatedContact = proposal ? $contactsStore.find(c => {
-    if (!proposal.contact_id || !c?.id) return false;
-    
-    let contactIdStr = '';
-    if (typeof c.id === 'string') {
-      contactIdStr = c.id;
-    } else if (c.id && typeof c.id === 'object') {
-      if ((c.id as any).tb && (c.id as any).id) {
-        if (typeof (c.id as any).id === 'string') {
-          contactIdStr = `${(c.id as any).tb}:${(c.id as any).id}`;
-        } else if ((c.id as any).id.String) {
-          contactIdStr = `${(c.id as any).tb}:${(c.id as any).id.String}`;
-        }
-      }
-    }
-    
-    let feeContactId = '';
-    if (typeof proposal.contact_id === 'string') {
-      feeContactId = proposal.contact_id;
-    } else if (proposal.contact_id && typeof proposal.contact_id === 'object') {
-      if ((proposal.contact_id as any).tb && (proposal.contact_id as any).id) {
-        if (typeof (proposal.contact_id as any).id === 'string') {
-          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id}`;
-        } else if ((proposal.contact_id as any).id.String) {
-          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeContactId.replace('contacts:', '');
-    const id2 = contactIdStr.replace('contacts:', '');
-    return id1 === id2 || feeContactId === contactIdStr;
-  }) : null;
+
+  // Find related contact using type-safe utility
+  $: relatedContact = proposal?.contact_id
+    ? findEntityById($contactsStore, proposal.contact_id)
+    : null;
 
   // Load related data when component mounts
   onMount(() => {

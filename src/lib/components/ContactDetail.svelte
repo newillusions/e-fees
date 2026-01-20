@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { feesStore, feesActions, companiesStore, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId } from '$lib/utils';
+  import { extractId, compareIds } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
@@ -23,55 +23,21 @@
   // Find related company
   $: relatedCompany = contact ? companyLookup.getCompany(contact.company) : null;
 
-  // Filter Fees where this contact is involved
-  $: contactFees = contact
+  // Helper to parse issue dates for sorting
+  const parseIssueDate = (dateStr: string): Date => {
+    if (dateStr.length === 6) {
+      return new Date(
+        `20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`
+      );
+    }
+    return new Date(dateStr);
+  };
+
+  // Filter Fees where this contact is involved using type-safe comparison
+  $: contactFees = contact?.id
     ? $feesStore
-        .filter(fee => {
-          if (!fee.contact_id || !contact?.id) return false;
-
-          let feeContactId = '';
-          if (typeof fee.contact_id === 'string') {
-            feeContactId = fee.contact_id;
-          } else if (fee.contact_id && typeof fee.contact_id === 'object') {
-            if ((fee.contact_id as any).tb && (fee.contact_id as any).id) {
-              if (typeof (fee.contact_id as any).id === 'string') {
-                feeContactId = `${(fee.contact_id as any).tb}:${(fee.contact_id as any).id}`;
-              } else if ((fee.contact_id as any).id.String) {
-                feeContactId = `${(fee.contact_id as any).tb}:${(fee.contact_id as any).id.String}`;
-              }
-            }
-          }
-
-          let contactIdStr = '';
-          if (typeof contact.id === 'string') {
-            contactIdStr = contact.id;
-          } else if (contact.id && typeof contact.id === 'object') {
-            if ((contact.id as any).tb && (contact.id as any).id) {
-              if (typeof (contact.id as any).id === 'string') {
-                contactIdStr = `${(contact.id as any).tb}:${(contact.id as any).id}`;
-              } else if ((contact.id as any).id.String) {
-                contactIdStr = `${(contact.id as any).tb}:${(contact.id as any).id.String}`;
-              }
-            }
-          }
-
-          const id1 = feeContactId.replace('contacts:', '');
-          const id2 = contactIdStr.replace('contacts:', '');
-          return id1 === id2 || feeContactId === contactIdStr;
-        })
-        .sort((a, b) => {
-          // Parse issue_date for proper sorting
-          const parseIssueDate = (dateStr: string) => {
-            if (dateStr.length === 6) {
-              return new Date(
-                `20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`
-              );
-            }
-            return new Date(dateStr);
-          };
-
-          return parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime();
-        })
+        .filter(fee => compareIds(fee.contact_id, contact.id))
+        .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
     : [];
 
   // Load related data when component mounts

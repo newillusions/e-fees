@@ -9,7 +9,7 @@
     projectsActions
   } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId } from '$lib/utils';
+  import { extractId, compareIds, findEntityById } from '$lib/utils';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
@@ -22,124 +22,28 @@
   export let isOpen = false;
   export let company: Company | null = null;
 
-  // Filter contacts for this company
-  $: companyContacts = company
-    ? $contactsStore.filter(contact => {
-        if (!contact.company || !company?.id) return false;
-
-        let contactCompanyId = '';
-        if (typeof contact.company === 'string') {
-          contactCompanyId = contact.company;
-        } else if (contact.company && typeof contact.company === 'object') {
-          if ((contact.company as any).tb && (contact.company as any).id) {
-            if (typeof (contact.company as any).id === 'string') {
-              contactCompanyId = `${(contact.company as any).tb}:${(contact.company as any).id}`;
-            } else if ((contact.company as any).id.String) {
-              contactCompanyId = `${(contact.company as any).tb}:${(contact.company as any).id.String}`;
-            }
-          }
-        }
-
-        let companyIdStr = '';
-        if (typeof company.id === 'string') {
-          companyIdStr = company.id;
-        } else if (company.id && typeof company.id === 'object') {
-          if ((company.id as any).tb && (company.id as any).id) {
-            if (typeof (company.id as any).id === 'string') {
-              companyIdStr = `${(company.id as any).tb}:${(company.id as any).id}`;
-            } else if ((company.id as any).id.String) {
-              companyIdStr = `${(company.id as any).tb}:${(company.id as any).id.String}`;
-            }
-          }
-        }
-
-        const id1 = contactCompanyId.replace('company:', '');
-        const id2 = companyIdStr.replace('company:', '');
-        return id1 === id2 || contactCompanyId === companyIdStr;
-      })
+  // Filter contacts for this company using type-safe comparison
+  $: companyContacts = company?.id
+    ? $contactsStore.filter(contact => compareIds(contact.company, company.id))
     : [];
 
-  // Filter Fees for this company
-  $: companyFees = company
+  // Filter Fees for this company using type-safe comparison
+  $: companyFees = company?.id
     ? $feesStore
-        .filter(fee => {
-          if (!fee.company_id || !company?.id) return false;
-
-          let feeCompanyId = '';
-          if (typeof fee.company_id === 'string') {
-            feeCompanyId = fee.company_id;
-          } else if (fee.company_id && typeof fee.company_id === 'object') {
-            if ((fee.company_id as any).tb && (fee.company_id as any).id) {
-              if (typeof (fee.company_id as any).id === 'string') {
-                feeCompanyId = `${(fee.company_id as any).tb}:${(fee.company_id as any).id}`;
-              } else if ((fee.company_id as any).id.String) {
-                feeCompanyId = `${(fee.company_id as any).tb}:${(fee.company_id as any).id.String}`;
-              }
-            }
-          }
-
-          let companyIdStr = '';
-          if (typeof company.id === 'string') {
-            companyIdStr = company.id;
-          } else if (company.id && typeof company.id === 'object') {
-            if ((company.id as any).tb && (company.id as any).id) {
-              if (typeof (company.id as any).id === 'string') {
-                companyIdStr = `${(company.id as any).tb}:${(company.id as any).id}`;
-              } else if ((company.id as any).id.String) {
-                companyIdStr = `${(company.id as any).tb}:${(company.id as any).id.String}`;
-              }
-            }
-          }
-
-          const id1 = feeCompanyId.replace('company:', '');
-          const id2 = companyIdStr.replace('company:', '');
-          return id1 === id2 || feeCompanyId === companyIdStr;
-        })
-        .sort(
-          (a, b) => new Date(b.time?.created_at || 0).getTime() - new Date(a.time?.created_at || 0).getTime()
+        .filter(fee => compareIds(fee.company_id, company.id))
+        .sort((a, b) =>
+          new Date(b.time?.created_at || 0).getTime() - new Date(a.time?.created_at || 0).getTime()
         )
     : [];
 
   // Filter projects related to this company (through fees)
-  $: companyProjects = company
+  $: companyProjects = company?.id
     ? $projectsStore
-        .filter(project => {
-          return companyFees.some(fee => {
-            if (!fee.project_id || !project?.id) return false;
-
-            let feeProjectId = '';
-            if (typeof fee.project_id === 'string') {
-              feeProjectId = fee.project_id;
-            } else if (fee.project_id && typeof fee.project_id === 'object') {
-              if ((fee.project_id as any).tb && (fee.project_id as any).id) {
-                if (typeof (fee.project_id as any).id === 'string') {
-                  feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
-                } else if ((fee.project_id as any).id.String) {
-                  feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
-                }
-              }
-            }
-
-            let projectIdStr = '';
-            if (typeof project.id === 'string') {
-              projectIdStr = project.id;
-            } else if (project.id && typeof project.id === 'object') {
-              if ((project.id as any).tb && (project.id as any).id) {
-                if (typeof (project.id as any).id === 'string') {
-                  projectIdStr = `${(project.id as any).tb}:${(project.id as any).id}`;
-                } else if ((project.id as any).id.String) {
-                  projectIdStr = `${(project.id as any).tb}:${(project.id as any).id.String}`;
-                }
-              }
-            }
-
-            const id1 = feeProjectId.replace('projects:', '');
-            const id2 = projectIdStr.replace('projects:', '');
-            return id1 === id2 || feeProjectId === projectIdStr;
-          });
-        })
-        .sort(
-          (a, b) => new Date(b.time?.updated_at || 0).getTime() - new Date(a.time?.updated_at || 0).getTime()
+        .filter(project =>
+          companyFees.some(fee => compareIds(fee.project_id, project.id))
+        )
+        .sort((a, b) =>
+          new Date(b.time?.updated_at || 0).getTime() - new Date(a.time?.updated_at || 0).getTime()
         )
     : [];
 
@@ -282,39 +186,7 @@
         {:else}
           <div class="grid gap-2">
             {#each companyFees as fee}
-              {@const relatedProject = $projectsStore.find(p => {
-                if (!fee.project_id || !p?.id) return false;
-
-                let projectIdStr = '';
-                if (typeof p.id === 'string') {
-                  projectIdStr = p.id;
-                } else if (p.id && typeof p.id === 'object') {
-                  if ((p.id as any).tb && (p.id as any).id) {
-                    if (typeof (p.id as any).id === 'string') {
-                      projectIdStr = `${(p.id as any).tb}:${(p.id as any).id}`;
-                    } else if ((p.id as any).id.String) {
-                      projectIdStr = `${(p.id as any).tb}:${(p.id as any).id.String}`;
-                    }
-                  }
-                }
-
-                let feeProjectId = '';
-                if (typeof fee.project_id === 'string') {
-                  feeProjectId = fee.project_id;
-                } else if (fee.project_id && typeof fee.project_id === 'object') {
-                  if ((fee.project_id as any).tb && (fee.project_id as any).id) {
-                    if (typeof (fee.project_id as any).id === 'string') {
-                      feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
-                    } else if ((fee.project_id as any).id.String) {
-                      feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
-                    }
-                  }
-                }
-
-                const id1 = feeProjectId.replace('projects:', '');
-                const id2 = projectIdStr.replace('projects:', '');
-                return id1 === id2 || feeProjectId === projectIdStr;
-              })}
+              {@const relatedProject = findEntityById($projectsStore, fee.project_id)}
               <ListCard clickable={false}>
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex-1 min-w-0">

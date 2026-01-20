@@ -352,8 +352,10 @@ export const feesActions = {
     const oldStatus = currentFee.status;
 
     // Update only the status field
+    // Destructure to exclude id from update data
+    const { id: _id, ...feeWithoutId } = currentFee;
     const updatedFeeData = {
-      ...currentFee,
+      ...feeWithoutId,
       status: newStatus as Fee['status'],
       time: {
         ...currentFee.time,
@@ -361,9 +363,6 @@ export const feesActions = {
         created_at: currentFee.time?.created_at || new Date().toISOString()
       }
     };
-
-    // Remove the id field for the update
-    delete (updatedFeeData as any).id;
 
     const result = await feesActionsInternal.update(id, updatedFeeData);
 

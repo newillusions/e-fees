@@ -45,7 +45,7 @@
     {maxlength}
     {min}
     {max}
-    autocomplete={autocomplete as any}
+    autocomplete={autocomplete}
     bind:value
     class={inputClasses}
   />

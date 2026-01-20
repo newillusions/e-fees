@@ -3,6 +3,13 @@ import { mount } from 'svelte'
 import App from './App.svelte'
 import { securityMonitor, getSecurityReport } from './lib/security'
 
+// Extend window for dev debugging tools
+declare global {
+  interface Window {
+    getSecurityReport?: typeof getSecurityReport;
+  }
+}
+
 const appDiv = document.getElementById('app');
 if (appDiv) {
   try {
@@ -14,7 +21,7 @@ if (appDiv) {
     if (import.meta.env.DEV) {
       
       // Make security report available globally for debugging
-      (window as any).getSecurityReport = getSecurityReport;
+      window.getSecurityReport = getSecurityReport;
       
       // Log initial security validation
       setTimeout(() => {

@@ -2,10 +2,10 @@
   import { createEventDispatcher } from 'svelte';
   import { feesStore, feesActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId } from '$lib/utils';
+  import { extractId, compareIds } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { openFolderInExplorer, copyProjectTemplate, checkProjectFolderExists, renameFolderWithOldSuffix } from '$lib/api';
-import { getFolderForStatus } from '$lib/api/folderManagement';
+  import { getFolderForStatus } from '$lib/api/folderManagement';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
@@ -13,12 +13,12 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
   import StatusBadge from './StatusBadge.svelte';
   import WarningModal from './WarningModal.svelte';
   import type { Project, Fee } from '../../types';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
   export let project: Project | null = null;
-  
+
   // Modal state
   let warningModal: {
     isOpen: boolean;
@@ -37,54 +37,24 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
     onConfirm: null,
     onCancel: null
   };
-  
+
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
-  
-  // Filter fees for this project
-  $: projectFees = project ? $feesStore.filter(fee => {
-    if (!fee.project_id || !project?.id) return false;
-    
-    let feeProjectId = '';
-    if (typeof fee.project_id === 'string') {
-      feeProjectId = fee.project_id;
-    } else if (fee.project_id && typeof fee.project_id === 'object') {
-      if ((fee.project_id as any).tb && (fee.project_id as any).id) {
-        if (typeof (fee.project_id as any).id === 'string') {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
-        } else if ((fee.project_id as any).id.String) {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
-        }
-      }
+
+  // Helper to parse issue dates for sorting
+  const parseIssueDate = (dateStr: string): Date => {
+    if (dateStr.length === 6) {
+      return new Date(`20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`);
     }
-    
-    let projectIdStr = '';
-    if (typeof project.id === 'string') {
-      projectIdStr = project.id;
-    } else if (project.id && typeof project.id === 'object') {
-      if ((project.id as any).tb && (project.id as any).id) {
-        if (typeof (project.id as any).id === 'string') {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id}`;
-        } else if ((project.id as any).id.String) {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeProjectId.replace('projects:', '');
-    const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || feeProjectId === projectIdStr;
-  }).sort((a, b) => {
-    // Parse issue_date for proper sorting
-    const parseIssueDate = (dateStr: string) => {
-      if (dateStr.length === 6) {
-        return new Date(`20${dateStr.substring(0,2)}-${dateStr.substring(2,4)}-${dateStr.substring(4,6)}`);
-      }
-      return new Date(dateStr);
-    };
-    
-    return parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime();
-  }) : [];
+    return new Date(dateStr);
+  };
+
+  // Filter fees for this project using type-safe comparison
+  $: projectFees = project?.id
+    ? $feesStore
+        .filter(fee => compareIds(fee.project_id, project.id))
+        .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
+    : [];
 
   // Load related data when component mounts
   onMount(() => {
