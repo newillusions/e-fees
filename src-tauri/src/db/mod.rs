@@ -290,19 +290,20 @@ impl DatabaseManager {
         let offset = (page - 1) * page_size;
         info!("Fetching {} page {} (offset: {}, limit: {})", table, page, offset, page_size);
 
-        // Get total count
-        let count_query = format!("SELECT count() FROM {} GROUP ALL", table);
-        let mut count_response = client.query(&count_query).await?;
-        let count_result: Option<serde_json::Value> = count_response.take(0)?;
+        // Execute count and data fetch in a single query for better performance
+        // Statement 0: count, Statement 1: paginated data
+        let combined_query = format!(
+            "SELECT count() FROM {} GROUP ALL; SELECT * FROM {} ORDER BY time.created_at DESC LIMIT {} START {}",
+            table, table, page_size, offset
+        );
+        let mut response = client.query(&combined_query).await?;
+
+        // Extract count from statement 0
+        let count_result: Option<serde_json::Value> = response.take(0)?;
         let total = count_result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize;
 
-        // Fetch paginated data
-        let paginated_query = format!(
-            "SELECT * FROM {} ORDER BY time.created_at DESC LIMIT {} START {}",
-            table, page_size, offset
-        );
-        let mut response = client.query(&paginated_query).await?;
-        let items: Vec<T> = response.take(0)?;
+        // Extract items from statement 1
+        let items: Vec<T> = response.take(1)?;
 
         info!("Fetched {} {} for page {} (total: {})", items.len(), table, page, total);
         Ok(PaginatedResponse::new(items, total, page, page_size))

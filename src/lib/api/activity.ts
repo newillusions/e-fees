@@ -6,6 +6,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type { ActivityLog, ActivityLogCreate } from '../../types';
+import { logger } from '../services/logger';
+
+const activityLogger = logger.child({ component: 'ActivityAPI' });
 
 /**
  * Create a new activity log entry.
@@ -20,7 +23,7 @@ export async function createActivityLog(log: ActivityLogCreate): Promise<Activit
   try {
     return await invoke<ActivityLog>('create_activity_log', { log });
   } catch (error) {
-    console.error('Failed to create activity log:', error);
+    activityLogger.error('Failed to create activity log', { action: log.action, entityType: log.entity_type, error });
     throw error;
   }
 }
@@ -48,7 +51,7 @@ export async function getActivityLogs(
       offset
     });
   } catch (error) {
-    console.error('Failed to get activity logs:', error);
+    activityLogger.error('Failed to get activity logs', { limit, entityType, offset, error });
     return [];
   }
 }

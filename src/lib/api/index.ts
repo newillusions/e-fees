@@ -81,7 +81,10 @@ export {
   getDbInfo,
   getTableSchema,
   positionWindow4K,
-  investigateRecord
+  investigateRecord,
+  getDevMode,
+  logMessage,
+  type LogLevel
 } from './system';
 
 // Reference data operations

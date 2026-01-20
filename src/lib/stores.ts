@@ -11,10 +11,9 @@ import type {
   Project,
   Company,
   Contact,
-  Fee,
-  ConnectionStatus
+  Fee
 } from '../types';
-import { useCrudStore, createEntityStore } from './utils/crud';
+import { createEntityStore } from './utils/crud';
 import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
 import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
 
@@ -40,8 +39,7 @@ export const connectionStore = writable<ConnectionState>(initialConnectionState)
 // ENTITY STORES - MIGRATED TO CRUD UTILITIES
 // ============================================================================
 
-import type { CrudApi, CrudState } from './utils/crud';
-import type { Writable, Readable } from 'svelte/store';
+import type { CrudApi } from './utils/crud';
 import type { UnknownSurrealThing } from '../types';
 
 /** Base entity type that has an optional SurrealDB Thing ID */
@@ -98,13 +96,9 @@ export const feesLoading = feesInternal.loadingStore;
 export const feesError = feesInternal.errorStore;
 
 // Internal references for actions
-const projectsStoreInternal = projectsInternal.internalStore;
 const projectsActionsInternal = projectsInternal.internalActions;
-const companiesStoreInternal = companiesInternal.internalStore;
 const companiesActionsInternal = companiesInternal.internalActions;
-const contactsStoreInternal = contactsInternal.internalStore;
 const contactsActionsInternal = contactsInternal.internalActions;
-const feesStoreInternal = feesInternal.internalStore;
 const feesActionsInternal = feesInternal.internalActions;
 
 // ============================================================================

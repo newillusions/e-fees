@@ -10,37 +10,18 @@ use std::process::Command;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
-use super::{AppState, AppSettings};
+use super::{AppState, AppSettings, AppSettingsPublic};
 
-/// Read current application settings from .env file.
+/// Internal function to read full application settings from .env file.
 ///
-/// This command loads all configurable application settings from the
-/// `.env` file located in the project root directory. Settings include
-/// database configuration, staff information, and file system paths.
+/// This function returns the complete settings including sensitive data
+/// like passwords. It should only be used internally by other Rust code
+/// that needs full access to credentials (e.g., database initialization).
 ///
-/// # Returns
-/// - `Ok(AppSettings)`: Current settings with all configured values
-/// - `Err(String)`: File read error or parsing failure
-///
-/// # Configuration Source
-/// Settings are read from `../.env` relative to the Tauri binary location.
-/// Missing settings are returned as `None` values, allowing for partial
-/// configuration and gradual setup.
-///
-/// # Security Considerations
-/// Database passwords and sensitive information are included in the response
-/// but should be handled securely on the frontend (e.g., masked in UI).
-///
-/// # Frontend Usage
-/// ```typescript
-/// const settings = await invoke('get_settings');
-/// if (settings.surrealdb_url) {
-///   console.log(`Database: ${settings.surrealdb_url}`);
-/// }
-/// ```
-#[tauri::command]
-pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> {
-    info!("Reading settings from .env file");
+/// **SECURITY:** This is NOT a Tauri command - never expose directly to frontend.
+/// For frontend access, use the `get_settings` command which returns `AppSettingsPublic`.
+pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings, String> {
+    info!("Reading settings from .env file (internal)");
 
     // Log the current working directory
     if let Ok(cwd) = std::env::current_dir() {
@@ -133,10 +114,39 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettings, String> 
         info!("No .env file found, returning empty settings");
     }
 
-    info!("Returning settings: staff_name={:?}, staff_email={:?}, staff_phone={:?}, staff_position={:?}",
+    info!("Returning internal settings: staff_name={:?}, staff_email={:?}, staff_phone={:?}, staff_position={:?}",
           settings.staff_name, settings.staff_email, settings.staff_phone, settings.staff_position);
 
     Ok(settings)
+}
+
+/// Read current application settings from .env file (public/safe version).
+///
+/// This command loads all configurable application settings from the
+/// `.env` file located in the project root directory. Settings include
+/// database configuration, staff information, and file system paths.
+///
+/// # Returns
+/// - `Ok(AppSettingsPublic)`: Current settings with sensitive data redacted
+/// - `Err(String)`: File read error or parsing failure
+///
+/// # Security
+/// **Password is NEVER returned to the frontend.** Instead, a `has_password`
+/// boolean indicates whether a password is configured. This prevents
+/// credential exposure through the IPC layer.
+///
+/// # Frontend Usage
+/// ```typescript
+/// const settings = await invoke('get_settings');
+/// if (settings.has_password) {
+///   console.log('Password is configured');
+/// }
+/// ```
+#[tauri::command]
+pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettingsPublic, String> {
+    info!("Reading settings from .env file (public)");
+    let settings = get_settings_internal(&app_handle).await?;
+    Ok(AppSettingsPublic::from(&settings))
 }
 
 /// Save application settings to .env file.
@@ -338,7 +348,7 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
 /// ```
 #[tauri::command]
 pub async fn get_dev_mode(app_handle: AppHandle) -> Result<bool, String> {
-    let settings = get_settings(app_handle).await?;
+    let settings = get_settings_internal(&app_handle).await?;
     Ok(settings.dev_mode.unwrap_or(false))
 }
 
@@ -365,8 +375,8 @@ pub async fn get_dev_mode(app_handle: AppHandle) -> Result<bool, String> {
 pub async fn reload_database_config(state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
     info!("Reloading database configuration from .env file");
 
-    // Load fresh settings from the .env file
-    let settings = get_settings(app_handle).await?;
+    // Load fresh settings from the .env file (using internal function for password access)
+    let settings = get_settings_internal(&app_handle).await?;
 
     // Extract database configuration
     let url = settings.surrealdb_url.ok_or("Missing SurrealDB URL in settings")?;
@@ -472,16 +482,18 @@ pub async fn select_folder(app_handle: tauri::AppHandle) -> Result<Option<String
 ///
 /// # Returns
 /// - `Ok(String)`: Success message
-/// - `Err(String)`: Path not found or permission error
+/// - `Err(String)`: Path not found, permission error, or security violation
 ///
 /// # Platform Support
 /// - **Windows**: Uses `explorer` command
 /// - **macOS**: Uses `open` command
 /// - **Linux**: Uses `xdg-open` command
 ///
-/// # Security Considerations
-/// Path validation is performed to prevent command injection, but callers
-/// should ensure paths are trusted before calling this command.
+/// # Security
+/// Path traversal protection is enforced:
+/// - Paths containing `..` are rejected
+/// - Paths must be absolute
+/// - Paths are canonicalized to prevent symlink attacks
 ///
 /// # Frontend Usage
 /// ```typescript
@@ -496,36 +508,61 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, Stri
 
     use std::path::Path;
 
-    // Check if the folder exists first
+    // Security: Reject paths with path traversal sequences
+    if folder_path.contains("..") {
+        error!("Path traversal attempt detected: {}", folder_path);
+        return Err("Invalid path: path traversal not allowed".to_string());
+    }
+
+    // Security: Reject relative paths
     let path = Path::new(&folder_path);
+    if !path.is_absolute() {
+        error!("Relative path rejected: {}", folder_path);
+        return Err("Invalid path: must be an absolute path".to_string());
+    }
+
+    // Check if the folder exists first
     if !path.exists() {
         error!("Folder does not exist: {}", folder_path);
         return Err(format!("Folder does not exist: {}", folder_path));
     }
 
+    // Security: Canonicalize path to resolve any symlinks and normalize
+    let canonical_path = path.canonicalize()
+        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+
+    // Ensure it's still a directory after canonicalization
+    if !canonical_path.is_dir() {
+        error!("Path is not a directory: {}", folder_path);
+        return Err("Path is not a directory".to_string());
+    }
+
+    let canonical_str = canonical_path.to_string_lossy().to_string();
+    info!("Opening canonicalized path: {}", canonical_str);
+
     // Use platform-specific command to open folder
     let result = if cfg!(target_os = "windows") {
         Command::new("explorer")
-            .arg(&folder_path)
+            .arg(&canonical_str)
             .spawn()
     } else if cfg!(target_os = "macos") {
         Command::new("open")
-            .arg(&folder_path)
+            .arg(&canonical_str)
             .spawn()
     } else {
         // Linux and other Unix-like systems
         Command::new("xdg-open")
-            .arg(&folder_path)
+            .arg(&canonical_str)
             .spawn()
     };
 
     match result {
         Ok(_) => {
-            info!("Successfully opened folder: {}", folder_path);
+            info!("Successfully opened folder: {}", canonical_str);
             Ok("Folder opened successfully".to_string())
         }
         Err(e) => {
-            error!("Failed to open folder {}: {}", folder_path, e);
+            error!("Failed to open folder {}: {}", canonical_str, e);
             Err(format!("Failed to open folder: {}", e))
         }
     }

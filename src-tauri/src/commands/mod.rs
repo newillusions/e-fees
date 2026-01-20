@@ -56,7 +56,7 @@ pub mod types;
 pub mod utils;
 
 // Re-export shared types for use in other modules
-pub use types::{CompanyUpdate, ContactUpdate, ProjectUpdate, AppSettings};
+pub use types::{CompanyUpdate, ContactUpdate, ProjectUpdate, AppSettings, AppSettingsPublic};
 
 // ============================================================================
 // DOMAIN-SPECIFIC COMMAND MODULES

@@ -118,12 +118,10 @@ describe('Companies API Module', () => {
       expect(result).toEqual(mockCompany);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Create failed'));
 
-      const result = await createCompany({} as CompanyCreate);
-
-      expect(result).toBeNull();
+      await expect(createCompany({} as CompanyCreate)).rejects.toThrow('Create failed');
     });
 
     it('should pass reg_no and tax_no when provided', async () => {

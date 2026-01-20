@@ -7,7 +7,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { companiesActions } from '$lib/stores';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
   import { searchCountries, getCitySuggestions } from '$lib/api';
   import CrudModal from './base/CrudModal.svelte';
@@ -136,7 +136,7 @@
       };
       await companiesActions.create(companyData);
     } else if (company) {
-      const companyId = extractSurrealId(company.id) || extractSurrealId(company);
+      const companyId = getEntityId(company);
       if (!companyId) {
         throw new Error('Invalid company ID');
       }
@@ -154,7 +154,7 @@
 
   // Delete handler
   async function handleDelete(entity: Company) {
-    const companyId = extractSurrealId(entity.id) || extractSurrealId(entity);
+    const companyId = getEntityId(entity);
     if (!companyId) {
       throw new Error('Invalid company ID');
     }

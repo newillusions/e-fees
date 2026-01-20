@@ -128,10 +128,6 @@ describe('ApiClient', () => {
         const result = await ApiClient.checkDbConnection();
 
         expect(result).toBe(false);
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to check database connection:',
-          expect.any(Error)
-        );
       });
     });
 
@@ -173,10 +169,6 @@ describe('ApiClient', () => {
         mockInvoke.mockRejectedValueOnce(new Error('Database error'));
 
         await expect(ApiClient.getProjects()).rejects.toThrow('Database error');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to fetch projects from database:',
-          expect.any(Error)
-        );
       });
 
       it('should handle null response from backend', async () => {
@@ -212,7 +204,6 @@ describe('ApiClient', () => {
         mockInvoke.mockRejectedValueOnce(new Error('Search failed'));
 
         await expect(ApiClient.searchProjects('test')).rejects.toThrow('Search failed');
-        expect(console.error).toHaveBeenCalledWith('Failed to search projects:', expect.any(Error));
       });
     });
 
@@ -255,20 +246,14 @@ describe('ApiClient', () => {
       it('should handle creation failures', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Validation failed'));
 
-        const result = await ApiClient.createProject(newProject);
-
-        expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith('Failed to create project:', expect.any(Error));
+        await expect(ApiClient.createProject(newProject)).rejects.toThrow('Validation failed');
       });
 
       it('should validate required fields', async () => {
         const invalidProject = { name: '' } as any;
         mockInvoke.mockRejectedValueOnce(new Error('Validation failed'));
 
-        const result = await ApiClient.createProject(invalidProject);
-
-        expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith('Failed to create project:', expect.any(Error));
+        await expect(ApiClient.createProject(invalidProject)).rejects.toThrow('Validation failed');
       });
     });
   });
@@ -289,10 +274,6 @@ describe('ApiClient', () => {
         mockInvoke.mockRejectedValueOnce(new Error('Database connection lost'));
 
         await expect(ApiClient.getCompanies()).rejects.toThrow('Database connection lost');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to fetch companies from database:',
-          expect.any(Error)
-        );
       });
     });
 
@@ -328,10 +309,7 @@ describe('ApiClient', () => {
       it('should handle duplicate abbreviation errors', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Abbreviation already exists'));
 
-        const result = await ApiClient.createCompany(newCompany);
-
-        expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith('Failed to create company:', expect.any(Error));
+        await expect(ApiClient.createCompany(newCompany)).rejects.toThrow('Abbreviation already exists');
       });
     });
 
@@ -365,7 +343,6 @@ describe('ApiClient', () => {
         await expect(ApiClient.updateCompany('company:NONEXISTENT', companyUpdate)).rejects.toThrow(
           'Company not found'
         );
-        expect(console.error).toHaveBeenCalledWith('Failed to update company:', expect.any(Error));
       });
     });
 
@@ -385,7 +362,6 @@ describe('ApiClient', () => {
         await expect(ApiClient.deleteCompany('company:TEST')).rejects.toThrow(
           'Company has related records'
         );
-        expect(console.error).toHaveBeenCalledWith('Failed to delete company:', expect.any(Error));
       });
     });
   });
@@ -450,9 +426,7 @@ describe('ApiClient', () => {
         const invalidContact = { ...newContact, email: 'invalid-email' };
         mockInvoke.mockRejectedValueOnce(new Error('Invalid email format'));
 
-        const result = await ApiClient.createContact(invalidContact);
-
-        expect(result).toBeNull();
+        await expect(ApiClient.createContact(invalidContact)).rejects.toThrow('Invalid email format');
       });
     });
 
@@ -501,10 +475,6 @@ describe('ApiClient', () => {
         mockInvoke.mockRejectedValueOnce(new Error('Connection timeout'));
 
         await expect(ApiClient.getFees()).rejects.toThrow('Connection timeout');
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to fetch fees from database:',
-          expect.any(Error)
-        );
       });
     });
 
@@ -557,9 +527,7 @@ describe('ApiClient', () => {
         const invalidFee = { ...newFee, project_id: 'projects:nonexistent' };
         mockInvoke.mockRejectedValueOnce(new Error('Invalid project reference'));
 
-        const result = await ApiClient.createFee(invalidFee);
-
-        expect(result).toBeNull();
+        await expect(ApiClient.createFee(invalidFee)).rejects.toThrow('Invalid project reference');
       });
     });
 
@@ -613,13 +581,7 @@ describe('ApiClient', () => {
       it('should handle file write errors', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Permission denied'));
 
-        const result = await ApiClient.writeFeeToJson('fee:test_fee');
-
-        expect(result).toBeNull();
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to write RFP data to JSON:',
-          expect.any(Error)
-        );
+        await expect(ApiClient.writeFeeToJson('fee:test_fee')).rejects.toThrow('Permission denied');
       });
     });
 
@@ -650,10 +612,6 @@ describe('ApiClient', () => {
         const result = await ApiClient.checkProjectFolderExists('25-97101', 'Test Project');
 
         expect(result).toBe(false);
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to check project folder existence:',
-          expect.any(Error)
-        );
       });
     });
   });
@@ -663,10 +621,6 @@ describe('ApiClient', () => {
       mockInvoke.mockRejectedValueOnce(new Error('Request timeout'));
 
       await expect(ApiClient.getProjects()).rejects.toThrow('Request timeout');
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to fetch projects from database:',
-        expect.any(Error)
-      );
     });
 
     it('should handle malformed responses', async () => {
@@ -681,10 +635,6 @@ describe('ApiClient', () => {
       mockInvoke.mockRejectedValueOnce(new Error('Invalid JSON response'));
 
       await expect(ApiClient.getContacts()).rejects.toThrow('Invalid JSON response');
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to fetch contacts from database:',
-        expect.any(Error)
-      );
     });
   });
 

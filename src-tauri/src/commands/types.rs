@@ -62,18 +62,21 @@ pub struct ProjectUpdate {
     pub folder: Option<String>,
 }
 
-/// Application settings structure for environment configuration.
+/// Application settings structure for environment configuration (internal use).
 ///
 /// This struct represents all configurable settings that can be modified
 /// through the application's settings interface. Settings are persisted
 /// to the `.env` file in the project root.
+///
+/// **SECURITY NOTE:** This struct contains sensitive data (password) and should
+/// only be used internally. Use `AppSettingsPublic` when returning data to frontend.
 ///
 /// # Database Configuration
 /// - `surrealdb_url`: WebSocket URL for SurrealDB connection
 /// - `surrealdb_ns`: Database namespace (typically "emittiv")
 /// - `surrealdb_db`: Database name (typically "projects")
 /// - `surrealdb_user`: Authentication username
-/// - `surrealdb_pass`: Authentication password
+/// - `surrealdb_pass`: Authentication password (SENSITIVE)
 ///
 /// # Staff Information
 /// - `staff_name`: Default staff member name for proposals
@@ -98,4 +101,49 @@ pub struct AppSettings {
     /// Development mode flag - enables verbose logging when true
     #[serde(default)]
     pub dev_mode: Option<bool>,
+}
+
+/// Public application settings structure for frontend consumption.
+///
+/// This struct is a security-safe version of `AppSettings` that replaces
+/// the actual password with a boolean `has_password` flag. This prevents
+/// sensitive credentials from being exposed to the frontend.
+///
+/// # Security
+/// - Password is NEVER sent to frontend
+/// - `has_password` indicates whether a password is configured
+/// - Frontend can prompt for password entry when saving settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppSettingsPublic {
+    pub surrealdb_url: Option<String>,
+    pub surrealdb_ns: Option<String>,
+    pub surrealdb_db: Option<String>,
+    pub surrealdb_user: Option<String>,
+    /// Indicates whether a password is configured (password value is never exposed)
+    pub has_password: bool,
+    pub staff_name: Option<String>,
+    pub staff_email: Option<String>,
+    pub staff_phone: Option<String>,
+    pub staff_position: Option<String>,
+    pub project_folder_path: Option<String>,
+    #[serde(default)]
+    pub dev_mode: Option<bool>,
+}
+
+impl From<&AppSettings> for AppSettingsPublic {
+    fn from(settings: &AppSettings) -> Self {
+        AppSettingsPublic {
+            surrealdb_url: settings.surrealdb_url.clone(),
+            surrealdb_ns: settings.surrealdb_ns.clone(),
+            surrealdb_db: settings.surrealdb_db.clone(),
+            surrealdb_user: settings.surrealdb_user.clone(),
+            has_password: settings.surrealdb_pass.is_some() && !settings.surrealdb_pass.as_ref().unwrap().is_empty(),
+            staff_name: settings.staff_name.clone(),
+            staff_email: settings.staff_email.clone(),
+            staff_phone: settings.staff_phone.clone(),
+            staff_position: settings.staff_position.clone(),
+            project_folder_path: settings.project_folder_path.clone(),
+            dev_mode: settings.dev_mode,
+        }
+    }
 }

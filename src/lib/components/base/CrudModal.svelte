@@ -13,20 +13,25 @@
   import Button from '../Button.svelte';
   import type { FormFieldConfig } from './types';
 
-  // Generic types
-  type T = Record<string, any>;
+  // Generic form data type - uses unknown for type safety
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type EntityType = Record<string, any>;
+  type FormDataType = Record<string, unknown>;
+  // Callback type that accepts any entity - allows specific entity types from consumers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type DeleteCallback = (entity: any) => Promise<void>;
 
   const dispatch = createEventDispatcher();
 
-  // Props
+  // Props - EntityType allows any entity object to be passed in
   export let isOpen = false;
-  export let entity: any | null = null;
+  export let entity: EntityType | null = null;
   export let mode: 'create' | 'edit' = 'create';
   export let title: string;
   export let fields: FormFieldConfig[];
-  export let validationRules: any[] = [];
-  export let onSave: (data: any) => Promise<void>;
-  export let onDelete: ((entity: any) => Promise<void>) | null = null;
+  export let validationRules: ValidationRule<FormDataType>[] = [];
+  export let onSave: (data: FormDataType) => Promise<void>;
+  export let onDelete: DeleteCallback | null = null;
   export let maxWidth = '500px';
   export let customClass = '';
   export let zIndex = 100; // Base z-index, can be increased for nested modals
@@ -34,16 +39,16 @@
   // Operation state management
   const { store: operationState, actions: operationActions } = useOperationState();
 
-  // Form state
-  let formData: T = {};
+  // Form state - internal form data for editing
+  let formData: FormDataType = {};
   let formErrors: Partial<Record<string, string>> = {};
   let showDeleteConfirm = false;
 
   // Initialize form data structure based on field configurations
-  function initializeFormData() {
-    const initialData: T = {};
+  function initializeFormData(): FormDataType {
+    const initialData: FormDataType = {};
 
-    function processField(field: FormFieldConfig, data: any) {
+    function processField(field: FormFieldConfig, data: FormDataType) {
       if (field.type === 'group' && field.fields) {
         // For group fields, process nested fields
         field.fields.forEach(subField => processField(subField, data));
@@ -71,7 +76,7 @@
 
     formData = { ...initializeFormData() };
 
-    function processField(field: FormFieldConfig, data: any, source: any) {
+    function processField(field: FormFieldConfig, data: FormDataType, source: EntityType) {
       if (field.type === 'group' && field.fields) {
         // For group fields, process nested fields
         field.fields.forEach(subField => processField(subField, data, source));

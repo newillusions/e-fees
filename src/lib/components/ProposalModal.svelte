@@ -6,7 +6,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
@@ -322,7 +322,10 @@
       const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
       const companyId = formData.company_id || '';
       const contactId = formData.contact_id || '';
-      
+
+      // QUAL-L6: Create timestamp once for consistency
+      const timestamp = new Date().toISOString();
+
       const proposalData = {
         ...formData,
         rev: parseInt(formData.rev) || 1,
@@ -331,8 +334,8 @@
         contact_id: contactId,
         revisions: [],
         time: {
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: timestamp,
+          updated_at: timestamp
         }
       };
       
@@ -341,7 +344,7 @@
       // Auto-export to JSON if enabled
       if (autoExportToJson && result?.id) {
         try {
-          const feeId = extractSurrealId(result.id) || extractSurrealId(result) || '';
+          const feeId = getEntityId(result);
           if (feeId) {
             const exportResult = await writeFeeToJsonSafe(feeId);
             if (exportResult) {
@@ -393,9 +396,7 @@
       return;
     }
 
-    // Try multiple extraction approaches like ContactModal
-    const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
-    
+    const proposalId = getEntityId(activeProposal);
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
       return;
@@ -444,10 +445,9 @@
     if (!activeProposal || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      // Try multiple extraction approaches like ContactModal
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) throw new Error('Invalid proposal ID');
-      
+
       const result = await feesActions.delete(proposalId);
       operationActions.setMessage('Proposal deleted successfully');
       closeModal();
@@ -468,9 +468,7 @@
         throw new Error('No proposal data available for update');
       }
 
-      // Use the same ID extraction logic as handleUpdate
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
-
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
         console.error('ProposalModal: Failed to extract proposal ID');
         throw new Error('Invalid proposal ID');
@@ -540,7 +538,7 @@
     showJsonExportAlert = false;
     
     try {
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || '';
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
         operationActions.setError('Could not extract proposal ID for JSON export');
         return;

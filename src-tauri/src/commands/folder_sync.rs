@@ -469,18 +469,8 @@ pub async fn resolve_folder_inconsistency(
                 manager.clone()
             }; // Read lock is dropped here
 
-            // Use raw SQL UPDATE to only update the status field
-            // This avoids deserialization issues with NULL fields in the Project struct
-            let escaped_status = new_status.replace("'", "''");
-            let query = format!(
-                "UPDATE projects:`{}` SET status = '{}', time.updated_at = time::now()",
-                project_id,
-                escaped_status
-            );
-
-            info!("Executing status update query: {}", query);
-
-            manager_clone.execute_raw_query(&query)
+            // Use safe update_project_status function with input validation
+            manager_clone.update_project_status(&project_id, &new_status)
                 .await
                 .map_err(|e| format!("Failed to update project status: {}", e))?;
 
@@ -530,7 +520,9 @@ pub async fn resolve_folder_inconsistency(
                     warn!("Rename failed, attempting copy+delete: {}", e);
 
                     let options = fs_extra::dir::CopyOptions::new();
-                    fs_extra::dir::copy(from, to.parent().unwrap(), &options)
+                    let parent_dir = to.parent()
+                        .ok_or_else(|| "Destination path has no parent directory".to_string())?;
+                    fs_extra::dir::copy(from, parent_dir, &options)
                         .map_err(|e| format!("Failed to copy folder: {}", e))?;
 
                     fs::remove_dir_all(from)

@@ -101,29 +101,29 @@ impl DatabaseManager {
 // ==================== Contact Operations ====================
 
 impl DatabaseManager {
+    /// Get all contacts with required fields populated.
+    /// Filtering is done at the database level for efficiency.
     pub async fn get_contacts(&self) -> Result<Vec<Contact>, Error> {
         let client = self.get_client()?;
-        info!("Attempting to query contacts table");
+        info!("Attempting to query contacts table with database-level filtering");
 
-        let all_contacts: Vec<Contact> = client.select("contacts").await.unwrap_or_default();
-        info!("Raw fetched {} contacts", all_contacts.len());
+        // Filter at database level instead of fetching all and filtering in Rust
+        let query = r#"
+            SELECT * FROM contacts
+            WHERE first_name IS NOT NONE AND first_name != ''
+            AND last_name IS NOT NONE AND last_name != ''
+            AND email IS NOT NONE AND email != ''
+            AND phone IS NOT NONE AND phone != ''
+            AND position IS NOT NONE AND position != ''
+            AND company IS NOT NONE
+            ORDER BY time.updated_at DESC
+        "#;
 
-        // Filter out incomplete contacts
-        let valid_contacts: Vec<Contact> = all_contacts.into_iter()
-            .filter(|contact| {
-                let has_first_name = contact.first_name.as_ref().map_or(false, |s| !s.is_empty());
-                let has_last_name = contact.last_name.as_ref().map_or(false, |s| !s.is_empty());
-                let has_email = contact.email.as_ref().map_or(false, |s| !s.is_empty());
-                let has_phone = contact.phone.as_ref().map_or(false, |s| !s.is_empty());
-                let has_position = contact.position.as_ref().map_or(false, |s| !s.is_empty());
-                let has_company = contact.company.is_some();
+        let mut response = client.query(query).await?;
+        let contacts: Vec<Contact> = response.take(0)?;
 
-                has_first_name && has_last_name && has_email && has_phone && has_position && has_company
-            })
-            .collect();
-
-        info!("Successfully fetched {} valid contacts", valid_contacts.len());
-        Ok(valid_contacts)
+        info!("Successfully fetched {} valid contacts", contacts.len());
+        Ok(contacts)
     }
 
     pub async fn get_contacts_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Contact>, Error> {
@@ -176,6 +176,10 @@ impl DatabaseManager {
         self.paginate("fee", page, page_size).await
     }
 
+    pub async fn get_fee_by_id(&self, id: &str) -> Result<Option<Fee>, Error> {
+        self.get_by_id("fee", id).await
+    }
+
     pub async fn create_fee(&self, fee: FeeCreate) -> Result<Fee, Error> {
         let client = self.get_client()?;
         client.create_fee(fee).await?
@@ -208,12 +212,10 @@ impl DatabaseManager {
         let client = self.get_client()?;
         info!("Getting area suggestions for country: {}", country);
 
-        let query = format!(
-            "SELECT area FROM projects WHERE country = '{}' AND area IS NOT NONE GROUP BY area ORDER BY area ASC LIMIT 20",
-            country.replace("'", "''")
-        );
+        // Use parameterized query to prevent SQL injection
+        let query = "SELECT area FROM projects WHERE country = $country AND area IS NOT NONE GROUP BY area ORDER BY area ASC LIMIT 20";
 
-        let mut response = client.query(&query).await?;
+        let mut response = client.query_bind(query, ("country", country.to_string())).await?;
         let result: Result<Vec<serde_json::Value>, _> = response.take(0);
 
         match result {
@@ -236,12 +238,10 @@ impl DatabaseManager {
         let client = self.get_client()?;
         info!("Getting city suggestions for country: {}", country);
 
-        let query = format!(
-            "SELECT city FROM projects WHERE country = '{}' AND city IS NOT NONE GROUP BY city ORDER BY city ASC LIMIT 20",
-            country.replace("'", "''")
-        );
+        // Use parameterized query to prevent SQL injection
+        let query = "SELECT city FROM projects WHERE country = $country AND city IS NOT NONE GROUP BY city ORDER BY city ASC LIMIT 20";
 
-        let mut response = client.query(&query).await?;
+        let mut response = client.query_bind(query, ("country", country.to_string())).await?;
         let result: Result<Vec<serde_json::Value>, _> = response.take(0);
 
         match result {
@@ -381,12 +381,10 @@ impl DatabaseManager {
         let country = parts[1][..3].parse::<u16>().map_err(|_| self.invalid_request_error("Invalid country code"))?;
         let seq = parts[1][3..].parse::<u8>().map_err(|_| self.invalid_request_error("Invalid sequence number"))?;
 
-        let query = format!(
-            "SELECT count() FROM projects WHERE number.year = {} AND number.country = {} AND number.seq = {}",
-            year, country, seq
-        );
+        // Use parameterized query to prevent SQL injection
+        let query = "SELECT count() FROM projects WHERE number.year = $year AND number.country = $country AND number.seq = $seq";
 
-        let mut response = client.query(&query).await?;
+        let mut response = client.query_bind(query, (("year", year), ("country", country), ("seq", seq))).await?;
         let result: Result<Value, _> = response.take(0);
 
         match result {
@@ -482,23 +480,19 @@ impl DatabaseManager {
     pub async fn get_activity_logs(&self, limit: Option<usize>, entity_type: Option<String>, offset: Option<usize>) -> Result<Vec<ActivityLog>, Error> {
         let client = self.get_client()?;
 
-        let limit_val = limit.unwrap_or(50);
-        let offset_val = offset.unwrap_or(0);
+        let limit_val = limit.unwrap_or(50) as i64;
+        let offset_val = offset.unwrap_or(0) as i64;
         info!("Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})", limit_val, entity_type, offset_val);
 
-        let query = if let Some(et) = &entity_type {
-            format!(
-                "SELECT * FROM activity_log WHERE entity_type = '{}' ORDER BY timestamp DESC LIMIT {} START {}",
-                et.replace("'", "''"), limit_val, offset_val
-            )
+        // Use parameterized queries to prevent SQL injection
+        let mut response = if let Some(et) = &entity_type {
+            let query = "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT $limit START $offset";
+            client.query_bind(query, (("entity_type", et.clone()), ("limit", limit_val), ("offset", offset_val))).await?
         } else {
-            format!(
-                "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT {} START {}",
-                limit_val, offset_val
-            )
+            let query = "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT $limit START $offset";
+            client.query_bind(query, (("limit", limit_val), ("offset", offset_val))).await?
         };
 
-        let mut response = client.query(&query).await?;
         let logs: Vec<ActivityLog> = response.take(0)?;
         info!("Retrieved {} activity logs", logs.len());
         Ok(logs)
@@ -508,14 +502,49 @@ impl DatabaseManager {
 // ==================== Utility Operations ====================
 
 impl DatabaseManager {
-    pub async fn execute_raw_query(&self, query: &str) -> Result<(), Error> {
+    /// Update a project's status safely using parameterized queries.
+    ///
+    /// This replaces the dangerous `execute_raw_query` function with a safe,
+    /// purpose-built method that validates inputs and uses parameterized queries.
+    pub async fn update_project_status(&self, project_id: &str, new_status: &str) -> Result<(), Error> {
         let client = self.get_client()?;
-        client.query(query).await?;
+
+        // Validate project_id format (should be like "25-97101" or "25_97101")
+        // Allow alphanumeric, hyphens, and underscores only
+        if project_id.is_empty() || project_id.len() > 20 {
+            return Err(self.invalid_request_error("Invalid project ID length"));
+        }
+        if !project_id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            return Err(self.invalid_request_error("Invalid project ID format"));
+        }
+
+        // Validate status against known values
+        let valid_statuses = [
+            "Draft", "Active", "On Hold", "Completed", "Archived", "Cancelled",
+            "RFP", "Tender", "Awarded", "Lost"
+        ];
+        if !valid_statuses.contains(&new_status) {
+            return Err(self.invalid_request_error(&format!("Invalid status: {}", new_status)));
+        }
+
+        // Use parameterized query for safety
+        let query = format!(
+            "UPDATE projects:`{}` SET status = $status, time.updated_at = time::now()",
+            project_id
+        );
+        client.query_bind(&query, ("status", new_status.to_string())).await?;
+
+        info!("Successfully updated project {} status to {}", project_id, new_status);
         Ok(())
     }
 
     pub async fn get_table_schema(&self, table_name: &str) -> Result<serde_json::Value, Error> {
         let client = self.get_client()?;
+
+        // Validate table name to prevent SQL injection (only alphanumeric and underscores)
+        if !table_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err(self.invalid_request_error("Invalid table name"));
+        }
 
         let query = format!("INFO FOR TABLE {};", table_name);
         let mut result = client.query(&query).await?;
@@ -527,22 +556,33 @@ impl DatabaseManager {
         let client = self.get_client()?;
         info!("Investigating record: {}", record_id);
 
+        // Validate record_id format to prevent SQL injection
+        // Only allow alphanumeric, underscores, and colons (for table:id format)
+        if !record_id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == ':') {
+            return Err(self.invalid_request_error("Invalid record ID format"));
+        }
+
+        // Limit length to prevent abuse
+        if record_id.len() > 100 {
+            return Err(self.invalid_request_error("Record ID too long"));
+        }
+
         let mut queries = Vec::new();
         let mut results = serde_json::json!({
             "record_id": record_id,
             "investigation": {}
         });
 
-        if record_id.contains(":") {
+        if record_id.contains(':') {
             queries.push(format!("SELECT * FROM {};", record_id));
         }
 
-        if !record_id.contains(":") {
+        if !record_id.contains(':') {
             queries.push(format!("SELECT * FROM {} LIMIT 5;", record_id));
         }
 
-        let table_part = if record_id.contains(":") {
-            record_id.split(":").next().unwrap_or("")
+        let table_part = if record_id.contains(':') {
+            record_id.split(':').next().unwrap_or("")
         } else {
             record_id
         };

@@ -13,6 +13,9 @@
 import { ApiClient } from '../api';
 import type { ActivityLogCreate, UnknownSurrealThing } from '../../types';
 import { extractSurrealId } from '../utils/surrealdb';
+import { logger } from './logger';
+
+const activityServiceLogger = logger.child({ component: 'ActivityLoggerService' });
 
 // Entity type definitions
 export type EntityType = 'project' | 'fee' | 'company' | 'contact';
@@ -92,7 +95,7 @@ export async function logActivity(log: ActivityLogCreate): Promise<void> {
     await ApiClient.createActivityLog(log);
   } catch (error) {
     // Log the error but don't throw - activity logging should never block operations
-    console.error('[ActivityLogger] Failed to log activity:', error);
+    activityServiceLogger.warn('Failed to log activity', { action: log.action, entityType: log.entity_type, error });
   }
 }
 

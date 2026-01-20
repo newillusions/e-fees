@@ -6,6 +6,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type { DatabaseStats, DatabaseInfo, TableSchema } from '../../types';
+import { logger } from '../services/logger';
+
+const systemLogger = logger.child({ component: 'SystemAPI' });
 
 /**
  * Retrieves comprehensive application statistics for the dashboard.
@@ -16,7 +19,7 @@ export async function getStats(): Promise<DatabaseStats> {
     const stats = await invoke<DatabaseStats>('get_stats');
     return stats;
   } catch (error) {
-    console.error('Failed to fetch stats from database:', error);
+    systemLogger.error('Failed to fetch stats from database', { error });
     throw error;
   }
 }
@@ -29,7 +32,7 @@ export async function healthCheck(): Promise<string> {
   try {
     return await invoke<string>('health_check');
   } catch (error) {
-    console.error('Health check failed:', error);
+    systemLogger.error('Health check failed', { error });
     return 'Health check failed';
   }
 }
@@ -42,7 +45,7 @@ export async function getDbInfo(): Promise<DatabaseInfo> {
   try {
     return await invoke<DatabaseInfo>('get_db_info');
   } catch (error) {
-    console.error('Failed to get database info:', error);
+    systemLogger.error('Failed to get database info', { error });
     return {
       error: error?.toString() || 'Unknown error',
       status: 'error'
@@ -59,7 +62,7 @@ export async function getTableSchema(tableName: string): Promise<TableSchema> {
   try {
     return await invoke<TableSchema>('get_table_schema', { tableName });
   } catch (error) {
-    console.error(`Failed to get schema for table ${tableName}:`, error);
+    systemLogger.error('Failed to get schema for table', { tableName, error });
     return {
       table: tableName,
       fields: [],
@@ -78,7 +81,7 @@ export async function positionWindow4K(): Promise<string> {
   try {
     return await invoke<string>('position_window_4k');
   } catch (error) {
-    console.error('Failed to position window:', error);
+    systemLogger.error('Failed to position window', { error });
     return 'Failed to position window';
   }
 }
@@ -88,12 +91,56 @@ export async function positionWindow4K(): Promise<string> {
  * @param recordId - SurrealDB record ID to investigate
  * @returns Detailed record information
  */
-export async function investigateRecord(recordId: string): Promise<any> {
+export async function investigateRecord(recordId: string): Promise<unknown> {
   try {
     const result = await invoke('investigate_record', { recordId });
     return result;
   } catch (error) {
-    console.error('Failed to investigate record:', error);
+    systemLogger.error('Failed to investigate record', { recordId, error });
     throw error;
+  }
+}
+
+/**
+ * Checks if the application is running in development mode.
+ * ARCH-L1: Routes invoke call through API layer.
+ * @returns True if in dev mode, false otherwise
+ */
+export async function getDevMode(): Promise<boolean> {
+  try {
+    return await invoke<boolean>('get_dev_mode');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Log levels supported by the backend logger.
+ */
+export type LogLevel = 'info' | 'debug' | 'error' | 'warn';
+
+/**
+ * Sends a log message to the backend for file logging.
+ * ARCH-L1: Routes invoke call through API layer.
+ * @param level - Log severity level
+ * @param target - Component or module name
+ * @param message - Log message
+ * @param context - Optional context data (JSON stringified)
+ */
+export async function logMessage(
+  level: LogLevel,
+  target: string,
+  message: string,
+  context?: string | null
+): Promise<void> {
+  try {
+    await invoke('log_message', {
+      level,
+      target,
+      message,
+      context
+    });
+  } catch {
+    // Silently ignore logging failures to prevent error cascades
   }
 }

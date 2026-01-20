@@ -109,12 +109,10 @@ describe('Contacts API Module', () => {
       expect(result).toEqual(mockContact);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Create failed'));
 
-      const result = await createContact({} as ContactCreate);
-
-      expect(result).toBeNull();
+      await expect(createContact({} as ContactCreate)).rejects.toThrow('Create failed');
     });
   });
 
@@ -132,12 +130,10 @@ describe('Contacts API Module', () => {
       expect(result).toEqual(mockContact);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Update failed'));
 
-      const result = await updateContact('test', {});
-
-      expect(result).toBeNull();
+      await expect(updateContact('test', {})).rejects.toThrow('Update failed');
     });
   });
 
@@ -151,12 +147,10 @@ describe('Contacts API Module', () => {
       expect(result).toEqual(mockContact);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Delete failed'));
 
-      const result = await deleteContact('test');
-
-      expect(result).toBeNull();
+      await expect(deleteContact('test')).rejects.toThrow('Delete failed');
     });
   });
 });

@@ -19,6 +19,17 @@ pub enum DatabaseClient {
     WebSocket(Surreal<Client>),
 }
 
+/// Macro to eliminate repeated match patterns across Http and WebSocket clients.
+/// This macro takes a method call and applies it to both client types.
+macro_rules! delegate_to_client {
+    ($self:expr, $method:ident $(, $args:expr)* $(,)?) => {
+        match $self {
+            DatabaseClient::Http(client) => client.$method($($args),*).await,
+            DatabaseClient::WebSocket(client) => client.$method($($args),*).await,
+        }
+    };
+}
+
 impl DatabaseClient {
     /// Connect via WebSocket with HTTP fallback.
     pub async fn connect(url: &str) -> Result<Self, Error> {
@@ -80,10 +91,7 @@ impl DatabaseClient {
 
     /// Check connection health.
     pub async fn health(&self) -> Result<(), Error> {
-        match self {
-            DatabaseClient::Http(client) => client.health().await,
-            DatabaseClient::WebSocket(client) => client.health().await,
-        }
+        delegate_to_client!(self, health)
     }
 
     /// Sign in with root credentials.
@@ -141,18 +149,12 @@ impl DatabaseClient {
     where
         T: serde::de::DeserializeOwned,
     {
-        match self {
-            DatabaseClient::Http(client) => client.select(table).await,
-            DatabaseClient::WebSocket(client) => client.select(table).await,
-        }
+        delegate_to_client!(self, select, table)
     }
 
     /// Execute a raw query.
     pub async fn query(&self, query: &str) -> Result<surrealdb::Response, Error> {
-        match self {
-            DatabaseClient::Http(client) => client.query(query).await,
-            DatabaseClient::WebSocket(client) => client.query(query).await,
-        }
+        delegate_to_client!(self, query, query)
     }
 
     /// Execute a parameterized query with bindings (SQL injection safe).

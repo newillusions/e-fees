@@ -29,7 +29,7 @@ export const PROPOSAL_STATUSES = [
 export type ProposalStatus = typeof PROPOSAL_STATUSES[number];
 
 /**
- * Proposal status options formatted for select/dropdown components.
+ * Proposal status options formatted for select dropdowns.
  * { value, label } format for FormSelect compatibility.
  */
 export const PROPOSAL_STATUS_OPTIONS = PROPOSAL_STATUSES.map(status => ({
@@ -40,6 +40,7 @@ export const PROPOSAL_STATUS_OPTIONS = PROPOSAL_STATUSES.map(status => ({
 /**
  * Proposal status options formatted for typeahead components.
  * { id, name } format for TypeaheadSelect compatibility.
+ * @deprecated Use PROPOSAL_STATUS_OPTIONS for select dropdowns
  */
 export const PROPOSAL_STATUS_OPTIONS_TYPEAHEAD = PROPOSAL_STATUSES.map(status => ({
   id: status,

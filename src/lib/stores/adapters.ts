@@ -61,19 +61,15 @@ export const projectsApi: CrudApi<Project> = {
 /** Companies API adapter implementing CrudApi interface */
 export const companiesApi: CrudApi<Company> = {
   getAll: () => getCompanies(),
-  async create(data) {
-    const result = await createCompany(data);
-    if (!result) throw new Error('Failed to create company');
-    return result;
-  },
-  async update(id, data) {
+  create: (data) => createCompany(data),
+  update: async (id, data) => {
     const result = await updateCompany(id, data);
-    if (!result) throw new Error('Failed to update company');
+    if (!result) throw new Error(`Company ${id} not found`);
     return result;
   },
-  async delete(id) {
+  delete: async (id) => {
     const result = await deleteCompany(id);
-    if (!result) throw new Error('Failed to delete company');
+    if (!result) throw new Error(`Company ${id} not found`);
     return result;
   }
 };
@@ -81,41 +77,17 @@ export const companiesApi: CrudApi<Company> = {
 /** Contacts API adapter implementing CrudApi interface */
 export const contactsApi: CrudApi<Contact> = {
   getAll: () => getContacts(),
-  async create(data) {
-    const result = await createContact(data);
-    if (!result) throw new Error('Failed to create contact');
-    return result;
-  },
-  async update(id, data) {
-    const result = await updateContact(id, data);
-    if (!result) throw new Error('Failed to update contact');
-    return result;
-  },
-  async delete(id) {
-    const result = await deleteContact(id);
-    if (!result) throw new Error('Failed to delete contact');
-    return result;
-  }
+  create: (data) => createContact(data),
+  update: (id, data) => updateContact(id, data),
+  delete: (id) => deleteContact(id)
 };
 
 /** Fees API adapter implementing CrudApi interface */
 export const feesApi: CrudApi<Fee> = {
   getAll: () => getFees(),
-  async create(data) {
-    const result = await createFee(data);
-    if (!result) throw new Error('Failed to create fee');
-    return result;
-  },
-  async update(id, data) {
-    const result = await updateFee(id, data as Omit<Fee, 'id'>);
-    if (!result) throw new Error('Failed to update fee');
-    return result;
-  },
-  async delete(id) {
-    const result = await deleteFee(id);
-    if (!result) throw new Error('Failed to delete fee');
-    return result;
-  }
+  create: (data) => createFee(data),
+  update: (id, data) => updateFee(id, data as Omit<Fee, 'id'>),
+  delete: (id) => deleteFee(id)
 };
 
 // ============================================================================

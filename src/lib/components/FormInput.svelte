@@ -11,7 +11,7 @@
   export let maxlength: number | undefined = undefined;
   export let min: number | undefined = undefined;
   export let max: number | undefined = undefined;
-  export let autocomplete: string | undefined = undefined;
+  export let autocomplete: HTMLInputElement['autocomplete'] | undefined = undefined;
   export let className = '';
 
   // Generate ID if not provided

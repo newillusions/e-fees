@@ -1,8 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { invoke } from '@tauri-apps/api/core';
   import Card from '$lib/components/Card.svelte';
   import { validateProjectBasePath } from '$lib/api/folderManagement';
+  import { openFolderInExplorer } from '$lib/api/filesystem';
 
   const dispatch = createEventDispatcher();
 
@@ -18,11 +18,12 @@
     dispatch('openModal', { type: 'company' });
   }
 
+  // ARCH-L1: Route invoke call through API layer
   async function handleOpenFolders() {
     try {
       const basePath = await validateProjectBasePath();
-      // Open the folder in the native file explorer
-      await invoke('open_folder_in_explorer', { folderPath: basePath });
+      // Open the folder in the native file explorer via API layer
+      await openFolderInExplorer(basePath);
     } catch (error) {
       console.error('Failed to access project folders:', error);
       alert('Failed to access project folders: ' + (error as Error).message);

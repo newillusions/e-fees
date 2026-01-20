@@ -184,25 +184,6 @@ macro_rules! crud_command {
     };
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db::DatabaseManager;
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
-    use tauri::State;
-
-    #[tokio::test]
-    async fn test_execute_with_manager_success() {
-        // This would require more setup for a full test
-        // but demonstrates the testing approach
-        assert!(true);
-    }
-
-    #[test]
-    fn test_macro_expansion() {
-        // Test that macros compile correctly
-        // This ensures the macro syntax is valid
-        assert!(true);
-    }
-}
+// Note: Tests for these utilities are exercised through integration tests
+// in the commands modules (projects.rs, companies.rs, etc.) and db/tests.rs.
+// The macros are validated at compile time when used in production code.

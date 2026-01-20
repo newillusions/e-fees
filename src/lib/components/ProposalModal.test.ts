@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import ProposalModal from './ProposalModal.svelte';
 import type { Fee, Project, Company, Contact } from '$lib/../types';
-import type { AppSettings } from '$lib/stores/settings';
+import type { AppSettingsPublic } from '$lib/stores/settings';
 
 // Mock the API
 vi.mock('$lib/api', () => ({
@@ -50,7 +50,13 @@ vi.mock('$lib/stores/settings', () => ({
 
 // Mock utilities
 vi.mock('$lib/utils/surrealdb', () => ({
-  extractSurrealId: vi.fn()
+  extractSurrealId: vi.fn(),
+  getEntityId: vi.fn((entity) => {
+    if (!entity) return '';
+    if (typeof entity === 'string') return entity;
+    if (entity.id) return typeof entity.id === 'string' ? entity.id : '';
+    return '';
+  })
 }));
 
 vi.mock('$lib/utils/validation', () => ({
@@ -239,8 +245,9 @@ describe('ProposalModal Component', () => {
     reset: vi.fn()
   };
 
-  const mockSettings: Partial<AppSettings> = {
-    staff_name: 'Martin'
+  const mockSettings: AppSettingsPublic = {
+    staff_name: 'Martin',
+    has_password: true
   };
 
   beforeEach(() => {
@@ -268,7 +275,7 @@ describe('ProposalModal Component', () => {
     });
 
     vi.mocked(settingsStore.subscribe).mockImplementation((callback) => {
-      callback(mockSettings as AppSettings);
+      callback(mockSettings);
       return vi.fn();
     });
     

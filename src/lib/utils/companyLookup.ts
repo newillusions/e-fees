@@ -16,6 +16,13 @@ import { extractId } from './index';
 const companyCache = new Map<string, Company>();
 
 /**
+ * Track the last companies array reference to avoid unnecessary cache rebuilds.
+ * PERF-H4: Prevents cache thrashing when reactive system re-evaluates with same data.
+ */
+let lastCompaniesRef: Company[] | null = null;
+let lastCompaniesLength = 0;
+
+/**
  * Company lookup interface providing optimized lookup methods.
  */
 export interface CompanyLookup {
@@ -55,25 +62,37 @@ export interface CompanyLookup {
  * ```
  */
 export function createCompanyLookup(companies: Company[]): CompanyLookup {
-  // Clear and rebuild cache when companies change
-  companyCache.clear();
-  
   // Handle case where companies is null, undefined, or not an array
   if (!companies || !Array.isArray(companies)) {
     companies = [];
   }
-  
-  companies.forEach(company => {
-    const id = extractId(company.id);
-    if (id) {
-      companyCache.set(id, company);
-      // Also cache with full record ID format for flexibility
-      if (typeof company.id === 'object' && company.id) {
-        const fullId = `company:${id}`;
-        companyCache.set(fullId, company);
+
+  // PERF-H4: Only rebuild cache if companies array has actually changed
+  // Check both reference equality and length to detect changes
+  const needsRebuild =
+    lastCompaniesRef !== companies ||
+    lastCompaniesLength !== companies.length ||
+    companyCache.size === 0;
+
+  if (needsRebuild) {
+    companyCache.clear();
+
+    companies.forEach(company => {
+      const id = extractId(company.id);
+      if (id) {
+        companyCache.set(id, company);
+        // Also cache with full record ID format for flexibility
+        if (typeof company.id === 'object' && company.id) {
+          const fullId = `company:${id}`;
+          companyCache.set(fullId, company);
+        }
       }
-    }
-  });
+    });
+
+    // Update tracking references
+    lastCompaniesRef = companies;
+    lastCompaniesLength = companies.length;
+  }
 
   return {
     getCompanyName: (companyRef: UnknownSurrealThing): string => {
@@ -146,12 +165,14 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
 
 /**
  * Clears the company lookup cache.
- * 
+ *
  * This can be called when companies are updated to ensure
  * the cache doesn't contain stale data.
  */
 export function clearCompanyCache(): void {
   companyCache.clear();
+  lastCompaniesRef = null;
+  lastCompaniesLength = 0;
 }
 
 /**

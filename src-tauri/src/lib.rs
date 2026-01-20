@@ -97,7 +97,8 @@ use commands::{
 /// - `Err(String)`: Configuration not found or invalid
 async fn load_database_config_from_settings(app_handle: &tauri::AppHandle) -> Result<DatabaseConfig, String> {
     // Try to load settings from the app data directory
-    match commands::get_settings(app_handle.clone()).await {
+    // Use internal function to get full settings including password (not exposed to frontend)
+    match commands::settings::get_settings_internal(app_handle).await {
         Ok(settings) => {
             // Convert settings to database configuration
             DatabaseConfig::from_settings(&settings)

@@ -7,13 +7,19 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { feesActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
+  import { createProjectTypeaheadSearch, createCompanyTypeaheadSearch, createContactTypeaheadSearch } from '$lib/utils/search';
   import { get } from 'svelte/store';
-  import { PROPOSAL_STATUS_OPTIONS_TYPEAHEAD } from '$lib/constants';
+  import { PROPOSAL_STATUS_OPTIONS } from '$lib/constants';
   import CrudModal from './base/CrudModal.svelte';
   import type { Fee } from '$lib/../types';
   import type { FormFieldConfig } from './base/types';
+
+  // Create optimized typeahead search functions (PERF-H5 + QUAL-H4 fix)
+  const searchProjects = createProjectTypeaheadSearch(extractSurrealId);
+  const searchCompanies = createCompanyTypeaheadSearch(extractSurrealId);
+  const searchContacts = createContactTypeaheadSearch(extractSurrealId);
 
   const dispatch = createEventDispatcher();
 
@@ -58,7 +64,7 @@
           type: 'select',
           name: 'status',
           label: 'Status',
-          options: PROPOSAL_STATUS_OPTIONS_TYPEAHEAD,
+          options: PROPOSAL_STATUS_OPTIONS,
           required: true,
           colSpan: 1
         },
@@ -71,31 +77,9 @@
           colSpan: 2,
           displayFields: ['name'],
           onSearch: async (searchText: string) => {
-            if (!searchText || searchText.length < 1) return [];
-            
             try {
-              const searchLower = searchText.toLowerCase();
-              const projects = get(projectsStore);
-              
-              return projects
-                .filter(project => {
-                  const nameMatch = project.name?.toLowerCase().includes(searchLower);
-                  const shortNameMatch = project.name_short?.toLowerCase().includes(searchLower);
-                  const numberMatch = project.number?.id?.toLowerCase().includes(searchLower);
-                  return nameMatch || shortNameMatch || numberMatch;
-                })
-                .map(project => {
-                  const projectId = extractSurrealId(project) || extractSurrealId(project.id) || project.id || '';
-                  return {
-                    id: String(projectId),
-                    name: project.name || '',
-                    name_short: project.name_short || '',
-                    number: project.number?.id || 'No Number'
-                  };
-                })
-                .slice(0, 10);
-            } catch (error) {
-              console.warn('Failed to search projects:', error);
+              return searchProjects(get(projectsStore), searchText);
+            } catch {
               return [];
             }
           }
@@ -109,31 +93,9 @@
           colSpan: 1,
           displayFields: ['name'],
           onSearch: async (searchText: string) => {
-            if (!searchText || searchText.length < 1) return [];
-            
             try {
-              const searchLower = searchText.toLowerCase();
-              const companies = get(companiesStore);
-              
-              return companies
-                .filter(company => {
-                  const nameMatch = company.name?.toLowerCase().includes(searchLower);
-                  const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
-                  const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
-                  return nameMatch || shortNameMatch || abbreviationMatch;
-                })
-                .map(company => {
-                  const companyId = extractSurrealId(company) || extractSurrealId(company.id) || company.id || '';
-                  return {
-                    id: String(companyId),
-                    name: company.name || '',
-                    name_short: company.name_short || '',
-                    abbreviation: company.abbreviation || ''
-                  };
-                })
-                .slice(0, 10);
-            } catch (error) {
-              console.warn('Failed to search companies:', error);
+              return searchCompanies(get(companiesStore), searchText);
+            } catch {
               return [];
             }
           }
@@ -147,30 +109,9 @@
           colSpan: 1,
           displayFields: ['full_name'],
           onSearch: async (searchText: string) => {
-            if (!searchText || searchText.length < 1) return [];
-            
             try {
-              const searchLower = searchText.toLowerCase();
-              const contacts = get(contactsStore);
-              
-              return contacts
-                .filter(contact => {
-                  const nameMatch = contact.full_name?.toLowerCase().includes(searchLower);
-                  const emailMatch = contact.email?.toLowerCase().includes(searchLower);
-                  return nameMatch || emailMatch;
-                })
-                .map(contact => {
-                  const contactId = extractSurrealId(contact) || extractSurrealId(contact.id) || contact.id || '';
-                  return {
-                    id: String(contactId),
-                    name: contact.full_name || '',
-                    full_name: contact.full_name || '',
-                    email: contact.email || ''
-                  };
-                })
-                .slice(0, 10);
-            } catch (error) {
-              console.warn('Failed to search contacts:', error);
+              return searchContacts(get(contactsStore), searchText);
+            } catch {
               return [];
             }
           }
@@ -210,7 +151,7 @@
       };
       await feesActions.create(proposalData);
     } else if (proposal) {
-      const proposalId = extractSurrealId(proposal.id) || extractSurrealId(proposal) || proposal.id || '';
+      const proposalId = getEntityId(proposal);
       if (!proposalId) {
         throw new Error('Invalid proposal ID');
       }
@@ -228,11 +169,11 @@
 
   // Delete handler
   async function handleDelete(entity: Fee) {
-    const proposalId = extractSurrealId(entity.id) || extractSurrealId(entity) || entity.id || '';
+    const proposalId = getEntityId(entity);
     if (!proposalId) {
       throw new Error('Invalid proposal ID');
     }
-    await feesActions.delete(String(proposalId));
+    await feesActions.delete(proposalId);
   }
 
   // Close handler

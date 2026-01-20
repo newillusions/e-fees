@@ -258,6 +258,9 @@
           id: formData.project_number
         };
 
+        // Create timestamp once for consistency
+        const timestamp = new Date().toISOString();
+
         // Construct Project object with required fields only
         const project = {
           name: formData.name,
@@ -269,8 +272,9 @@
           number: projectNumber,
           folder: formData.folder,
           time: {
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            // QUAL-L6: Use single timestamp for consistency
+            created_at: timestamp,
+            updated_at: timestamp
           }
         };
 

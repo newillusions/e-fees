@@ -5,30 +5,39 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import type { AppSettings, AppSettingsPublic } from '$lib/stores/settings';
+import { logger } from '../services/logger';
+
+const settingsLogger = logger.child({ component: 'SettingsAPI' });
 
 /**
- * Get application settings from the backend.
- * @returns Current application settings
+ * Get application settings from the backend (public/safe version).
+ *
+ * **Security:** Password is never returned from the backend.
+ * The `has_password` boolean indicates whether a password is configured.
+ *
+ * @returns Current application settings with sensitive data redacted
  */
-export async function getSettings(): Promise<any> {
+export async function getSettings(): Promise<AppSettingsPublic> {
   try {
-    return await invoke<any>('get_settings');
+    return await invoke<AppSettingsPublic>('get_settings');
   } catch (error) {
-    console.error('Failed to get settings:', error);
+    settingsLogger.error('Failed to get settings', { error });
     throw error;
   }
 }
 
 /**
  * Save application settings to the backend.
- * @param settings - Settings object to save
+ *
+ * @param settings - Settings object to save (can include password)
  * @returns Success or error message
  */
-export async function saveSettings(settings: Record<string, unknown>): Promise<string> {
+export async function saveSettings(settings: AppSettings): Promise<string> {
   try {
     return await invoke<string>('save_settings', { settings });
   } catch (error) {
-    console.error('Failed to save settings:', error);
+    settingsLogger.error('Failed to save settings', { error });
     throw error;
   }
 }
@@ -45,7 +54,7 @@ export async function reloadDatabaseConfig(): Promise<string> {
   try {
     return await invoke<string>('reload_database_config');
   } catch (error) {
-    console.error('Failed to reload database configuration:', error);
+    settingsLogger.error('Failed to reload database configuration', { error });
     throw error;
   }
 }

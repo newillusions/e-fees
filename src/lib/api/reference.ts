@@ -6,6 +6,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type { CountrySearchResult } from '../../types';
+import { logger } from '../services/logger';
+
+const referenceLogger = logger.child({ component: 'ReferenceAPI' });
 
 /**
  * Searches countries by name with fuzzy matching.
@@ -17,7 +20,7 @@ export async function searchCountries(query: string): Promise<CountrySearchResul
     const countries = await invoke<CountrySearchResult[]>('search_countries', { query });
     return countries;
   } catch (error) {
-    console.error('Failed to search countries:', error);
+    referenceLogger.error('Failed to search countries', { query, error });
     throw error;
   }
 }
@@ -32,7 +35,7 @@ export async function getAreaSuggestions(country: string | null): Promise<string
     const suggestions = await invoke('get_area_suggestions', { country: country || '' });
     return suggestions as string[];
   } catch (error) {
-    console.error('Failed to get area suggestions:', error);
+    referenceLogger.error('Failed to get area suggestions', { country, error });
     throw error;
   }
 }
@@ -47,7 +50,7 @@ export async function getCitySuggestions(country: string | null): Promise<string
     const suggestions = await invoke('get_city_suggestions', { country: country || '' });
     return suggestions as string[];
   } catch (error) {
-    console.error('Failed to get city suggestions:', error);
+    referenceLogger.error('Failed to get city suggestions', { country, error });
     throw error;
   }
 }
@@ -61,7 +64,7 @@ export async function getAllCities(): Promise<string[]> {
     const cities = await invoke('get_all_cities');
     return cities as string[];
   } catch (error) {
-    console.error('Failed to get all cities:', error);
+    referenceLogger.error('Failed to get all cities', { error });
     throw error;
   }
 }

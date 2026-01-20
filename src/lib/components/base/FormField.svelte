@@ -128,7 +128,7 @@
     <FormSelect
       label={field.label}
       {value}
-      options={(field.options || []) as unknown as { value: string; label: string }[]}
+      options={field.options || []}
       placeholder={field.placeholder}
       required={field.required}
       disabled={field.disabled}

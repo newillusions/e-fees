@@ -31,7 +31,14 @@ vi.mock('$lib/stores', () => ({
 // Mock utilities
 vi.mock('$lib/utils/surrealdb', () => ({
   extractSurrealId: vi.fn(),
-  formatSurrealRelation: vi.fn()
+  formatSurrealRelation: vi.fn(),
+  // getEntityId extracts ID from entity.id or falls back to empty string
+  getEntityId: vi.fn((entity) => {
+    if (!entity) return '';
+    if (typeof entity === 'string') return entity;
+    if (entity.id) return typeof entity.id === 'string' ? entity.id : '';
+    return '';
+  })
 }));
 
 vi.mock('$lib/utils/validation', () => ({

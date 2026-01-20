@@ -154,12 +154,10 @@ describe('Projects API Module', () => {
       expect(result).toEqual(mockProject);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Create failed'));
 
-      const result = await createProject({} as ProjectCreate);
-
-      expect(result).toBeNull();
+      await expect(createProject({} as ProjectCreate)).rejects.toThrow('Create failed');
     });
   });
 

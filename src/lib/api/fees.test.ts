@@ -131,12 +131,10 @@ describe('Fees API Module', () => {
       });
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Create failed'));
 
-      const result = await createFee({} as FeeCreate);
-
-      expect(result).toBeNull();
+      await expect(createFee({} as FeeCreate)).rejects.toThrow('Create failed');
     });
   });
 
@@ -160,12 +158,10 @@ describe('Fees API Module', () => {
       expect(result).toEqual(mockFee);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Update failed'));
 
-      const result = await updateFee('test', {});
-
-      expect(result).toBeNull();
+      await expect(updateFee('test', {})).rejects.toThrow('Update failed');
     });
   });
 
@@ -179,12 +175,10 @@ describe('Fees API Module', () => {
       expect(result).toEqual(mockFee);
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Delete failed'));
 
-      const result = await deleteFee('test');
-
-      expect(result).toBeNull();
+      await expect(deleteFee('test')).rejects.toThrow('Delete failed');
     });
   });
 
@@ -198,12 +192,10 @@ describe('Fees API Module', () => {
       expect(result).toBe('Success: file written');
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Write failed'));
 
-      const result = await writeFeeToJson('test');
-
-      expect(result).toBeNull();
+      await expect(writeFeeToJson('test')).rejects.toThrow('Write failed');
     });
   });
 
@@ -217,12 +209,10 @@ describe('Fees API Module', () => {
       expect(result).toBe('Success with backup');
     });
 
-    it('should return null on error', async () => {
+    it('should throw on error', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Safe write failed'));
 
-      const result = await writeFeeToJsonSafe('test');
-
-      expect(result).toBeNull();
+      await expect(writeFeeToJsonSafe('test')).rejects.toThrow('Safe write failed');
     });
   });
 });

@@ -5,7 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { projectsActions, feesStore } from '$lib/stores';
-  import { extractSurrealId, compareSurrealIds } from '$lib/utils/surrealdb';
+  import { getEntityId, compareSurrealIds } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { logger } from '$lib/services/logger';
@@ -132,8 +132,7 @@
     if (!project) return;
     
     await withLoadingState(async () => {
-      // Try to extract ID from project.id first, then from project itself
-      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      const projectId = getEntityId(project);
       if (!projectId) {
         logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');
@@ -227,8 +226,7 @@
     if (!project || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      // Try to extract ID from project.id first, then from project itself
-      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      const projectId = getEntityId(project);
       if (!projectId) {
         logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');

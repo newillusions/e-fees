@@ -83,6 +83,7 @@ pub async fn update_fee(id: String, fee: FeeUpdate, state: State<'_, AppState>) 
 ///
 /// This command fetches complete fee data including all linked records
 /// and writes it to the project's JSON template file for InDesign integration.
+/// Uses targeted queries for efficiency instead of fetching all records.
 #[tauri::command]
 pub async fn write_fee_to_json(
     rfp_id: String,
@@ -90,22 +91,38 @@ pub async fn write_fee_to_json(
     app_handle: AppHandle
 ) -> Result<String, String> {
     use fee_json::{
-        find_fee_by_id, find_project_for_fee, find_company_for_fee, find_contact_for_fee,
         build_fee_json_paths, build_fee_json, rename_template_file_if_needed, write_json_to_file
     };
 
     info!("Writing fee {} to JSON file", rfp_id);
 
-    // Get all data from database
-    let (fees, projects, companies, contacts, project_folder_path) = {
+    // Get fee and related records using targeted queries (not fetch-all)
+    let (fee, project, company, contact, project_folder_path) = {
         let manager = state.read().await;
-        let fees = manager.get_fees().await.map_err(|e| format!("Failed to fetch fees: {}", e))?;
-        let projects = manager.get_projects().await.map_err(|e| format!("Failed to fetch projects: {}", e))?;
-        let companies = manager.get_companies().await.map_err(|e| format!("Failed to fetch companies: {}", e))?;
-        let contacts = manager.get_contacts().await.map_err(|e| format!("Failed to fetch contacts: {}", e))?;
+
+        // Get the fee by ID directly
+        let fee = manager.get_fee_by_id(&rfp_id).await
+            .map_err(|e| format!("Failed to fetch fee: {}", e))?
+            .ok_or_else(|| format!("Fee not found: {}", rfp_id))?;
+
+        // Extract IDs from fee and fetch related records directly
+        let project_id = fee.project_id.id.to_string();
+        let company_id = fee.company_id.id.to_string();
+        let contact_id = fee.contact_id.id.to_string();
+
+        let project = manager.get_project_by_id(&project_id).await
+            .map_err(|e| format!("Failed to fetch project: {}", e))?
+            .ok_or_else(|| "Project not found for fee".to_string())?;
+
+        let company = manager.get_company_by_id(&company_id).await
+            .map_err(|e| format!("Failed to fetch company: {}", e))?
+            .ok_or_else(|| "Company not found for fee".to_string())?;
+
+        let contact = manager.get_contact_by_id(&contact_id).await
+            .map_err(|e| format!("Failed to fetch contact: {}", e))?
+            .ok_or_else(|| "Contact not found for fee".to_string())?;
 
         // Get project folder path from settings
-        let config = app_handle.config();
         let app_data_dir = app_handle.path().app_data_dir()
             .map_err(|e| format!("Failed to get app data directory: {}", e))?;
         let settings_path = app_data_dir.join("settings.json");
@@ -123,28 +140,16 @@ pub async fn write_fee_to_json(
             String::new()
         };
 
-        (fees, projects, companies, contacts, project_folder_path)
+        (fee, project, company, contact, project_folder_path)
     };
 
     if project_folder_path.is_empty() {
         return Err("Project folder path not configured in settings".to_string());
     }
 
-    // Find the fee
-    let fee = find_fee_by_id(&fees, &rfp_id)
-        .ok_or_else(|| format!("Fee not found: {}", rfp_id))?;
-
-    // Find related records
-    let project = find_project_for_fee(&projects, fee)
-        .ok_or_else(|| "Project not found for fee".to_string())?;
-    let company = find_company_for_fee(&companies, fee)
-        .ok_or_else(|| "Company not found for fee".to_string())?;
-    let contact = find_contact_for_fee(&contacts, fee)
-        .ok_or_else(|| "Contact not found for fee".to_string())?;
-
     // Build paths and JSON data
-    let paths = build_fee_json_paths(&project_folder_path, project);
-    let json_data = build_fee_json(fee, project, company, contact);
+    let paths = build_fee_json_paths(&project_folder_path, &project);
+    let json_data = build_fee_json(&fee, &project, &company, &contact);
 
     // Rename template file if needed
     rename_template_file_if_needed(&paths.old_json_path, &paths.new_json_path)?;
@@ -159,6 +164,7 @@ pub async fn write_fee_to_json(
 ///
 /// This is a safer version of write_fee_to_json that provides more detailed
 /// error messages and handles edge cases more gracefully.
+/// Uses targeted queries for efficiency instead of fetching all records.
 #[tauri::command]
 pub async fn write_fee_to_json_safe(
     fee_id: String,
@@ -166,9 +172,7 @@ pub async fn write_fee_to_json_safe(
     app_handle: AppHandle
 ) -> Result<String, String> {
     use fee_json::{
-        find_fee_by_id, find_project_for_fee, find_company_for_fee, find_contact_for_fee,
-        build_fee_json_paths, build_fee_json, rename_template_file_if_needed, write_json_to_file,
-        format_issue_date
+        build_fee_json_paths, build_fee_json, rename_template_file_if_needed, write_json_to_file
     };
 
     info!("Writing fee {} to JSON file (safe mode)", fee_id);
@@ -178,28 +182,46 @@ pub async fn write_fee_to_json_safe(
         return Err("Fee ID cannot be empty".to_string());
     }
 
-    // Get all data from database
-    let (fees, projects, companies, contacts, project_folder_path) = {
+    // Get fee and related records using targeted queries (not fetch-all)
+    let (fee, project, company, contact, project_folder_path) = {
         let manager = state.read().await;
 
-        let fees = manager.get_fees().await.map_err(|e| {
-            error!("Failed to fetch fees: {}", e);
-            format!("Database error: Failed to fetch fees - {}", e)
+        // Get the fee by ID directly
+        let fee = manager.get_fee_by_id(&fee_id).await.map_err(|e| {
+            error!("Failed to fetch fee: {}", e);
+            format!("Database error: Failed to fetch fee - {}", e)
+        })?.ok_or_else(|| {
+            error!("Fee not found: {}", fee_id);
+            format!("Fee not found with ID: {}. It may have been deleted.", fee_id)
         })?;
 
-        let projects = manager.get_projects().await.map_err(|e| {
-            error!("Failed to fetch projects: {}", e);
-            format!("Database error: Failed to fetch projects - {}", e)
+        // Extract IDs from fee and fetch related records directly
+        let project_id = fee.project_id.id.to_string();
+        let company_id = fee.company_id.id.to_string();
+        let contact_id = fee.contact_id.id.to_string();
+
+        let project = manager.get_project_by_id(&project_id).await.map_err(|e| {
+            error!("Failed to fetch project: {}", e);
+            format!("Database error: Failed to fetch project - {}", e)
+        })?.ok_or_else(|| {
+            error!("Project not found for fee: {}", fee_id);
+            "Data integrity error: The project linked to this fee no longer exists.".to_string()
         })?;
 
-        let companies = manager.get_companies().await.map_err(|e| {
-            error!("Failed to fetch companies: {}", e);
-            format!("Database error: Failed to fetch companies - {}", e)
+        let company = manager.get_company_by_id(&company_id).await.map_err(|e| {
+            error!("Failed to fetch company: {}", e);
+            format!("Database error: Failed to fetch company - {}", e)
+        })?.ok_or_else(|| {
+            error!("Company not found for fee: {}", fee_id);
+            "Data integrity error: The company linked to this fee no longer exists.".to_string()
         })?;
 
-        let contacts = manager.get_contacts().await.map_err(|e| {
-            error!("Failed to fetch contacts: {}", e);
-            format!("Database error: Failed to fetch contacts - {}", e)
+        let contact = manager.get_contact_by_id(&contact_id).await.map_err(|e| {
+            error!("Failed to fetch contact: {}", e);
+            format!("Database error: Failed to fetch contact - {}", e)
+        })?.ok_or_else(|| {
+            error!("Contact not found for fee: {}", fee_id);
+            "Data integrity error: The contact linked to this fee no longer exists.".to_string()
         })?;
 
         // Get project folder path from settings
@@ -220,7 +242,7 @@ pub async fn write_fee_to_json_safe(
             String::new()
         };
 
-        (fees, projects, companies, contacts, project_folder_path)
+        (fee, project, company, contact, project_folder_path)
     };
 
     if project_folder_path.is_empty() {
@@ -235,30 +257,8 @@ pub async fn write_fee_to_json_safe(
         ));
     }
 
-    // Find the fee
-    let fee = find_fee_by_id(&fees, &fee_id).ok_or_else(|| {
-        error!("Fee not found: {}", fee_id);
-        format!("Fee not found with ID: {}. It may have been deleted.", fee_id)
-    })?;
-
-    // Find related records with detailed error messages
-    let project = find_project_for_fee(&projects, fee).ok_or_else(|| {
-        error!("Project not found for fee: {}", fee_id);
-        "Data integrity error: The project linked to this fee no longer exists.".to_string()
-    })?;
-
-    let company = find_company_for_fee(&companies, fee).ok_or_else(|| {
-        error!("Company not found for fee: {}", fee_id);
-        "Data integrity error: The company linked to this fee no longer exists.".to_string()
-    })?;
-
-    let contact = find_contact_for_fee(&contacts, fee).ok_or_else(|| {
-        error!("Contact not found for fee: {}", fee_id);
-        "Data integrity error: The contact linked to this fee no longer exists.".to_string()
-    })?;
-
     // Build paths
-    let paths = build_fee_json_paths(&project_folder_path, project);
+    let paths = build_fee_json_paths(&project_folder_path, &project);
 
     // Check if project directory exists
     if !Path::new(&paths.old_json_path).parent().map(|p| p.exists()).unwrap_or(false) {
@@ -266,7 +266,7 @@ pub async fn write_fee_to_json_safe(
     }
 
     // Build JSON data
-    let json_data = build_fee_json(fee, project, company, contact);
+    let json_data = build_fee_json(&fee, &project, &company, &contact);
 
     // Check for placeholder content
     if check_placeholder_content(&json_data) {

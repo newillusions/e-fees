@@ -1,9 +1,39 @@
 //! # Database Security Module
-//! 
+//!
 //! This module provides input validation to prevent SQL injection attacks.
 
 use serde::{Deserialize, Serialize};
 use regex::Regex;
+use once_cell::sync::Lazy;
+
+// Pre-compiled regex patterns for validation (compiled once at startup)
+// Using Lazy ensures these are compiled only once and any compilation errors
+// are caught at application startup rather than during runtime.
+
+static PROJECT_NAME_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-zA-Z0-9\s\-_().&,]+$")
+        .expect("PROJECT_NAME_PATTERN regex should compile")
+});
+
+static EMAIL_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .expect("EMAIL_PATTERN regex should compile")
+});
+
+static PHONE_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[\+]?[0-9\s\-\(\)]{7,20}$")
+        .expect("PHONE_PATTERN regex should compile")
+});
+
+static PROJECT_NUMBER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{2}-\d{3}\d{2}$")
+        .expect("PROJECT_NUMBER_PATTERN regex should compile")
+});
+
+static ID_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-zA-Z0-9_]+$")
+        .expect("ID_PATTERN regex should compile")
+});
 
 /// Input validation error types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,7 +72,7 @@ impl InputValidator {
         if name.is_empty() {
             return Err(ValidationError::RequiredField { field: "name".to_string() });
         }
-        
+
         if name.len() < 2 || name.len() > 200 {
             return Err(ValidationError::InvalidLength {
                 field: "name".to_string(),
@@ -53,8 +83,7 @@ impl InputValidator {
         }
 
         // Allow alphanumeric, spaces, hyphens, underscores, parentheses, and common punctuation
-        let pattern = Regex::new(r"^[a-zA-Z0-9\s\-_().&,]+$").unwrap();
-        if !pattern.is_match(name) {
+        if !PROJECT_NAME_PATTERN.is_match(name) {
             return Err(ValidationError::InvalidCharacters {
                 field: "name".to_string(),
                 pattern: "alphanumeric characters, spaces, hyphens, underscores, parentheses".to_string(),
@@ -70,8 +99,7 @@ impl InputValidator {
             return Err(ValidationError::RequiredField { field: "email".to_string() });
         }
 
-        let email_pattern = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-        if !email_pattern.is_match(email) {
+        if !EMAIL_PATTERN.is_match(email) {
             return Err(ValidationError::InvalidFormat {
                 field: "email".to_string(),
                 expected: "valid email address".to_string(),
@@ -88,8 +116,7 @@ impl InputValidator {
         }
 
         // Allow international phone formats
-        let phone_pattern = Regex::new(r"^[\+]?[0-9\s\-\(\)]{7,20}$").unwrap();
-        if !phone_pattern.is_match(phone) {
+        if !PHONE_PATTERN.is_match(phone) {
             return Err(ValidationError::InvalidFormat {
                 field: "phone".to_string(),
                 expected: "valid phone number".to_string(),
@@ -101,8 +128,7 @@ impl InputValidator {
 
     /// Validate project number format (YY-CCCNN)
     pub fn validate_project_number(number: &str) -> Result<(), ValidationError> {
-        let pattern = Regex::new(r"^\d{2}-\d{3}\d{2}$").unwrap();
-        if !pattern.is_match(number) {
+        if !PROJECT_NUMBER_PATTERN.is_match(number) {
             return Err(ValidationError::InvalidFormat {
                 field: "project_number".to_string(),
                 expected: "YY-CCCNN format (e.g., 25-97105)".to_string(),
@@ -148,8 +174,7 @@ impl InputValidator {
             return Err(ValidationError::RequiredField { field: "id".to_string() });
         }
 
-        let id_pattern = Regex::new(r"^[a-zA-Z0-9_]+$").unwrap();
-        if !id_pattern.is_match(id) {
+        if !ID_PATTERN.is_match(id) {
             return Err(ValidationError::InvalidCharacters {
                 field: "id".to_string(),
                 pattern: "alphanumeric characters and underscores only".to_string(),

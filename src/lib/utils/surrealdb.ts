@@ -153,11 +153,45 @@ export function thingToString(thing: UnknownSurrealThing): string {
 
 /**
  * Creates a SurrealDB Thing object from table and ID.
- * 
+ *
  * @param table - Table name
  * @param id - Record ID
  * @returns SurrealDB Thing object
  */
 export function createSurrealThing(table: string, id: string): { tb: string; id: string } {
   return { tb: table, id };
+}
+
+/**
+ * Extracts the ID from an entity, handling all SurrealDB formats.
+ *
+ * PERF-L3: Consolidates the repeated pattern:
+ *   extractSurrealId(entity.id) || extractSurrealId(entity) || entity.id || ''
+ * into a single function call.
+ *
+ * @param entity - Entity object that may contain an id property, or a SurrealDB Thing
+ * @returns The extracted string ID, or empty string if not found
+ *
+ * @example
+ * getEntityId({ id: "123" }) // Returns: "123"
+ * getEntityId({ id: { tb: "table", id: "123" } }) // Returns: "123"
+ * getEntityId({ tb: "table", id: "123" }) // Returns: "123"
+ */
+export function getEntityId(entity: UnknownSurrealThing | { id?: UnknownSurrealThing } | null | undefined): string {
+  if (!entity) return '';
+
+  // Try extracting from the entity directly (handles Thing objects and strings)
+  const directId = extractSurrealId(entity as UnknownSurrealThing);
+  if (directId) return directId;
+
+  // Try extracting from the entity.id property
+  if (typeof entity === 'object' && 'id' in entity) {
+    const idFromProperty = extractSurrealId(entity.id as UnknownSurrealThing);
+    if (idFromProperty) return idFromProperty;
+
+    // Fallback to raw id if it's a string
+    if (typeof entity.id === 'string') return entity.id;
+  }
+
+  return '';
 }

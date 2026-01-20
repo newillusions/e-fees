@@ -6,10 +6,12 @@
 //! - Database configuration loading
 //! - Thing object handling
 //! - Error handling
+//! - Input validation (security module)
 
 #[cfg(test)]
 mod tests {
     use crate::db::DatabaseConfig;
+    use crate::db::security::InputValidator;
     use serial_test::serial;
     use std::env;
 
@@ -401,5 +403,379 @@ mod tests {
         year: u8,
         country_code: u16,
         sequence: u8,
+    }
+
+    // ============================================================================
+    // INPUT VALIDATOR SECURITY TESTS (using actual InputValidator)
+    // ============================================================================
+
+    mod input_validator_tests {
+        use super::*;
+
+        // ----- Project Name Validation -----
+
+        #[test]
+        fn test_validate_project_name_valid() {
+            // Normal project names
+            assert!(InputValidator::validate_project_name("Test Project").is_ok());
+            assert!(InputValidator::validate_project_name("Project-2025").is_ok());
+            assert!(InputValidator::validate_project_name("Project_Name").is_ok());
+            assert!(InputValidator::validate_project_name("Project (Phase 1)").is_ok());
+            assert!(InputValidator::validate_project_name("Client & Partners").is_ok());
+            assert!(InputValidator::validate_project_name("Name, Inc.").is_ok());
+        }
+
+        #[test]
+        fn test_validate_project_name_empty() {
+            let result = InputValidator::validate_project_name("");
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_validate_project_name_too_short() {
+            let result = InputValidator::validate_project_name("A");
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_validate_project_name_too_long() {
+            let long_name = "A".repeat(201);
+            let result = InputValidator::validate_project_name(&long_name);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_validate_project_name_sql_injection_attempts() {
+            // SQL injection attempts should be rejected
+            assert!(InputValidator::validate_project_name("'; DROP TABLE projects;--").is_err());
+            assert!(InputValidator::validate_project_name("Project' OR '1'='1").is_err());
+            assert!(InputValidator::validate_project_name("Test\"; DELETE FROM projects;").is_err());
+            assert!(InputValidator::validate_project_name("Project`; DROP TABLE users;`").is_err());
+        }
+
+        #[test]
+        fn test_validate_project_name_xss_attempts() {
+            // XSS injection attempts should be rejected
+            assert!(InputValidator::validate_project_name("<script>alert('XSS')</script>").is_err());
+            assert!(InputValidator::validate_project_name("Project<img src=x onerror=alert(1)>").is_err());
+        }
+
+        // ----- Email Validation -----
+
+        #[test]
+        fn test_validate_email_valid() {
+            assert!(InputValidator::validate_email("test@example.com").is_ok());
+            assert!(InputValidator::validate_email("user.name@domain.co.uk").is_ok());
+            assert!(InputValidator::validate_email("user+tag@example.org").is_ok());
+        }
+
+        #[test]
+        fn test_validate_email_invalid() {
+            assert!(InputValidator::validate_email("").is_err());
+            assert!(InputValidator::validate_email("invalid").is_err());
+            assert!(InputValidator::validate_email("@example.com").is_err());
+            assert!(InputValidator::validate_email("user@").is_err());
+            assert!(InputValidator::validate_email("user@.com").is_err());
+        }
+
+        #[test]
+        fn test_validate_email_sql_injection() {
+            // SQL injection in email fields
+            assert!(InputValidator::validate_email("test'@example.com").is_err());
+            assert!(InputValidator::validate_email("test'; DROP TABLE users;--@example.com").is_err());
+        }
+
+        // ----- Phone Validation -----
+
+        #[test]
+        fn test_validate_phone_valid() {
+            assert!(InputValidator::validate_phone("+971501234567").is_ok());
+            assert!(InputValidator::validate_phone("+1-555-123-4567").is_ok());
+            assert!(InputValidator::validate_phone("(555) 123-4567").is_ok());
+            assert!(InputValidator::validate_phone("555 123 4567").is_ok());
+        }
+
+        #[test]
+        fn test_validate_phone_invalid() {
+            assert!(InputValidator::validate_phone("").is_err());
+            assert!(InputValidator::validate_phone("123").is_err()); // Too short
+            assert!(InputValidator::validate_phone("123456789012345678901").is_err()); // Too long
+        }
+
+        #[test]
+        fn test_validate_phone_sql_injection() {
+            assert!(InputValidator::validate_phone("123'; DROP TABLE contacts;--").is_err());
+            assert!(InputValidator::validate_phone("+1' OR '1'='1").is_err());
+        }
+
+        // ----- Project Number Validation -----
+
+        #[test]
+        fn test_validate_project_number_valid() {
+            assert!(InputValidator::validate_project_number("25-97105").is_ok());
+            assert!(InputValidator::validate_project_number("24-96601").is_ok());
+            assert!(InputValidator::validate_project_number("00-00001").is_ok());
+            assert!(InputValidator::validate_project_number("99-99999").is_ok());
+        }
+
+        #[test]
+        fn test_validate_project_number_invalid_format() {
+            assert!(InputValidator::validate_project_number("invalid").is_err());
+            assert!(InputValidator::validate_project_number("2025-971").is_err());
+            assert!(InputValidator::validate_project_number("25-971").is_err());
+            assert!(InputValidator::validate_project_number("25971-05").is_err());
+            assert!(InputValidator::validate_project_number("").is_err());
+        }
+
+        #[test]
+        fn test_validate_project_number_sql_injection() {
+            assert!(InputValidator::validate_project_number("25'; DROP TABLE projects;--").is_err());
+            assert!(InputValidator::validate_project_number("' OR 1=1--").is_err());
+        }
+
+        // ----- Status Validation -----
+
+        #[test]
+        fn test_validate_status_valid() {
+            let allowed = &["Draft", "Active", "On Hold", "Completed", "Cancelled"];
+            assert!(InputValidator::validate_status("Draft", allowed).is_ok());
+            assert!(InputValidator::validate_status("Active", allowed).is_ok());
+            assert!(InputValidator::validate_status("Completed", allowed).is_ok());
+        }
+
+        #[test]
+        fn test_validate_status_invalid() {
+            let allowed = &["Draft", "Active", "On Hold", "Completed", "Cancelled"];
+            assert!(InputValidator::validate_status("InvalidStatus", allowed).is_err());
+            assert!(InputValidator::validate_status("", allowed).is_err());
+        }
+
+        #[test]
+        fn test_validate_status_sql_injection() {
+            let allowed = &["Draft", "Active"];
+            assert!(InputValidator::validate_status("Draft'; DROP TABLE--", allowed).is_err());
+        }
+
+        // ----- Text Field Validation -----
+
+        #[test]
+        fn test_validate_text_field_valid() {
+            assert!(InputValidator::validate_text_field("name", "John", 1, 50).is_ok());
+            assert!(InputValidator::validate_text_field("name", "A", 1, 50).is_ok()); // Min length
+            assert!(InputValidator::validate_text_field("name", &"A".repeat(50), 1, 50).is_ok()); // Max length
+        }
+
+        #[test]
+        fn test_validate_text_field_empty_when_required() {
+            let result = InputValidator::validate_text_field("name", "", 1, 50);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_validate_text_field_too_long() {
+            let result = InputValidator::validate_text_field("name", &"A".repeat(51), 1, 50);
+            assert!(result.is_err());
+        }
+
+        // ----- ID Validation -----
+
+        #[test]
+        fn test_validate_id_valid() {
+            assert!(InputValidator::validate_id("john_doe").is_ok());
+            assert!(InputValidator::validate_id("TEST123").is_ok());
+            assert!(InputValidator::validate_id("company_ABC").is_ok());
+        }
+
+        #[test]
+        fn test_validate_id_invalid() {
+            assert!(InputValidator::validate_id("").is_err());
+            assert!(InputValidator::validate_id("john-doe").is_err()); // Hyphen not allowed
+            assert!(InputValidator::validate_id("john doe").is_err()); // Space not allowed
+            assert!(InputValidator::validate_id("test@email").is_err()); // @ not allowed
+        }
+
+        #[test]
+        fn test_validate_id_sql_injection() {
+            assert!(InputValidator::validate_id("'; DROP TABLE contacts;--").is_err());
+            assert!(InputValidator::validate_id("id' OR '1'='1").is_err());
+        }
+
+        // ----- Sanitization Functions -----
+
+        #[test]
+        fn test_sanitize_for_display() {
+            assert_eq!(InputValidator::sanitize_for_display("Normal text"), "Normal text");
+            assert_eq!(InputValidator::sanitize_for_display("Test-Project_123"), "Test-Project_123");
+            assert_eq!(InputValidator::sanitize_for_display("Client & Co."), "Client & Co.");
+            // Dangerous characters should be removed (quotes, angle brackets, semicolons)
+            assert_eq!(InputValidator::sanitize_for_display("test'; DROP TABLE--"), "test DROP TABLE--");
+            // Parentheses are allowed in sanitized output
+            assert_eq!(InputValidator::sanitize_for_display("<script>alert(1)</script>"), "scriptalert(1)script");
+        }
+
+        #[test]
+        fn test_escape_single_quotes() {
+            assert_eq!(InputValidator::escape_single_quotes("test"), "test");
+            assert_eq!(InputValidator::escape_single_quotes("O'Brien"), "O''Brien");
+            assert_eq!(InputValidator::escape_single_quotes("'; DROP TABLE--"), "''; DROP TABLE--");
+            assert_eq!(InputValidator::escape_single_quotes("' OR '1'='1"), "'' OR ''1''=''1");
+        }
+    }
+
+    // ============================================================================
+    // COMPREHENSIVE SQL INJECTION ATTACK PATTERN TESTS
+    // ============================================================================
+
+    mod sql_injection_attack_tests {
+        use super::*;
+
+        #[test]
+        fn test_classic_sql_injection_patterns() {
+            let attack_patterns = vec![
+                "' OR '1'='1",
+                "' OR 1=1--",
+                "'; DROP TABLE users;--",
+                "admin'--",
+                "1'; DELETE FROM projects WHERE '1'='1",
+                "'; TRUNCATE TABLE fees;--",
+                "' UNION SELECT * FROM passwords--",
+                "'); DROP TABLE contacts; --",
+            ];
+
+            for pattern in attack_patterns {
+                // Project name validation should reject these
+                let result = InputValidator::validate_project_name(pattern);
+                assert!(result.is_err(), "Pattern should be rejected: {}", pattern);
+
+                // ID validation should also reject
+                let id_result = InputValidator::validate_id(pattern);
+                assert!(id_result.is_err(), "ID validation should reject: {}", pattern);
+            }
+        }
+
+        #[test]
+        fn test_encoded_sql_injection_patterns() {
+            // URL-encoded and hex-encoded attacks
+            let encoded_patterns = vec![
+                "test%27%20OR%201=1--", // URL encoded
+                "test%00", // Null byte
+            ];
+
+            for pattern in encoded_patterns {
+                let result = InputValidator::validate_project_name(pattern);
+                assert!(result.is_err(), "Encoded pattern should be rejected: {}", pattern);
+            }
+        }
+
+        #[test]
+        fn test_comment_based_injection() {
+            let comment_patterns = vec![
+                "test/**/OR/**/1=1",
+                "test--comment",
+                "test#comment",
+            ];
+
+            for pattern in comment_patterns {
+                // These contain special characters that should be rejected
+                let result = InputValidator::validate_id(pattern);
+                assert!(result.is_err(), "Comment pattern should be rejected: {}", pattern);
+            }
+        }
+
+        #[test]
+        fn test_escape_function_neutralizes_attacks() {
+            // Even if these somehow passed validation, escaping should neutralize them
+            let attacks = vec![
+                ("'; DROP TABLE--", "''; DROP TABLE--"),
+                ("test' OR '1'='1", "test'' OR ''1''=''1"),
+                ("Robert'); DROP TABLE students;--", "Robert''); DROP TABLE students;--"),
+            ];
+
+            for (input, expected_escaped) in attacks {
+                let escaped = InputValidator::escape_single_quotes(input);
+                assert_eq!(escaped, expected_escaped);
+                // The escaped version has doubled quotes which makes SQL injection ineffective
+                assert!(escaped.contains("''"));
+            }
+        }
+    }
+
+    // ============================================================================
+    // XSS PREVENTION TESTS
+    // ============================================================================
+
+    mod xss_prevention_tests {
+        use super::*;
+
+        #[test]
+        fn test_xss_script_tags() {
+            let xss_patterns = vec![
+                "<script>alert('XSS')</script>",
+                "<script src='evil.js'></script>",
+                "<SCRIPT>alert(1)</SCRIPT>",
+            ];
+
+            for pattern in xss_patterns {
+                let result = InputValidator::validate_project_name(pattern);
+                assert!(result.is_err(), "XSS pattern should be rejected: {}", pattern);
+            }
+        }
+
+        #[test]
+        fn test_xss_event_handlers() {
+            let xss_patterns = vec![
+                "<img src=x onerror=alert(1)>",
+                "<body onload=alert('XSS')>",
+                "<div onclick=alert(1)>",
+            ];
+
+            for pattern in xss_patterns {
+                let result = InputValidator::validate_project_name(pattern);
+                assert!(result.is_err(), "XSS event handler should be rejected: {}", pattern);
+            }
+        }
+
+        #[test]
+        fn test_sanitize_removes_xss() {
+            let xss = "<script>alert('XSS')</script>";
+            let sanitized = InputValidator::sanitize_for_display(xss);
+            assert!(!sanitized.contains("<"));
+            assert!(!sanitized.contains(">"));
+            assert!(!sanitized.contains("'"));
+        }
+    }
+
+    // ============================================================================
+    // BOUNDARY VALUE TESTS
+    // ============================================================================
+
+    mod boundary_value_tests {
+        use super::*;
+
+        #[test]
+        fn test_text_field_boundary_values() {
+            // Minimum boundary
+            assert!(InputValidator::validate_text_field("test", "A", 1, 100).is_ok());
+            assert!(InputValidator::validate_text_field("test", "", 1, 100).is_err());
+
+            // Maximum boundary
+            let at_max = "A".repeat(100);
+            let over_max = "A".repeat(101);
+            assert!(InputValidator::validate_text_field("test", &at_max, 1, 100).is_ok());
+            assert!(InputValidator::validate_text_field("test", &over_max, 1, 100).is_err());
+        }
+
+        #[test]
+        fn test_project_name_boundary_values() {
+            // Min: 2 characters
+            assert!(InputValidator::validate_project_name("AB").is_ok());
+            assert!(InputValidator::validate_project_name("A").is_err());
+
+            // Max: 200 characters
+            let at_max = "A".repeat(200);
+            let over_max = "A".repeat(201);
+            assert!(InputValidator::validate_project_name(&at_max).is_ok());
+            assert!(InputValidator::validate_project_name(&over_max).is_err());
+        }
     }
 }

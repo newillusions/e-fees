@@ -40,9 +40,13 @@
     // Check if this is first run by testing connection
     const isConnected = await checkDbConnection();
     if (!isConnected) {
-      // Check if we have placeholder config
+      // Check if we have valid configuration
+      // Settings now return has_password boolean instead of actual password
       const settings = await getSettings();
-      if (settings?.surrealdb_user === 'placeholder' || !settings?.surrealdb_user) {
+      const hasValidConfig = settings?.surrealdb_user &&
+                            settings.surrealdb_user !== 'placeholder' &&
+                            settings.has_password;
+      if (!hasValidConfig) {
         isOpen = true;
       }
     }

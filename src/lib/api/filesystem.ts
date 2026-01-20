@@ -6,6 +6,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { logApiError } from '../services/logger';
 
 /**
  * Opens a native folder selection dialog.
@@ -16,7 +17,7 @@ export async function selectFolder(): Promise<string | null> {
     const folder = await invoke<string | null>('select_folder');
     return folder;
   } catch (error) {
-    console.error('Failed to open folder picker:', error);
+    logApiError('selectFolder', error as Error, { component: 'FilesystemApi' });
     return null;
   }
 }
@@ -31,7 +32,7 @@ export async function openFolderInExplorer(folderPath: string): Promise<string> 
     const result = await invoke<string>('open_folder_in_explorer', { folderPath });
     return result;
   } catch (error) {
-    console.error('Failed to open folder in explorer:', error);
+    logApiError('openFolderInExplorer', error as Error, { component: 'FilesystemApi' });
     return 'Failed to open folder';
   }
 }
@@ -53,7 +54,7 @@ export async function checkProjectFolderExists(
     });
     return exists;
   } catch (error) {
-    console.error('Failed to check project folder existence:', error);
+    logApiError('checkProjectFolderExists', error as Error, { component: 'FilesystemApi' });
     return false;
   }
 }
@@ -75,7 +76,7 @@ export async function checkVarJsonExists(
     });
     return exists;
   } catch (error) {
-    console.error('Failed to check var.json existence:', error);
+    logApiError('checkVarJsonExists', error as Error, { component: 'FilesystemApi' });
     return false;
   }
 }
@@ -97,7 +98,7 @@ export async function checkVarJsonTemplateExists(
     });
     return exists;
   } catch (error) {
-    console.error('Failed to check var.json template existence:', error);
+    logApiError('checkVarJsonTemplateExists', error as Error, { component: 'FilesystemApi' });
     return false;
   }
 }
@@ -119,7 +120,7 @@ export async function renameFolderWithOldSuffix(
     });
     return result;
   } catch (error) {
-    console.error('Failed to rename folder:', error);
+    logApiError('renameFolderWithOldSuffix', error as Error, { component: 'FilesystemApi' });
     throw error;
   }
 }
@@ -141,7 +142,7 @@ export async function renameVarJsonWithOldSuffix(
     });
     return result;
   } catch (error) {
-    console.error('Failed to rename var.json:', error);
+    logApiError('renameVarJsonWithOldSuffix', error as Error, { component: 'FilesystemApi' });
     throw error;
   }
 }

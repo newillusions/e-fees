@@ -81,7 +81,7 @@ export interface CrudApi<T> {
 /**
  * Options for configuring CRUD store behavior.
  */
-export interface CrudStoreOptions {
+export interface CrudStoreOptions<T = unknown> {
   /** Enable optimistic updates */
   enableOptimistic?: boolean;
   /** Enable logging */
@@ -89,9 +89,11 @@ export interface CrudStoreOptions {
   /** Component name for logging context */
   component?: string;
   /** Custom ID extractor function */
-  idExtractor?: (item: any) => string | null;
+  idExtractor?: (id: UnknownSurrealThing) => string | null;
   /** Auto-refresh interval in milliseconds */
   autoRefresh?: number;
+  /** Fields to search within (avoids JSON.stringify per item) */
+  searchFields?: (keyof T)[];
 }
 
 /**
@@ -158,8 +160,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     enableLogging = true,
     component = 'CrudStore',
     idExtractor = extractSurrealId,
-    autoRefresh
-  } = options;
+    autoRefresh,
+    searchFields
+  } = options as CrudStoreOptions<T>;
 
   const componentLogger = enableLogging ? logger.child({ component }) : null;
 
@@ -199,6 +202,20 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(item => {
+        // PERF-H8: Use defined searchFields when available (avoids JSON.stringify per item)
+        if (searchFields && searchFields.length > 0) {
+          for (const field of searchFields) {
+            const value = item[field];
+            if (value !== null && value !== undefined) {
+              const stringValue = typeof value === 'string' ? value : String(value);
+              if (stringValue.toLowerCase().includes(query)) {
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+        // Fallback to JSON.stringify if no searchFields defined
         const searchableText = JSON.stringify(item).toLowerCase();
         return searchableText.includes(query);
       });
