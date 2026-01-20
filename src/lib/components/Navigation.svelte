@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { NavItem } from '../../types';
-  import { onMount } from 'svelte';
+  // svelte:window used for keyboard events
   import { location, push } from 'svelte-spa-router';
   import { settingsStore } from '$lib/stores/settings';
-  // import { positionWindow4K } from '../api'; // DISABLED for new environment
 
   // Check if dev mode is enabled
   $: devModeEnabled = $settingsStore?.dev_mode ?? false;
@@ -64,25 +63,13 @@
       if (item) {
         event.preventDefault();
         handleNavClick(item.id);
-        return;
       }
-
-      // Window positioning shortcut (Cmd/Ctrl + W) - DISABLED for new environment
-      // if (key === 'w' || key === 'W') {
-      //   event.preventDefault();
-      //   positionWindow4K().then(result => {
-      //   }).catch(error => {
-      //     console.error('Failed to position window:', error);
-      //   });
-      // }
     }
   }
 
-  onMount(() => {
-    document.addEventListener('keydown', handleKeydown);
-    return () => document.removeEventListener('keydown', handleKeydown);
-  });
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <nav class="flex-1">
   <ul class="space-y-1">

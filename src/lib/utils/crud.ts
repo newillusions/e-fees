@@ -14,7 +14,7 @@
  * - Comprehensive error handling
  */
 
-import { writable, type Writable } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import type { UnknownSurrealThing } from '../../types';
@@ -237,14 +237,11 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       
       try {
         const items = await api.getAll();
-        const currentState = store;
-        let stateValue: CrudState<T>;
-        const unsubscribe = currentState.subscribe(state => stateValue = state);
-        unsubscribe();
-        
+        const stateValue = get(store);
+
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, stateValue!.searchQuery, stateValue!.filters),
-          stateValue!.sort
+          applyFiltersAndSearch(items, stateValue.searchQuery, stateValue.filters),
+          stateValue.sort
         );
         
         store.update(state => ({ 
@@ -767,11 +764,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     },
 
     getById(id) {
-      let currentState: CrudState<T>;
-      const unsubscribe = store.subscribe(state => currentState = state);
-      unsubscribe();
-      
-      return currentState!.items.find(item => {
+      const currentState = get(store);
+
+      return currentState.items.find(item => {
         const itemId = idExtractor(item.id);
         return itemId === id;
       }) || null;
@@ -932,16 +927,24 @@ export async function withLoadingState<T>(
   actions: OperationActions,
   loadingType: 'loading' | 'saving' | 'deleting' = 'loading'
 ): Promise<T> {
+  // Map loading types to their corresponding action methods
+  const loadingActions = {
+    loading: actions.setLoading,
+    saving: actions.setSaving,
+    deleting: actions.setDeleting
+  } as const;
+  const setLoadingState = loadingActions[loadingType];
+
   try {
     actions.clearMessages();
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](true);
-    
+    setLoadingState(true);
+
     const result = await operation();
-    
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](false);
+
+    setLoadingState(false);
     return result;
   } catch (error) {
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](false);
+    setLoadingState(false);
     actions.setError(error instanceof Error ? error.message : 'An error occurred');
     throw error;
   }
@@ -967,13 +970,6 @@ export function validateSurrealId(id: unknown): boolean {
   }
   
   return false;
-}
-
-/**
- * Compares two SurrealDB IDs for equality.
- */
-export function compareSurrealIdsLocal(id1: UnknownSurrealThing, id2: UnknownSurrealThing): boolean {
-  return compareSurrealIds(id1, id2);
 }
 
 // ============================================================================

@@ -3,7 +3,8 @@
 //! This module provides secure implementations using input validation
 //! to prevent SQL injection attacks.
 
-use crate::db::{DatabaseClient, NewProject, Project, Company, CompanyCreate, Contact, ContactCreate};
+use crate::db::client::DatabaseClient;
+use crate::db::types::{NewProject, Project, Company, CompanyCreate, Contact, ContactCreate};
 use crate::db::security::{InputValidator, ValidationError};
 use crate::commands::ContactUpdate;
 use surrealdb::Error;

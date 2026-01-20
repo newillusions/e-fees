@@ -11,6 +11,18 @@ import type { CompanyLookup } from './companyLookup';
 import type { FilterConfig } from './filters';
 import { extractId } from './index';
 
+/**
+ * Extracts the project number ID string from a Project's number field.
+ * Handles both object format (ProjectNumber) and string format.
+ */
+function getProjectNumberId(project: Project): string {
+  if (!project.number) return '';
+  if (typeof project.number === 'object' && 'id' in project.number) {
+    return project.number.id || '';
+  }
+  return String(project.number);
+}
+
 // Re-export normalization utilities (defined in separate file to avoid circular deps)
 export { normalizeForSearch, normalizedMatch } from './searchNormalize';
 
@@ -115,9 +127,9 @@ export function createProjectFilterConfig(): FilterConfig<Project> {
     searchFields: PROJECT_SEARCH_FIELDS,
     sortFunction: (a, b) => {
       // Sort by project number descending (newest first)
-      const numA = typeof a.number === 'object' ? (a.number as any)?.id : a.number;
-      const numB = typeof b.number === 'object' ? (b.number as any)?.id : b.number;
-      return (numB || '').localeCompare(numA || '');
+      const numA = getProjectNumberId(a);
+      const numB = getProjectNumberId(b);
+      return numB.localeCompare(numA);
     }
   };
 }
@@ -298,9 +310,7 @@ export function getContactDisplayInfo(
  */
 export function getProjectDisplayInfo(project: Project): { name: string; subtitle: string } {
   const name = project.name || 'Unnamed Project';
-  const projectNumber = typeof project.number === 'object'
-    ? (project.number as any)?.id
-    : project.number;
+  const projectNumber = getProjectNumberId(project);
 
   const subtitle = [projectNumber, project.city, project.country]
     .filter(Boolean)

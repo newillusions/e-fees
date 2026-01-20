@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use log::{info, error};
 use tauri::Manager;
 
@@ -160,39 +161,21 @@ pub fn run() {
 
             // Initialize with unconfigured state - will be configured async
             let db_manager = DatabaseManager::new_unconfigured();
-            let app_state = Arc::new(Mutex::new(db_manager));
-            
+            let app_state = Arc::new(RwLock::new(db_manager));
+
             // Clone state for heartbeat monitoring
             let heartbeat_state = app_state.clone();
+            // Get status reference for heartbeat - we need to do this synchronously during setup
             let status = {
-                if let Ok(manager) = app_state.lock() {
-                    manager.status.clone()
-                } else {
-                    error!("Failed to get status from database manager");
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Failed to initialize database manager"
-                    )));
-                }
+                // Use try_read to avoid blocking, fall back to a new status if lock can't be acquired
+                // This should always succeed since we just created the state
+                let manager = app_state.try_read().expect("Failed to read newly created state");
+                manager.status.clone()
             };
             
             // Set up the application state
             app.manage(app_state.clone());
-            
-            // Position window on right half of screen after a slight delay - DISABLED for new environment
-            // let window_handle = app.handle().clone();
-            // tauri::async_runtime::spawn(async move {
-            //     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            //     if let Some(window) = window_handle.get_webview_window("main") {
-            //         // Use logical position for proper scaling support
-            //         // At 150% scaling: 2560x1440 logical pixels
-            //         let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x: 1280.0, y: 50.0 }));
-            //         // Also ensure the size is correct using logical size
-            //         let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1280.0, height: 1200.0 }));
-            //         info!("Window positioned on right half of screen with scaling support");
-            //     }
-            // });
-            
+
             // Initialize database connection in async context using Tauri's runtime
             let init_state = app_state.clone();
             let app_handle_clone = app.handle().clone();
@@ -228,10 +211,9 @@ pub fn run() {
                     match manager.initialize().await {
                         Ok(_) => {
                             info!("Database initialized successfully");
-                            // Update the original manager in the state
-                            if let Ok(mut state_manager) = init_state.lock() {
-                                *state_manager = manager;
-                            }
+                            // Update the original manager in the state using write lock
+                            let mut state_manager = init_state.write().await;
+                            *state_manager = manager;
                             true
                         }
                         Err(e) => {

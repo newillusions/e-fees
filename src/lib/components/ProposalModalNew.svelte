@@ -252,12 +252,6 @@
   onDelete={mode === 'edit' ? handleDelete : null}
   maxWidth="600px"
   customClass="proposal-modal"
+  zIndex={65}
   on:close={handleClose}
 />
-
-<style>
-  /* Ensure ProposalModal appears above other modals */
-  :global(.proposal-modal) {
-    z-index: 65 !important;
-  }
-</style>

@@ -212,9 +212,5 @@
   on:close={handleClose}
 />
 
-<!-- Company Modal -->
+<!-- Company Modal (can be triggered for inline company creation) -->
 <CompanyModal isOpen={showCompanyModal} mode="create" on:close={handleCompanyModalClose} />
-
-<style>
-  /* z-index is now handled via the zIndex prop passed to CrudModal/BaseModal */
-</style>

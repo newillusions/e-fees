@@ -19,18 +19,34 @@ export type EntityType = 'project' | 'fee' | 'company' | 'contact';
 export type ActionType = 'create' | 'update' | 'delete' | 'status_change';
 
 /**
+ * Base interface for entities that can be logged.
+ * All entity types (Project, Company, Contact, Fee) satisfy this interface.
+ * Uses unknown types for fields that have different structures across entities.
+ */
+export interface LoggableEntity {
+  id?: unknown;
+  name?: string;
+  project_number?: string;
+  number?: unknown; // Can be string (Fee) or object (Project)
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+/**
  * Get a display name for an entity based on its type and data
  */
-export function getEntityDisplayName(entityType: EntityType, entity: Record<string, unknown>): string {
+export function getEntityDisplayName(entityType: EntityType, entity: LoggableEntity): string {
   switch (entityType) {
     case 'project':
-      return (entity.name as string) || (entity.project_number as string) || 'Unknown Project';
+      return entity.name || entity.project_number || 'Unknown Project';
     case 'fee':
-      return (entity.name as string) || (entity.number as string) || 'Unknown Fee';
+      // Fee.number is a string
+      return entity.name || (typeof entity.number === 'string' ? entity.number : undefined) || 'Unknown Fee';
     case 'company':
-      return (entity.name as string) || 'Unknown Company';
+      return entity.name || 'Unknown Company';
     case 'contact':
-      return (entity.full_name as string) ||
+      return entity.full_name ||
              `${entity.first_name || ''} ${entity.last_name || ''}`.trim() ||
              'Unknown Contact';
     default:
@@ -86,7 +102,7 @@ export async function logActivity(log: ActivityLogCreate): Promise<void> {
 export async function logCreate(
   entityType: EntityType,
   entityId: string,
-  entity: Record<string, unknown>,
+  entity: LoggableEntity,
   metadata?: Record<string, unknown>
 ): Promise<void> {
   const entityName = getEntityDisplayName(entityType, entity);
@@ -106,7 +122,7 @@ export async function logCreate(
 export async function logUpdate(
   entityType: EntityType,
   entityId: string,
-  entity: Record<string, unknown>,
+  entity: LoggableEntity,
   changedFields?: string[],
   metadata?: Record<string, unknown>
 ): Promise<void> {
@@ -168,93 +184,68 @@ export async function logStatusChange(
 }
 
 // ============================================================================
-// ENTITY-SPECIFIC LOGGING HELPERS
+// ENTITY LOGGER FACTORY
 // ============================================================================
 
-/**
- * Project activity logging helpers
- */
-export const projectLogger = {
-  async onCreate(project: Record<string, unknown>): Promise<void> {
-    const id = extractSurrealId(project.id as UnknownSurrealThing) || 'unknown';
-    await logCreate('project', id, project);
-  },
+/** Logger interface for entities without status tracking */
+export interface EntityLogger {
+  onCreate(entity: LoggableEntity): Promise<void>;
+  onUpdate(entity: LoggableEntity, changedFields?: string[]): Promise<void>;
+  onDelete(entityId: string, entityName: string): Promise<void>;
+}
 
-  async onUpdate(project: Record<string, unknown>, changedFields?: string[]): Promise<void> {
-    const id = extractSurrealId(project.id as UnknownSurrealThing) || 'unknown';
-    await logUpdate('project', id, project, changedFields);
-  },
-
-  async onDelete(projectId: string, projectName: string): Promise<void> {
-    await logDelete('project', projectId, projectName);
-  },
-
-  async onStatusChange(project: Record<string, unknown>, oldStatus: string, newStatus: string): Promise<void> {
-    const id = extractSurrealId(project.id as UnknownSurrealThing) || 'unknown';
-    const name = getEntityDisplayName('project', project);
-    await logStatusChange('project', id, name, oldStatus, newStatus);
-  }
-};
+/** Logger interface for entities with status tracking */
+export interface EntityLoggerWithStatus extends EntityLogger {
+  onStatusChange(entity: LoggableEntity, oldStatus: string, newStatus: string): Promise<void>;
+}
 
 /**
- * Fee/Proposal activity logging helpers
+ * Factory function to create entity loggers.
+ * Eliminates duplication across project, fee, company, and contact loggers.
  */
-export const feeLogger = {
-  async onCreate(fee: Record<string, unknown>): Promise<void> {
-    const id = extractSurrealId(fee.id as UnknownSurrealThing) || 'unknown';
-    await logCreate('fee', id, fee);
-  },
-
-  async onUpdate(fee: Record<string, unknown>, changedFields?: string[]): Promise<void> {
-    const id = extractSurrealId(fee.id as UnknownSurrealThing) || 'unknown';
-    await logUpdate('fee', id, fee, changedFields);
-  },
-
-  async onDelete(feeId: string, feeName: string): Promise<void> {
-    await logDelete('fee', feeId, feeName);
-  },
-
-  async onStatusChange(fee: Record<string, unknown>, oldStatus: string, newStatus: string): Promise<void> {
-    const id = extractSurrealId(fee.id as UnknownSurrealThing) || 'unknown';
-    const name = getEntityDisplayName('fee', fee);
-    await logStatusChange('fee', id, name, oldStatus, newStatus);
-  }
-};
+function createEntityLogger(entityType: EntityType): EntityLogger {
+  return {
+    async onCreate(entity: LoggableEntity): Promise<void> {
+      const id = extractSurrealId(entity.id as UnknownSurrealThing) || 'unknown';
+      await logCreate(entityType, id, entity);
+    },
+    async onUpdate(entity: LoggableEntity, changedFields?: string[]): Promise<void> {
+      const id = extractSurrealId(entity.id as UnknownSurrealThing) || 'unknown';
+      await logUpdate(entityType, id, entity, changedFields);
+    },
+    async onDelete(entityId: string, entityName: string): Promise<void> {
+      await logDelete(entityType, entityId, entityName);
+    }
+  };
+}
 
 /**
- * Company activity logging helpers
+ * Factory function to create entity loggers with status change support.
  */
-export const companyLogger = {
-  async onCreate(company: Record<string, unknown>): Promise<void> {
-    const id = extractSurrealId(company.id as UnknownSurrealThing) || 'unknown';
-    await logCreate('company', id, company);
-  },
+function createEntityLoggerWithStatus(entityType: EntityType): EntityLoggerWithStatus {
+  const baseLogger = createEntityLogger(entityType);
+  return {
+    ...baseLogger,
+    async onStatusChange(entity: LoggableEntity, oldStatus: string, newStatus: string): Promise<void> {
+      const id = extractSurrealId(entity.id as UnknownSurrealThing) || 'unknown';
+      const name = getEntityDisplayName(entityType, entity);
+      await logStatusChange(entityType, id, name, oldStatus, newStatus);
+    }
+  };
+}
 
-  async onUpdate(company: Record<string, unknown>, changedFields?: string[]): Promise<void> {
-    const id = extractSurrealId(company.id as UnknownSurrealThing) || 'unknown';
-    await logUpdate('company', id, company, changedFields);
-  },
+// ============================================================================
+// ENTITY-SPECIFIC LOGGERS (created via factory)
+// ============================================================================
 
-  async onDelete(companyId: string, companyName: string): Promise<void> {
-    await logDelete('company', companyId, companyName);
-  }
-};
+/** Project activity logger (with status change support) */
+export const projectLogger = createEntityLoggerWithStatus('project');
 
-/**
- * Contact activity logging helpers
- */
-export const contactLogger = {
-  async onCreate(contact: Record<string, unknown>): Promise<void> {
-    const id = extractSurrealId(contact.id as UnknownSurrealThing) || 'unknown';
-    await logCreate('contact', id, contact);
-  },
+/** Fee/Proposal activity logger (with status change support) */
+export const feeLogger = createEntityLoggerWithStatus('fee');
 
-  async onUpdate(contact: Record<string, unknown>, changedFields?: string[]): Promise<void> {
-    const id = extractSurrealId(contact.id as UnknownSurrealThing) || 'unknown';
-    await logUpdate('contact', id, contact, changedFields);
-  },
+/** Company activity logger */
+export const companyLogger = createEntityLogger('company');
 
-  async onDelete(contactId: string, contactName: string): Promise<void> {
-    await logDelete('contact', contactId, contactName);
-  }
-};
+/** Contact activity logger */
+export const contactLogger = createEntityLogger('contact');

@@ -187,10 +187,9 @@ struct DbProjectInfo {
 async fn get_projects_from_db(state: &State<'_, AppState>) -> Result<Vec<DbProjectInfo>, String> {
     // Clone the manager to avoid holding lock across await
     let manager_clone = {
-        let manager = state.lock()
-            .map_err(|e| format!("Failed to lock database: {}", e))?;
+        let manager = state.read().await;
         manager.clone()
-    }; // Lock is dropped here
+    }; // Read lock is dropped here
 
     // Get all projects using the existing get_projects method
     let projects = manager_clone.get_projects()
@@ -466,10 +465,9 @@ pub async fn resolve_folder_inconsistency(
 
             // Clone the manager to avoid holding lock across await
             let manager_clone = {
-                let manager = state.lock()
-                    .map_err(|e| format!("Failed to lock database: {}", e))?;
+                let manager = state.read().await;
                 manager.clone()
-            }; // Lock is dropped here
+            }; // Read lock is dropped here
 
             // Use raw SQL UPDATE to only update the status field
             // This avoids deserialization issues with NULL fields in the Project struct

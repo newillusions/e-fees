@@ -16,7 +16,6 @@ import type {
 } from '../types';
 import { useCrudStore, createEntityStore } from './utils/crud';
 import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
-import { extractSurrealId } from './utils/surrealdb';
 import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
 
 // ============================================================================
@@ -41,91 +40,72 @@ export const connectionStore = writable<ConnectionState>(initialConnectionState)
 // ENTITY STORES - MIGRATED TO CRUD UTILITIES
 // ============================================================================
 
-// Projects store using enhanced CRUD utilities
-const {
-  store: projectsStoreInternal,
-  actions: projectsActionsInternal
-} = createEntityStore(projectsApi, 'Project', {
-  enableOptimistic: true,
-  enableLogging: true
-});
+import type { CrudApi, CrudState } from './utils/crud';
+import type { Writable, Readable } from 'svelte/store';
+import type { UnknownSurrealThing } from '../types';
 
-// Export compatible writable stores for testing and manual updates
-export const projectsStore = writable<Project[]>([]);
-export const projectsLoading = writable<boolean>(false);
-export const projectsError = writable<string | null>(null);
+/** Base entity type that has an optional SurrealDB Thing ID */
+type EntityWithId = { id?: UnknownSurrealThing };
 
-// Auto-sync internal CRUD store with exported stores
-projectsStoreInternal.subscribe(state => {
-  projectsStore.set(state.items);
-  projectsLoading.set(state.loading || state.saving);
-  projectsError.set(state.error);
-});
+/**
+ * Factory function to create entity stores with auto-sync to external stores.
+ * Eliminates code duplication across projects, companies, contacts, and fees.
+ */
+function createSyncedEntityStore<T extends EntityWithId>(
+  api: CrudApi<T>,
+  entityName: string
+) {
+  const { store: internalStore, actions: internalActions } = createEntityStore<T>(api, entityName, {
+    enableOptimistic: true,
+    enableLogging: true
+  });
 
-// Companies store using enhanced CRUD utilities
-const {
-  store: companiesStoreInternal,
-  actions: companiesActionsInternal
-} = createEntityStore(companiesApi, 'Company', {
-  enableOptimistic: true,
-  enableLogging: true
-});
+  const itemsStore = writable<T[]>([]);
+  const loadingStore = writable<boolean>(false);
+  const errorStore = writable<string | null>(null);
 
-// Export compatible writable stores for testing and manual updates
-export const companiesStore = writable<Company[]>([]);
-export const companiesLoading = writable<boolean>(false);
-export const companiesError = writable<string | null>(null);
+  // Auto-sync internal CRUD store with exported stores
+  internalStore.subscribe(state => {
+    itemsStore.set(state.items);
+    loadingStore.set(state.loading || state.saving);
+    errorStore.set(state.error);
+  });
 
-// Auto-sync internal CRUD store with exported stores
-companiesStoreInternal.subscribe(state => {
-  companiesStore.set(state.items);
-  companiesLoading.set(state.loading || state.saving);
-  companiesError.set(state.error);
-});
+  return { internalStore, internalActions, itemsStore, loadingStore, errorStore };
+}
 
-// Contacts store using enhanced CRUD utilities
-const {
-  store: contactsStoreInternal,
-  actions: contactsActionsInternal
-} = createEntityStore(contactsApi, 'Contact', {
-  enableOptimistic: true,
-  enableLogging: true
-});
+// Create all entity stores using the factory
+const projectsInternal = createSyncedEntityStore(projectsApi, 'Project');
+const companiesInternal = createSyncedEntityStore(companiesApi, 'Company');
+const contactsInternal = createSyncedEntityStore(contactsApi, 'Contact');
+const feesInternal = createSyncedEntityStore(feesApi, 'Fee');
 
-// Export compatible writable stores for testing and manual updates
-export const contactsStore = writable<Contact[]>([]);
-export const contactsLoading = writable<boolean>(false);
-export const contactsError = writable<string | null>(null);
+// Export compatible writable stores for testing and components
+export const projectsStore = projectsInternal.itemsStore;
+export const projectsLoading = projectsInternal.loadingStore;
+export const projectsError = projectsInternal.errorStore;
 
-// Auto-sync internal CRUD store with exported stores
-contactsStoreInternal.subscribe(state => {
-  contactsStore.set(state.items);
-  contactsLoading.set(state.loading || state.saving);
-  contactsError.set(state.error);
-});
+export const companiesStore = companiesInternal.itemsStore;
+export const companiesLoading = companiesInternal.loadingStore;
+export const companiesError = companiesInternal.errorStore;
 
-// Fees store using enhanced CRUD utilities
-const {
-  store: feesStoreInternal,
-  actions: feesActionsInternal
-} = createEntityStore(feesApi, 'Fee', {
-  enableOptimistic: true,
-  enableLogging: true
-});
+export const contactsStore = contactsInternal.itemsStore;
+export const contactsLoading = contactsInternal.loadingStore;
+export const contactsError = contactsInternal.errorStore;
 
-// Export compatible writable stores for testing and manual updates
-export const feesStore = writable<Fee[]>([]);
-export const feesLoading = writable<boolean>(false);
-export const feesError = writable<string | null>(null);
+export const feesStore = feesInternal.itemsStore;
+export const feesLoading = feesInternal.loadingStore;
+export const feesError = feesInternal.errorStore;
 
-// Auto-sync internal CRUD store with exported stores
-feesStoreInternal.subscribe(state => {
-  feesStore.set(state.items);
-  feesLoading.set(state.loading || state.saving);
-  feesError.set(state.error);
-});
-
-
+// Internal references for actions
+const projectsStoreInternal = projectsInternal.internalStore;
+const projectsActionsInternal = projectsInternal.internalActions;
+const companiesStoreInternal = companiesInternal.internalStore;
+const companiesActionsInternal = companiesInternal.internalActions;
+const contactsStoreInternal = contactsInternal.internalStore;
+const contactsActionsInternal = contactsInternal.internalActions;
+const feesStoreInternal = feesInternal.internalStore;
+const feesActionsInternal = feesInternal.internalActions;
 
 // ============================================================================
 // DERIVED STORES (COMPUTED VALUES)
@@ -163,12 +143,22 @@ export const recentFeesStore = derived(
 
 
 // Companies with contact counts
+// Optimized: O(n+m) instead of O(n*m) by pre-computing contact counts
 export const companiesWithContactsStore = derived(
   [companiesStore, contactsStore],
   ([companies, contacts]) => {
+    // Build contact count map in O(m)
+    const contactCountMap = new Map<string, number>();
+    for (const contact of contacts) {
+      if (contact.company) {
+        const companyId = String(contact.company);
+        contactCountMap.set(companyId, (contactCountMap.get(companyId) || 0) + 1);
+      }
+    }
+    // Map companies with counts in O(n)
     return companies.map(company => ({
       ...company,
-      contactCount: contacts.filter(contact => contact.company === company.id).length
+      contactCount: contactCountMap.get(String(company.id)) || 0
     }));
   }
 );
@@ -200,7 +190,7 @@ export const projectsActions = {
   async create(project: Omit<Project, 'id'>) {
     const result = await projectsActionsInternal.create(project);
     // Log activity (fire-and-forget)
-    projectLogger.onCreate(result as unknown as Record<string, unknown>);
+    projectLogger.onCreate(result);
     return result;
   },
 
@@ -211,15 +201,11 @@ export const projectsActions = {
 
     // Check if this is a status change
     if (currentProject && projectData.status && currentProject.status !== projectData.status) {
-      projectLogger.onStatusChange(
-        result as unknown as Record<string, unknown>,
-        currentProject.status,
-        projectData.status
-      );
+      projectLogger.onStatusChange(result, currentProject.status, projectData.status);
     } else {
       // Log general update with changed fields
       const changedFields = Object.keys(projectData);
-      projectLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+      projectLogger.onUpdate(result, changedFields);
     }
     return result;
   },
@@ -247,7 +233,7 @@ export const companiesActions = {
   async create(company: Omit<Company, 'id'>) {
     const result = await companiesActionsInternal.create(company);
     // Log activity (fire-and-forget)
-    companyLogger.onCreate(result as unknown as Record<string, unknown>);
+    companyLogger.onCreate(result);
     return result;
   },
 
@@ -255,7 +241,7 @@ export const companiesActions = {
     const result = await companiesActionsInternal.update(id, companyData);
     // Log update with changed fields
     const changedFields = Object.keys(companyData);
-    companyLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    companyLogger.onUpdate(result, changedFields);
     return result;
   },
 
@@ -282,7 +268,7 @@ export const contactsActions = {
   async create(contact: Omit<Contact, 'id'>) {
     const result = await contactsActionsInternal.create(contact);
     // Log activity (fire-and-forget)
-    contactLogger.onCreate(result as unknown as Record<string, unknown>);
+    contactLogger.onCreate(result);
     return result;
   },
 
@@ -290,7 +276,7 @@ export const contactsActions = {
     const result = await contactsActionsInternal.update(id, contactData);
     // Log update with changed fields
     const changedFields = Object.keys(contactData);
-    contactLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+    contactLogger.onUpdate(result, changedFields);
     return result;
   },
 
@@ -320,7 +306,7 @@ export const feesActions = {
   async create(fee: Omit<Fee, 'id'>) {
     const result = await feesActionsInternal.create(fee);
     // Log activity (fire-and-forget)
-    feeLogger.onCreate(result as unknown as Record<string, unknown>);
+    feeLogger.onCreate(result);
     return result;
   },
 
@@ -331,15 +317,11 @@ export const feesActions = {
 
     // Check if this is a status change
     if (currentFee && feeData.status && currentFee.status !== feeData.status) {
-      feeLogger.onStatusChange(
-        result as unknown as Record<string, unknown>,
-        currentFee.status,
-        feeData.status
-      );
+      feeLogger.onStatusChange(result, currentFee.status, feeData.status);
     } else {
       // Log general update with changed fields
       const changedFields = Object.keys(feeData);
-      feeLogger.onUpdate(result as unknown as Record<string, unknown>, changedFields);
+      feeLogger.onUpdate(result, changedFields);
     }
     return result;
   },
@@ -386,11 +368,7 @@ export const feesActions = {
     const result = await feesActionsInternal.update(id, updatedFeeData);
 
     // Log status change (fire-and-forget)
-    feeLogger.onStatusChange(
-      result as unknown as Record<string, unknown>,
-      oldStatus,
-      newStatus
-    );
+    feeLogger.onStatusChange(result, oldStatus, newStatus);
 
     return result;
   }
@@ -405,7 +383,7 @@ export const feesActions = {
 let isLoadingData = false;
 
 // Load all data
-export const loadAllData = async () => {
+export const loadAllData = async (): Promise<void> => {
   // Prevent concurrent loads
   if (isLoadingData) {
     return;
@@ -427,18 +405,18 @@ export const loadAllData = async () => {
 };
 
 // Convenience functions for individual data loading
-export const loadProjects = () => projectsActions.load();
-export const loadCompanies = () => companiesActions.load();
-export const loadContacts = () => contactsActions.load();
-export const loadFees = () => feesActions.load();
+export const loadProjects = (): Promise<void> => projectsActions.load();
+export const loadCompanies = (): Promise<void> => companiesActions.load();
+export const loadContacts = (): Promise<void> => contactsActions.load();
+export const loadFees = (): Promise<void> => feesActions.load();
 
 // Refresh all data
-export const refreshAllData = async () => {
+export const refreshAllData = async (): Promise<void> => {
   await loadAllData();
 };
 
 // Clear all data (useful for logout)
-export const clearAllData = () => {
+export const clearAllData = (): void => {
   projectsActionsInternal.clear();
   companiesActionsInternal.clear();
   contactsActionsInternal.clear();
@@ -449,8 +427,27 @@ export const clearAllData = () => {
 // UTILITY FUNCTIONS
 // ============================================================================
 
+/** Statistics snapshot type */
+interface StatisticsSnapshot {
+  totalProjects: number;
+  activeFees: number;
+  totalCompanies: number;
+  totalContacts: number;
+  totalFees: number;
+}
+
+/** Current data snapshot type */
+interface CurrentDataSnapshot {
+  projects: Project[];
+  companies: Company[];
+  contacts: Contact[];
+  fees: Fee[];
+  connection: ConnectionState;
+  statistics: StatisticsSnapshot;
+}
+
 // Get current values synchronously
-export const getCurrentData = () => ({
+export const getCurrentData = (): CurrentDataSnapshot => ({
   projects: get(projectsStore),
   companies: get(companiesStore),
   contacts: get(contactsStore),
@@ -460,7 +457,7 @@ export const getCurrentData = () => ({
 });
 
 // Check if data is loaded
-export const isDataLoaded = () => {
+export const isDataLoaded = (): boolean => {
   const data = getCurrentData();
   return (
     data.projects.length > 0 ||

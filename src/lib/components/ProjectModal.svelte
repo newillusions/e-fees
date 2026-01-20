@@ -5,7 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { projectsActions, feesStore } from '$lib/stores';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { extractSurrealId, compareSurrealIds } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { logger } from '$lib/services/logger';
@@ -262,40 +262,10 @@
     dispatch('close');
   }
   
-  // Get related fees for impact analysis
-  $: relatedFees = project ? $feesStore.filter(fee => {
-    if (!fee.project_id || !project?.id) return false;
-    
-    let feeProjectId = '';
-    if (typeof fee.project_id === 'string') {
-      feeProjectId = fee.project_id;
-    } else if (fee.project_id && typeof fee.project_id === 'object') {
-      if ((fee.project_id as any).tb && (fee.project_id as any).id) {
-        if (typeof (fee.project_id as any).id === 'string') {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
-        } else if ((fee.project_id as any).id.String) {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
-        }
-      }
-    }
-    
-    let projectIdStr = '';
-    if (typeof project.id === 'string') {
-      projectIdStr = project.id;
-    } else if (project.id && typeof project.id === 'object') {
-      if ((project.id as any).tb && (project.id as any).id) {
-        if (typeof (project.id as any).id === 'string') {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id}`;
-        } else if ((project.id as any).id.String) {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeProjectId.replace('projects:', '');
-    const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || feeProjectId === projectIdStr;
-  }) : [];
+  // Get related fees for impact analysis (uses utility for SurrealDB ID comparison)
+  $: relatedFees = project
+    ? $feesStore.filter(fee => fee.project_id && project?.id && compareSurrealIds(fee.project_id, project.id))
+    : [];
 
   // Load form data when project changes
   $: if (project && mode === 'edit') {
