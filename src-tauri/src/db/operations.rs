@@ -320,7 +320,10 @@ impl DatabaseManager {
             Ok(records) => {
                 if let Some(first) = records.first() {
                     if let Some(dial_code) = first.get("dial_code").and_then(|v| v.as_u64()) {
-                        dial_code as u16
+                        // TYPE-M2: Use try_into with bounds checking instead of lossy cast
+                        u16::try_from(dial_code).map_err(|_| {
+                            self.invalid_request_error(&format!("Dial code {} out of valid range for country: {}", dial_code, country_name))
+                        })?
                     } else {
                         return Err(self.invalid_request_error(&format!("Dial code is not a number for country: {}", country_name)));
                     }
@@ -333,7 +336,12 @@ impl DatabaseManager {
 
         info!("Found country code {} for country {}", country_code, country_name);
 
-        let year = year.unwrap_or_else(|| (chrono::Utc::now().year() % 100) as u8);
+        // TYPE-M2: year % 100 is always 0-99, safe for u8, but use explicit conversion
+        let year = year.unwrap_or_else(|| {
+            let current_year = chrono::Utc::now().year() % 100;
+            // This is always 0-99, so u8 conversion is safe
+            u8::try_from(current_year).unwrap_or(0)
+        });
 
         // Find max sequence using parameterized query
         let query = "SELECT number.seq FROM projects WHERE number.year = $year AND number.country = $country AND number.seq >= 1 AND number.seq <= 99 ORDER BY number.seq DESC LIMIT 1";
@@ -344,7 +352,9 @@ impl DatabaseManager {
             Ok(records) => {
                 if let Some(first) = records.first() {
                     if let Some(seq) = first.get("number").and_then(|n| n.get("seq")).and_then(|s| s.as_u64()) {
-                        (seq + 1) as u8
+                        // TYPE-M2: Use checked arithmetic and try_from for safe conversion
+                        let next = seq.saturating_add(1);
+                        u8::try_from(next).unwrap_or(u8::MAX)
                     } else {
                         1
                     }
