@@ -10,7 +10,7 @@
  * - Activity logging is fire-and-forget (errors don't block the main operation)
  */
 
-import { ApiClient } from '../api';
+import { createActivityLog } from '../api';
 import type { ActivityLogCreate, UnknownSurrealThing } from '../../types';
 import { extractSurrealId } from '../utils/surrealdb';
 import { logger } from './logger';
@@ -92,7 +92,7 @@ export function generateDescription(
  */
 export async function logActivity(log: ActivityLogCreate): Promise<void> {
   try {
-    await ApiClient.createActivityLog(log);
+    await createActivityLog(log);
   } catch (error) {
     // Log the error but don't throw - activity logging should never block operations
     activityServiceLogger.warn('Failed to log activity', { action: log.action, entityType: log.entity_type, error });

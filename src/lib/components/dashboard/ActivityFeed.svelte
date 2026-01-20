@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte';
-  import { ApiClient, type ActivityLog } from '$lib/api';
+  import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
@@ -43,7 +43,7 @@
     try {
       const entityType = entityFilter === 'all' ? undefined : entityFilter;
       const offset = currentPage * PAGE_SIZE;
-      const newActivities = await ApiClient.getActivityLogs(PAGE_SIZE, entityType, offset);
+      const newActivities = await getActivityLogs(PAGE_SIZE, entityType, offset);
 
       if (reset) {
         activities = newActivities;
