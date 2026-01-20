@@ -3,7 +3,6 @@
 //! This module handles health checks, statistics, database info,
 //! window positioning, logging, and debugging utilities.
 
-use chrono::Utc;
 use log::{error, info};
 use tauri::State;
 

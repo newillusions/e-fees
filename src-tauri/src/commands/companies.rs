@@ -5,7 +5,6 @@
 use crate::crud_command;
 use crate::db::{Company, CompanyCreate, PaginatedResponse};
 use crate::commands::utils::execute_with_manager;
-use log::{error, info};
 use tauri::State;
 
 use super::{AppState, CompanyUpdate};

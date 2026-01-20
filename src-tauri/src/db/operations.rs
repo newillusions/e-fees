@@ -4,7 +4,7 @@
 //! extracted from mod.rs to reduce file size and improve organization.
 
 use surrealdb::{Error, Value};
-use log::{error, info, warn};
+use log::{error, info};
 use chrono::Datelike;
 
 use super::{

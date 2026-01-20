@@ -19,7 +19,7 @@ use tauri::{command, AppHandle, State};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use log::{info, error, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 use regex::Regex;
