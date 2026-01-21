@@ -116,8 +116,8 @@
   }
 </script>
 
-<div class="dashboard-container">
-  
+<div class="dashboard-scroll-wrapper">
+  <div class="dashboard-container">
   <!-- Quick Actions -->
   <section class="dashboard-section">
     <QuickActions on:openModal={handleModalOpen} />
@@ -166,6 +166,7 @@
       </div>
     </div>
   </section>
+  </div>
 </div>
 
 <!-- Real Modal Components -->
@@ -198,6 +199,12 @@
 />
 
 <style>
+  .dashboard-scroll-wrapper {
+    height: calc(100vh - 80px); /* Account for header */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;

@@ -747,7 +747,7 @@ html {
   scrollbar-color: #999 #333;
 }
 
-/* Main content - only show scrollbar when needed */
+/* Main content - no scroll here, let inner content handle scrolling */
 .main-content-scroll {
-  overflow-y: auto !important;
+  overflow: hidden !important;
 }
