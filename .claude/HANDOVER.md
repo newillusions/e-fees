@@ -4,23 +4,26 @@
 Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend.
 - **Version**: 0.10.24 (Production-ready)
 - **Auto-Updater**: Working on macOS
-- **KB Integration**: Active (v3.0.0)
+- **KB Integration**: Active (v3.3.4)
+- **Code Review**: Comprehensive Jan 2026 review completed and merged
 
-## Last Session (2026-01-18)
-- Fixed network/DNS configuration for dev database access
-- Added `surreal-dev.internal` DNS override in OPNsense Unbound
-- Dev database now accessible via hostname
-- Mac WiFi moved to trusted SSID ("mrandmrs") for proper routing
+## Last Session (2026-01-21)
+**Summary**: Completed code review refactoring work and merged to main.
 
-## Known Issues
+**Completed:**
+- Fixed QUAL-H1: Added macros (`delegate_delete!`, `delegate_update_merge!`) to reduce DatabaseClient code duplication
+- Fixed ARCH-M1: Replaced ApiClient class usage with direct function imports in production code
+- Cleaned up unused Rust imports in 4 files
+- Verified most critical/high priority issues were already fixed in prior sessions
+- Created and merged PR #1 to GitHub with all code review improvements (13 commits, 142 files)
 
-### macOS Dev Mode Subnet Access
-The Tauri app in dev mode has issues accessing IP addresses outside the app's subnet. This affects SurrealDB connections when the database is on a different VLAN (10.0.23.x) than the dev machine.
-
-**Workarounds:**
-1. Use hostname instead of IP if DNS resolves correctly
-2. Test in release builds which may have different network permissions
-3. Consider running SurrealDB locally for development
+**Key Findings:** Most issues from CODE_REVIEW_FINDINGS_2026-01.md were already addressed:
+- SQL injection fixes (SEC-C1, SEC-C2) - parameterized queries
+- Path traversal protection (SEC-H1) - path validation
+- Password not exposed to frontend (SEC-H2) - AppSettingsPublic
+- XSS prevention (SEC-M2) - textContent
+- Pagination optimized (PERF-H1) - combined query
+- Many performance and type safety improvements
 
 ## Key Technical Context
 
@@ -36,48 +39,40 @@ The Tauri app in dev mode has issues accessing IP addresses outside the app's su
 2. **Git**: Dual remotes - push to both `origin` (Gitea) and `github` (GitHub)
 3. **Releases**: Use `./scripts/publish-release.sh VERSION`
 
+### Architecture (Post-Refactor)
+- **Commands**: Modularized in `src-tauri/src/commands/` (projects.rs, companies.rs, contacts.rs, fees.rs, etc.)
+- **Database**: Split into client.rs, config.rs, operations.rs, types.rs, security.rs
+- **API**: Domain modules in `src/lib/api/` with direct function exports
+
 ### Database Tables
 - `projects` (48 records) - Project opportunities
-- `fee` (37 records) - Fee proposals (renamed from `rfp`)
+- `fee` (37 records) - Fee proposals
 - `company` (19 records) - Client companies
 - `contacts` - Contact persons linked to companies
 - `country`, `currency` - Reference data
 
-### Known Scalability Issues (from SITREP)
-1. **Database Mutex** - Single connection bottleneck in `db/mod.rs`
-2. **No Pagination** - All data loaded at once in `stores.ts`
-3. **Client-side Joins** - N+1 query pattern with derived stores
-
-## Recent Features (v0.10.x)
-- Unified search with normalized matching
-- Activity logging system
-- Folder sync feature (in progress)
-- Project folder links with status-based subfolder paths
-
 ## Next Steps
-1. Complete folder sync testing and commit
-2. Implement pagination (scalability priority)
-3. Add database connection pooling
-4. Continue feature development per SITREP roadmap
+1. Consider releasing v0.10.25 with code review improvements
+2. Continue with remaining low-priority issues if desired
+3. Monitor for any regressions from refactoring
+4. Resume feature development per SITREP roadmap
 
 ## Key Files
 | Purpose | Location |
 |---------|----------|
 | Main instructions | `CLAUDE.md` |
+| Code review findings | `docs/code-review/CODE_REVIEW_FINDINGS_2026-01.md` |
+| Resolution plan | `docs/code-review/RESOLUTION_PLAN_2026-01.md` |
 | Architecture analysis | `docs/planning/SITREP_2025-12-06.md` |
 | Release workflow | `RELEASE_PROCESS.md` |
-| Known issues | `KNOWN_ISSUES.md` |
-| DB commands | `src-tauri/src/commands/mod.rs` |
-| Frontend stores | `src/lib/stores.ts` |
-| API layer | `src/lib/api.ts` |
+| DB commands | `src-tauri/src/commands/` (modularized) |
+| API layer | `src/lib/api/` (domain modules) |
 
 ## KB Commands
 - `/lamp-on` - Load context at session start
 - `/lamp-off` - Save learnings at session end
 - `/kb <query>` - Search knowledge base
 - `/kb-save` - Save specific observation
-- `/kb-pause` - Pause KB capture temporarily
-- `/handoff` - Generate handoff notes for another session
 
 ---
-*Updated: 2026-01-18*
+*Updated: 2026-01-21*
