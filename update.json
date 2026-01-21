@@ -1,15 +1,19 @@
 {
-  "version": "0.10.25",
-  "notes": "Code review improvements: database client macros, direct function imports, cleanup",
-  "pub_date": "2026-01-21T03:54:19Z",
+  "version": "0.10.26",
+  "notes": "Fix: Removed dual scrollbar issue on list pages",
+  "pub_date": "2026-01-21T11:36:20Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3ZXa3ZhUTZXVkJkRHJ1NmdYNWtoVmdNT3QzKzNKNTV1dTB0NkorVnhaVWZuRjU2MWN0WUdrMDdqaHNtL0VOTkdQMG8rUE5GOWdmUjhXbnYwM2h0d1FnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTY3MzQwCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKZ0JMOXNyRnpLbVdoeDJ3N3AzN1EwUlV2Qm1sL1UraU5Cc1I5UzQzSndRNitqT3BaUE9oSUJhRmlFRWdtKzdyNlRrek9KcTlNY29kUlVBT3lsT0UyQmc9PQo=",
-      "url": "https://apache.mms.name/e-fees-releases/0.10.25/E-Fees_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3J5NE9xYlpia29JdE1Bd1JIYklJRXdkK0toR0dmaExEelpUVmx4Wkxoc3ZOd0NSTzJueGNUbGRjMjdWNXJ5MU1taWUzUFdDakZlU2FONXk1aEU5eWc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTkzNTYxCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKMkJjR2srazRFZGFTVnp3VUlUN3RoOEMzSFVKOGdTN2NjYnBlS3hWQVZlaVl3b3kxMThsS1N4cGhiWk00czVDL28rRElzSW55aFBhSGlaKzJoSFdXQkE9PQo=",
+      "url": "https://apache.mms.name/e-fees-releases/0.10.26/macos-aarch64/e-fees.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3JUQ1M2cmxIbS80UVo4RUZ0eHlSVEJ0aHY4aWlUSEpqVjI3SzJ6dURhZHY0ZkRpZnQ5b0xMaGxNMzYvUkpDcHVpWEszSGcxOVNDRmpzSXlUWnN5WXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTkzMjc1CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKM1MweG1wL1hDZVJaSmk4alBIa05CazZuclhpcjNRMXZQRkRubTM4UFNwT0tUOGx1SnYycG42WitGRmxEbGI3VWhzaHdtdW40QVMrS1I5bXhGMk1VQ0E9PQo=",
+      "url": "https://apache.mms.name/e-fees-releases/0.10.26/macos-x64/e-fees.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3JFNWNjRnlXQUtBTTVPNTVnWkNNMmg3djZjQkJUa2pCV1FReG4wV2tzWVVoUmZjaDJIb0N4azIzazdTYmt0dnBEaDNaTzR3WnE3YkFncjF4QWtpbHdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTY3NjE2CWZpbGU6RS1GZWVzXzAuMTAuMjVfeDY0LXNldHVwLmV4ZQpCdVZBUit2UWNwdDZiK01hakNXdWxFQVViVGhORE1wdFhHbWdYS0hNUnBVVndNUHNJT21UUWV5Y1hzaDUzY244YThUWnNrL1Fjd0hrTDBXSVU0d3pEdz09Cg==",
-      "url": "https://apache.mms.name/e-fees-releases/0.10.25/E-Fees_0.10.25_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2dKeThQNk9neUNjaFNMWm03dlZIeTJUUzlhUTNJMS9CcFBheVdTZ2p4NTE4Y1oxRHZlbFVIbVVBcTl6OWRRQXRFUXp1cDVpWkhLYVZYUDMycjdGVXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTkzODQyCWZpbGU6RS1GZWVzXzAuMTAuMjZfeDY0LXNldHVwLmV4ZQpOR1dqOUd2bHZBdGtVeUw2eXMvMGNSd0ZqUmUxU1FYZXZ6bjZmdDQ0Y1p4eDA0OXdoa2lKRVRkQUZ2ajlSVjhJS21rcTlBbG5GTWR1UERUb2dPSnBCZz09Cg==",
+      "url": "https://apache.mms.name/e-fees-releases/0.10.26/windows/e-fees_x64-setup.exe"
     }
   }
 }
