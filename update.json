@@ -1,19 +1,15 @@
 {
   "version": "0.10.25",
-  "notes": "Release v0.10.25",
+  "notes": "Code review improvements: database client macros, direct function imports, cleanup",
   "pub_date": "2026-01-21T03:54:19Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3ZXa3ZhUTZXVkJkRHJ1NmdYNWtoVmdNT3QzKzNKNTV1dTB0NkorVnhaVWZuRjU2MWN0WUdrMDdqaHNtL0VOTkdQMG8rUE5GOWdmUjhXbnYwM2h0d1FnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTY3MzQwCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKZ0JMOXNyRnpLbVdoeDJ3N3AzN1EwUlV2Qm1sL1UraU5Cc1I5UzQzSndRNitqT3BaUE9oSUJhRmlFRWdtKzdyNlRrek9KcTlNY29kUlVBT3lsT0UyQmc9PQo=",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.25/E-Fees_0.10.25_aarch64.app.tar.gz"
-    },
-    "darwin-x86_64": {
-      "signature": "",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.25/E-Fees_0.10.25_x64.app.tar.gz"
+      "url": "https://apache.mms.name/e-fees-releases/0.10.25/E-Fees_aarch64.app.tar.gz"
     },
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3JFNWNjRnlXQUtBTTVPNTVnWkNNMmg3djZjQkJUa2pCV1FReG4wV2tzWVVoUmZjaDJIb0N4azIzazdTYmt0dnBEaDNaTzR3WnE3YkFncjF4QWtpbHdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4OTY3NjE2CWZpbGU6RS1GZWVzXzAuMTAuMjVfeDY0LXNldHVwLmV4ZQpCdVZBUit2UWNwdDZiK01hakNXdWxFQVViVGhORE1wdFhHbWdYS0hNUnBVVndNUHNJT21UUWV5Y1hzaDUzY244YThUWnNrL1Fjd0hrTDBXSVU0d3pEdz09Cg==",
-      "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.25/E-Fees_0.10.25_x64-setup.exe"
+      "url": "https://apache.mms.name/e-fees-releases/0.10.25/E-Fees_0.10.25_x64-setup.exe"
     }
   }
 }
