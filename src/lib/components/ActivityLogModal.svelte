@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte';
-  import { ApiClient, type ActivityLog } from '$lib/api';
+  import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from './LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
@@ -39,7 +39,7 @@
       const entityType = entityFilter === 'all' ? undefined : entityFilter;
       // Load more than needed to enable pagination
       const limit = pageSize * currentPage;
-      let results = await ApiClient.getActivityLogs(limit + 1, entityType);
+      let results = await getActivityLogs(limit + 1, entityType);
 
       // Apply action filter client-side (API doesn't support it yet)
       if (actionFilter !== 'all') {

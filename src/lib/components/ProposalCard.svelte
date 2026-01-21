@@ -3,11 +3,11 @@
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import StatusBadge from './StatusBadge.svelte';
-  import type { FeeProposal } from '../../types';
+  import type { Fee } from '../../types';
   
   const dispatch = createEventDispatcher();
   
-  export let proposal: FeeProposal;
+  export let proposal: Fee;
   export let clickable = true;
   export let projectName: string = '';
   export let companyName: string = '';
@@ -79,7 +79,7 @@
         <span>Rev:<br/>{proposal.rev}</span>
         <span>Staff:<br/>{proposal.staff_name || 'N/A'}</span>
         <span>Issue Date:<br/>{proposal.issue_date.length === 6 ? proposal.issue_date : new Date(proposal.issue_date).toISOString().slice(2,10).replace(/-/g,'')}</span>
-        <span>Created:<br/>{new Date(proposal.time.created_at).toISOString().slice(2,10).replace(/-/g,'')}</span>
+        <span>Created:<br/>{proposal.time ? new Date(proposal.time.created_at).toISOString().slice(2,10).replace(/-/g,'') : '—'}</span>
       </div>
     </div>
   </svelte:fragment>

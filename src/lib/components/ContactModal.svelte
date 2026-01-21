@@ -7,11 +7,10 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { contactsActions, companiesStore } from '$lib/stores';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
   import { get } from 'svelte/store';
   import CrudModal from './base/CrudModal.svelte';
-  import CompanyModal from './CompanyModal.svelte';
   import type { Contact } from '$lib/../types';
   import type { FormFieldConfig } from './base/types';
 
@@ -21,9 +20,6 @@
   export let contact: Contact | null = null;
   export let mode: 'create' | 'edit' = 'create';
   export let zIndex = 100; // Base z-index, can be increased for nested modals
-
-  // Company modal state
-  let showCompanyModal = false;
 
   // Form field configuration
   const fields: FormFieldConfig[] = [
@@ -111,7 +107,7 @@
             return nameMatch || shortNameMatch || abbreviationMatch;
           })
           .map(company => {
-            const companyId = extractSurrealId(company.id) || company.id || '';
+            const companyId = getEntityId(company);
             return {
               id: String(companyId),
               name: company.name || '',
@@ -154,8 +150,7 @@
       };
       await contactsActions.create(contactData);
     } else if (contact) {
-      const contactId =
-        extractSurrealId(contact.id) || extractSurrealId(contact) || contact.id || '';
+      const contactId = getEntityId(contact);
       if (!contactId) {
         throw new Error('Invalid contact ID');
       }
@@ -175,25 +170,16 @@
 
   // Delete handler
   async function handleDelete(entity: Contact) {
-    const contactId = extractSurrealId(entity.id) || extractSurrealId(entity) || entity.id || '';
+    const contactId = getEntityId(entity);
     if (!contactId) {
       throw new Error('Invalid contact ID');
     }
-    await contactsActions.delete(String(contactId));
+    await contactsActions.delete(contactId);
   }
 
   // Close handler
   function handleClose() {
     dispatch('close');
-  }
-
-  // Company modal handlers
-  function handleAddCompany() {
-    showCompanyModal = true;
-  }
-
-  function handleCompanyModalClose() {
-    showCompanyModal = false;
   }
 </script>
 
@@ -211,10 +197,3 @@
   {zIndex}
   on:close={handleClose}
 />
-
-<!-- Company Modal -->
-<CompanyModal isOpen={showCompanyModal} mode="create" on:close={handleCompanyModalClose} />
-
-<style>
-  /* z-index is now handled via the zIndex prop passed to CrudModal/BaseModal */
-</style>

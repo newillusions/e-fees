@@ -19,12 +19,36 @@ use tauri::{command, AppHandle, State};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use log::{info, error, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 use regex::Regex;
+use once_cell::sync::Lazy;
 
 use crate::commands::AppState;
+
+// ============================================================================
+// STATIC REGEX PATTERNS (compiled once at startup)
+// ============================================================================
+
+/// Pattern to match project folder names: YY-NNNNN followed by space and project name
+/// Examples: "25-97108 RAK Beach District", "24-96601 Some Project"
+static PROJECT_FOLDER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{2}-\d{5}\s+.+")
+        .expect("Invalid PROJECT_FOLDER_PATTERN regex - this is a compile-time constant")
+});
+
+/// Pattern to extract project number from folder name
+static PROJECT_NUMBER_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(\d{2}-\d{5})")
+        .expect("Invalid PROJECT_NUMBER_PATTERN regex - this is a compile-time constant")
+});
+
+/// Pattern to extract project name from folder name (after number and space)
+static PROJECT_NAME_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{2}-\d{5}\s+(.+)$")
+        .expect("Invalid PROJECT_NAME_PATTERN regex - this is a compile-time constant")
+});
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -147,22 +171,19 @@ fn get_status_from_folder(folder: &str) -> Option<&'static str> {
 fn is_project_folder(folder_name: &str) -> bool {
     // Pattern: 2 digits, hyphen, 5 digits, space, then project name
     // Examples: "25-97108 RAK Beach District", "24-96601 Some Project"
-    let re = Regex::new(r"^\d{2}-\d{5}\s+.+").unwrap();
-    re.is_match(folder_name)
+    PROJECT_FOLDER_PATTERN.is_match(folder_name)
 }
 
 /// Extract project number from folder name
 fn extract_project_number(folder_name: &str) -> Option<String> {
-    let re = Regex::new(r"^(\d{2}-\d{5})").unwrap();
-    re.captures(folder_name)
+    PROJECT_NUMBER_PATTERN.captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
 }
 
 /// Extract project name from folder name (after the number and space)
 fn extract_project_name(folder_name: &str) -> String {
-    let re = Regex::new(r"^\d{2}-\d{5}\s+(.+)$").unwrap();
-    re.captures(folder_name)
+    PROJECT_NAME_PATTERN.captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
         .unwrap_or_else(|| folder_name.to_string())
@@ -187,10 +208,9 @@ struct DbProjectInfo {
 async fn get_projects_from_db(state: &State<'_, AppState>) -> Result<Vec<DbProjectInfo>, String> {
     // Clone the manager to avoid holding lock across await
     let manager_clone = {
-        let manager = state.lock()
-            .map_err(|e| format!("Failed to lock database: {}", e))?;
+        let manager = state.read().await;
         manager.clone()
-    }; // Lock is dropped here
+    }; // Read lock is dropped here
 
     // Get all projects using the existing get_projects method
     let projects = manager_clone.get_projects()
@@ -466,23 +486,12 @@ pub async fn resolve_folder_inconsistency(
 
             // Clone the manager to avoid holding lock across await
             let manager_clone = {
-                let manager = state.lock()
-                    .map_err(|e| format!("Failed to lock database: {}", e))?;
+                let manager = state.read().await;
                 manager.clone()
-            }; // Lock is dropped here
+            }; // Read lock is dropped here
 
-            // Use raw SQL UPDATE to only update the status field
-            // This avoids deserialization issues with NULL fields in the Project struct
-            let escaped_status = new_status.replace("'", "''");
-            let query = format!(
-                "UPDATE projects:`{}` SET status = '{}', time.updated_at = time::now()",
-                project_id,
-                escaped_status
-            );
-
-            info!("Executing status update query: {}", query);
-
-            manager_clone.execute_raw_query(&query)
+            // Use safe update_project_status function with input validation
+            manager_clone.update_project_status(&project_id, &new_status)
                 .await
                 .map_err(|e| format!("Failed to update project status: {}", e))?;
 
@@ -532,7 +541,9 @@ pub async fn resolve_folder_inconsistency(
                     warn!("Rename failed, attempting copy+delete: {}", e);
 
                     let options = fs_extra::dir::CopyOptions::new();
-                    fs_extra::dir::copy(from, to.parent().unwrap(), &options)
+                    let parent_dir = to.parent()
+                        .ok_or_else(|| "Destination path has no parent directory".to_string())?;
+                    fs_extra::dir::copy(from, parent_dir, &options)
                         .map_err(|e| format!("Failed to copy folder: {}", e))?;
 
                     fs::remove_dir_all(from)

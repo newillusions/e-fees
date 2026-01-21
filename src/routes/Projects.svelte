@@ -192,11 +192,9 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
     }
 
     const fullPath = getFullProjectPath(project);
-    console.log('[openProjectFolder] Attempting to open:', fullPath);
 
     try {
       const result = await openFolderInExplorer(fullPath);
-      console.log('[openProjectFolder] Result:', result);
       if (result.includes('Failed')) {
         alert('Failed to open project folder. Please check the path exists.');
       }

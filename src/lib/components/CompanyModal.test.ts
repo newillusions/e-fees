@@ -28,7 +28,13 @@ vi.mock('$lib/stores', () => ({
 
 // Mock utilities
 vi.mock('$lib/utils/surrealdb', () => ({
-  extractSurrealId: vi.fn()
+  extractSurrealId: vi.fn(),
+  getEntityId: vi.fn((entity) => {
+    if (!entity) return '';
+    if (typeof entity === 'string') return entity;
+    if (entity.id) return typeof entity.id === 'string' ? entity.id : '';
+    return '';
+  })
 }));
 
 vi.mock('$lib/utils/validation', () => ({
@@ -54,9 +60,9 @@ import { useOperationState, withLoadingState } from '$lib/utils/crud';
 
 describe('CompanyModal Component', () => {
   const mockCountries = [
-    { name: 'United Arab Emirates', dial_code: 971 },
-    { name: 'Saudi Arabia', dial_code: 966 },
-    { name: 'United Kingdom', dial_code: 44 }
+    { name: 'United Arab Emirates', dial_code: 971, code: 'AE' },
+    { name: 'Saudi Arabia', dial_code: 966, code: 'SA' },
+    { name: 'United Kingdom', dial_code: 44, code: 'GB' }
   ];
 
   const mockCities = ['Dubai', 'Abu Dhabi', 'Sharjah'];
@@ -77,15 +83,21 @@ describe('CompanyModal Component', () => {
   };
 
   const mockOperationState = {
-    subscribe: vi.fn(callback => {
+    subscribe: vi.fn((callback: (value: any) => void) => {
       callback({ saving: false, deleting: false, error: null, message: null });
-      return { unsubscribe: vi.fn() };
-    })
+      return vi.fn(); // Unsubscriber is just () => void
+    }),
+    set: vi.fn(),
+    update: vi.fn()
   };
 
   const mockOperationActions = {
+    setLoading: vi.fn(),
+    setSaving: vi.fn(),
+    setDeleting: vi.fn(),
     setError: vi.fn(),
     setMessage: vi.fn(),
+    clearMessages: vi.fn(),
     reset: vi.fn()
   };
 
@@ -100,7 +112,7 @@ describe('CompanyModal Component', () => {
     vi.mocked(extractSurrealId).mockReturnValue('emt');
     vi.mocked(withLoadingState).mockImplementation(async fn => await fn());
     vi.mocked(useOperationState).mockReturnValue({
-      store: mockOperationState,
+      store: mockOperationState as any,
       actions: mockOperationActions
     });
   });
@@ -240,7 +252,7 @@ describe('CompanyModal Component', () => {
     it('should delete company after confirmation', async () => {
       const user = userEvent.setup();
 
-      vi.mocked(companiesActions.delete).mockResolvedValue(true);
+      vi.mocked(companiesActions.delete).mockResolvedValue(mockCompany);
 
       const { component } = render(CompanyModal, {
         isOpen: true,
@@ -283,14 +295,16 @@ describe('CompanyModal Component', () => {
 
     it('should show loading spinner during save', () => {
       const loadingState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({ saving: true, deleting: false, error: null, message: null });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: loadingState,
+        store: loadingState as any,
         actions: mockOperationActions
       });
 
@@ -308,19 +322,21 @@ describe('CompanyModal Component', () => {
   describe('Error and Message Display', () => {
     it('should display error messages', () => {
       const errorState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({
             saving: false,
             deleting: false,
             error: 'Something went wrong',
             message: null
           });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: errorState,
+        store: errorState as any,
         actions: mockOperationActions
       });
 
@@ -331,19 +347,21 @@ describe('CompanyModal Component', () => {
 
     it('should display success messages', () => {
       const messageState = {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({
             saving: false,
             deleting: false,
             error: null,
             message: 'Company created successfully'
           });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: messageState,
+        store: messageState as any,
         actions: mockOperationActions
       });
 

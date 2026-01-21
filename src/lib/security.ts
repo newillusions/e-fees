@@ -17,10 +17,24 @@ export interface CSPViolation {
   violatedDirective: string;
 }
 
+/** Details for unsafe-eval security events */
+export interface UnsafeEvalDetails {
+  code: string;
+}
+
+/** Details for inline-script security events */
+export interface InlineScriptDetails {
+  script: string;
+  src: string | null;
+}
+
+/** Union type for all security event details */
+export type SecurityEventDetails = CSPViolation | UnsafeEvalDetails | InlineScriptDetails | Record<string, unknown>;
+
 export interface SecurityEvent {
   type: 'csp-violation' | 'unsafe-eval' | 'inline-script' | 'external-resource';
   timestamp: Date;
-  details: CSPViolation | Record<string, any>;
+  details: SecurityEventDetails;
   userAgent: string;
   url: string;
 }

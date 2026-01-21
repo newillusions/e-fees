@@ -10,6 +10,7 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import ProposalModal from './ProposalModal.svelte';
 import type { Fee, Project, Company, Contact } from '$lib/../types';
+import type { AppSettingsPublic } from '$lib/stores/settings';
 
 // Mock the API
 vi.mock('$lib/api', () => ({
@@ -49,7 +50,13 @@ vi.mock('$lib/stores/settings', () => ({
 
 // Mock utilities
 vi.mock('$lib/utils/surrealdb', () => ({
-  extractSurrealId: vi.fn()
+  extractSurrealId: vi.fn(),
+  getEntityId: vi.fn((entity) => {
+    if (!entity) return '';
+    if (typeof entity === 'string') return entity;
+    if (entity.id) return typeof entity.id === 'string' ? entity.id : '';
+    return '';
+  })
 }));
 
 vi.mock('$lib/utils/validation', () => ({
@@ -109,12 +116,13 @@ describe('ProposalModal Component', () => {
   const mockProjects: Project[] = [
     {
       id: 'projects:25-97101',
-      number: '25-97101',
+      number: { year: 25, country: 971, seq: 1, id: '25-97101' },
       name: 'Dubai Marina Tower',
       name_short: 'Marina Tower',
+      status: 'Active',
       country: 'United Arab Emirates',
       city: 'Dubai',
-      company: 'company:emt',
+      client_company: 'company:emt',
       time: {
         created_at: '2025-08-21T09:00:00Z',
         updated_at: '2025-08-21T09:00:00Z'
@@ -122,12 +130,13 @@ describe('ProposalModal Component', () => {
     },
     {
       id: 'projects:25-96601',
-      number: '25-96601',
+      number: { year: 25, country: 966, seq: 1, id: '25-96601' },
       name: 'Riyadh Complex',
       name_short: 'Riyadh Complex',
+      status: 'Draft',
       country: 'Saudi Arabia',
       city: 'Riyadh',
-      company: 'company:aec',
+      client_company: 'company:aec',
       time: {
         created_at: '2025-08-21T09:00:00Z',
         updated_at: '2025-08-21T09:00:00Z'
@@ -201,15 +210,16 @@ describe('ProposalModal Component', () => {
     id: 'rfp:test123',
     name: 'Dubai Marina Tower Fee Proposal',
     number: 'FP-25-97101',
-    project: 'projects:25-97101',
-    company: 'company:emt',
-    contact: 'contact:test123',
+    project_id: 'projects:25-97101',
+    company_id: 'company:emt',
+    contact_id: 'contact:test123',
     issue_date: '250821',
-    status: 'draft',
-    stage: 'proposal',
+    status: 'Draft',
+    stage: 'Prepared',
     package: 'basic',
-    staff: 'Martin',
+    staff_name: 'Martin',
     activity: 'Design Development',
+    revisions: [],
     time: {
       created_at: '2025-08-21T10:00:00Z',
       updated_at: '2025-08-21T10:00:00Z'
@@ -217,49 +227,56 @@ describe('ProposalModal Component', () => {
   };
 
   const mockOperationState = {
-    subscribe: vi.fn((callback) => {
+    subscribe: vi.fn((callback: (value: any) => void) => {
       callback({ saving: false, deleting: false, error: null, message: null });
-      return { unsubscribe: vi.fn() };
-    })
+      return vi.fn(); // Unsubscriber is just () => void
+    }),
+    set: vi.fn(),
+    update: vi.fn()
   };
 
   const mockOperationActions = {
+    setLoading: vi.fn(),
+    setSaving: vi.fn(),
+    setDeleting: vi.fn(),
     setError: vi.fn(),
     setMessage: vi.fn(),
+    clearMessages: vi.fn(),
     reset: vi.fn()
   };
 
-  const mockSettings = {
-    currentTeamMember: 'Martin'
+  const mockSettings: AppSettingsPublic = {
+    staff_name: 'Martin',
+    has_password: true
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Setup store mocks
+
+    // Setup store mocks - return a function directly (Svelte Unsubscriber is () => void)
     vi.mocked(projectsStore.subscribe).mockImplementation((callback) => {
       callback(mockProjects);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
-    
+
     vi.mocked(companiesStore.subscribe).mockImplementation((callback) => {
       callback(mockCompanies);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
-    
+
     vi.mocked(contactsStore.subscribe).mockImplementation((callback) => {
       callback(mockContacts);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
-    
+
     vi.mocked(feesStore.subscribe).mockImplementation((callback) => {
       callback([]);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
-    
+
     vi.mocked(settingsStore.subscribe).mockImplementation((callback) => {
       callback(mockSettings);
-      return { unsubscribe: vi.fn() };
+      return vi.fn();
     });
     
     // Setup utility mocks
@@ -268,7 +285,7 @@ describe('ProposalModal Component', () => {
     vi.mocked(extractSurrealId).mockReturnValue('test123');
     vi.mocked(withLoadingState).mockImplementation(async (fn) => await fn());
     vi.mocked(useOperationState).mockReturnValue({
-      store: mockOperationState,
+      store: mockOperationState as any,
       actions: mockOperationActions
     });
   });
@@ -393,8 +410,8 @@ describe('ProposalModal Component', () => {
 
     it('should delete proposal after confirmation', async () => {
       const user = userEvent.setup();
-      
-      vi.mocked(feesActions.delete).mockResolvedValue(true);
+
+      vi.mocked(feesActions.delete).mockResolvedValue(mockFee);
       
       render(ProposalModal, {
         isOpen: true,
@@ -437,14 +454,16 @@ describe('ProposalModal Component', () => {
 
     it('should show loading spinner during save', () => {
       const loadingState = {
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({ saving: true, deleting: false, error: null, message: null });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: loadingState,
+        store: loadingState as any,
         actions: mockOperationActions
       });
 
@@ -462,14 +481,16 @@ describe('ProposalModal Component', () => {
   describe('Error and Message Display', () => {
     it('should display error messages', () => {
       const errorState = {
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({ saving: false, deleting: false, error: 'Something went wrong', message: null });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: errorState,
+        store: errorState as any,
         actions: mockOperationActions
       });
 
@@ -480,14 +501,16 @@ describe('ProposalModal Component', () => {
 
     it('should display success messages', () => {
       const messageState = {
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn((callback: (value: any) => void) => {
           callback({ saving: false, deleting: false, error: null, message: 'Fee proposal created successfully' });
-          return { unsubscribe: vi.fn() };
-        })
+          return vi.fn();
+        }),
+        set: vi.fn(),
+        update: vi.fn()
       };
 
       vi.mocked(useOperationState).mockReturnValue({
-        store: messageState,
+        store: messageState as any,
         actions: mockOperationActions
       });
 

@@ -14,10 +14,18 @@
  * - Comprehensive error handling
  */
 
-import { writable, type Writable } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import type { UnknownSurrealThing } from '../../types';
+
+/**
+ * Type-safe helper to access a property by key on an object.
+ * Returns undefined if the property doesn't exist.
+ */
+function getPropertyValue<T extends object>(obj: T, key: string): unknown {
+  return (obj as Record<string, unknown>)[key];
+}
 
 // ============================================================================
 // TYPE DEFINITIONS AND INTERFACES
@@ -73,7 +81,7 @@ export interface CrudApi<T> {
 /**
  * Options for configuring CRUD store behavior.
  */
-export interface CrudStoreOptions {
+export interface CrudStoreOptions<T = unknown> {
   /** Enable optimistic updates */
   enableOptimistic?: boolean;
   /** Enable logging */
@@ -81,9 +89,11 @@ export interface CrudStoreOptions {
   /** Component name for logging context */
   component?: string;
   /** Custom ID extractor function */
-  idExtractor?: (item: any) => string | null;
+  idExtractor?: (id: UnknownSurrealThing) => string | null;
   /** Auto-refresh interval in milliseconds */
   autoRefresh?: number;
+  /** Fields to search within (avoids JSON.stringify per item) */
+  searchFields?: (keyof T)[];
 }
 
 /**
@@ -150,8 +160,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     enableLogging = true,
     component = 'CrudStore',
     idExtractor = extractSurrealId,
-    autoRefresh
-  } = options;
+    autoRefresh,
+    searchFields
+  } = options as CrudStoreOptions<T>;
 
   const componentLogger = enableLogging ? logger.child({ component }) : null;
 
@@ -191,6 +202,20 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(item => {
+        // PERF-H8: Use defined searchFields when available (avoids JSON.stringify per item)
+        if (searchFields && searchFields.length > 0) {
+          for (const field of searchFields) {
+            const value = item[field];
+            if (value !== null && value !== undefined) {
+              const stringValue = typeof value === 'string' ? value : String(value);
+              if (stringValue.toLowerCase().includes(query)) {
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+        // Fallback to JSON.stringify if no searchFields defined
         const searchableText = JSON.stringify(item).toLowerCase();
         return searchableText.includes(query);
       });
@@ -200,7 +225,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
         filtered = filtered.filter(item => {
-          const itemValue = (item as any)[key];
+          const itemValue = getPropertyValue(item, key);
           if (typeof value === 'string' && typeof itemValue === 'string') {
             return itemValue.toLowerCase().includes(value.toLowerCase());
           }
@@ -219,13 +244,21 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     if (!sort) return items;
 
     return [...items].sort((a, b) => {
-      const aValue = (a as any)[sort.field];
-      const bValue = (b as any)[sort.field];
-      
+      const aValue = getPropertyValue(a, sort.field);
+      const bValue = getPropertyValue(b, sort.field);
+
       let comparison = 0;
-      if (aValue < bValue) comparison = -1;
-      else if (aValue > bValue) comparison = 1;
-      
+      // Handle null/undefined values (push them to the end)
+      const aIsEmpty = aValue === undefined || aValue === null;
+      const bIsEmpty = bValue === undefined || bValue === null;
+
+      if (aIsEmpty && !bIsEmpty) comparison = 1;
+      else if (!aIsEmpty && bIsEmpty) comparison = -1;
+      else if (!aIsEmpty && !bIsEmpty) {
+        if (aValue < bValue) comparison = -1;
+        else if (aValue > bValue) comparison = 1;
+      }
+
       return sort.direction === 'desc' ? -comparison : comparison;
     });
   };
@@ -237,14 +270,11 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       
       try {
         const items = await api.getAll();
-        const currentState = store;
-        let stateValue: CrudState<T>;
-        const unsubscribe = currentState.subscribe(state => stateValue = state);
-        unsubscribe();
-        
+        const stateValue = get(store);
+
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, stateValue!.searchQuery, stateValue!.filters),
-          stateValue!.sort
+          applyFiltersAndSearch(items, stateValue.searchQuery, stateValue.filters),
+          stateValue.sort
         );
         
         store.update(state => ({ 
@@ -767,11 +797,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     },
 
     getById(id) {
-      let currentState: CrudState<T>;
-      const unsubscribe = store.subscribe(state => currentState = state);
-      unsubscribe();
-      
-      return currentState!.items.find(item => {
+      const currentState = get(store);
+
+      return currentState.items.find(item => {
         const itemId = idExtractor(item.id);
         return itemId === id;
       }) || null;
@@ -932,16 +960,24 @@ export async function withLoadingState<T>(
   actions: OperationActions,
   loadingType: 'loading' | 'saving' | 'deleting' = 'loading'
 ): Promise<T> {
+  // Map loading types to their corresponding action methods
+  const loadingActions = {
+    loading: actions.setLoading,
+    saving: actions.setSaving,
+    deleting: actions.setDeleting
+  } as const;
+  const setLoadingState = loadingActions[loadingType];
+
   try {
     actions.clearMessages();
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](true);
-    
+    setLoadingState(true);
+
     const result = await operation();
-    
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](false);
+
+    setLoadingState(false);
     return result;
   } catch (error) {
-    actions[loadingType === 'loading' ? 'setLoading' : loadingType === 'saving' ? 'setSaving' : 'setDeleting'](false);
+    setLoadingState(false);
     actions.setError(error instanceof Error ? error.message : 'An error occurred');
     throw error;
   }
@@ -952,28 +988,32 @@ export async function withLoadingState<T>(
 // ============================================================================
 
 /**
+ * Type guard for SurrealDB Thing objects.
+ */
+function isSurrealThingLike(id: unknown): id is { tb: unknown; id: unknown } {
+  return (
+    typeof id === 'object' &&
+    id !== null &&
+    'tb' in id &&
+    'id' in id
+  );
+}
+
+/**
  * Validates SurrealDB ID format.
  */
 export function validateSurrealId(id: unknown): boolean {
   if (!id) return false;
-  
+
   if (typeof id === 'string') {
     return id.length > 0;
   }
-  
-  if (typeof id === 'object' && id !== null) {
-    const thing = id as any;
-    return 'tb' in thing && 'id' in thing && !!thing.tb && !!thing.id;
-  }
-  
-  return false;
-}
 
-/**
- * Compares two SurrealDB IDs for equality.
- */
-export function compareSurrealIdsLocal(id1: UnknownSurrealThing, id2: UnknownSurrealThing): boolean {
-  return compareSurrealIds(id1, id2);
+  if (isSurrealThingLike(id)) {
+    return !!id.tb && !!id.id;
+  }
+
+  return false;
 }
 
 // ============================================================================

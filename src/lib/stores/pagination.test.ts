@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { Project, Company, Contact, Fee } from '../../types';
+import type { Project, Company, Contact, Fee, SurrealThing } from '../../types';
 
 // ============================================================================
 // TYPE DEFINITIONS (Contract for pagination feature)
@@ -156,9 +156,22 @@ function generateTestFee(sequence: number): Fee {
 /**
  * Extract ID from SurrealDB Thing object or string
  */
-function extractTestId(id: string | { id: string }): string {
+function extractTestId(id: string | SurrealThing | { id: string | { String: string } } | undefined): string {
   if (typeof id === 'string') return id;
-  return id.id || String(id);
+  if (!id) return '';
+  // Handle SurrealThing with nested { String: ... } structure
+  if ('tb' in id && id.id) {
+    const innerId = id.id;
+    if (typeof innerId === 'string') return innerId;
+    if (typeof innerId === 'object' && 'String' in innerId) return innerId.String;
+  }
+  // Handle simple { id: string } structure
+  if ('id' in id) {
+    const innerId = id.id;
+    if (typeof innerId === 'string') return innerId;
+    if (typeof innerId === 'object' && innerId && 'String' in innerId) return (innerId as { String: string }).String;
+  }
+  return String(id);
 }
 
 // ============================================================================
@@ -912,11 +925,11 @@ describe('Edge Cases', () => {
 
   it('should handle sort changes mid-pagination', () => {
     // Arrange: Store with partial data loaded
-    const currentSort = 'created_at';
+    const currentSort: string = 'created_at';
     const items = Array.from({ length: 100 }, (_, i) => generateTestProject(i + 1));
 
     // Act: Sort changed
-    const newSort = 'name';
+    const newSort: string = 'name';
     const shouldReload = newSort !== currentSort;
 
     // Assert: Should trigger reload

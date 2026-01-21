@@ -6,7 +6,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
@@ -26,35 +26,6 @@
   export let isOpen = false;
   export let proposal: Fee | null = null;
   export let mode: 'create' | 'edit' = 'create';
-  
-  // Debug logging - using $inspect for Svelte 5 compatibility
-  onMount(() => {
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal mounted with props:', { isOpen, mode, proposalId: proposal?.id });
-    }
-  });
-  
-  $: if (import.meta.env.DEV) {
-    console.log('ProposalModal reactive props changed:', { 
-      isOpen, 
-      mode, 
-      proposalId: proposal?.id,
-      hasProposal: !!proposal
-    });
-  }
-  
-  // Enhanced prop tracking - avoid logging $state objects
-  $: if (import.meta.env.DEV && proposal !== null && proposal !== undefined) {
-    console.log('ProposalModal: Proposal prop is NOT null/undefined, id:', proposal.id);
-  }
-  
-  $: if (import.meta.env.DEV && proposal === null) {
-    console.log('ProposalModal: WARNING - Proposal prop is NULL');
-  }
-  
-  $: if (import.meta.env.DEV && proposal === undefined) {
-    console.log('ProposalModal: WARNING - Proposal prop is UNDEFINED');
-  }
   
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -291,8 +262,9 @@
   }
   
   // Get the mapped project status for a proposal status
-  function getProjectStatusFromProposalStatus(proposalStatus: string): string {
-    const proposalToProjectMapping: Record<string, string> = {
+  type ProjectStatus = 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'active';
+  function getProjectStatusFromProposalStatus(proposalStatus: string): ProjectStatus {
+    const proposalToProjectMapping: Record<string, ProjectStatus> = {
       'Draft': 'Draft',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
@@ -303,16 +275,13 @@
       'On Hold': 'On Hold',
       'Revised': 'Revised'
     };
-    return proposalToProjectMapping[proposalStatus] || proposalStatus;
+    return proposalToProjectMapping[proposalStatus] || (proposalStatus as ProjectStatus);
   }
   
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal: handleSubmit called, mode:', mode);
-    }
-    
+
     // If user typed in the project field but didn't select from dropdown, try to find a match
     if (projectSearchText && !formData.project_id) {
       const exactMatch = allProjectOptions.find(project => 
@@ -340,14 +309,8 @@
     }
     
     if (mode === 'create') {
-      if (import.meta.env.DEV) {
-        console.log('ProposalModal: Calling handleCreate');
-      }
       handleCreate();
     } else {
-      if (import.meta.env.DEV) {
-        console.log('ProposalModal: Calling handleUpdate');
-      }
       handleUpdate();
     }
   }
@@ -359,7 +322,10 @@
       const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
       const companyId = formData.company_id || '';
       const contactId = formData.contact_id || '';
-      
+
+      // QUAL-L6: Create timestamp once for consistency
+      const timestamp = new Date().toISOString();
+
       const proposalData = {
         ...formData,
         rev: parseInt(formData.rev) || 1,
@@ -368,8 +334,8 @@
         contact_id: contactId,
         revisions: [],
         time: {
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: timestamp,
+          updated_at: timestamp
         }
       };
       
@@ -378,7 +344,7 @@
       // Auto-export to JSON if enabled
       if (autoExportToJson && result?.id) {
         try {
-          const feeId = extractSurrealId(result.id) || extractSurrealId(result) || '';
+          const feeId = getEntityId(result);
           if (feeId) {
             const exportResult = await writeFeeToJsonSafe(feeId);
             if (exportResult) {
@@ -421,26 +387,16 @@
     }, operationActions, 'saving');
   }
   
-  // Update proposal with loading state  
+  // Update proposal with loading state
   async function handleUpdate() {
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal: handleUpdate called');
-      console.log('ProposalModal: proposal id:', proposal?.id);
-    }
-    
     const activeProposal = proposal || originalProposal;
     if (!activeProposal) {
       console.error('ProposalModal: No proposal data available');
       operationActions.setError('No proposal data available for update');
       return;
     }
-    
-    // Try multiple extraction approaches like ContactModal
-    const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal: extracted proposalId:', proposalId);
-    }
-    
+
+    const proposalId = getEntityId(activeProposal);
     if (!proposalId) {
       operationActions.setError('Invalid proposal ID');
       return;
@@ -489,10 +445,9 @@
     if (!activeProposal || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      // Try multiple extraction approaches like ContactModal
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) throw new Error('Invalid proposal ID');
-      
+
       const result = await feesActions.delete(proposalId);
       operationActions.setMessage('Proposal deleted successfully');
       closeModal();
@@ -502,63 +457,25 @@
   
   // Handle project status sync confirmation
   async function handleProjectStatusSync(syncStatus: boolean) {
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal: handleProjectStatusSync called, syncStatus:', syncStatus);
-      console.log('ProposalModal: has pendingUpdateData:', !!pendingUpdateData);
-      
-      // Enhanced debugging before clearing dialog - avoid logging $state objects
-      console.log('=== ENHANCED DEBUG: handleProjectStatusSync ===');
-      console.log('ProposalModal: proposal is null?', proposal === null);
-      console.log('ProposalModal: proposal is undefined?', proposal === undefined);
-      if (proposal) {
-        console.log('ProposalModal: proposal.id value:', proposal.id);
-        console.log('ProposalModal: proposal.id type:', typeof proposal.id);
-      }
-      console.log('ProposalModal: mode value:', mode);
-      console.log('ProposalModal: isOpen value:', isOpen);
-      console.log('=== END ENHANCED DEBUG ===');
-    }
-    
     showProjectStatusSync = false;
-    
+
     await withLoadingState(async () => {
-      if (import.meta.env.DEV) {
-        // Debug the proposal object structure - avoid logging $state objects
-        console.log('ProposalModal: proposal.id structure:', proposal?.id);
-        console.log('ProposalModal: has originalProposal fallback:', !!originalProposal);
-      }
-      
       // Use failsafe: try current proposal first, then fall back to originalProposal
       const activeProposal = proposal || originalProposal;
-      if (import.meta.env.DEV) {
-        console.log('ProposalModal: activeProposal selected, has ID:', !!activeProposal?.id);
-      }
-      
+
       if (!activeProposal) {
-        console.error('ProposalModal: No proposal data available (both proposal and originalProposal are null)');
+        console.error('ProposalModal: No proposal data available');
         throw new Error('No proposal data available for update');
       }
-      
-      // Use the same ID extraction logic as handleUpdate
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
-      if (import.meta.env.DEV) {
-        console.log('ProposalModal: extracted proposalId in handleProjectStatusSync:', proposalId);
-      }
-      
-      // If proposalId is still empty, try alternative extraction methods
+
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
         console.error('ProposalModal: Failed to extract proposal ID');
-        if (import.meta.env.DEV) {
-          console.error('ProposalModal: activeProposal.id:', activeProposal?.id);
-        }
         throw new Error('Invalid proposal ID');
       }
-      
+
       let updateData = pendingUpdateData;
       if (!updateData) {
-        if (import.meta.env.DEV) {
-          console.warn('ProposalModal: pendingUpdateData was null, recreating from form data');
-        }
         // Recreate updateData from current form
         const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
         const companyId = formData.company_id || '';
@@ -621,7 +538,7 @@
     showJsonExportAlert = false;
     
     try {
-      const proposalId = extractSurrealId(activeProposal.id) || extractSurrealId(activeProposal) || activeProposal.id || '';
+      const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
         operationActions.setError('Could not extract proposal ID for JSON export');
         return;
@@ -866,9 +783,6 @@
   // Capture original proposal when modal opens (failsafe)
   $: if (proposal && isOpen && !originalProposal) {
     originalProposal = JSON.parse(JSON.stringify(proposal)); // Deep copy
-    if (import.meta.env.DEV) {
-      console.log('ProposalModal: Captured originalProposal with id:', originalProposal?.id);
-    }
   }
   
   // Load form data when proposal changes - only when modal opens
@@ -1100,16 +1014,16 @@
             label="Issue Date"
             bind:value={formData.issue_date}
             placeholder="YYMMDD format"
-            maxlength="6"
+            maxlength={6}
             required
             error={formErrors.issue_date}
           />
-          
+
           <FormInput
             label="Release"
             bind:value={formData.rev}
             placeholder="1"
-            min="1"
+            min={1}
           />
         </div>
         

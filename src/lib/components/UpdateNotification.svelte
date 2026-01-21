@@ -4,7 +4,7 @@
   import { cubicOut } from 'svelte/easing';
   import { check } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
-  import { invoke } from '@tauri-apps/api/core';
+  import { logMessage, getDevMode, type LogLevel } from '$lib/api/system';
 
   let showModal = false;
   let updateAvailable = false;
@@ -19,41 +19,28 @@
   let devMode = false;
 
   // Enhanced logging function - logs to console and backend
-  async function log(level: 'info' | 'debug' | 'error' | 'warn', message: string, data?: any) {
+  // ARCH-L1: Routes invoke call through API layer
+  async function log(level: LogLevel, message: string, data?: unknown) {
     const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] [UPDATER] ${message}`;
+    const formattedMessage = `[${timestamp}] [UPDATER] ${message}`;
 
     if (devMode || level === 'error') {
       if (data) {
-        console[level](logMessage, data);
+        console[level](formattedMessage, data);
       } else {
-        console[level](logMessage);
+        console[level](formattedMessage);
       }
 
-      // Also log to backend for file logging
-      try {
-        await invoke('log_message', {
-          level,
-          target: 'updater',
-          message,
-          context: data ? JSON.stringify(data) : null
-        });
-      } catch (e) {
-        // Ignore logging errors
-      }
+      // Also log to backend for file logging via API layer
+      await logMessage(level, 'updater', message, data ? JSON.stringify(data) : null);
     }
   }
 
   // Check for updates on mount
   onMount(async () => {
-    // Check dev mode first
-    try {
-      devMode = await invoke<boolean>('get_dev_mode');
-      await log('info', `Dev mode: ${devMode}`);
-    } catch (e) {
-      // Default to false if can't get dev mode
-      devMode = false;
-    }
+    // Check dev mode first via API layer
+    devMode = await getDevMode();
+    await log('info', `Dev mode: ${devMode}`);
 
     // Wait a bit after app starts to check for updates
     setTimeout(checkForUpdates, 3000);

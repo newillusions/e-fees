@@ -20,6 +20,9 @@ export const DEFAULT_PAGE_SIZE = 50;
 /** Delay before starting background loading (ms) */
 export const BACKGROUND_LOAD_DELAY = 2000;
 
+/** Delay between loading pages to avoid overwhelming the server (ms) */
+export const PAGE_LOAD_DELAY_MS = 100;
+
 // ============================================================================
 // PAGINATION STATE INTERFACE
 // ============================================================================
@@ -265,7 +268,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
         await actions.loadNextPage();
 
         // Small delay between pages to avoid overwhelming the server
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
       }
     },
 

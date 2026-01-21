@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { projectsStore, projectsActions, companiesStore, companiesActions, contactsStore, contactsActions } from '$lib/stores';
   import { onMount } from 'svelte';
-  import { extractId } from '$lib/utils';
+  import { extractId, findEntityById } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
@@ -10,14 +10,22 @@
   import InfoCard from './InfoCard.svelte';
   import WarningModal from './WarningModal.svelte';
   import type { Fee, Project, Company, Contact } from '../../types';
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
   export let proposal: Fee | null = null;
-  
+
   // Modal state
-  let warningModal = {
+  let warningModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: (() => void | Promise<void>) | null;
+    onCancel: (() => void) | null;
+  } = {
     isOpen: false,
     title: 'Warning',
     message: '',
@@ -26,82 +34,22 @@
     onConfirm: null,
     onCancel: null
   };
-  
+
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
-  
-  // Find related project
-  $: relatedProject = proposal ? $projectsStore.find(p => {
-    if (!proposal.project_id || !p?.id) return false;
-    
-    let projectIdStr = '';
-    if (typeof p.id === 'string') {
-      projectIdStr = p.id;
-    } else if (p.id && typeof p.id === 'object') {
-      if ((p.id as any).tb && (p.id as any).id) {
-        if (typeof (p.id as any).id === 'string') {
-          projectIdStr = `${(p.id as any).tb}:${(p.id as any).id}`;
-        } else if ((p.id as any).id.String) {
-          projectIdStr = `${(p.id as any).tb}:${(p.id as any).id.String}`;
-        }
-      }
-    }
-    
-    let feeProjectId = '';
-    if (typeof proposal.project_id === 'string') {
-      feeProjectId = proposal.project_id;
-    } else if (proposal.project_id && typeof proposal.project_id === 'object') {
-      if ((proposal.project_id as any).tb && (proposal.project_id as any).id) {
-        if (typeof (proposal.project_id as any).id === 'string') {
-          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id}`;
-        } else if ((proposal.project_id as any).id.String) {
-          feeProjectId = `${(proposal.project_id as any).tb}:${(proposal.project_id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeProjectId.replace('projects:', '');
-    const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || feeProjectId === projectIdStr;
-  }) : null;
-  
+
+  // Find related project using type-safe utility
+  $: relatedProject = proposal?.project_id
+    ? findEntityById($projectsStore, proposal.project_id)
+    : null;
+
   // Find related company
   $: relatedCompany = proposal ? companyLookup.getCompany(proposal.company_id) : null;
-  
-  // Find related contact
-  $: relatedContact = proposal ? $contactsStore.find(c => {
-    if (!proposal.contact_id || !c?.id) return false;
-    
-    let contactIdStr = '';
-    if (typeof c.id === 'string') {
-      contactIdStr = c.id;
-    } else if (c.id && typeof c.id === 'object') {
-      if ((c.id as any).tb && (c.id as any).id) {
-        if (typeof (c.id as any).id === 'string') {
-          contactIdStr = `${(c.id as any).tb}:${(c.id as any).id}`;
-        } else if ((c.id as any).id.String) {
-          contactIdStr = `${(c.id as any).tb}:${(c.id as any).id.String}`;
-        }
-      }
-    }
-    
-    let feeContactId = '';
-    if (typeof proposal.contact_id === 'string') {
-      feeContactId = proposal.contact_id;
-    } else if (proposal.contact_id && typeof proposal.contact_id === 'object') {
-      if ((proposal.contact_id as any).tb && (proposal.contact_id as any).id) {
-        if (typeof (proposal.contact_id as any).id === 'string') {
-          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id}`;
-        } else if ((proposal.contact_id as any).id.String) {
-          feeContactId = `${(proposal.contact_id as any).tb}:${(proposal.contact_id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeContactId.replace('contacts:', '');
-    const id2 = contactIdStr.replace('contacts:', '');
-    return id1 === id2 || feeContactId === contactIdStr;
-  }) : null;
+
+  // Find related contact using type-safe utility
+  $: relatedContact = proposal?.contact_id
+    ? findEntityById($contactsStore, proposal.contact_id)
+    : null;
 
   // Load related data when component mounts
   onMount(() => {
@@ -111,9 +59,6 @@
   });
   
   function handleEdit() {
-    if (import.meta.env.DEV) {
-      console.log('ProposalDetail: handleEdit called with proposal id:', proposal?.id);
-    }
     dispatch('edit', proposal);
   }
   
@@ -130,12 +75,6 @@
   
   // Project creation workflow with existence check
   async function handleCreateProject() {
-    if (import.meta.env.DEV) {
-      console.log('ProposalDetail: handleCreateProject called');
-      console.log('Proposal id:', proposal?.id);
-      console.log('Related Project id:', relatedProject?.id);
-    }
-    
     if (!proposal || !relatedProject) {
       console.error('Cannot create project: missing proposal or related project data');
       return;
@@ -279,11 +218,6 @@
   
   // JSON export with safety checks
   async function handleExportToJson() {
-    if (import.meta.env.DEV) {
-      console.log('ProposalDetail: handleExportToJson called');
-      console.log('Proposal id:', proposal?.id);
-    }
-    
     if (!proposal) {
       console.error('Cannot export: no proposal data');
       return;
@@ -357,12 +291,6 @@
     }
   ];
   
-  // Debug custom actions - avoid logging $state objects
-  $: if (import.meta.env.DEV) {
-    console.log('ProposalDetail: customActions updated, count:', customActions.length);
-    console.log('Proposal available:', !!proposal);
-    console.log('Related project available:', !!relatedProject);
-  }
 </script>
 
 <DetailPanel 
@@ -382,7 +310,7 @@
         location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
         stats={[
           { label: 'Revision', value: proposal.rev || 0 },
-          { label: 'Days Active', value: Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) }
+          { label: 'Days Active', value: proposal.time?.created_at ? Math.floor((new Date().getTime() - new Date(proposal.time.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0 }
         ]}
       />
     {/if}
@@ -397,26 +325,26 @@
         fields={[
           { label: 'FP Number', value: proposal.number },
           { label: 'Status', value: proposal.status },
-          { label: 'Revision', value: proposal.rev.toString() },
+          { label: 'Revision', value: (proposal.rev ?? 0).toString() },
           { label: 'Issue Date', value: formatIssueDate(proposal.issue_date) },
           { label: 'Staff Member', value: proposal.staff_name || '—' },
-          { label: 'Created', value: proposal.time.created_at, type: 'date' },
-          { label: 'Last Updated', value: proposal.time.updated_at, type: 'date' },
+          { label: 'Created', value: proposal.time?.created_at, type: 'date' },
+          { label: 'Last Updated', value: proposal.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(proposal.id), type: 'id' }
         ]}
       />
     
     <!-- Project Information Section -->
     {#if relatedProject}
-      <InfoCard 
-        title="Related Project" 
+      <InfoCard
+        title="Related Project"
         columns={3}
         fields={[
           { label: 'Project Number', value: relatedProject.number?.id || '—' },
           { label: 'Project Name', value: relatedProject.name },
-          { label: 'Short Name', value: relatedProject.name_short },
+          { label: 'Short Name', value: relatedProject.name_short || '—' },
           { label: 'Status', value: relatedProject.status },
-          { label: 'Area', value: relatedProject.area },
+          { label: 'Area', value: relatedProject.area || '—' },
           { label: 'Location', value: `${relatedProject.city}, ${relatedProject.country}` }
         ]}
       />
@@ -434,13 +362,13 @@
     
     <!-- Company Information Section -->
     {#if relatedCompany}
-      <InfoCard 
-        title="Client Company" 
+      <InfoCard
+        title="Client Company"
         columns={3}
         fields={[
           { label: 'Company Name', value: relatedCompany.name },
-          { label: 'Short Name', value: relatedCompany.name_short },
-          { label: 'Abbreviation', value: relatedCompany.abbreviation },
+          { label: 'Short Name', value: relatedCompany.name_short || '—' },
+          { label: 'Abbreviation', value: relatedCompany.abbreviation || '—' },
           { label: 'Location', value: `${relatedCompany.city}, ${relatedCompany.country}` },
           { label: 'Registration', value: relatedCompany.reg_no || '—' },
           { label: 'Tax Number', value: relatedCompany.tax_no || '—' }

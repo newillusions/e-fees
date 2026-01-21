@@ -1,0 +1,1 @@
+/Volumes/base/dev/claude/kb-agent/plugin/commands/kb-pause.md

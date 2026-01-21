@@ -49,6 +49,7 @@ export type ValidationErrors<T> = Partial<Record<keyof T, string>>;
  *   // Form is valid
  * }
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateForm<T extends Record<string, any>>(
   formData: T,
   rules: ValidationRule<T>[]

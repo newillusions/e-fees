@@ -5,13 +5,17 @@ use std::future::Future;
 use tauri::State;
 
 /// Generic helper for executing operations with database manager state management
-/// 
+///
 /// This function handles the repetitive pattern of:
-/// 1. Locking the application state
+/// 1. Acquiring a read lock on the application state (async-friendly)
 /// 2. Cloning the database manager
-/// 3. Executing the operation
-/// 4. Logging success/failure
-/// 5. Converting errors to strings
+/// 3. Releasing the lock immediately
+/// 4. Executing the async operation
+/// 5. Logging success/failure
+/// 6. Converting errors to strings
+///
+/// Using RwLock allows concurrent read access, improving throughput for
+/// multiple simultaneous commands.
 pub async fn execute_with_manager<T, F, Fut>(
     state: &State<'_, AppState>,
     operation: F,
@@ -22,15 +26,12 @@ where
     F: FnOnce(DatabaseManager) -> Fut,
     Fut: Future<Output = Result<T, surrealdb::Error>>,
 {
-    // Handle state locking with automatic cleanup
+    // Handle state access with RwLock - async-friendly, allows concurrent reads
     let manager_clone = {
-        let manager = state.lock().map_err(|e| {
-            error!("Failed to lock application state: {}", e);
-            e.to_string()
-        })?;
+        let manager = state.read().await;
         manager.clone()
-    }; // Lock is automatically dropped here when manager goes out of scope
-    
+    }; // Read lock is automatically dropped here when manager goes out of scope
+
     // Execute the operation with consistent logging
     match operation(manager_clone).await {
         Ok(result) => {
@@ -183,24 +184,6 @@ macro_rules! crud_command {
     };
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db::DatabaseManager;
-    use std::sync::{Arc, Mutex};
-    use tauri::State;
-    
-    #[tokio::test]
-    async fn test_execute_with_manager_success() {
-        // This would require more setup for a full test
-        // but demonstrates the testing approach
-        assert!(true);
-    }
-    
-    #[test]
-    fn test_macro_expansion() {
-        // Test that macros compile correctly
-        // This ensures the macro syntax is valid
-        assert!(true);
-    }
-}
+// Note: Tests for these utilities are exercised through integration tests
+// in the commands modules (projects.rs, companies.rs, etc.) and db/tests.rs.
+// The macros are validated at compile time when used in production code.

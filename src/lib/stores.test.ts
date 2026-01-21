@@ -21,16 +21,13 @@ import {
   feesError,
   feesActions,
   connectionStore,
-  filteredProjectsStore,
-  filteredCompaniesStore,
-  filteredContactsStore,
-  filteredFeesStore,
   companiesWithContactsStore,
   statisticsStore,
   loadAllData,
-  clearAllData
+  clearAllData,
+  type ConnectionState
 } from './stores';
-import type { Project, Company, Contact, Fee, ConnectionState } from '../types';
+import type { Project, Company, Contact, Fee } from '../types';
 
 // Mock the API module
 vi.mock('./api', () => ({
@@ -425,6 +422,7 @@ describe('Store Management', () => {
         const newContact = {
           first_name: 'Jane',
           last_name: 'Smith',
+          full_name: 'Jane Smith',
           email: 'jane.smith@example.com',
           phone: '+971507654321',
           position: 'Director',
@@ -500,7 +498,8 @@ describe('Store Management', () => {
           company_id: 'company:TEST',
           contact_id: 'contacts:test_contact',
           status: 'Draft' as const,
-          issue_date: '250816'
+          issue_date: '250816',
+          revisions: []
         };
         
         const createdFee = { ...mockFee, ...newFee, id: 'fee:new_fee' };

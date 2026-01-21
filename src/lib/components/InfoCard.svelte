@@ -6,13 +6,13 @@
   export let title: string = 'Information';
   export let fields: Array<{
     label: string;
-    value: string;
+    value: string | number | undefined;
     type?: 'text' | 'date' | 'id' | 'link';
     clickable?: boolean;
   }> = [];
   export let columns: number = 3;
 
-  function formatValue(value: string, type: string = 'text'): string {
+  function formatValue(value: string | number | undefined, type: string = 'text'): string {
     if (!value) return '—';
 
     switch (type) {
@@ -23,9 +23,9 @@
           year: 'numeric'
         });
       case 'id':
-        return value.replace(/^[^:]+:/, ''); // Remove table prefix from IDs
+        return String(value).replace(/^[^:]+:/, ''); // Remove table prefix from IDs
       default:
-        return value;
+        return String(value);
     }
   }
 </script>

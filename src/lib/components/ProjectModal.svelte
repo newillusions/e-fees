@@ -5,7 +5,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { projectsActions, feesStore } from '$lib/stores';
-  import { extractSurrealId } from '$lib/utils/surrealdb';
+  import { getEntityId, compareSurrealIds } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { logger } from '$lib/services/logger';
@@ -132,8 +132,7 @@
     if (!project) return;
     
     await withLoadingState(async () => {
-      // Try to extract ID from project.id first, then from project itself
-      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      const projectId = getEntityId(project);
       if (!projectId) {
         logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');
@@ -142,7 +141,7 @@
       const projectData = {
         ...formData,
         time: {
-          created_at: project.time.created_at,
+          created_at: project.time?.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
       };
@@ -155,7 +154,7 @@
   }
   
   // Handle status change confirmation
-  async function handleStatusChangeConfirm(event) {
+  async function handleStatusChangeConfirm(event: CustomEvent) {
     const { project: projectData, newStatus, folderChangeRequired, affectedFees, feesToUpdate, suggestedFeeStatus } = event.detail;
     
     // Update the form data with the new status
@@ -217,7 +216,7 @@
   // Handle status change cancellation
   function handleStatusChangeCancel() {
     // Revert the status back to original
-    formData.status = originalProject?.status || 'Draft';
+    formData.status = (originalProject?.status as ProjectStatus) || 'Draft';
     showStatusChangeModal = false;
     pendingStatusChange = '';
   }
@@ -227,8 +226,7 @@
     if (!project || !showDeleteConfirm) return;
     
     await withLoadingState(async () => {
-      // Try to extract ID from project.id first, then from project itself
-      const projectId = extractSurrealId(project.id) || extractSurrealId(project);
+      const projectId = getEntityId(project);
       if (!projectId) {
         logger.error('Failed to extract project ID', { project });
         throw new Error('Invalid project ID');
@@ -262,40 +260,10 @@
     dispatch('close');
   }
   
-  // Get related fees for impact analysis
-  $: relatedFees = project ? $feesStore.filter(fee => {
-    if (!fee.project_id || !project?.id) return false;
-    
-    let feeProjectId = '';
-    if (typeof fee.project_id === 'string') {
-      feeProjectId = fee.project_id;
-    } else if (fee.project_id && typeof fee.project_id === 'object') {
-      if ((fee.project_id as any).tb && (fee.project_id as any).id) {
-        if (typeof (fee.project_id as any).id === 'string') {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id}`;
-        } else if ((fee.project_id as any).id.String) {
-          feeProjectId = `${(fee.project_id as any).tb}:${(fee.project_id as any).id.String}`;
-        }
-      }
-    }
-    
-    let projectIdStr = '';
-    if (typeof project.id === 'string') {
-      projectIdStr = project.id;
-    } else if (project.id && typeof project.id === 'object') {
-      if ((project.id as any).tb && (project.id as any).id) {
-        if (typeof (project.id as any).id === 'string') {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id}`;
-        } else if ((project.id as any).id.String) {
-          projectIdStr = `${(project.id as any).tb}:${(project.id as any).id.String}`;
-        }
-      }
-    }
-    
-    const id1 = feeProjectId.replace('projects:', '');
-    const id2 = projectIdStr.replace('projects:', '');
-    return id1 === id2 || feeProjectId === projectIdStr;
-  }) : [];
+  // Get related fees for impact analysis (uses utility for SurrealDB ID comparison)
+  $: relatedFees = project
+    ? $feesStore.filter(fee => fee.project_id && project?.id && compareSurrealIds(fee.project_id, project.id))
+    : [];
 
   // Load form data when project changes
   $: if (project && mode === 'edit') {
@@ -309,7 +277,7 @@
       city: project.city || '',
       country: project.country || '',
       folder: project.folder || '',
-      status: project.status || 'Draft'
+      status: (project.status as ProjectStatus) || 'Draft'
     };
   }
 </script>

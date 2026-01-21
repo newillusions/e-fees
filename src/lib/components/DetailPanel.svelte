@@ -3,33 +3,27 @@
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
+  interface CustomAction {
+    handler: () => void;
+    label: string;
+    disabled?: boolean;
+    tooltip?: string;
+    icon: string;
+  }
+
   const dispatch = createEventDispatcher();
 
   export let isOpen = false;
   export let title = '';
   export let canEdit = true;
-  export let customActions = [];
+  export let customActions: CustomAction[] = [];
   export let show = true; // New prop to control visibility
-
-  // Debug logging - avoid logging complex objects
-  $: if (import.meta.env.DEV) {
-    console.log('DetailPanel props:', {
-      isOpen,
-      title,
-      canEdit,
-      show,
-      customActionsCount: customActions.length
-    });
-  }
 
   function closePanel() {
     dispatch('close');
   }
 
   function handleEdit() {
-    if (import.meta.env.DEV) {
-      console.log('DetailPanel: handleEdit called');
-    }
     dispatch('edit');
   }
 
@@ -71,13 +65,7 @@
         <!-- Custom Action Buttons -->
         {#each customActions as action}
           <button
-            on:click={() => {
-              if (import.meta.env.DEV) {
-                console.log('DetailPanel: Custom action clicked:', action.label);
-                console.log('Action disabled?', action.disabled);
-              }
-              action.handler();
-            }}
+            on:click={() => action.handler()}
             class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
             aria-label={action.label}
             disabled={action.disabled}

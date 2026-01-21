@@ -14,7 +14,15 @@
   import { push } from 'svelte-spa-router';
 
   // Statistics from backend (efficient COUNT queries)
-  let stats = $state({
+  interface DashboardStats {
+    totalProjects: number;
+    activeFees: number;
+    totalCompanies: number;
+    totalContacts: number;
+    totalFees: number;
+  }
+
+  let stats = $state<DashboardStats>({
     totalProjects: 0,
     activeFees: 0,
     totalCompanies: 0,
@@ -63,7 +71,16 @@
     }
   }
 
-  const statCards = [
+  // Type for stat cards with proper key typing
+  interface StatCard {
+    title: string;
+    key: keyof DashboardStats;
+    icon: string;
+    color: string;
+    route: string;
+  }
+
+  const statCards: StatCard[] = [
     {
       title: 'Total Projects',
       key: 'totalProjects',
@@ -127,7 +144,7 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <div class="stat-number">{(stats as any)[card.key]}</div>
+                <div class="stat-number">{stats[card.key]}</div>
                 <div class="stat-label">{card.title}</div>
               </div>
             </div>

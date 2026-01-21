@@ -3,6 +3,7 @@
   import BaseModal from './BaseModal.svelte';
   import Button from './Button.svelte';
   import { moveProjectFolder, getFolderForStatus, getStatusForFolder, type FolderOperationResult } from '$lib/api/folderManagement';
+  import { extractId } from '$lib/utils';
   import type { Project, Fee } from '../../types';
   
   const dispatch = createEventDispatcher();
@@ -57,8 +58,9 @@
       
       // Auto-select relevant fees for update
       affectedFees.forEach(fee => {
-        if (fee.id && suggestedFeeStatus && fee.status !== suggestedFeeStatus) {
-          selectedFeeUpdates[fee.id] = true;
+        const feeId = extractId(fee.id);
+        if (feeId && suggestedFeeStatus && fee.status !== suggestedFeeStatus) {
+          selectedFeeUpdates[feeId] = true;
         }
       });
     } else {
@@ -100,9 +102,10 @@
     try {
       if (mode === 'project-primary') {
         // Collect fees that should be updated
-        const feesToUpdate = affectedFees.filter(fee => 
-          fee.id && selectedFeeUpdates[fee.id]
-        ).map(fee => ({
+        const feesToUpdate = affectedFees.filter(fee => {
+          const feeId = extractId(fee.id);
+          return feeId && selectedFeeUpdates[feeId];
+        }).map(fee => ({
           id: fee.id,
           newStatus: suggestedFeeStatus
         }));
@@ -144,7 +147,7 @@
   function getStatusChangeDescription(): string {
     if (!project?.status || !newStatus) return '';
     
-    const statusChanges = {
+    const statusChanges: Record<string, string> = {
       'RFP->Active': 'Project awarded - moving to current projects',
       'RFP->Completed': 'Project completed directly from RFP stage',
       'RFP->Cancelled': 'RFP cancelled - moving to inactive',
@@ -154,7 +157,7 @@
       'Completed->Active': 'Reopening completed project',
       'Cancelled->RFP': 'Reactivating cancelled project'
     };
-    
+
     const key = `${project.status}->${newStatus}`;
     return statusChanges[key] || `Changing status from ${project.status} to ${newStatus}`;
   }
@@ -270,10 +273,11 @@
                 <div class="space-y-0.5">
                   <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">Select proposals to update:</h5>
                   {#each affectedFees as fee}
+                    {@const feeId = extractId(fee.id) ?? ''}
                     <label class="flex items-center gap-2 py-0.5 px-1 bg-emittiv-black/30 rounded text-xs cursor-pointer hover:bg-emittiv-black/40">
                       <input
                         type="checkbox"
-                        bind:checked={selectedFeeUpdates[fee.id]}
+                        bind:checked={selectedFeeUpdates[feeId]}
                         disabled={!suggestedFeeStatus || fee.status === suggestedFeeStatus}
                         class="emittiv-checkbox emittiv-checkbox-sm"
                       />
@@ -281,7 +285,7 @@
                         <span class="text-emittiv-white">{fee.number}</span>
                         <div class="flex items-center gap-2">
                           <span class="text-emittiv-lighter">{fee.status}</span>
-                          {#if suggestedFeeStatus && fee.status !== suggestedFeeStatus && selectedFeeUpdates[fee.id]}
+                          {#if suggestedFeeStatus && fee.status !== suggestedFeeStatus && selectedFeeUpdates[feeId]}
                             <span class="text-emittiv-splash">→ {suggestedFeeStatus}</span>
                           {/if}
                         </div>

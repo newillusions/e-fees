@@ -2,6 +2,18 @@
  * Type definitions for the generic CRUD modal system.
  */
 
+import type { ValidationRule } from '$lib/utils/validation';
+
+/** Type for typeahead search result items */
+export interface TypeaheadOption {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+/** Type for form field values */
+export type FormFieldValue = string | number | boolean | null | undefined;
+
 /**
  * Configuration for a form field in the CRUD modal.
  */
@@ -19,7 +31,7 @@ export interface FormFieldConfig {
   /** Maximum length for text inputs */
   maxlength?: number;
   /** Default value for the field */
-  defaultValue?: any;
+  defaultValue?: FormFieldValue;
   /** Whether the field is disabled */
   disabled?: boolean;
   /** Additional CSS classes */
@@ -28,22 +40,20 @@ export interface FormFieldConfig {
   colSpan?: 1 | 2;
 
   // Select field options
-  /** Options for select fields */
-  options?: Array<{ id: string; name: string; [key: string]: any }>;
+  /** Options for select fields (value/label for FormSelect) */
+  options?: Array<{ value: string; label: string }>;
 
   // Typeahead field options
   /** Fields to display in typeahead options */
   displayFields?: string[];
   /** Search handler for typeahead fields */
-  onSearch?: (
-    searchText: string
-  ) => Promise<Array<{ id: string; name: string; [key: string]: any }>>;
+  onSearch?: (searchText: string) => Promise<TypeaheadOption[]>;
   /** Selection handler for typeahead fields */
-  onSelect?: (selected: any) => void;
+  onSelect?: (selected: TypeaheadOption) => void;
 
   // Computed field options
   /** Computation function for computed fields */
-  computeFn?: (formData: any) => string;
+  computeFn?: (formData: Record<string, unknown>) => string;
 
   // Group field options
   /** Child fields for group fields */
@@ -67,7 +77,7 @@ export interface CrudModalProps<T> {
   /** Field configurations */
   fields: FormFieldConfig[];
   /** Validation rules */
-  validationRules?: any[];
+  validationRules?: ValidationRule<T>[];
   /** Save handler */
   onSave: (data: T) => Promise<void>;
   /** Delete handler (optional) */
@@ -83,6 +93,6 @@ export interface CrudModalProps<T> {
  */
 export interface FieldChangeEvent {
   fieldName: string;
-  value: any;
-  formData: any;
+  value: unknown;
+  formData: Record<string, unknown>;
 }

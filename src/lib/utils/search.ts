@@ -11,8 +11,21 @@ import type { CompanyLookup } from './companyLookup';
 import type { FilterConfig } from './filters';
 import { extractId } from './index';
 
-// Re-export normalization utilities (defined in separate file to avoid circular deps)
-export { normalizeForSearch, normalizedMatch } from './searchNormalize';
+/**
+ * Extracts the project number ID string from a Project's number field.
+ * Handles both object format (ProjectNumber) and string format.
+ */
+function getProjectNumberId(project: Project): string {
+  if (!project.number) return '';
+  if (typeof project.number === 'object' && 'id' in project.number) {
+    return project.number.id || '';
+  }
+  return String(project.number);
+}
+
+// Import and re-export normalization utilities
+import { normalizeForSearch, normalizedMatch } from './searchNormalize';
+export { normalizeForSearch, normalizedMatch };
 
 /**
  * Lookup context for related entity searches.
@@ -115,9 +128,9 @@ export function createProjectFilterConfig(): FilterConfig<Project> {
     searchFields: PROJECT_SEARCH_FIELDS,
     sortFunction: (a, b) => {
       // Sort by project number descending (newest first)
-      const numA = typeof a.number === 'object' ? (a.number as any)?.id : a.number;
-      const numB = typeof b.number === 'object' ? (b.number as any)?.id : b.number;
-      return (numB || '').localeCompare(numA || '');
+      const numA = getProjectNumberId(a);
+      const numB = getProjectNumberId(b);
+      return numB.localeCompare(numA);
     }
   };
 }
@@ -298,9 +311,7 @@ export function getContactDisplayInfo(
  */
 export function getProjectDisplayInfo(project: Project): { name: string; subtitle: string } {
   const name = project.name || 'Unnamed Project';
-  const projectNumber = typeof project.number === 'object'
-    ? (project.number as any)?.id
-    : project.number;
+  const projectNumber = getProjectNumberId(project);
 
   const subtitle = [projectNumber, project.city, project.country]
     .filter(Boolean)
@@ -322,4 +333,144 @@ export function getCompanyDisplayInfo(company: Company): { name: string; subtitl
     .join(' • ');
 
   return { name, subtitle };
+}
+
+// ============================================================================
+// TYPEAHEAD SEARCH UTILITIES
+// ============================================================================
+
+/**
+ * Configuration for typeahead search.
+ */
+export interface TypeaheadSearchConfig<T, R> {
+  /** Fields to search within each item */
+  searchFields: (keyof T)[];
+  /** Function to extract nested field values (e.g., project.number.id) */
+  nestedFieldExtractor?: (item: T) => string[];
+  /** Function to transform item to result format */
+  mapToResult: (item: T) => R;
+  /** Maximum results to return (default: 10) */
+  maxResults?: number;
+}
+
+/**
+ * Creates a typeahead search function for a given entity type.
+ *
+ * Performance optimized:
+ * - Normalizes search query once (not per item)
+ * - Uses pre-defined search fields
+ * - Limits results early
+ *
+ * @param config - Search configuration
+ * @returns A search function that takes items and search text
+ *
+ * @example
+ * ```typescript
+ * const searchProjects = createTypeaheadSearch({
+ *   searchFields: ['name', 'name_short'],
+ *   nestedFieldExtractor: (p) => [p.number?.id || ''],
+ *   mapToResult: (p) => ({ id: extractId(p.id), name: p.name })
+ * });
+ *
+ * const results = searchProjects(projects, 'dubai');
+ * ```
+ */
+export function createTypeaheadSearch<T, R>(
+  config: TypeaheadSearchConfig<T, R>
+): (items: T[], searchText: string) => R[] {
+  const { searchFields, nestedFieldExtractor, mapToResult, maxResults = 10 } = config;
+
+  return (items: T[], searchText: string): R[] => {
+    if (!searchText || searchText.length < 1 || !items?.length) {
+      return [];
+    }
+
+    // Normalize search query once (PERF-H5 fix)
+    const normalizedQuery = normalizeForSearch(searchText);
+    const results: R[] = [];
+
+    for (const item of items) {
+      // Check standard fields
+      let matched = false;
+      for (const field of searchFields) {
+        const value = item[field];
+        if (value && typeof value === 'string' && normalizedMatch(value, normalizedQuery)) {
+          matched = true;
+          break;
+        }
+      }
+
+      // Check nested fields if not matched yet
+      if (!matched && nestedFieldExtractor) {
+        const nestedValues = nestedFieldExtractor(item);
+        for (const value of nestedValues) {
+          if (value && normalizedMatch(value, normalizedQuery)) {
+            matched = true;
+            break;
+          }
+        }
+      }
+
+      if (matched) {
+        results.push(mapToResult(item));
+        if (results.length >= maxResults) {
+          break; // Early exit once we have enough results
+        }
+      }
+    }
+
+    return results;
+  };
+}
+
+/**
+ * Pre-configured typeahead search for Projects.
+ */
+export function createProjectTypeaheadSearch(
+  extractIdFn: (item: UnknownSurrealThing) => string | null
+): (projects: Project[], searchText: string) => Array<{ id: string; name: string; name_short: string; number: string }> {
+  return createTypeaheadSearch<Project, { id: string; name: string; name_short: string; number: string }>({
+    searchFields: ['name', 'name_short'],
+    nestedFieldExtractor: (p) => [p.number?.id || ''],
+    mapToResult: (p) => ({
+      id: extractIdFn(p.id) || extractIdFn(p) || '',
+      name: p.name || '',
+      name_short: p.name_short || '',
+      number: p.number?.id || 'No Number'
+    })
+  });
+}
+
+/**
+ * Pre-configured typeahead search for Companies.
+ */
+export function createCompanyTypeaheadSearch(
+  extractIdFn: (item: UnknownSurrealThing) => string | null
+): (companies: Company[], searchText: string) => Array<{ id: string; name: string; name_short: string; abbreviation: string }> {
+  return createTypeaheadSearch<Company, { id: string; name: string; name_short: string; abbreviation: string }>({
+    searchFields: ['name', 'name_short', 'abbreviation'],
+    mapToResult: (c) => ({
+      id: extractIdFn(c.id) || extractIdFn(c) || '',
+      name: c.name || '',
+      name_short: c.name_short || '',
+      abbreviation: c.abbreviation || ''
+    })
+  });
+}
+
+/**
+ * Pre-configured typeahead search for Contacts.
+ */
+export function createContactTypeaheadSearch(
+  extractIdFn: (item: UnknownSurrealThing) => string | null
+): (contacts: Contact[], searchText: string) => Array<{ id: string; name: string; full_name: string; email: string }> {
+  return createTypeaheadSearch<Contact, { id: string; name: string; full_name: string; email: string }>({
+    searchFields: ['full_name', 'email'],
+    mapToResult: (c) => ({
+      id: extractIdFn(c.id) || extractIdFn(c) || '',
+      name: c.full_name || '',
+      full_name: c.full_name || '',
+      email: c.email || ''
+    })
+  });
 }

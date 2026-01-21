@@ -4,19 +4,31 @@
 Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend.
 - **Version**: 0.10.24 (Production-ready)
 - **Auto-Updater**: Working on macOS
-- **KB Integration**: Active (v0.5.1)
+- **KB Integration**: Active (v3.0.0)
 
-## Last Session (2025-12-14)
-- KB Agent plugin installed and configured
-- Documentation cleanup completed
-- Outdated docs archived to `docs/archive/pre-kb-cleanup-2025-12-14/`
+## Last Session (2026-01-18)
+- Fixed network/DNS configuration for dev database access
+- Added `surreal-dev.internal` DNS override in OPNsense Unbound
+- Dev database now accessible via hostname
+- Mac WiFi moved to trusted SSID ("mrandmrs") for proper routing
+
+## Known Issues
+
+### macOS Dev Mode Subnet Access
+The Tauri app in dev mode has issues accessing IP addresses outside the app's subnet. This affects SurrealDB connections when the database is on a different VLAN (10.0.23.x) than the dev machine.
+
+**Workarounds:**
+1. Use hostname instead of IP if DNS resolves correctly
+2. Test in release builds which may have different network permissions
+3. Consider running SurrealDB locally for development
 
 ## Key Technical Context
 
 ### Tech Stack
 - **Frontend**: Svelte 5 with TypeScript, TailwindCSS
 - **Backend**: Tauri v2 (Rust)
-- **Database**: SurrealDB @ ws://10.0.1.17:8000 (emittiv/projects)
+- **Database**: SurrealDB @ http://surreal-dev.internal:8000 (emittiv/projects)
+- **KB Database**: SurrealDB @ http://10.0.23.11:8000 (kb/knowledge)
 - **Design**: Emittiv brand palette (black/orange theme)
 
 ### Critical Rules
@@ -53,7 +65,6 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 |---------|----------|
 | Main instructions | `CLAUDE.md` |
 | Architecture analysis | `docs/planning/SITREP_2025-12-06.md` |
-| Recent session notes | `docs/planning/HANDOVER_2025-12-10.md` |
 | Release workflow | `RELEASE_PROCESS.md` |
 | Known issues | `KNOWN_ISSUES.md` |
 | DB commands | `src-tauri/src/commands/mod.rs` |
@@ -65,6 +76,8 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 - `/lamp-off` - Save learnings at session end
 - `/kb <query>` - Search knowledge base
 - `/kb-save` - Save specific observation
+- `/kb-pause` - Pause KB capture temporarily
+- `/handoff` - Generate handoff notes for another session
 
 ---
-*Updated: 2025-12-14*
+*Updated: 2026-01-18*

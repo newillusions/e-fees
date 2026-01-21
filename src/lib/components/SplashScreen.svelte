@@ -28,22 +28,24 @@
   
   let messageIndex = 0;
   
-  onMount(async () => {
-    // Load app version
-    appVersion = await getAppVersion();
+  onMount(() => {
+    // Load app version (async but not blocking)
+    getAppVersion().then(version => {
+      appVersion = version;
+    });
 
     // Animate dots
-    dotInterval = setInterval(() => {
+    dotInterval = window.setInterval(() => {
       dots = dots.length >= 3 ? '' : dots + '.';
-    }, 500) as any;
-    
+    }, 500);
+
     // Progress simulation
-    progressInterval = setInterval(() => {
+    progressInterval = window.setInterval(() => {
       if (progress < 90) {
         progress += Math.random() * 15;
         if (progress > 90) progress = 90;
       }
-    }, 300) as any;
+    }, 300);
     
     // Cycle through connection messages
     const messageInterval = setInterval(() => {

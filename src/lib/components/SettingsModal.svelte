@@ -7,12 +7,14 @@
 
   // Folder sync modal state
   let showFolderSyncModal = false;
-  
+
   const dispatch = createEventDispatcher();
-  
+
   export let isOpen = false;
-  
+
   // Settings form data - initialize with defaults
+  // This uses AppSettings (with surrealdb_pass) for the form, even though
+  // the store holds AppSettingsPublic (with has_password instead)
   let settings: AppSettings = {
     surrealdb_url: '',
     surrealdb_ns: '',
@@ -26,24 +28,31 @@
     project_folder_path: '',
     dev_mode: false
   };
-  
+
+  // Track whether a password exists (from backend) and if user entered new one
+  let hasExistingPassword = false;
+  let passwordChanged = false;
+
   // Loading states
   let isSaving = false;
   let saveMessage = '';
-  
+
   // Load settings when modal opens
   $: if (isOpen) {
     loadSettings();
   }
-  
-  // Update form when store changes
+
+  // Update form when store changes (store holds public settings without password)
   $: if ($settingsStore) {
+    hasExistingPassword = $settingsStore.has_password;
     settings = {
       surrealdb_url: $settingsStore.surrealdb_url || '',
       surrealdb_ns: $settingsStore.surrealdb_ns || '',
       surrealdb_db: $settingsStore.surrealdb_db || '',
       surrealdb_user: $settingsStore.surrealdb_user || '',
-      surrealdb_pass: $settingsStore.surrealdb_pass || '',
+      // Password is never returned from backend - start empty
+      // User can enter new password or leave empty to keep existing
+      surrealdb_pass: '',
       staff_name: $settingsStore.staff_name || '',
       staff_email: $settingsStore.staff_email || '',
       staff_phone: $settingsStore.staff_phone || '',
@@ -51,6 +60,12 @@
       project_folder_path: $settingsStore.project_folder_path || '',
       dev_mode: $settingsStore.dev_mode || false
     };
+    passwordChanged = false;
+  }
+
+  // Track when user modifies the password field
+  function onPasswordInput() {
+    passwordChanged = true;
   }
   
   async function loadSettings() {
@@ -60,36 +75,44 @@
   async function saveSettingsForm() {
     isSaving = true;
     saveMessage = '';
-    
+
     try {
       // Validate required fields
       if (!settings.surrealdb_url || !settings.surrealdb_ns || !settings.surrealdb_db) {
         throw new Error('SurrealDB connection fields are required');
       }
-      
+
+      // Prepare settings for save
+      // If password wasn't changed and there's an existing password, don't send empty string
+      // (the backend will preserve existing password if surrealdb_pass is undefined)
+      const settingsToSave: AppSettings = { ...settings };
+      if (!passwordChanged && hasExistingPassword && !settingsToSave.surrealdb_pass) {
+        // Remove password field so backend preserves existing value
+        delete settingsToSave.surrealdb_pass;
+      }
+
       // Save settings to .env file
-      await settingsActions.save(settings);
+      await settingsActions.save(settingsToSave);
       saveMessage = 'Settings saved! Applying configuration...';
-      
+
       // Reload database configuration in real-time
       try {
-        const reloadResult = await reloadDatabaseConfig();
-        console.log('Database configuration reloaded:', reloadResult);
-        
+        await reloadDatabaseConfig();
+
         // Refresh data with new connection
         await loadAllData();
-        
+
         saveMessage = 'Settings saved and applied successfully! Database connection updated.';
       } catch (reloadError) {
         console.warn('Database reload failed:', reloadError);
         saveMessage = 'Settings saved but database reload failed. You may need to restart the app.';
       }
-      
+
       // Auto-close after 3 seconds (longer to show the reload process)
       setTimeout(() => {
         closeModal();
       }, 3000);
-      
+
     } catch (error) {
       saveMessage = `Error: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
@@ -237,13 +260,14 @@
                 
                 <div>
                   <label for="surrealdb_pass" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
-                    Password
+                    Password {hasExistingPassword && !passwordChanged ? '(configured)' : ''}
                   </label>
                   <input
                     id="surrealdb_pass"
                     type="password"
                     bind:value={settings.surrealdb_pass}
-                    placeholder="••••••••"
+                    on:input={onPasswordInput}
+                    placeholder={hasExistingPassword ? 'Leave empty to keep existing' : 'Enter password'}
                     class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
                     style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />

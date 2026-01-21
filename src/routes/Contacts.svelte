@@ -8,6 +8,7 @@
   import { paginatedContactsStore, companiesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   import { createContactFilterConfig } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -152,7 +153,8 @@
     if (!storeState.initialized) {
       paginatedContactsStore.actions.loadInitialPage();
     }
-    companiesActions.load();
+    // Only load companies if not already loaded (performance optimization)
+    if (!get(companiesStore).length) companiesActions.load();
   });
 </script>
 

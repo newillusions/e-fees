@@ -5,10 +5,13 @@
   import ProposalDetail from '$lib/components/ProposalDetail.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
+import { get } from 'svelte/store';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   import { createFeeFilterConfig, createProjectLookup } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
+  import { extractId } from '$lib/utils';
+  import { createThrottled } from '$lib/utils/crud';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import type { Fee, UnknownSurrealThing } from '../types';
@@ -48,8 +51,8 @@
     return unsubscribe;
   });
 
-  // Scroll handler for infinite scroll
-  function handleScroll() {
+  // Scroll handler for infinite scroll (unthrottled - called by throttled wrapper)
+  function checkScrollPosition() {
     if (!scrollContainer || isLoading || !hasMore) return;
 
     const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
@@ -61,6 +64,9 @@
     }
   }
 
+  // PERF-M4: Throttle scroll handler to max once per 100ms for better performance
+  const handleScroll = createThrottled(checkScrollPosition, 100);
+
   // Set up scroll listener when container is available
   $effect(() => {
     if (scrollContainer) {
@@ -69,9 +75,10 @@
     }
   });
 
-  // Create lookups for company/project search
+  // Create lookups for company/project/contact search - O(1) lookups instead of O(n)
   const companyLookup = $derived(createCompanyLookup($companiesStore));
   const projectLookup = $derived(createProjectLookup($projectsStore));
+  const contactLookup = $derived(new Map($contactsStore.map(c => [extractId(c.id), c])));
 
   // Filter configuration for proposals - uses unified search module
   // This enables searching by company code (e.g., "ptg") and project name
@@ -82,7 +89,7 @@
       ...baseConfig,
       filterFields: {
         status: (proposal: Fee) => proposal.status,
-        staff: (proposal: Fee) => proposal.staff_name
+        staff: (proposal: Fee) => proposal.staff_name || ''
       }
     };
   })());
@@ -92,14 +99,17 @@
 
   // Get unique values for filters using optimized functions
   const uniqueStatuses = $derived(getUniqueFieldValues(fees, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name || '').filter(Boolean));
 
   // Count proposals per status for styling (bold for non-empty)
+  // Uses single-pass O(n) instead of O(n*statuses)
   const statusCounts = $derived(
-    PROPOSAL_STATUSES.reduce((acc, status) => {
-      acc[status] = fees.filter(p => p.status === status).length;
+    fees.reduce((acc, fee) => {
+      if (fee.status && fee.status in acc) {
+        acc[fee.status]++;
+      }
       return acc;
-    }, {} as Record<string, number>)
+    }, Object.fromEntries(PROPOSAL_STATUSES.map(s => [s, 0])) as Record<string, number>)
   );
   
   function handleNewProposal() {
@@ -143,204 +153,35 @@
     if (!storeState.initialized) {
       paginatedFeesStore.actions.loadInitialPage();
     }
-    projectsActions.load();
-    companiesActions.load();
-    contactsActions.load();
+    // Only load related data if not already loaded (performance optimization)
+    if (!get(projectsStore).length) projectsActions.load();
+    if (!get(companiesStore).length) companiesActions.load();
+    if (!get(contactsStore).length) contactsActions.load();
   });
   
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
   
+  // O(1) lookup functions using pre-computed Maps (replaces O(n) .find() calls)
   function getProjectName(projectRef: UnknownSurrealThing): string {
     if (!projectRef) return 'N/A';
-    
-    // Convert the project reference to a string ID
-    let projectIdStr = '';
-    
-    if (typeof projectRef === 'string') {
-      projectIdStr = projectRef;
-    } else if (projectRef && typeof projectRef === 'object') {
-      // Handle Thing object { tb: 'projects', id: { String: 'PROJECT_ID' } }
-      if (projectRef.tb && projectRef.id) {
-        if (typeof projectRef.id === 'string') {
-          projectIdStr = `${projectRef.tb}:${projectRef.id}`;
-        } else if (projectRef.id.String) {
-          projectIdStr = `${projectRef.tb}:${projectRef.id.String}`;
-        }
-      }
-      // Handle simple { id: 'projects:PROJECT_ID' } format
-      else if (projectRef.id && typeof projectRef.id === 'string') {
-        projectIdStr = projectRef.id;
-      }
-    }
-    
-    if (!projectIdStr) {
-      return 'Unknown Project';
-    }
-    
-    // Now find the project in the store
-    const project = $projectsStore.find(p => {
-      if (!p.id) return false;
-      
-      // Get the project's ID in various formats
-      let pIdStr = '';
-      if (typeof p.id === 'string') {
-        pIdStr = p.id;
-      } else if (p.id && typeof p.id === 'object') {
-        if (p.id.tb && p.id.id) {
-          if (typeof p.id.id === 'string') {
-            pIdStr = `${p.id.tb}:${p.id.id}`;
-          } else if (p.id.id.String) {
-            pIdStr = `${p.id.tb}:${p.id.id.String}`;
-          }
-        }
-      }
-      
-      // Compare IDs - handle all variations
-      const id1 = pIdStr.replace('projects:', '');
-      const id2 = projectIdStr.replace('projects:', '');
-      
-      return id1 === id2 || pIdStr === projectIdStr;
-    });
-    
-    if (project) {
-      return project.name;
-    }
-    
-    // If not found, try to extract ID from reference
-    if (projectIdStr.includes(':')) {
-      return projectIdStr.split(':')[1];
-    }
-    
-    return projectIdStr;
+    const id = extractId(projectRef);
+    const project = projectLookup.get(id);
+    return project?.name || (id || 'Unknown Project');
   }
 
   function getCompanyName(companyRef: UnknownSurrealThing): string {
-    if (!companyRef) return '';
-    
-    // Convert the company reference to a string ID
-    let companyIdStr = '';
-    
-    if (typeof companyRef === 'string') {
-      companyIdStr = companyRef;
-    } else if (companyRef && typeof companyRef === 'object') {
-      // Handle Thing object { tb: 'company', id: { String: 'ABBREVIATION' } }
-      if (companyRef.tb && companyRef.id) {
-        if (typeof companyRef.id === 'string') {
-          companyIdStr = `${companyRef.tb}:${companyRef.id}`;
-        } else if (companyRef.id.String) {
-          companyIdStr = `${companyRef.tb}:${companyRef.id.String}`;
-        }
-      }
-      // Handle simple { id: 'company:ABBREVIATION' } format
-      else if (companyRef.id && typeof companyRef.id === 'string') {
-        companyIdStr = companyRef.id;
-      }
-    }
-    
-    if (!companyIdStr) {
-      return '';
-    }
-    
-    // Now find the company in the store
-    const company = $companiesStore.find(c => {
-      if (!c.id) return false;
-      
-      // Get the company's ID in various formats
-      let cIdStr = '';
-      if (typeof c.id === 'string') {
-        cIdStr = c.id;
-      } else if (c.id && typeof c.id === 'object') {
-        if (c.id.tb && c.id.id) {
-          if (typeof c.id.id === 'string') {
-            cIdStr = `${c.id.tb}:${c.id.id}`;
-          } else if (c.id.id.String) {
-            cIdStr = `${c.id.tb}:${c.id.id.String}`;
-          }
-        }
-      }
-      
-      // Compare IDs - handle all variations
-      const id1 = cIdStr.replace('company:', '');
-      const id2 = companyIdStr.replace('company:', '');
-      
-      return id1 === id2 || cIdStr === companyIdStr;
-    });
-    
-    if (company) {
-      return company.name;
-    }
-    
-    // If not found, try to extract abbreviation from ID
-    if (companyIdStr.includes(':')) {
-      return companyIdStr.split(':')[1];
-    }
-    
-    return companyIdStr;
+    return companyLookup.getCompanyName(companyRef);
   }
 
   function getContactName(contactRef: UnknownSurrealThing): string {
     if (!contactRef) return '';
-    
-    // Convert the contact reference to a string ID
-    let contactIdStr = '';
-    
-    if (typeof contactRef === 'string') {
-      contactIdStr = contactRef;
-    } else if (contactRef && typeof contactRef === 'object') {
-      // Handle Thing object { tb: 'contacts', id: { String: 'CONTACT_ID' } }
-      if (contactRef.tb && contactRef.id) {
-        if (typeof contactRef.id === 'string') {
-          contactIdStr = `${contactRef.tb}:${contactRef.id}`;
-        } else if (contactRef.id.String) {
-          contactIdStr = `${contactRef.tb}:${contactRef.id.String}`;
-        }
-      }
-      // Handle simple { id: 'contacts:CONTACT_ID' } format
-      else if (contactRef.id && typeof contactRef.id === 'string') {
-        contactIdStr = contactRef.id;
-      }
-    }
-    
-    if (!contactIdStr) {
-      return '';
-    }
-    
-    // Now find the contact in the store
-    const contact = $contactsStore.find(c => {
-      if (!c.id) return false;
-      
-      // Get the contact's ID in various formats
-      let cIdStr = '';
-      if (typeof c.id === 'string') {
-        cIdStr = c.id;
-      } else if (c.id && typeof c.id === 'object') {
-        if (c.id.tb && c.id.id) {
-          if (typeof c.id.id === 'string') {
-            cIdStr = `${c.id.tb}:${c.id.id}`;
-          } else if (c.id.id.String) {
-            cIdStr = `${c.id.tb}:${c.id.id.String}`;
-          }
-        }
-      }
-      
-      // Compare IDs - handle all variations
-      const id1 = cIdStr.replace('contacts:', '');
-      const id2 = contactIdStr.replace('contacts:', '');
-      
-      return id1 === id2 || cIdStr === contactIdStr;
-    });
-    
+    const id = extractId(contactRef);
+    const contact = contactLookup.get(id);
     if (contact) {
-      return contact.full_name;
+      return contact.full_name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
     }
-    
-    // If not found, try to extract ID from reference
-    if (contactIdStr.includes(':')) {
-      return contactIdStr.split(':')[1];
-    }
-    
-    return contactIdStr;
+    return id || '';
   }
 </script>
 

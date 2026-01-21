@@ -6,7 +6,7 @@
   import GlobalSearchModal from './GlobalSearchModal.svelte';
   import { location } from 'svelte-spa-router';
   import { logoLight } from '../../assets';
-  import { onMount, onDestroy } from 'svelte';
+  // svelte:window used for keyboard events instead of onMount/onDestroy
 
   // Settings modal state
   let isSettingsOpen = false;
@@ -67,14 +67,6 @@
     }
   }
 
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
-  });
-
   // Dynamic page titles
   const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
@@ -86,6 +78,8 @@
 
   $: pageTitle = pageTitles[$location] || 'Dashboard';
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="flex h-screen overflow-hidden glass-container">
   <!-- Fixed Sidebar -->
