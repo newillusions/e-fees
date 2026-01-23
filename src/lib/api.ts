@@ -113,6 +113,7 @@ export class ApiClient {
   static getSettings = settings.getSettings;
   static saveSettings = settings.saveSettings;
   static reloadDatabaseConfig = settings.reloadDatabaseConfig;
+  static reconnectDatabase = settings.reconnectDatabase;
 
   // System methods
   static getStats = system.getStats;
@@ -188,6 +189,7 @@ export const {
   getSettings,
   saveSettings,
   reloadDatabaseConfig,
+  reconnectDatabase,
   selectFolder,
   openFolderInExplorer,
 
