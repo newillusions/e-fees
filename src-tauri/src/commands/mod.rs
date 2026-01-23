@@ -105,7 +105,7 @@ pub use activity_logs::{create_activity_log, get_activity_logs};
 
 // Database connection
 pub mod db_connection;
-pub use db_connection::{check_db_connection, get_connection_status};
+pub use db_connection::{check_db_connection, get_connection_status, reconnect_database};
 
 // Fee JSON helpers (internal use)
 pub mod fee_json;

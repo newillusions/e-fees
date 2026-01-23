@@ -72,7 +72,7 @@ export {
 } from './filesystem';
 
 // Settings operations
-export { getSettings, saveSettings, reloadDatabaseConfig } from './settings';
+export { getSettings, saveSettings, reloadDatabaseConfig, reconnectDatabase } from './settings';
 
 // System operations
 export {

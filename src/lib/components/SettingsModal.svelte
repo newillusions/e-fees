@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
-  import { reloadDatabaseConfig } from '$lib/api';
+  import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
   import { loadAllData } from '$lib/stores';
   import FolderSyncModal from './FolderSyncModal.svelte';
 
@@ -36,6 +36,8 @@
   // Loading states
   let isSaving = false;
   let saveMessage = '';
+  let isTesting = false;
+  let testMessage = '';
 
   // Load settings when modal opens
   $: if (isOpen) {
@@ -136,15 +138,39 @@
     try {
       // Import the API function
       const { selectFolder: apiSelectFolder } = await import('$lib/api');
-      
+
       // Open native folder picker dialog
       const folderPath = await apiSelectFolder();
-      
+
       if (folderPath) {
         settings.project_folder_path = folderPath;
       }
     } catch (error) {
       console.error('Failed to select folder:', error);
+    }
+  }
+
+  async function testConnection() {
+    isTesting = true;
+    testMessage = '';
+
+    try {
+      // Force reconnect to database using saved config
+      await reconnectDatabase();
+
+      // If successful, reload data
+      await loadAllData();
+
+      testMessage = 'Connected!';
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        testMessage = '';
+      }, 3000);
+    } catch (error) {
+      testMessage = `Connection failed: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      isTesting = false;
     }
   }
 </script>
@@ -272,6 +298,32 @@
                     style="padding: 8px 12px; font-size: 12px; height: 32px;"
                   />
                 </div>
+              </div>
+
+              <!-- Reconnect Database Button -->
+              <div class="flex items-center" style="gap: 12px; margin-top: 4px;">
+                <button
+                  type="button"
+                  on:click={testConnection}
+                  disabled={isTesting}
+                  class="bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 6px;"
+                >
+                  {#if isTesting}
+                    <div class="border-2 border-emittiv-light border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
+                    <span>Reconnecting...</span>
+                  {:else}
+                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Reconnect</span>
+                  {/if}
+                </button>
+                {#if testMessage}
+                  <span class="text-xs {testMessage.includes('failed') ? 'text-red-400' : 'text-green-400'}">
+                    {testMessage}
+                  </span>
+                {/if}
               </div>
             </div>
           </div>

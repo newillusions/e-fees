@@ -24,6 +24,7 @@ jobs:
     name: Build macOS (Apple Silicon + Intel)
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target:
           - aarch64-apple-darwin  # Apple Silicon (M1/M2/M3)

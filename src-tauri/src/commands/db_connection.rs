@@ -69,3 +69,34 @@ pub async fn get_connection_status(state: State<'_, AppState>) -> Result<Connect
     let status = manager.get_status().await;
     Ok(status)
 }
+
+/// Force a database reconnection.
+///
+/// This command closes any existing database connection and establishes
+/// a new one using the current configuration. Use this when:
+/// - The database server was temporarily unavailable
+/// - Network connectivity was restored
+/// - Testing connection after changing settings
+///
+/// # Returns
+/// - `Ok(String)`: Success message indicating reconnection completed
+/// - `Err(String)`: Error message if reconnection failed
+///
+/// # Frontend Usage
+/// ```typescript
+/// try {
+///     await invoke('reconnect_database');
+///     console.log('Reconnected successfully');
+/// } catch (error) {
+///     console.error('Reconnection failed:', error);
+/// }
+/// ```
+#[tauri::command]
+pub async fn reconnect_database(state: State<'_, AppState>) -> Result<String, String> {
+    info!("Reconnecting to database");
+
+    let mut manager = state.write().await;
+    manager.reconnect().await?;
+
+    Ok("Database reconnected successfully".to_string())
+}

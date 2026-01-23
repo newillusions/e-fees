@@ -58,3 +58,21 @@ export async function reloadDatabaseConfig(): Promise<string> {
     throw error;
   }
 }
+
+/**
+ * Force a database reconnection.
+ *
+ * Use this when the database server was temporarily unavailable or
+ * network connectivity was restored. This closes any existing connection
+ * and establishes a new one using the current saved configuration.
+ *
+ * @returns Success or failure message from the backend
+ */
+export async function reconnectDatabase(): Promise<string> {
+  try {
+    return await invoke<string>('reconnect_database');
+  } catch (error) {
+    settingsLogger.error('Failed to reconnect to database', { error });
+    throw error;
+  }
+}

@@ -12,6 +12,7 @@ use db::{DatabaseManager, DatabaseConfig};
 use commands::{
     check_db_connection,
     get_connection_status,
+    reconnect_database,
     get_projects,
     search_projects,
     get_companies,
@@ -243,6 +244,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_db_connection,
             get_connection_status,
+            reconnect_database,
             get_projects,
             search_projects,
             get_companies,

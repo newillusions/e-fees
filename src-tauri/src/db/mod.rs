@@ -91,6 +91,29 @@ impl DatabaseManager {
         Ok(())
     }
 
+    /// Force a reconnection to the database.
+    /// This closes any existing connection and establishes a new one.
+    pub async fn reconnect(&mut self) -> Result<(), String> {
+        info!("Forcing database reconnection");
+
+        // Close existing connection
+        self.client = None;
+        self.update_status(false, Some("Reconnecting...".to_string())).await;
+
+        // Attempt to reconnect
+        match self.initialize().await {
+            Ok(_) => {
+                info!("Database reconnection successful");
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = format!("Reconnection failed: {}", e);
+                error!("{}", error_msg);
+                Err(error_msg)
+            }
+        }
+    }
+
     pub async fn initialize(&mut self) -> Result<(), Error> {
         info!("Initializing database connection to {}", self.config.url);
 
