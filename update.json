@@ -1,18 +1,18 @@
 {
   "version": "0.10.27",
   "notes": "Release v0.10.27",
-  "pub_date": "2026-01-23T13:27:39Z",
+  "pub_date": "2026-01-23T13:56:49Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3NONEJzVU1UbjB6TkZOVTArNmdxb1hrNjl0elZrbzNPczdoUWFCdUlFMWttaDBScENaM0pWY3lIV1F3ZW1mNGdBSmVmZmRIVVJzL3dzZFRYRDhqV0E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5MTc2NDE2CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKdmlPbllmdEljQ2tZdVNDMVJIUUROMUx5MVdDdlJJRGUxcGV5NnBYaGwyMk5aZkF1QUtxK09DSG4raVkrY3BTOVd0TENvYkFuMUQ3MEVxVFRoaXlQQVE9PQo=",
       "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.27/E-Fees_0.10.27_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3Z4cU9zcm1vZjFuUDV3N3Q1Y3BndlVGa1hhMFM5OUxRRU04VXJKRDNCUXZCOXJJbDQ5SHk4cWRTYmFuV2s0V1NKbEN2T1JQU1lJSVRXN3RlS1pEMUFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5MTc2Mzc5CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKSFpqVEJtNnBMcVdjY054MXBTbS9kWkx0R3Q2YitZQm1CQ0VhOVc5SWMzdkIwU0wwL3lteFFhM3IvSVdyTFZ5ZlQwMWFYUUtPVnB4V3dFR2U1MDZEQXc9PQo=",
       "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.27/E-Fees_0.10.27_x64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3U2cjAydERneHI1Z2Vsd2ZmZjJkL2ZpTnQ5VDFJMVVGdE03bUxxNGluU3V1U09nUWgrMXl3bzR0OWZZVERiaFYrKzAxRmY2ck8wNkxhcmltb0owTHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5MTc2NTgzCWZpbGU6RS1GZWVzXzAuMTAuMjdfeDY0LXNldHVwLmV4ZQpJQXFES0VYUjdlTDdTUXlLN2dBck8zSVJ0OHo3MFpVcXFNbnF0eDllbWJ0RUZZaVI4UWpPeEpWOXBsaE1NVmpjZmJkSzlYZDFOZWVxZWlxTTRqS2VBUT09Cg==",
       "url": "https://git.mms.name/martin/fee-prop/releases/download/v0.10.27/E-Fees_0.10.27_x64-setup.exe"
     }
   }
