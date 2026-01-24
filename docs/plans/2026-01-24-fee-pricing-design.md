@@ -161,13 +161,16 @@ interface ReimbursableCost {
 }
 
 // Payment schedule entry
+// NOTE: Multiple payment entries can link to the same stage_id
+// e.g., "50% DD" and "100% DD" both link to the DD stage
 interface PaymentScheduleEntry {
   id: string;
   type: 'mobilisation' | 'milestone' | 'final';
-  description: string;        // "30% Mobilisation", "SD Completion"
+  description: string;        // "30% Mobilisation", "50% DD", "100% DD"
   stage_id?: string;          // Linked stage (for milestone payments)
+  stage_percentage?: number;  // What % of the stage fee this represents (50, 100)
   amount: number;             // Payment amount
-  percentage_of_total: number; // What % of total this represents
+  percentage_of_total: number; // What % of contract total this represents
   due_date?: string;          // Expected due date
   status: 'pending' | 'invoiced' | 'paid';
   invoice_number?: string;    // For future Invoice Ninja integration
@@ -427,10 +430,23 @@ Features:
 
 ## Export Format
 
+### Fee Breakdown vs Payment Schedule
+
+**Important distinction**: The export must show both:
+
+1. **Fee Breakdown** - What each stage/discipline is worth (the work value)
+2. **Payment Schedule** - When payments are due (the billing plan)
+
+These often differ:
+- Fee might show "DD: 31,579 AED" as the stage value
+- Payment might show "50% DD: 15,790 AED" and "100% DD: 15,790 AED" as separate billing milestones
+- Mobilisation is a payment item, not a fee item
+
 ### Pricing Excel/CSV
 
 Maintains compatibility with current InDesign workflow:
 
+**Sheet 1: Fee Breakdown**
 ```
 | Stage | Lighting | Audio | Total |
 |-------|----------|-------|-------|
@@ -439,7 +455,23 @@ Maintains compatibility with current InDesign workflow:
 | ...   | ...      | ...   | ...   |
 ```
 
-Plus summary sheet with totals, VAT, mobilisation.
+**Sheet 2: Payment Schedule**
+```
+| Payment Milestone      | Amount   | % of Total |
+|------------------------|----------|------------|
+| Mobilisation (30%)     | 37,883   | 30%        |
+| SD Completion          | 21,053   | 17%        |
+| 50% DD                 | 15,790   | 12.5%      |
+| 100% DD                | 15,790   | 12.5%      |
+| ...                    | ...      | ...        |
+```
+
+**Sheet 3: Summary**
+- Design phase total
+- Post-contract total
+- Reimbursable costs
+- VAT
+- Grand total
 
 ### Existing var.json
 
