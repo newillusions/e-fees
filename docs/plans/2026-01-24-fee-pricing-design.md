@@ -244,12 +244,88 @@ const DEFAULT_POST_CONTRACT_STAGES: Omit<Stage, 'id'>[] = [
 1. **Disciplines Panel** → Define who's involved and allocation
 2. **Stages Panel** → Define design phases and breakdown
 3. **Pricing Panel** → Calculate fees with buffer and review matrix
+4. **Costs Panel** → Add reimbursable expenses with markup
+5. **Payment Schedule Panel** → Define billing milestones
+6. **Summary Panel** → Review full breakdown and totals
+
+**Persistent Summary Bar** appears on all panels showing running totals.
 
 ### Panel Structure
 
 Each panel is a reusable component that works for both:
 - Direct manual editing (current workflow)
 - Future wizard-style guided setup
+
+#### Persistent Summary Bar
+
+Shows on ALL pricing panels - provides at-a-glance totals while editing:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ Target: 100,000 │ Quoted: 105,263 │ +Costs: 4,025 │ +VAT: 6,214 │ TOTAL: 130,502 │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Features:
+- Always visible when working on pricing
+- Updates in real-time as values change
+- Compact single-line format
+- Click to expand to Summary Panel
+
+#### Summary Panel
+
+Full breakdown view for review and verification:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Fee Summary                                                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   TARGET FEE                              100,000 AED       │
+│   Buffer (5%)                              +5,263 AED       │
+│   ───────────────────────────────────────────────           │
+│   QUOTED FEE                              105,263 AED       │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│   Fee Breakdown                                             │
+│   ───────────────────────────────────────────────           │
+│   Design Phase                            105,263 AED       │
+│     • Lighting Design (60%)                63,158 AED       │
+│     • Audio Visual (40%)                   42,105 AED       │
+│                                                             │
+│   Post-Contract Services                   15,000 AED       │
+│     • Site Visits (4 × 2,500)              10,000 AED       │
+│     • Commissioning                         5,000 AED       │
+│                                                             │
+│   Reimbursable Costs                        4,025 AED       │
+│     • CAD Document (1,000 + 15%)            1,150 AED       │
+│     • Sample Materials (2,500 + 15%)        2,875 AED       │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│   SUBTOTAL                                124,288 AED       │
+│   VAT (5%)                                  6,214 AED       │
+│   ───────────────────────────────────────────────           │
+│   GRAND TOTAL                             130,502 AED       │
+│                                                             │
+│   ┌───────────────────────────────────────────────────────┐ │
+│   │ MOBILISATION (30%)                     39,151 AED     │ │
+│   └───────────────────────────────────────────────────────┘ │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│   Payment Status                                            │
+│   ○ Pending    130,502 AED                                  │
+│   ○ Invoiced         0 AED                                  │
+│   ● Paid             0 AED                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Features:
+- Complete fee breakdown by category
+- Discipline subtotals within design phase
+- Line item detail for costs
+- Payment status tracking
+- Print/export friendly format
 
 #### Disciplines Panel
 
@@ -482,11 +558,13 @@ Unchanged - continues to work for InDesign data merge.
 ### Phase 1: Data Model & Core UI
 - [ ] Extend Fee type with pricing fields
 - [ ] Create database migration for new fields
+- [ ] Build Persistent Summary Bar component
 - [ ] Build Disciplines panel component
 - [ ] Build Stages panel component
 - [ ] Build basic Pricing calculator panel
 - [ ] Build Costs panel component (reimbursables with markup)
 - [ ] Build Payment Schedule panel component
+- [ ] Build Summary panel component (full breakdown)
 - [ ] Add revision tracking infrastructure
 
 ### Phase 2: Full Calculator & Export
