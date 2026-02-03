@@ -5,10 +5,11 @@ use surrealdb::engine::remote::http::{Client as HttpClient, Http};
 use surrealdb::opt::auth::{Root, Namespace, Database};
 use surrealdb::{Error, Surreal};
 use log::{info, warn, error};
+use chrono::Utc;
 
 use super::types::{
     Project, NewProject, Company, CompanyCreate, Contact, ContactCreate,
-    Fee, FeeCreate, FeeUpdate,
+    Fee, FeeCreate, FeeUpdate, PricingUpdate,
 };
 use crate::commands::{CompanyUpdate, ContactUpdate, ProjectUpdate};
 
@@ -460,6 +461,56 @@ impl DatabaseClient {
 
     pub async fn delete_fee(&self, id: &str) -> Result<Option<Fee>, Error> {
         delegate_delete!(self, "fee", id)
+    }
+
+    /// Update only the pricing-related fields of a fee.
+    /// Uses MERGE to update only specified fields without affecting others.
+    pub async fn update_fee_pricing(&self, id: &str, pricing: super::PricingUpdate) -> Result<Option<Fee>, Error> {
+        info!("DatabaseClient::update_fee_pricing called with id: '{}'", id);
+
+        // Build a dynamic update object with only non-None fields
+        let mut update_obj = serde_json::Map::new();
+
+        if let Some(ref p) = pricing.pricing {
+            update_obj.insert("pricing".to_string(), serde_json::to_value(p).unwrap_or(serde_json::Value::Null));
+        }
+        if let Some(ref items) = pricing.post_contract_items {
+            update_obj.insert("post_contract_items".to_string(), serde_json::to_value(items).unwrap_or(serde_json::Value::Null));
+        }
+        if let Some(ref costs) = pricing.reimbursable_costs {
+            update_obj.insert("reimbursable_costs".to_string(), serde_json::to_value(costs).unwrap_or(serde_json::Value::Null));
+        }
+        if let Some(ref schedule) = pricing.payment_schedule {
+            update_obj.insert("payment_schedule".to_string(), serde_json::to_value(schedule).unwrap_or(serde_json::Value::Null));
+        }
+
+        // Create a nested time object with updated_at
+        let mut time_obj = serde_json::Map::new();
+        time_obj.insert("updated_at".to_string(), serde_json::Value::String(chrono::Utc::now().to_rfc3339()));
+        update_obj.insert("time".to_string(), serde_json::Value::Object(time_obj));
+
+        let update_value = serde_json::Value::Object(update_obj);
+
+        // Use MERGE to update only the specified fields (including timestamp)
+        let query = format!(
+            "UPDATE fee:{} MERGE $data RETURN AFTER",
+            id
+        );
+
+        info!("Executing pricing update with MERGE");
+
+        let mut response = self.query_bind(&query, ("data", update_value)).await?;
+        let result: Result<Vec<Fee>, _> = response.take(0);
+        match result {
+            Ok(mut fees) => {
+                info!("Pricing update returned {} records", fees.len());
+                Ok(fees.pop())
+            },
+            Err(e) => {
+                error!("Failed to parse pricing update response: {}", e);
+                Err(e)
+            },
+        }
     }
 
     // ==================== Country/Reference Operations ====================

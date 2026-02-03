@@ -29,6 +29,7 @@ use commands::{
     delete_contact,
     create_fee,
     update_fee,
+    update_fee_pricing,
     delete_fee,
     // Pagination commands
     get_projects_page,
@@ -261,6 +262,7 @@ pub fn run() {
             delete_contact,
             create_fee,
             update_fee,
+            update_fee_pricing,
             delete_fee,
             // Pagination commands
             get_projects_page,

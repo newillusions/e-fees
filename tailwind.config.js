@@ -21,6 +21,12 @@ export default {
         'heading': ['Ubuntu', 'system-ui', 'sans-serif'],
         'body': ['Montserrat', 'sans-serif'],
       },
+      fontSize: {
+        'xxs': ['10px', { lineHeight: '14px' }],  // Fixed px for desktop app - extra small labels, helper text
+        'xs': ['12px', { lineHeight: '16px' }],   // Fixed px for desktop app - small text
+        'sm': ['14px', { lineHeight: '20px' }],   // Fixed px for desktop app - body text
+        'base': ['16px', { lineHeight: '24px' }], // Fixed px for desktop app - base text
+      },
       spacing: {
         '0.25': '0.25rem',
         '0.5': '0.5rem',

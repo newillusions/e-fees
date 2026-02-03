@@ -90,6 +90,21 @@ npm run tauri:build  # Production build
 npm run check        # Type checking
 ```
 
+### 🚨 CRITICAL: Tailwind Usage Rules
+**NEVER use massive inline Tailwind class strings!** Extract repeated patterns into components or CSS classes.
+
+**Forbidden**:
+- Class strings > 50 chars repeated across files
+- Arbitrary pixel values (`text-[10px]` - use `text-xs`, `text-xxs`)
+- Ignoring existing `emittiv-*` classes in `app.css`
+
+**Required**:
+- Use Tailwind ONLY for one-off layout tweaks (`flex`, `gap-2`, `ml-1`)
+- Extract patterns repeated 2+ times into components or CSS classes
+- Use existing `.emittiv-input`, `.emittiv-select`, `.emittiv-btn` classes
+
+**See**: `.claude/rules/development-workflow.md` Rule 19a for complete guidelines.
+
 ### System Dependencies (Ubuntu/WSL2)
 ```bash
 sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget \

@@ -276,8 +276,9 @@ export interface PricingRevision {
 // ============================================================================
 
 export const DEFAULT_DISCIPLINES: Omit<Discipline, 'id'>[] = [
-  { name: "Lighting Design", percentage: 60, order: 1 },
-  { name: "Audio Visual", percentage: 40, order: 2 },
+  { name: "Lighting", percentage: 50, order: 1 },
+  { name: "Video", percentage: 30, order: 2 },
+  { name: "Audio", percentage: 20, order: 3 },
 ];
 
 export const DEFAULT_DESIGN_STAGES: Omit<Stage, 'id'>[] = [

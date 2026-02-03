@@ -20,6 +20,8 @@
   import CompanyModal from './CompanyModal.svelte';
   import ContactModal from './ContactModal.svelte';
   import type { Fee, Project, Company, Contact, UnknownSurrealThing } from '$lib/../types';
+  import type { PricingBreakdown } from '../../types/database';
+  import FeePricingModal from './pricing/FeePricingModal.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -99,6 +101,7 @@
   let showNewProjectModal = false;
   let showCompanyModal = false;
   let showContactModal = false;
+  let showPricingModal = false;
   let companyModalMode: 'create' | 'edit' = 'create';
   let contactModalMode: 'create' | 'edit' = 'create';
   let selectedCompany: Company | null = null;
@@ -1100,6 +1103,31 @@
       </div>
     </div>
     
+    <!-- Pricing Section (Edit Mode Only) -->
+    {#if mode === 'edit'}
+      <div>
+        <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+          Fee Pricing
+        </h3>
+        <div class="flex items-center justify-between">
+          <p class="text-emittiv-light text-sm">
+            {#if proposal?.pricing}
+              Pricing configured: {proposal.pricing.config?.currency || 'AED'} {(proposal.pricing.grand_total || 0).toLocaleString()}
+            {:else}
+              No pricing configured yet
+            {/if}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            on:click={() => showPricingModal = true}
+          >
+            {proposal?.pricing ? 'Edit Pricing' : 'Configure Pricing'}
+          </Button>
+        </div>
+      </div>
+    {/if}
+
     <!-- Auto-Export Options (Create Mode Only) -->
     {#if mode === 'create'}
       <div>
@@ -1331,6 +1359,16 @@
   mode={contactModalMode}
   zIndex={200}
   on:close={handleContactModalClosed}
+/>
+
+<FeePricingModal
+  bind:isOpen={showPricingModal}
+  fee={proposal}
+  on:close={() => showPricingModal = false}
+  on:save={() => {
+    feesActions.load();
+    showPricingModal = false;
+  }}
 />
 
 <style>

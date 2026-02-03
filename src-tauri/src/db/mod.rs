@@ -20,7 +20,7 @@ pub use types::{
     Project, ProjectNumber, TimeStamps, NewProject,
     Company, CompanyCreate,
     Contact, ContactCreate,
-    Fee, FeeCreate, FeeUpdate, Revision,
+    Fee, FeeCreate, FeeUpdate, Revision, PricingUpdate,
     PaginatedResponse, EntityCounts,
     ActivityLog, ActivityLogCreate,
 };

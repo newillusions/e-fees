@@ -311,6 +311,7 @@ pub struct PostContractItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentScheduleEntry {
     pub id: String,
+    #[serde(rename = "type")]
     pub payment_type: String,  // "mobilisation", "milestone", "final"
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -353,6 +354,15 @@ pub struct PricingBreakdown {
     pub subtotal: f64,
     pub vat_amount: f64,
     pub grand_total: f64,
+}
+
+/// Pricing update struct - for updating only pricing-related fields on a fee.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PricingUpdate {
+    pub pricing: Option<PricingBreakdown>,
+    pub post_contract_items: Option<Vec<PostContractItem>>,
+    pub reimbursable_costs: Option<Vec<ReimbursableCost>>,
+    pub payment_schedule: Option<PaymentSchedule>,
 }
 
 /// Pricing revision tracking (append-only).

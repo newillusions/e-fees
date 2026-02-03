@@ -73,7 +73,7 @@ pub use projects::{
 // Fee proposal management
 pub mod fees;
 pub use fees::{
-    get_fees, get_fees_page, create_fee, update_fee, delete_fee,
+    get_fees, get_fees_page, create_fee, update_fee, update_fee_pricing, delete_fee,
     write_fee_to_json, write_fee_to_json_safe,
 };
 

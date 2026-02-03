@@ -13,8 +13,8 @@
       }
     },
     "tauri-mcp": {
-      "command": "/Users/martin/.cargo/bin/tauri-mcp",
-      "args": ["--app-path", "/Volumes/base/dev/app/e-fees", "serve"]
+      "command": "node",
+      "args": ["/Volumes/base/dev/app/e-fees/tauri-plugin-mcp/mcp-server-ts/build/index.js"]
     },
     "git": {
       "command": "uvx",
@@ -39,20 +39,20 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
       }
     },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
-    },
-    "kb-surreal": {
-      "command": "node",
-      "args": ["/Volumes/base/dev/claude/kb-agent/plugin/mcp-server/index.js"],
+    "document-loader": {
+      "command": "uvx",
+      "args": ["awslabs.document-loader-mcp-server@latest"],
       "env": {
-        "SURREALDB_URL": "http://10.0.23.11:8000",
-        "SURREALDB_NS": "kb",
-        "SURREALDB_DB": "knowledge",
-        "SURREALDB_USER": "martin",
-        "SURREALDB_PASS": "th38ret3ch"
+        "FASTMCP_LOG_LEVEL": "ERROR"
       }
+    },
+    "excel": {
+      "command": "uvx",
+      "args": ["excel-mcp-server", "stdio"]
+    },
+    "peekaboo": {
+      "command": "npx",
+      "args": ["-y", "@steipete/peekaboo-mcp"]
     }
   }
 }

@@ -10,7 +10,7 @@ use chrono::Datelike;
 use super::{
     DatabaseManager, PaginatedResponse,
     Project, NewProject, Company, CompanyCreate,
-    Contact, ContactCreate, Fee, FeeCreate, FeeUpdate,
+    Contact, ContactCreate, Fee, FeeCreate, FeeUpdate, PricingUpdate,
     EntityCounts, ActivityLog, ActivityLogCreate,
 };
 use crate::commands::{CompanyUpdate, ProjectUpdate};
@@ -196,6 +196,12 @@ impl DatabaseManager {
         let client = self.get_client()?;
         client.delete_fee(id).await?
             .ok_or_else(|| self.not_found_error("delete fee"))
+    }
+
+    pub async fn update_fee_pricing(&self, id: &str, pricing: PricingUpdate) -> Result<Fee, Error> {
+        let client = self.get_client()?;
+        client.update_fee_pricing(id, pricing).await?
+            .ok_or_else(|| self.not_found_error("update fee pricing"))
     }
 }
 
@@ -421,8 +427,8 @@ impl DatabaseManager {
             SELECT count() as count FROM projects GROUP ALL;
             SELECT count() as count FROM company GROUP ALL;
             SELECT count() as count FROM contacts GROUP ALL;
-            SELECT count() as count FROM rfp GROUP ALL;
-            SELECT count() as count FROM rfp WHERE status IN ['Draft', 'Sent', 'Negotiation'] GROUP ALL;
+            SELECT count() as count FROM fee GROUP ALL;
+            SELECT count() as count FROM fee WHERE status IN ['Draft', 'Sent', 'Negotiation'] GROUP ALL;
         "#;
 
         let extract_count = |result: Option<serde_json::Value>| -> usize {
@@ -490,17 +496,24 @@ impl DatabaseManager {
     pub async fn get_activity_logs(&self, limit: Option<usize>, entity_type: Option<String>, offset: Option<usize>) -> Result<Vec<ActivityLog>, Error> {
         let client = self.get_client()?;
 
-        let limit_val = limit.unwrap_or(50) as i64;
-        let offset_val = offset.unwrap_or(0) as i64;
+        let limit_val = limit.unwrap_or(50);
+        let offset_val = offset.unwrap_or(0);
         info!("Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})", limit_val, entity_type, offset_val);
 
-        // Use parameterized queries to prevent SQL injection
+        // LIMIT and START are safe to interpolate as integers (no SQL injection risk)
+        // Parameterized bindings with nested tuples don't work reliably in SurrealDB SDK
         let mut response = if let Some(et) = &entity_type {
-            let query = "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT $limit START $offset";
-            client.query_bind(query, (("entity_type", et.clone()), ("limit", limit_val), ("offset", offset_val))).await?
+            let query = format!(
+                "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT {} START {}",
+                limit_val, offset_val
+            );
+            client.query_bind(&query, ("entity_type", et.clone())).await?
         } else {
-            let query = "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT $limit START $offset";
-            client.query_bind(query, (("limit", limit_val), ("offset", offset_val))).await?
+            let query = format!(
+                "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT {} START {}",
+                limit_val, offset_val
+            );
+            client.query(&query).await?
         };
 
         let logs: Vec<ActivityLog> = response.take(0)?;
