@@ -89,11 +89,7 @@
     {#if !readonly}
       <div class="flex items-center gap-2">
         {#if costs.length > 0}
-          <button
-            type="button"
-            class="text-xxs text-emittiv-light hover:text-emittiv-white transition-colors"
-            onclick={applyDefaultMarkup}
-          >
+          <button type="button" class="emittiv-text-btn" onclick={applyDefaultMarkup}>
             Apply {defaultMarkup}% to all
           </button>
         {/if}
@@ -163,7 +159,7 @@
             <input
               type="text"
               inputmode="numeric"
-              class="emittiv-table-input emittiv-table-input--left"
+              class="emittiv-table-input emittiv-table-input--lg"
               use:formattedNumber={{ value: cost.base_cost, onChange: (v) => updateCost(cost.id, 'base_cost', v), min: 0 }}
             />
           {:else}
@@ -179,7 +175,7 @@
               min="0"
               max="100"
               step="5"
-              class="emittiv-table-input emittiv-table-input--left"
+              class="emittiv-table-input emittiv-table-input--lg"
               value={cost.markup_percent}
               onchange={(e) => updateCost(cost.id, 'markup_percent', parseFloat(e.currentTarget.value) || 0)}
             />
@@ -197,7 +193,7 @@
         <!-- Remove -->
         {#if !readonly}
           <div class="emittiv-sortable-col--action">
-            <IconButton icon="trash" variant="danger" size="md" title="Remove" on:click={() => removeCost(cost.id)} />
+            <IconButton icon="trash" variant="danger" size="sm" title="Remove" on:click={() => removeCost(cost.id)} />
           </div>
         {/if}
       </div>

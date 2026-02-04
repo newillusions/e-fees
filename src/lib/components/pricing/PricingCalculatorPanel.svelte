@@ -46,12 +46,13 @@
   const postContractTotal = $derived(postContractSubtotal + postContractVat);
 
   // Recalculate quoted fee when target or buffer changes
+  // Note: only mutate config locally — bind:config propagates to parent.
+  // Do NOT call onUpdateConfig here to avoid double-update race with cells effect.
   $effect(() => {
     if (config && config.target_fee > 0) {
       const newQuoted = calculateQuotedFee(config.target_fee, config.buffer_percent);
       if (Math.abs(newQuoted - config.quoted_fee) > 0.01) {
         config = { ...config, quoted_fee: newQuoted };
-        onUpdateConfig(config);
       }
     }
   });
@@ -72,13 +73,11 @@
           });
         }
       }
-      // Only update if cells actually changed
+      // Only update if cells actually changed — compare by ID, not index position
       const cellsChanged = newCells.length !== cells.length ||
-        newCells.some((c, i) => {
-          const old = cells[i];
-          return !old || c.discipline_id !== old.discipline_id ||
-            c.stage_id !== old.stage_id ||
-            Math.abs(c.amount - old.amount) > 0.01;
+        newCells.some(c => {
+          const old = cells.find(oc => oc.discipline_id === c.discipline_id && oc.stage_id === c.stage_id);
+          return !old || Math.abs(c.amount - old.amount) > 0.01;
         });
       if (cellsChanged) {
         cells = newCells;

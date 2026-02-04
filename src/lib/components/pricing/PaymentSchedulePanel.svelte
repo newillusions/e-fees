@@ -2,6 +2,7 @@
   import type { PaymentScheduleEntry, PaymentSchedule, Stage, PricingConfig } from '../../../types/database';
   import { generatePricingId } from '../../../types/database';
   import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
+  import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
 
@@ -124,8 +125,8 @@
       if (entry.id !== id) return entry;
       const updated = { ...entry, [field]: value };
       // Recalculate percentage when amount changes
-      if (field === 'amount' && grandTotal > 0) {
-        updated.percentage_of_total = ((value as number) / grandTotal) * 100;
+      if (field === 'amount') {
+        updated.percentage_of_total = grandTotal > 0 ? ((value as number) / grandTotal) * 100 : 0;
       }
       return updated;
     });
@@ -196,11 +197,7 @@
   {#snippet headerActions()}
     {#if !readonly}
       <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="text-xxs text-emittiv-light hover:text-emittiv-white transition-colors"
-          onclick={generateFromPricing}
-        >
+        <button type="button" class="emittiv-text-btn" onclick={generateFromPricing}>
           Generate from Pricing
         </button>
         <IconButton icon="plus" label="Add" variant="primary" size="md" on:click={addPayment} />
@@ -213,126 +210,114 @@
     <div class="p-4 text-center">
       <p class="text-emittiv-light text-sm mb-1">No payment schedule defined.</p>
       {#if !readonly}
-        <button
-          type="button"
-          class="text-emittiv-splash hover:underline text-xs"
-          onclick={generateFromPricing}
-        >
+        <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={generateFromPricing}>
           Generate from pricing breakdown
         </button>
       {/if}
     </div>
   {:else}
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs">
-        <thead>
-          <tr class="border-b border-emittiv-dark bg-emittiv-black/30">
-            <th class="px-2 py-1.5 text-left text-emittiv-light font-medium">Payment</th>
-            <th class="px-2 py-1.5 text-right text-emittiv-light font-medium">Amount</th>
-            <th class="px-2 py-1.5 text-right text-emittiv-light font-medium">%</th>
-            <th class="px-2 py-1.5 text-center text-emittiv-light font-medium">Status</th>
-            {#if !readonly}
-              <th class="px-2 py-1.5 w-16"></th>
-            {/if}
-          </tr>
-        </thead>
-        <tbody>
-          {#each schedule.entries as entry (entry.id)}
-            <tr class="border-b border-emittiv-dark/50 hover:bg-emittiv-black/20">
-              <!-- Description -->
-              <td class="px-2 py-1">
-                {#if !readonly}
-                  <input
-                    type="text"
-                    class="emittiv-table-input emittiv-table-input--left"
-                    value={entry.description}
-                    onchange={(e) => updatePayment(entry.id, 'description', e.currentTarget.value)}
-                  />
-                {:else}
-                  <span class="text-emittiv-white">{entry.description}</span>
-                {/if}
-              </td>
+    <!-- Header row -->
+    <div class="emittiv-sortable-header">
+      <div class="emittiv-sortable-col--grow">Payment</div>
+      <div class="emittiv-sortable-col--number">Amount</div>
+      <div class="emittiv-sortable-col--pct">%</div>
+      <div class="emittiv-sortable-col--status">Status</div>
+      {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}
+    </div>
 
-              <!-- Amount -->
-              <td class="px-2 py-1 text-right">
-                {#if !readonly}
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    class="emittiv-table-input emittiv-table-input--lg emittiv-table-input--accent"
-                    value={Math.round(entry.amount)}
-                    onchange={(e) => updatePayment(entry.id, 'amount', parseFloat(e.currentTarget.value) || 0)}
-                  />
-                {:else}
-                  <span class="text-emittiv-splash font-medium">{formatNumber(entry.amount)}</span>
-                {/if}
-              </td>
+    <!-- Data rows -->
+    {#each schedule.entries as entry (entry.id)}
+      <div class="emittiv-sortable-row emittiv-sortable-row--static">
+        <!-- Description -->
+        <div class="emittiv-sortable-col--grow">
+          {#if !readonly}
+            <input
+              type="text"
+              class="emittiv-table-input emittiv-table-input--left"
+              value={entry.description}
+              onchange={(e) => updatePayment(entry.id, 'description', e.currentTarget.value)}
+            />
+          {:else}
+            <span class="text-emittiv-white">{entry.description}</span>
+          {/if}
+        </div>
 
-              <!-- Percentage -->
-              <td class="px-2 py-1 text-right text-emittiv-light">
-                {formatPercent(entry.percentage_of_total, 1)}
-              </td>
+        <!-- Amount -->
+        <div class="emittiv-sortable-col--number">
+          {#if !readonly}
+            <input
+              type="text"
+              inputmode="numeric"
+              class="emittiv-table-input emittiv-table-input--lg"
+              use:formattedNumber={{ value: Math.round(entry.amount), onChange: (v) => updatePayment(entry.id, 'amount', v), min: 0 }}
+            />
+          {:else}
+            <span class="text-emittiv-splash font-medium">{formatNumber(entry.amount)}</span>
+          {/if}
+        </div>
 
-              <!-- Status -->
-              <td class="px-2 py-1 text-center">
-                {#if !readonly}
-                  <button
-                    type="button"
-                    class="px-1.5 py-0.5 rounded text-xs font-medium transition-colors {statusColors[entry.status]}"
-                    onclick={() => cycleStatus(entry.id)}
-                    title="Click to change status"
-                  >
-                    {statusIcons[entry.status]} {entry.status}
-                  </button>
-                {:else}
-                  <span class="{statusColors[entry.status]} text-xs">
-                    {statusIcons[entry.status]} {entry.status}
-                  </span>
-                {/if}
-              </td>
+        <!-- Percentage -->
+        <div class="emittiv-sortable-col--pct">
+          <span class="text-emittiv-light">{formatPercent(entry.percentage_of_total, 1)}</span>
+        </div>
 
-              <!-- Actions -->
-              {#if !readonly}
-                <td class="px-2 py-1 text-right">
-                  <div class="flex items-center justify-end gap-0.5">
-                    {#if entry.type === 'milestone' && entry.stage_id && !entry.description.includes('%')}
-                      <IconButton
-                        icon="split"
-                        variant="secondary"
-                        size="md"
-                        title="Split into 50%/100%"
-                        on:click={() => splitPayment(entry.id)}
-                      />
-                    {/if}
-                    <IconButton icon="trash" variant="danger" size="md" title="Remove" on:click={() => removePayment(entry.id)} />
-                  </div>
-                </td>
+        <!-- Status -->
+        <div class="emittiv-sortable-col--status">
+          {#if !readonly}
+            <button
+              type="button"
+              class="emittiv-status-btn {statusColors[entry.status]}"
+              onclick={() => cycleStatus(entry.id)}
+              title="Click to change status"
+            >
+              {statusIcons[entry.status]} {entry.status}
+            </button>
+          {:else}
+            <span class="{statusColors[entry.status]} text-xs">
+              {statusIcons[entry.status]} {entry.status}
+            </span>
+          {/if}
+        </div>
+
+        <!-- Actions -->
+        {#if !readonly}
+          <div class="emittiv-sortable-col--action">
+            <div class="flex items-center gap-0.5">
+              {#if entry.type === 'milestone' && entry.stage_id && !entry.description.includes('%')}
+                <IconButton
+                  icon="split"
+                  variant="secondary"
+                  size="sm"
+                  title="Split into 50%/100%"
+                  on:click={() => splitPayment(entry.id)}
+                />
               {/if}
-            </tr>
-          {/each}
-        </tbody>
-        <tfoot>
-          <tr class="bg-emittiv-black/30 border-t border-emittiv-dark">
-            <td class="px-2 py-1.5 text-emittiv-white font-medium">TOTAL</td>
-            <td class="px-2 py-1.5 text-right font-bold" class:text-emittiv-splash={scheduleValid} class:text-red-500={!scheduleValid}>
-              {formatNumber(scheduledTotal)}
-            </td>
-            <td class="px-2 py-1.5 text-right text-emittiv-light">
-              {formatPercent(grandTotal > 0 ? (scheduledTotal / grandTotal) * 100 : 0, 1)}
-            </td>
-            <td colspan={readonly ? 1 : 2}></td>
-          </tr>
-        </tfoot>
-      </table>
+              <IconButton icon="trash" variant="danger" size="sm" title="Remove" on:click={() => removePayment(entry.id)} />
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/each}
+
+    <!-- Footer/totals row -->
+    <div class="emittiv-sortable-footer">
+      <div class="emittiv-sortable-col--grow">TOTAL</div>
+      <div class="emittiv-sortable-col--number">
+        <span class:text-emittiv-splash={scheduleValid} class:text-red-500={!scheduleValid} class="font-bold">
+          {formatNumber(scheduledTotal)}
+        </span>
+      </div>
+      <div class="emittiv-sortable-col--pct">
+        <span class="text-emittiv-light">{formatPercent(grandTotal > 0 ? (scheduledTotal / grandTotal) * 100 : 0, 1)}</span>
+      </div>
+      <div class="emittiv-sortable-col--status"></div>
+      {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}
     </div>
 
     <!-- Validation warning -->
     {#if !scheduleValid}
-      <div class="px-3 py-1.5 bg-red-500/10 border-t border-red-500/30">
-        <span class="text-red-500 text-xxs">
-          Schedule total ({formatNumber(scheduledTotal)}) doesn't match grand total ({formatNumber(grandTotal)})
-        </span>
+      <div class="emittiv-matrix-warning">
+        Schedule total ({formatNumber(scheduledTotal)}) doesn't match grand total ({formatNumber(grandTotal)})
       </div>
     {/if}
   {/if}

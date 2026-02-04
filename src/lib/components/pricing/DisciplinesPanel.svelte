@@ -19,8 +19,8 @@
     disciplines.reduce((sum, d) => sum + d.percentage, 0)
   );
 
-  // Validation state
-  const isValid = $derived(Math.abs(totalPercentage - 100) < 0.01);
+  // Validation state — round to 2 decimals before comparison to handle floating point
+  const isValid = $derived(Math.abs(Math.round(totalPercentage * 100) - 10000) === 0);
 
   // Sorted for display
   const sorted = $derived([...disciplines].sort((a, b) => a.order - b.order));
@@ -60,10 +60,12 @@
 
   function distributeEvenly() {
     if (disciplines.length === 0) return;
-    const evenPercent = 100 / disciplines.length;
-    const updated = disciplines.map(d => ({
+    const evenPercent = Math.floor((100 / disciplines.length) * 100) / 100;
+    const updated = disciplines.map((d, i) => ({
       ...d,
-      percentage: Math.round(evenPercent * 100) / 100,
+      percentage: i === disciplines.length - 1
+        ? Math.round((100 - evenPercent * (disciplines.length - 1)) * 100) / 100
+        : evenPercent,
     }));
     onUpdate(updated);
   }
@@ -79,19 +81,11 @@
     {#if !readonly}
       <div class="flex items-center gap-2">
         {#if disciplines.length === 0}
-          <button
-            type="button"
-            class="text-xxs text-emittiv-splash hover:text-orange-400 transition-colors"
-            onclick={loadDefaults}
-          >
+          <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={loadDefaults}>
             Load Defaults
           </button>
         {:else}
-          <button
-            type="button"
-            class="text-xxs text-emittiv-light hover:text-emittiv-white transition-colors"
-            onclick={distributeEvenly}
-          >
+          <button type="button" class="emittiv-text-btn" onclick={distributeEvenly}>
             Distribute Evenly
           </button>
         {/if}

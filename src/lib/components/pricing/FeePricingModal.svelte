@@ -232,14 +232,11 @@
       {#each tabs as tab}
         <button
           type="button"
-          class="flex items-center gap-1.5 px-3 py-2 rounded-t text-sm font-medium transition-colors"
-          class:bg-emittiv-darker={activeTab === tab.id}
-          class:text-emittiv-splash={activeTab === tab.id}
-          class:text-emittiv-light={activeTab !== tab.id}
-          class:hover:text-emittiv-white={activeTab !== tab.id}
+          class="emittiv-tab"
+          class:emittiv-tab--active={activeTab === tab.id}
           onclick={() => activeTab = tab.id}
         >
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="emittiv-tab__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={tab.icon} />
           </svg>
           {tab.label}
@@ -255,8 +252,10 @@
           {disciplines}
           {stages}
           bind:cells
+          bind:postContractItems
           onUpdateConfig={handleConfigUpdate}
           onUpdateCells={handleCellsUpdate}
+          onUpdatePostContract={handlePostContractUpdate}
         />
       {:else if activeTab === 'disciplines'}
         <DisciplinesPanel
@@ -266,9 +265,7 @@
       {:else if activeTab === 'stages'}
         <StagesPanel
           bind:stages
-          bind:postContractItems
           onUpdateStages={handleStagesUpdate}
-          onUpdatePostContract={handlePostContractUpdate}
         />
       {:else if activeTab === 'costs'}
         <CostsPanel

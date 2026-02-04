@@ -695,6 +695,64 @@
     flex-shrink: 0;
   }
 
+  /* Tab button - for tabbed panel navigation */
+  .emittiv-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 4px 4px 0 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--emittiv-light);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 200ms ease;
+  }
+
+  .emittiv-tab:hover {
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-tab--active {
+    background: var(--emittiv-black);
+    color: var(--emittiv-splash);
+  }
+
+  .emittiv-tab__icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Summary panel - ledger-style label/value rows */
+  .emittiv-summary-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .emittiv-summary-line--sub {
+    padding-left: 16px;
+    font-size: 14px;
+  }
+
+  .emittiv-summary-line--total {
+    border-top: 1px solid var(--emittiv-dark);
+    padding-top: 8px;
+  }
+
+  .emittiv-summary-section {
+    border-top: 1px solid var(--emittiv-dark);
+    padding-top: 16px;
+  }
+
+  .emittiv-summary-highlight {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
   /* Compact form divider */
   .emittiv-form-divider {
     border-top: 1px solid rgba(102, 102, 102, 0.5);
@@ -1017,6 +1075,54 @@
     width: 120px;
     flex-shrink: 0;
     margin-left: auto;
+  }
+
+  .emittiv-sortable-col--status {
+    width: 88px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emittiv-status-btn {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 200ms;
+    white-space: nowrap;
+  }
+
+  .emittiv-status-btn:hover {
+    opacity: 0.8;
+  }
+
+  /* Text button - small utility actions in panel headers */
+  .emittiv-text-btn {
+    font-size: 10px;
+    color: var(--emittiv-light);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 200ms ease;
+    white-space: nowrap;
+  }
+
+  .emittiv-text-btn:hover {
+    color: var(--emittiv-white);
+  }
+
+  /* Primary variant - splash colored for prominent actions (Load Defaults, Generate) */
+  .emittiv-text-btn--primary {
+    color: var(--emittiv-splash);
+  }
+
+  .emittiv-text-btn--primary:hover {
+    color: #fb923c;
   }
 
   .emittiv-sortable-col--action {

@@ -188,11 +188,11 @@
       {#each tabs as tab}
         <button
           type="button"
-          class="pricing-tab"
-          class:pricing-tab-active={activeTab === tab.id}
+          class="emittiv-tab"
+          class:emittiv-tab--active={activeTab === tab.id}
           onclick={() => activeTab = tab.id}
         >
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="emittiv-tab__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={tab.icon} />
           </svg>
           {tab.label}
@@ -365,30 +365,6 @@
   .reset-btn:hover {
     color: var(--emittiv-splash);
     border-color: var(--emittiv-splash);
-  }
-
-  .pricing-tab {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 4px 4px 0 0;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--emittiv-light);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: color 200ms ease;
-  }
-
-  .pricing-tab:hover {
-    color: var(--emittiv-white);
-  }
-
-  .pricing-tab-active {
-    background: var(--emittiv-black);
-    color: var(--emittiv-splash);
   }
 
   .pricing-content {

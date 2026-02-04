@@ -24,7 +24,8 @@
 
   // Calculate totals
   const designTotal = $derived(designStages.reduce((sum, s) => sum + s.percentage, 0));
-  const isDesignValid = $derived(Math.abs(designTotal - 100) < 0.01);
+  // Round to 2 decimals before comparison to handle floating point
+  const isDesignValid = $derived(Math.abs(Math.round(designTotal * 100) - 10000) === 0);
 
   // Stage editing
   function addDesignStage() {
@@ -113,10 +114,18 @@
 
   function distributeEvenly() {
     if (designStages.length === 0) return;
-    const evenPercent = 100 / designStages.length;
+    const evenPercent = Math.floor((100 / designStages.length) * 100) / 100;
+    let designIndex = 0;
     const updated = stages.map(s => {
       if (s.is_post_contract) return s;
-      return { ...s, percentage: Math.round(evenPercent * 100) / 100 };
+      const isLast = designIndex === designStages.length - 1;
+      designIndex++;
+      return {
+        ...s,
+        percentage: isLast
+          ? Math.round((100 - evenPercent * (designStages.length - 1)) * 100) / 100
+          : evenPercent,
+      };
     });
     stages = updated;
     onUpdateStages(updated);
@@ -130,19 +139,11 @@
       {#if !readonly}
         <div class="flex items-center gap-2">
           {#if stages.length === 0}
-            <button
-              type="button"
-              class="text-xxs text-emittiv-splash hover:text-orange-400 transition-colors"
-              onclick={loadDefaults}
-            >
+            <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={loadDefaults}>
               Load Defaults
             </button>
           {:else}
-            <button
-              type="button"
-              class="text-xxs text-emittiv-light hover:text-emittiv-white transition-colors"
-              onclick={distributeEvenly}
-            >
+            <button type="button" class="emittiv-text-btn" onclick={distributeEvenly}>
               Distribute Evenly
             </button>
           {/if}
