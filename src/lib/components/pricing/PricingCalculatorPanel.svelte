@@ -6,7 +6,7 @@
     generatePricingId,
     DEFAULT_PRICING_CONFIG
   } from '../../../types/database';
-  import { formatCurrency, formatNumber, formatPercent } from '$lib/utils/format';
+  import { formatCurrency, formatNumber, formatPercent, roundToIncrement } from '$lib/utils/format';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -39,6 +39,9 @@
   const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
   const postContractStages = $derived(stages.filter(s => s.is_post_contract).sort((a, b) => a.order - b.order));
   const sortedDisciplines = $derived([...disciplines].sort((a, b) => a.order - b.order));
+
+  // Stage total overrides (manual edits to rounded stage totals)
+  let stageTotalOverrides = $state<Map<string, number>>(new Map());
 
   // Post-contract totals
   const postContractSubtotal = $derived(postContractItems.reduce((sum, i) => sum + i.amount, 0));
@@ -92,17 +95,28 @@
     return cell?.override_amount ?? cell?.amount ?? 0;
   }
 
-  // Check if cell has override
+  // Check if cell has override (only if it actually differs from calculated)
   function hasOverride(disciplineId: string, stageId: string): boolean {
     const cell = cells.find(c => c.discipline_id === disciplineId && c.stage_id === stageId);
-    return cell?.override_amount !== undefined;
+    if (cell?.override_amount === undefined) return false;
+    // Only show override indicator if value actually differs from calculated
+    return Math.round(cell.override_amount) !== Math.round(cell.amount);
   }
 
-  // Set cell override
+  // Set cell override (only if value differs from calculated)
   function setCellOverride(disciplineId: string, stageId: string, value: number | null) {
+    const cell = cells.find(c => c.discipline_id === disciplineId && c.stage_id === stageId);
+    const calculatedAmount = cell?.amount ?? 0;
+
+    // Only set override if value actually differs from calculated
+    // Use Math.round for comparison since we display rounded values
+    const newOverride = (value !== null && Math.round(value) !== Math.round(calculatedAmount))
+      ? value
+      : undefined;
+
     const updated = cells.map(c => {
       if (c.discipline_id === disciplineId && c.stage_id === stageId) {
-        return { ...c, override_amount: value ?? undefined };
+        return { ...c, override_amount: newOverride };
       }
       return c;
     });
@@ -120,12 +134,61 @@
     return sortedDisciplines.reduce((sum, disc) => sum + getCellValue(disc.id, stageId), 0);
   }
 
+  // Get rounded stage total for display (client-facing)
+  function getRoundedStageTotal(stageId: string): number {
+    // Check for manual override first
+    if (stageTotalOverrides.has(stageId)) {
+      return stageTotalOverrides.get(stageId)!;
+    }
+    const raw = getStageTotal(stageId);
+    const increment = config?.rounding_increment ?? 50;
+    const mode = config?.rounding_mode ?? 'ceiling';
+    return roundToIncrement(raw, increment, mode);
+  }
+
+  // Check if stage total has override (only if it actually differs from calculated)
+  function hasStageTotalOverride(stageId: string): boolean {
+    if (!stageTotalOverrides.has(stageId)) return false;
+    const override = stageTotalOverrides.get(stageId)!;
+    const raw = getStageTotal(stageId);
+    const increment = config?.rounding_increment ?? 50;
+    const mode = config?.rounding_mode ?? 'ceiling';
+    const calculatedRounded = roundToIncrement(raw, increment, mode);
+    return Math.round(override) !== Math.round(calculatedRounded);
+  }
+
+  // Set stage total override (only if value differs from calculated rounded total)
+  function setStageTotalOverride(stageId: string, value: number) {
+    const raw = getStageTotal(stageId);
+    const increment = config?.rounding_increment ?? 50;
+    const mode = config?.rounding_mode ?? 'ceiling';
+    const calculatedRounded = roundToIncrement(raw, increment, mode);
+
+    // Only set override if value actually differs from calculated rounded value
+    if (Math.round(value) !== Math.round(calculatedRounded)) {
+      stageTotalOverrides = new Map(stageTotalOverrides).set(stageId, value);
+    } else {
+      // Clear any existing override if value matches calculated
+      const newMap = new Map(stageTotalOverrides);
+      newMap.delete(stageId);
+      stageTotalOverrides = newMap;
+    }
+  }
+
+  // Clear stage total override
+  function clearStageTotalOverride(stageId: string) {
+    const newMap = new Map(stageTotalOverrides);
+    newMap.delete(stageId);
+    stageTotalOverrides = newMap;
+  }
+
   function getDisciplineTotal(disciplineId: string): number {
     return designStages.reduce((sum, stage) => sum + getCellValue(disciplineId, stage.id), 0);
   }
 
+  // Design subtotal uses rounded stage totals for consistency
   const designSubtotal = $derived(
-    sortedDisciplines.reduce((sum, disc) => sum + getDisciplineTotal(disc.id), 0)
+    designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0)
   );
   const designVat = $derived(designSubtotal * (config?.vat_percent || 0) / 100);
   const grandTotal = $derived(designSubtotal + designVat);
@@ -287,6 +350,78 @@
         <span class="emittiv-calc-quoted">{formatCurrency(config.quoted_fee, config.currency)}</span>
       </div>
     </div>
+
+    <!-- Rounding Configuration Row -->
+    <div class="emittiv-calc-row mt-2">
+      <div class="emittiv-calc-field emittiv-calc-field--currency">
+        <label class="emittiv-label">Rounding</label>
+        {#if !readonly}
+          <select
+            class="emittiv-select"
+            value={config.rounding_increment ?? 50}
+            onchange={(e) => updateConfig('rounding_increment', parseInt(e.currentTarget.value))}
+          >
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={250}>250</option>
+            <option value={500}>500</option>
+            <option value={1000}>1,000</option>
+          </select>
+        {:else}
+          <span class="text-emittiv-white">{config.rounding_increment ?? 50}</span>
+        {/if}
+      </div>
+      <div class="emittiv-calc-field emittiv-calc-field--currency">
+        <label class="emittiv-label">Mode</label>
+        {#if !readonly}
+          <select
+            class="emittiv-select"
+            value={config.rounding_mode ?? 'ceiling'}
+            onchange={(e) => updateConfig('rounding_mode', e.currentTarget.value)}
+          >
+            <option value="ceiling">Ceiling (up)</option>
+            <option value="nearest">Nearest</option>
+          </select>
+        {:else}
+          <span class="text-emittiv-white">{config.rounding_mode === 'nearest' ? 'Nearest' : 'Ceiling'}</span>
+        {/if}
+      </div>
+      <div class="emittiv-calc-field emittiv-calc-field--currency">
+        <label class="emittiv-label">Tax Type</label>
+        {#if !readonly}
+          <select
+            class="emittiv-select"
+            value={config.tax_type ?? 'vat'}
+            onchange={(e) => updateConfig('tax_type', e.currentTarget.value)}
+          >
+            <option value="vat">VAT</option>
+            <option value="withholding">Withholding</option>
+            <option value="none">None</option>
+          </select>
+        {:else}
+          <span class="text-emittiv-white">{config.tax_type === 'none' ? 'None' : config.tax_type === 'withholding' ? 'Withholding' : 'VAT'}</span>
+        {/if}
+      </div>
+      <div class="emittiv-calc-field emittiv-calc-field--pct">
+        <label class="emittiv-label">Show Tax</label>
+        {#if !readonly}
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              class="emittiv-checkbox"
+              checked={config.show_tax_in_summary ?? false}
+              onchange={(e) => updateConfig('show_tax_in_summary', e.currentTarget.checked)}
+            />
+            <span class="text-emittiv-light text-xs">In summary</span>
+          </label>
+        {:else}
+          <span class="text-emittiv-white">{config.show_tax_in_summary ? 'Yes' : 'No'}</span>
+        {/if}
+      </div>
+      <div class="emittiv-calc-field emittiv-calc-field--quoted">
+        <!-- Spacer to align with row above -->
+      </div>
+    </div>
   </PanelCard>
 
   <!-- Design Phase Pricing Matrix -->
@@ -297,8 +432,7 @@
         <div class="emittiv-sortable-col--grow">Stage</div>
         {#each sortedDisciplines as disc}
           <div class="emittiv-sortable-col--number">
-            {disc.name}
-            <span class="emittiv-sortable-col--subtitle">{formatPercent(disc.percentage)}</span>
+            {disc.name} <span class="text-emittiv-lighter">{formatPercent(disc.percentage)}</span>
           </div>
         {/each}
         <div class="emittiv-sortable-col--accent">Total</div>
@@ -307,9 +441,12 @@
       <!-- Data rows -->
       {#each designStages as stage}
         <div class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact">
-          <div class="emittiv-sortable-col--grow text-emittiv-white">
-            {stage.name}
-            <span class="emittiv-sortable-col--subtitle">({formatPercent(stage.percentage)})</span>
+          <div class="emittiv-sortable-col--grow flex items-center justify-between text-emittiv-white">
+            <span>{stage.name}</span>
+            <span class="text-emittiv-light text-xs flex">
+              <span class="w-8 text-center">[{stage.code}]</span>
+              <span class="w-10 text-right">[{formatPercent(stage.percentage)}]</span>&nbsp;&nbsp;
+            </span>
           </div>
           {#each sortedDisciplines as disc}
             {@const cellValue = getCellValue(disc.id, stage.id)}
@@ -317,13 +454,6 @@
             <div class="emittiv-sortable-col--number">
               {#if !readonly}
                 <div class="emittiv-sortable-cell-group">
-                  <input
-                    type="text"
-                    inputmode="numeric"
-                    class="emittiv-table-input emittiv-table-input--md"
-                    class:emittiv-text--override={isOverridden}
-                    use:formattedNumber={{ value: Math.round(cellValue), onChange: (v) => setCellOverride(disc.id, stage.id, v), min: 0 }}
-                  />
                   {#if isOverridden}
                     <button
                       type="button"
@@ -336,6 +466,14 @@
                       </svg>
                     </button>
                   {/if}
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="emittiv-table-input emittiv-table-input--md"
+                    class:emittiv-text--override={isOverridden}
+                    class:emittiv-table-input--has-override={isOverridden}
+                    use:formattedNumber={{ value: Math.round(cellValue), onChange: (v) => setCellOverride(disc.id, stage.id, v), min: 0 }}
+                  />
                 </div>
               {:else}
                 <span class:emittiv-text--override={isOverridden}>
@@ -344,8 +482,34 @@
               {/if}
             </div>
           {/each}
-          <div class="emittiv-sortable-col--accent">
-            {formatNumber(getStageTotal(stage.id))}
+          <div class="emittiv-sortable-col--accent" title="Calculated: {formatNumber(getStageTotal(stage.id))} → Rounded: {formatNumber(roundToIncrement(getStageTotal(stage.id), config?.rounding_increment ?? 50, config?.rounding_mode ?? 'ceiling'))}">
+            {#if !readonly}
+              {@const isOverridden = hasStageTotalOverride(stage.id)}
+              <div class="emittiv-sortable-cell-group">
+                {#if isOverridden}
+                  <button
+                    type="button"
+                    class="emittiv-override-reset"
+                    onclick={() => clearStageTotalOverride(stage.id)}
+                    title="Reset to calculated value"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                {/if}
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  class="emittiv-table-input emittiv-table-input--md emittiv-table-input--accent"
+                  class:emittiv-text--override={isOverridden}
+                  class:emittiv-table-input--has-override={isOverridden}
+                  use:formattedNumber={{ value: getRoundedStageTotal(stage.id), onChange: (v) => setStageTotalOverride(stage.id, v), min: 0 }}
+                />
+              </div>
+            {:else}
+              {formatNumber(getRoundedStageTotal(stage.id))}
+            {/if}
           </div>
         </div>
       {/each}
@@ -362,31 +526,33 @@
           {formatNumber(designSubtotal)}
         </div>
       </div>
-      <!-- VAT row -->
-      <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
-        <div class="emittiv-sortable-col--grow">VAT ({config.vat_percent}%)</div>
-        {#each sortedDisciplines as disc}
-          <div class="emittiv-sortable-col--number"></div>
-        {/each}
-        <div class="emittiv-sortable-col--accent">
-          {formatNumber(designVat)}
+      <!-- Tax row (only shown if tax type is not 'none' and show_tax_in_summary is true) -->
+      {#if config.tax_type !== 'none' && config.show_tax_in_summary}
+        <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
+          <div class="emittiv-sortable-col--grow">{config.tax_type === 'withholding' ? 'Withholding' : 'VAT'} ({config.vat_percent}%)</div>
+          {#each sortedDisciplines as disc}
+            <div class="emittiv-sortable-col--number"></div>
+          {/each}
+          <div class="emittiv-sortable-col--accent">
+            {formatNumber(designVat)}
+          </div>
         </div>
-      </div>
+      {/if}
       <!-- Total row -->
       <div class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total">
-        <div class="emittiv-sortable-col--grow">TOTAL</div>
+        <div class="emittiv-sortable-col--grow">{config.tax_type !== 'none' && config.show_tax_in_summary ? 'TOTAL (incl. tax)' : 'TOTAL'}</div>
         {#each sortedDisciplines as disc}
           <div class="emittiv-sortable-col--number"></div>
         {/each}
         <div class="emittiv-sortable-col--accent">
-          {formatNumber(grandTotal)}
+          {formatNumber(config.tax_type !== 'none' && config.show_tax_in_summary ? grandTotal : designSubtotal)}
         </div>
       </div>
 
-      <!-- Matrix validation -->
-      {#if Math.abs(designSubtotal - config.quoted_fee) > 1}
+      <!-- Matrix validation - only warn if difference exceeds rounding threshold -->
+      {#if Math.abs(designSubtotal - config.quoted_fee) > (config.rounding_increment ?? 50) * designStages.length}
         <div class="emittiv-matrix-warning">
-          Note: Matrix subtotal ({formatNumber(designSubtotal)}) differs from quoted fee ({formatNumber(config.quoted_fee)}) due to manual overrides
+          Note: Matrix subtotal ({formatNumber(designSubtotal)}) differs significantly from quoted fee ({formatNumber(config.quoted_fee)}) - check for manual overrides
         </div>
       {/if}
     </PanelCard>

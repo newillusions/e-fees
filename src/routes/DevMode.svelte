@@ -63,7 +63,8 @@
     cells,
     postContractItems,
     reimbursableCosts,
-    config.vat_percent,
+    config,
+    stages,
   ));
 
   // Build pricing breakdown for summary bar

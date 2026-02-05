@@ -149,28 +149,37 @@
             {formatCurrency(pricing.subtotal, currency)}
           </span>
         </div>
-        <div class="emittiv-summary-line emittiv-summary-line--sub">
-          <span class="text-emittiv-dark">VAT ({formatPercent(pricing.config.vat_percent)})</span>
-          <span class="text-emittiv-light">
-            {formatCurrency(pricing.vat_amount, currency)}
-          </span>
-        </div>
+        {#if pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary}
+          <div class="emittiv-summary-line emittiv-summary-line--sub">
+            <span class="text-emittiv-dark">{pricing.config.tax_type === 'withholding' ? 'Withholding Tax' : 'VAT'} ({formatPercent(pricing.config.vat_percent)})</span>
+            <span class="text-emittiv-light">
+              {formatCurrency(pricing.vat_amount, currency)}
+            </span>
+          </div>
+        {/if}
         <div class="emittiv-summary-line emittiv-summary-line--total">
-          <span class="text-emittiv-white font-bold text-lg">GRAND TOTAL</span>
+          <span class="text-emittiv-white font-bold text-lg">
+            {pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary ? 'GRAND TOTAL' : 'TOTAL'}
+          </span>
           <span class="text-emittiv-splash font-bold text-xl">
-            {formatCurrency(pricing.grand_total, currency)}
+            {formatCurrency(pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal, currency)}
           </span>
         </div>
+        {#if pricing.config.tax_type !== 'none' && !pricing.config.show_tax_in_summary}
+          <div class="text-emittiv-dark text-xs mt-1">
+            {pricing.config.tax_type === 'withholding' ? 'Withholding tax' : 'VAT'} will be added at the prevailing rate ({pricing.config.vat_percent}%)
+          </div>
+        {/if}
       </div>
 
-      <!-- Mobilisation -->
+      <!-- Mobilisation (calculated on subtotal, not including tax) -->
       <div class="emittiv-summary-highlight">
         <div class="emittiv-summary-line">
           <span class="text-emittiv-light">
             MOBILISATION ({formatPercent(pricing.config.mobilisation_percent)})
           </span>
           <span class="text-emittiv-splash font-bold">
-            {formatCurrency(pricing.grand_total * (pricing.config.mobilisation_percent / 100), currency)}
+            {formatCurrency(pricing.subtotal * (pricing.config.mobilisation_percent / 100), currency)}
           </span>
         </div>
       </div>

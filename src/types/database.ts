@@ -173,6 +173,12 @@ export interface Stage {
   is_post_contract: boolean;  // Design phase vs post-contract
 }
 
+/** Tax type for pricing */
+export type TaxType = 'vat' | 'withholding' | 'none';
+
+/** Rounding mode for stage totals */
+export type RoundingMode = 'ceiling' | 'nearest';
+
 /** Pricing configuration */
 export interface PricingConfig {
   target_fee: number;           // What we want to achieve
@@ -182,6 +188,11 @@ export interface PricingConfig {
   vat_percent: number;          // VAT rate (typically 5% UAE)
   vat_included: boolean;        // Whether VAT is included in quoted_fee
   mobilisation_percent: number; // Advance payment percentage (typically 30%)
+  // Rounding settings for client-friendly stage totals
+  rounding_increment: number;   // 50, 100, 250, 500, 1000 (default: 50)
+  rounding_mode: RoundingMode;  // 'ceiling' or 'nearest' (default: 'ceiling')
+  tax_type: TaxType;            // 'vat', 'withholding', or 'none' (default: 'vat')
+  show_tax_in_summary: boolean; // Show tax in summary panels (default: false)
 }
 
 /** Discipline × Stage pricing cell */
@@ -301,6 +312,10 @@ export const DEFAULT_PRICING_CONFIG: Omit<PricingConfig, 'target_fee' | 'quoted_
   vat_percent: 5,
   vat_included: false,
   mobilisation_percent: 30,
+  rounding_increment: 50,
+  rounding_mode: 'ceiling',
+  tax_type: 'vat',
+  show_tax_in_summary: false,
 };
 
 export const DEFAULT_COST_MARKUP_PERCENT = 15;
@@ -451,13 +466,29 @@ export function createDefaultPostContractStages(): Stage[] {
 }
 
 /**
- * Calculate totals from pricing breakdown.
+ * Round a value to the nearest increment.
+ */
+function roundToIncrement(
+  value: number,
+  increment: number,
+  mode: RoundingMode = 'ceiling'
+): number {
+  if (increment <= 0) return value;
+  if (mode === 'ceiling') {
+    return Math.ceil(value / increment) * increment;
+  }
+  return Math.round(value / increment) * increment;
+}
+
+/**
+ * Calculate totals from pricing breakdown with rounding support.
  */
 export function calculatePricingTotals(
   cells: PricingCell[],
   postContractItems: PostContractItem[],
   costs: ReimbursableCost[],
-  vatPercent: number
+  config: PricingConfig,
+  stages?: Stage[]
 ): {
   design_phase_total: number;
   post_contract_total: number;
@@ -466,10 +497,40 @@ export function calculatePricingTotals(
   vat_amount: number;
   grand_total: number;
 } {
-  const design_phase_total = cells.reduce(
-    (sum, cell) => sum + (cell.override_amount ?? cell.amount),
-    0
-  );
+  const roundingIncrement = config.rounding_increment ?? 50;
+  const roundingMode = config.rounding_mode ?? 'ceiling';
+  const vatPercent = config.vat_percent ?? 0;
+  const taxType = config.tax_type ?? 'vat';
+  const showTax = config.show_tax_in_summary ?? false;
+
+  // Calculate design phase total with stage-level rounding
+  let design_phase_total: number;
+
+  if (stages && stages.length > 0) {
+    // Group cells by stage and round each stage total
+    const designStageIds = new Set(
+      stages.filter(s => !s.is_post_contract).map(s => s.id)
+    );
+
+    const stageTotals = new Map<string, number>();
+    for (const cell of cells) {
+      if (!designStageIds.has(cell.stage_id)) continue;
+      const current = stageTotals.get(cell.stage_id) ?? 0;
+      stageTotals.set(cell.stage_id, current + (cell.override_amount ?? cell.amount));
+    }
+
+    // Round each stage total and sum
+    design_phase_total = 0;
+    for (const [, rawTotal] of stageTotals) {
+      design_phase_total += roundToIncrement(rawTotal, roundingIncrement, roundingMode);
+    }
+  } else {
+    // Fallback: no stages provided, just sum cells (no per-stage rounding)
+    design_phase_total = cells.reduce(
+      (sum, cell) => sum + (cell.override_amount ?? cell.amount),
+      0
+    );
+  }
 
   const post_contract_total = postContractItems.reduce(
     (sum, item) => sum + item.amount,
@@ -482,7 +543,9 @@ export function calculatePricingTotals(
   );
 
   const subtotal = design_phase_total + post_contract_total + costs_total;
-  const vat_amount = subtotal * (vatPercent / 100);
+
+  // Calculate tax based on type
+  const vat_amount = taxType !== 'none' ? subtotal * (vatPercent / 100) : 0;
   const grand_total = subtotal + vat_amount;
 
   return {

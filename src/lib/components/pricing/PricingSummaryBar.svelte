@@ -11,13 +11,17 @@
 
   // Computed values with fallbacks
   const targetFee = $derived(pricing?.config?.target_fee ?? 0);
-  const quotedFee = $derived(pricing?.config?.quoted_fee ?? 0);
   const designTotal = $derived(pricing?.design_phase_total ?? 0);
   const postContractTotal = $derived(pricing?.post_contract_total ?? 0);
   const costsTotal = $derived(pricing?.costs_total ?? 0);
+  const subtotal = $derived(pricing?.subtotal ?? 0);
   const vatAmount = $derived(pricing?.vat_amount ?? 0);
   const grandTotal = $derived(pricing?.grand_total ?? 0);
   const currency = $derived(pricing?.config?.currency ?? 'AED');
+
+  // Tax display settings
+  const showTax = $derived(pricing?.config?.show_tax_in_summary ?? false);
+  const taxType = $derived(pricing?.config?.tax_type ?? 'vat');
 
   // Check if we have any pricing data
   const hasPricing = $derived(pricing !== null && targetFee > 0);
@@ -38,18 +42,11 @@
         <span class="emittiv-summary-bar__value">{formatNumber(targetFee)}</span>
       </div>
 
-      <div class="emittiv-summary-bar__sep"></div>
-
-      <div class="emittiv-summary-bar__item">
-        <span class="emittiv-summary-bar__label">Quoted</span>
-        <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent">{formatNumber(quotedFee)}</span>
-      </div>
-
       {#if designTotal > 0}
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
           <span class="emittiv-summary-bar__label">Design</span>
-          <span class="emittiv-summary-bar__value">{formatNumber(Math.round(designTotal))}</span>
+          <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent">{formatNumber(designTotal)}</span>
         </div>
       {/if}
 
@@ -57,7 +54,7 @@
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
           <span class="emittiv-summary-bar__label">Post-Contract</span>
-          <span class="emittiv-summary-bar__value">{formatNumber(Math.round(postContractTotal))}</span>
+          <span class="emittiv-summary-bar__value">{formatNumber(postContractTotal)}</span>
         </div>
       {/if}
 
@@ -65,22 +62,22 @@
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
           <span class="emittiv-summary-bar__label">Costs</span>
-          <span class="emittiv-summary-bar__value">{formatNumber(Math.round(costsTotal))}</span>
+          <span class="emittiv-summary-bar__value">{formatNumber(costsTotal)}</span>
         </div>
       {/if}
 
-      {#if vatAmount > 0}
+      {#if showTax && taxType !== 'none' && vatAmount > 0}
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
-          <span class="emittiv-summary-bar__label">VAT</span>
-          <span class="emittiv-summary-bar__value">{formatNumber(Math.round(vatAmount))}</span>
+          <span class="emittiv-summary-bar__label">{taxType === 'withholding' ? 'Tax' : 'VAT'}</span>
+          <span class="emittiv-summary-bar__value">{formatNumber(vatAmount)}</span>
         </div>
       {/if}
     </div>
 
     <div class="emittiv-summary-bar__total">
       <span class="emittiv-summary-bar__label">TOTAL</span>
-      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">{formatNumber(Math.round(grandTotal))} {currency}</span>
+      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">{formatNumber(showTax && taxType !== 'none' ? grandTotal : subtotal)} {currency}</span>
     </div>
   </button>
 {:else}

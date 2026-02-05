@@ -98,7 +98,8 @@
     cells,
     postContractItems,
     reimbursableCosts,
-    config?.vat_percent ?? 5
+    config ?? DEFAULT_PRICING_CONFIG as any,
+    stages,
   );
 
   // Build pricing breakdown for summary bar

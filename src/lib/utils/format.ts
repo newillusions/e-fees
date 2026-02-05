@@ -124,3 +124,30 @@ export function formatDate(
       });
   }
 }
+
+/**
+ * Round a value to the nearest increment.
+ * Used for producing client-friendly "human readable" fee values.
+ *
+ * @param value - The value to round
+ * @param increment - The rounding increment (e.g., 50, 100, 500)
+ * @param mode - 'ceiling' always rounds up, 'nearest' rounds to closest
+ * @returns Rounded value
+ *
+ * @example
+ * roundToIncrement(12847, 50, 'ceiling') // 12850
+ * roundToIncrement(12847, 100, 'ceiling') // 12900
+ * roundToIncrement(12847, 50, 'nearest') // 12850
+ * roundToIncrement(12825, 50, 'nearest') // 12850
+ */
+export function roundToIncrement(
+  value: number,
+  increment: number,
+  mode: 'ceiling' | 'nearest' = 'ceiling'
+): number {
+  if (increment <= 0) return value;
+  if (mode === 'ceiling') {
+    return Math.ceil(value / increment) * increment;
+  }
+  return Math.round(value / increment) * increment;
+}

@@ -1224,8 +1224,12 @@
     color: #eab308;
   }
 
-  /* Override reset button (inline cell action) */
+  /* Override reset button (inside input, left-aligned) */
   .emittiv-override-reset {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
     padding: 2px;
     color: #eab308;
     cursor: pointer;
@@ -1234,6 +1238,7 @@
     display: flex;
     align-items: center;
     transition: color 0.15s ease;
+    z-index: 1;
   }
 
   .emittiv-override-reset:hover {
@@ -1250,12 +1255,28 @@
     color: #eab308;
   }
 
+  /* Input with override has left padding for reset button */
+  .emittiv-table-input--has-override {
+    padding-left: 16px;
+  }
+
   /* Cell with input + optional action button */
   .emittiv-sortable-cell-group {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 2px;
+    width: 100%;
+  }
+
+  /* Input inside cell-group fills the width so reset button overlaps it */
+  .emittiv-sortable-cell-group .emittiv-table-input {
+    width: 100%;
+  }
+
+  /* Ensure accent column behaves like number column when containing inputs */
+  .emittiv-sortable-col--accent:has(.emittiv-sortable-cell-group) {
+    display: flex;
+    align-items: center;
   }
 
   /* Drag-over highlight for reorderable rows */
