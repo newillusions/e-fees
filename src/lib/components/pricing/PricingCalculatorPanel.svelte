@@ -190,7 +190,8 @@
   const designSubtotal = $derived(
     designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0)
   );
-  const designVat = $derived(designSubtotal * (config?.vat_percent || 0) / 100);
+  // VAT is added on top; withholding is NOT added to proposal totals (applied at invoice time only)
+  const designVat = $derived(config?.tax_type === 'vat' ? designSubtotal * (config?.vat_percent || 0) / 100 : 0);
   const grandTotal = $derived(designSubtotal + designVat);
 
   // Update config field
@@ -346,7 +347,7 @@
         {/if}
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--quoted">
-        <label class="emittiv-label">Quoted Fee</label>
+        <label class="emittiv-label">Calculated Fee</label>
         <span class="emittiv-calc-quoted">{formatCurrency(config.quoted_fee, config.currency)}</span>
       </div>
     </div>
@@ -526,10 +527,10 @@
           {formatNumber(designSubtotal)}
         </div>
       </div>
-      <!-- Tax row (only shown if tax type is not 'none' and show_tax_in_summary is true) -->
-      {#if config.tax_type !== 'none' && config.show_tax_in_summary}
+      <!-- Tax row (only shown for VAT when show_tax_in_summary is true) -->
+      {#if config.tax_type === 'vat' && config.show_tax_in_summary}
         <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
-          <div class="emittiv-sortable-col--grow">{config.tax_type === 'withholding' ? 'Withholding' : 'VAT'} ({config.vat_percent}%)</div>
+          <div class="emittiv-sortable-col--grow">VAT ({config.vat_percent}%)</div>
           {#each sortedDisciplines as disc}
             <div class="emittiv-sortable-col--number"></div>
           {/each}
@@ -540,12 +541,12 @@
       {/if}
       <!-- Total row -->
       <div class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total">
-        <div class="emittiv-sortable-col--grow">{config.tax_type !== 'none' && config.show_tax_in_summary ? 'TOTAL (incl. tax)' : 'TOTAL'}</div>
+        <div class="emittiv-sortable-col--grow">{config.tax_type === 'vat' && config.show_tax_in_summary ? 'TOTAL (incl. VAT)' : 'TOTAL'}</div>
         {#each sortedDisciplines as disc}
           <div class="emittiv-sortable-col--number"></div>
         {/each}
         <div class="emittiv-sortable-col--accent">
-          {formatNumber(config.tax_type !== 'none' && config.show_tax_in_summary ? grandTotal : designSubtotal)}
+          {formatNumber(config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal)}
         </div>
       </div>
 

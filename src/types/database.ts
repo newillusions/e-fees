@@ -545,7 +545,10 @@ export function calculatePricingTotals(
   const subtotal = design_phase_total + post_contract_total + costs_total;
 
   // Calculate tax based on type
-  const vat_amount = taxType !== 'none' ? subtotal * (vatPercent / 100) : 0;
+  // VAT: added on top of subtotal (client pays more)
+  // Withholding: NOT added to proposal totals — it's only applied at invoice time
+  //   (see docs/WITHHOLDING_TAX.md for full explanation)
+  const vat_amount = taxType === 'vat' ? subtotal * (vatPercent / 100) : 0;
   const grand_total = subtotal + vat_amount;
 
   return {

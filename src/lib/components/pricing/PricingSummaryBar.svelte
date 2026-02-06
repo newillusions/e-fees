@@ -66,10 +66,10 @@
         </div>
       {/if}
 
-      {#if showTax && taxType !== 'none' && vatAmount > 0}
+      {#if showTax && taxType === 'vat' && vatAmount > 0}
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
-          <span class="emittiv-summary-bar__label">{taxType === 'withholding' ? 'Tax' : 'VAT'}</span>
+          <span class="emittiv-summary-bar__label">VAT</span>
           <span class="emittiv-summary-bar__value">{formatNumber(vatAmount)}</span>
         </div>
       {/if}
@@ -77,7 +77,7 @@
 
     <div class="emittiv-summary-bar__total">
       <span class="emittiv-summary-bar__label">TOTAL</span>
-      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">{formatNumber(showTax && taxType !== 'none' ? grandTotal : subtotal)} {currency}</span>
+      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">{formatNumber(showTax && taxType === 'vat' ? grandTotal : subtotal)} {currency}</span>
     </div>
   </button>
 {:else}

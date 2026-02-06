@@ -149,9 +149,9 @@
             {formatCurrency(pricing.subtotal, currency)}
           </span>
         </div>
-        {#if pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary}
+        {#if pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary}
           <div class="emittiv-summary-line emittiv-summary-line--sub">
-            <span class="text-emittiv-dark">{pricing.config.tax_type === 'withholding' ? 'Withholding Tax' : 'VAT'} ({formatPercent(pricing.config.vat_percent)})</span>
+            <span class="text-emittiv-dark">VAT ({formatPercent(pricing.config.vat_percent)})</span>
             <span class="text-emittiv-light">
               {formatCurrency(pricing.vat_amount, currency)}
             </span>
@@ -159,15 +159,20 @@
         {/if}
         <div class="emittiv-summary-line emittiv-summary-line--total">
           <span class="text-emittiv-white font-bold text-lg">
-            {pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary ? 'GRAND TOTAL' : 'TOTAL'}
+            {pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? 'GRAND TOTAL' : 'TOTAL'}
           </span>
           <span class="text-emittiv-splash font-bold text-xl">
-            {formatCurrency(pricing.config.tax_type !== 'none' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal, currency)}
+            {formatCurrency(pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal, currency)}
           </span>
         </div>
-        {#if pricing.config.tax_type !== 'none' && !pricing.config.show_tax_in_summary}
+        {#if pricing.config.tax_type === 'vat' && !pricing.config.show_tax_in_summary}
           <div class="text-emittiv-dark text-xs mt-1">
-            {pricing.config.tax_type === 'withholding' ? 'Withholding tax' : 'VAT'} will be added at the prevailing rate ({pricing.config.vat_percent}%)
+            VAT will be added at the prevailing rate ({pricing.config.vat_percent}%)
+          </div>
+        {/if}
+        {#if pricing.config.tax_type === 'withholding'}
+          <div class="text-emittiv-dark text-xs mt-1">
+            Withholding tax ({pricing.config.vat_percent}%) applies — invoices will be grossed up so net receivable equals the quoted fee
           </div>
         {/if}
       </div>
