@@ -14,6 +14,7 @@
   import DevMode from './routes/DevMode.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { loadAllData } from '$lib/stores';
+  import { refreshExchangeRates } from '$lib/stores/exchangeRates';
   import { fade } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import {
@@ -102,6 +103,9 @@
 
   onMount(async () => {
     // Initialize app-wide logic
+
+    // Fetch exchange rates on startup (fire and forget — don't block app loading)
+    refreshExchangeRates().catch(err => console.warn('Exchange rates unavailable:', err));
 
     // Set up MCP plugin event listeners
     try {

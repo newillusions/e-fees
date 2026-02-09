@@ -3,6 +3,7 @@
   import {
     calculateQuotedFee,
     calculateCellAmount,
+    convertToClientCurrency,
     generatePricingId,
     DEFAULT_PRICING_CONFIG
   } from '../../../types/database';
@@ -10,6 +11,14 @@
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
+  import {
+    exchangeRatesStore,
+    exchangeRatesLoading,
+    exchangeRatesActions,
+    SUPPORTED_CURRENCIES,
+    type CurrencyCode
+  } from '$lib/stores/exchangeRates';
+  import { getRate } from '$lib/services/exchangeRates';
 
   interface Props {
     config: PricingConfig;
@@ -194,9 +203,49 @@
   const designVat = $derived(config?.tax_type === 'vat' ? designSubtotal * (config?.vat_percent || 0) / 100 : 0);
   const grandTotal = $derived(designSubtotal + designVat);
 
+  // Multi-currency conversion
+  const hasClientCurrency = $derived(
+    !!config?.client_currency && config.client_currency !== config.currency && !!config?.exchange_rate
+  );
+  const convertedTotal = $derived(
+    hasClientCurrency ? convertToClientCurrency(
+      config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal,
+      config
+    ) : undefined
+  );
+
+  // Live exchange rate from store
+  const liveRate = $derived.by(() => {
+    // Subscribe to store to trigger reactivity when rates are fetched
+    const rates = $exchangeRatesStore;
+    if (!rates || !config?.client_currency || config.client_currency === config.currency) return null;
+    return getRate(config.currency as CurrencyCode, config.client_currency as CurrencyCode);
+  });
+  const liveRateDate = $derived($exchangeRatesStore?.date ?? null);
+  const isRateLocked = $derived(!!config?.rate_locked_at);
+
+  function useLiveRate() {
+    if (liveRate !== null) {
+      updateConfig('exchange_rate', Math.round(liveRate * 10000) / 10000);
+    }
+  }
+
+  function lockRate() {
+    updateConfig('rate_locked_at', new Date().toISOString());
+  }
+
+  function unlockRate() {
+    updateConfig('rate_locked_at', undefined);
+  }
+
   // Update config field
-  function updateConfig(field: keyof PricingConfig, value: number | string | boolean) {
-    config = { ...config, [field]: value };
+  function updateConfig(field: keyof PricingConfig, value: number | string | boolean | undefined) {
+    const updated = { ...config, [field]: value };
+    // Clean up undefined values
+    if (value === undefined) {
+      delete (updated as Record<string, unknown>)[field];
+    }
+    config = updated;
     onUpdateConfig(config);
   }
 
@@ -423,6 +472,143 @@
         <!-- Spacer to align with row above -->
       </div>
     </div>
+
+    <!-- Exchange Rate Row -->
+    <div class="emittiv-calc-row mt-2">
+      <div class="emittiv-calc-field emittiv-calc-field--currency">
+        <label class="emittiv-label">Client Currency</label>
+        {#if !readonly}
+          <select
+            class="emittiv-select"
+            value={config.client_currency ?? ''}
+            onchange={(e) => {
+              const val = e.currentTarget.value;
+              updateConfig('client_currency', val || undefined);
+              if (!val || val === config.currency) {
+                updateConfig('exchange_rate', undefined);
+                updateConfig('rate_locked_at', undefined);
+              }
+            }}
+          >
+            <option value="">Same as base</option>
+            {#each SUPPORTED_CURRENCIES as cur}
+              {#if cur !== config.currency}
+                <option value={cur}>{cur}</option>
+              {/if}
+            {/each}
+          </select>
+        {:else}
+          <span class="text-emittiv-white">{config.client_currency || 'Same as base'}</span>
+        {/if}
+      </div>
+      {#if config.client_currency && config.client_currency !== config.currency}
+        <div class="emittiv-calc-field emittiv-calc-field--currency">
+          <label class="emittiv-label">Quote in</label>
+          {#if !readonly}
+            <select
+              class="emittiv-select"
+              value={config.quote_currency ?? config.currency}
+              onchange={(e) => updateConfig('quote_currency', e.currentTarget.value)}
+            >
+              <option value={config.currency}>{config.currency} (base)</option>
+              <option value={config.client_currency}>{config.client_currency} (client)</option>
+            </select>
+          {:else}
+            <span class="text-emittiv-white">{config.quote_currency ?? config.currency}</span>
+          {/if}
+        </div>
+        <div class="emittiv-calc-field emittiv-calc-field--fee">
+          <label class="emittiv-label">Exchange Rate (1 {config.currency} =)</label>
+          {#if !readonly}
+            <div class="emittiv-exchange-rate-input">
+              <input
+                type="number"
+                min="0"
+                step="0.0001"
+                class="emittiv-input"
+                value={config.exchange_rate ?? ''}
+                disabled={isRateLocked}
+                onchange={(e) => {
+                  const val = parseFloat(e.currentTarget.value);
+                  updateConfig('exchange_rate', isNaN(val) || val <= 0 ? undefined : val);
+                }}
+                placeholder="e.g. 0.9799"
+              />
+              {#if liveRate !== null && !isRateLocked}
+                <button
+                  type="button"
+                  class="emittiv-btn-inline"
+                  onclick={useLiveRate}
+                  title="Use live rate: {liveRate.toFixed(4)}"
+                >
+                  Use Live
+                </button>
+              {/if}
+            </div>
+          {:else}
+            <span class="text-emittiv-white">{config.exchange_rate ?? 'Not set'}</span>
+          {/if}
+        </div>
+
+        <!-- Live Rate Info -->
+        <div class="emittiv-calc-field emittiv-calc-field--fee">
+          {#if $exchangeRatesLoading}
+            <label class="emittiv-label">Live Rate</label>
+            <span class="text-emittiv-dark text-xs">Fetching...</span>
+          {:else if liveRate !== null && liveRateDate}
+            <label class="emittiv-label">Live Rate</label>
+            <span class="text-emittiv-light text-xs">
+              1 {config.currency} = {liveRate.toFixed(4)} {config.client_currency}
+              <span class="text-emittiv-dark">(ECB {liveRateDate})</span>
+            </span>
+          {:else}
+            <label class="emittiv-label">Live Rate</label>
+            <span class="text-emittiv-dark text-xs">Unavailable</span>
+          {/if}
+        </div>
+
+        <!-- Rate Lock & Converted Total -->
+        <div class="emittiv-calc-field emittiv-calc-field--quoted">
+          {#if isRateLocked}
+            <label class="emittiv-label">Rate Locked</label>
+            <div class="emittiv-rate-lock">
+              <span class="text-emittiv-light text-xs">
+                Locked {new Date(config.rate_locked_at!).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+              {#if !readonly}
+                <button
+                  type="button"
+                  class="emittiv-btn-inline emittiv-btn-inline--warn"
+                  onclick={unlockRate}
+                >
+                  Unlock
+                </button>
+              {/if}
+            </div>
+          {:else if config.exchange_rate && !readonly}
+            <label class="emittiv-label">&nbsp;</label>
+            <button
+              type="button"
+              class="emittiv-btn-inline"
+              onclick={lockRate}
+              title="Lock this rate so it won't change when you save"
+            >
+              Lock Rate
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <!-- Converted Total Row (shown when exchange rate is active) -->
+    {#if convertedTotal !== undefined && config.client_currency}
+      <div class="emittiv-calc-row mt-1">
+        <div class="emittiv-calc-field emittiv-calc-field--quoted" style="margin-left: auto;">
+          <label class="emittiv-label">Converted Total</label>
+          <span class="emittiv-calc-quoted">{formatCurrency(convertedTotal, config.client_currency)}</span>
+        </div>
+      </div>
+    {/if}
   </PanelCard>
 
   <!-- Design Phase Pricing Matrix -->

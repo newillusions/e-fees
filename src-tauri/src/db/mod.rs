@@ -23,6 +23,8 @@ pub use types::{
     Fee, FeeCreate, FeeUpdate, Revision, PricingUpdate,
     PaginatedResponse, EntityCounts,
     ActivityLog, ActivityLogCreate,
+    // Pricing types (used by import wizard)
+    PricingBreakdown, PricingConfig, Discipline, Stage, PricingCell,
 };
 
 use std::sync::Arc;

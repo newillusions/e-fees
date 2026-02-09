@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PricingBreakdown } from '../../../types/database';
+  import { convertToClientCurrency } from '../../../types/database';
   import { formatNumber } from '$lib/utils/format';
 
   interface Props {
@@ -23,6 +24,30 @@
   const showTax = $derived(pricing?.config?.show_tax_in_summary ?? false);
   const taxType = $derived(pricing?.config?.tax_type ?? 'vat');
 
+  // Multi-currency conversion
+  const clientCurrency = $derived(pricing?.config?.client_currency);
+  const quoteCurrency = $derived(pricing?.config?.quote_currency ?? currency);
+  const displayTotal = $derived(showTax && taxType === 'vat' ? grandTotal : subtotal);
+  const convertedDisplayTotal = $derived(
+    pricing?.config ? convertToClientCurrency(displayTotal, pricing.config) : undefined
+  );
+
+  // Bidirectional quoting: if quoting in client currency, swap primary/secondary
+  const isQuotingInClient = $derived(
+    !!clientCurrency && clientCurrency !== currency && quoteCurrency === clientCurrency
+  );
+  const primaryTotal = $derived(
+    isQuotingInClient && convertedDisplayTotal !== undefined ? convertedDisplayTotal : displayTotal
+  );
+  const primaryCurrency = $derived(isQuotingInClient && clientCurrency ? clientCurrency : currency);
+  const secondaryTotal = $derived(
+    isQuotingInClient ? displayTotal : convertedDisplayTotal
+  );
+  const secondaryCurrency = $derived(isQuotingInClient ? currency : clientCurrency);
+  const hasSecondary = $derived(
+    secondaryTotal !== undefined && secondaryCurrency && secondaryCurrency !== primaryCurrency
+  );
+
   // Check if we have any pricing data
   const hasPricing = $derived(pricing !== null && targetFee > 0);
 </script>
@@ -35,7 +60,7 @@
     title="Click to view full breakdown"
   >
     <div class="emittiv-summary-bar__items">
-      <span class="emittiv-summary-bar__currency">{currency}</span>
+      <span class="emittiv-summary-bar__currency">{primaryCurrency}</span>
 
       <div class="emittiv-summary-bar__item">
         <span class="emittiv-summary-bar__label">Target</span>
@@ -77,7 +102,12 @@
 
     <div class="emittiv-summary-bar__total">
       <span class="emittiv-summary-bar__label">TOTAL</span>
-      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">{formatNumber(showTax && taxType === 'vat' ? grandTotal : subtotal)} {currency}</span>
+      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">
+        {formatNumber(primaryTotal)} {primaryCurrency}
+        {#if hasSecondary && secondaryTotal !== undefined}
+          <span class="emittiv-summary-bar__converted">({formatNumber(secondaryTotal)} {secondaryCurrency})</span>
+        {/if}
+      </span>
     </div>
   </button>
 {:else}

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { PaymentScheduleEntry, PaymentSchedule, Stage, PricingConfig } from '../../../types/database';
+  import type { PaymentScheduleEntry, PaymentSchedule, Stage, PricingConfig, PricingCell } from '../../../types/database';
   import { generatePricingId } from '../../../types/database';
-  import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
+  import { formatNumber, formatPercent, formatDate, roundToIncrement } from '$lib/utils/format';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -9,6 +9,7 @@
   interface Props {
     schedule: PaymentSchedule;
     stages: Stage[];
+    cells: PricingCell[];
     config: PricingConfig;
     grandTotal: number;
     onUpdate: (schedule: PaymentSchedule) => void;
@@ -18,6 +19,7 @@
   let {
     schedule = $bindable(),
     stages,
+    cells,
     config,
     grandTotal,
     onUpdate,
@@ -26,6 +28,16 @@
 
   // Design stages for milestone generation
   const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
+
+  // Calculate rounded stage total from cells (same logic as PricingCalculatorPanel)
+  function getRoundedStageTotal(stageId: string): number {
+    const rawTotal = cells
+      .filter(c => c.stage_id === stageId)
+      .reduce((sum, c) => sum + (c.override_amount ?? c.amount), 0);
+    const increment = config?.rounding_increment ?? 50;
+    const mode = config?.rounding_mode ?? 'ceiling';
+    return roundToIncrement(rawTotal, increment, mode);
+  }
 
   // Status colors
   const statusColors = {
@@ -58,28 +70,33 @@
     };
   }
 
-  // Generate schedule from pricing
+  // Generate schedule from pricing using actual rounded stage totals
   function generateFromPricing() {
     const entries: PaymentScheduleEntry[] = [];
 
-    // Mobilisation
-    const mobilisationAmount = grandTotal * (config.mobilisation_percent / 100);
+    // Calculate design subtotal from actual rounded stage totals
+    const designSubtotal = designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0);
+
+    // Mobilisation based on design subtotal
+    const mobilisationAmount = designSubtotal * (config.mobilisation_percent / 100);
+    const mobilisationPercent = designSubtotal > 0 ? (mobilisationAmount / designSubtotal) * 100 : 0;
     entries.push({
       id: generatePricingId('pay'),
       type: 'mobilisation',
       description: `Mobilisation (${config.mobilisation_percent}%)`,
       amount: mobilisationAmount,
-      percentage_of_total: config.mobilisation_percent,
+      percentage_of_total: mobilisationPercent,
       status: 'pending',
     });
 
-    // Milestone payments for each design stage
-    const remainingPercent = 100 - config.mobilisation_percent;
-    const remainingAmount = grandTotal - mobilisationAmount;
+    // Milestone payments using actual rounded stage totals
+    const remainingAmount = designSubtotal - mobilisationAmount;
 
     for (const stage of designStages) {
-      const stagePercent = stage.percentage * (remainingPercent / 100);
-      const stageAmount = remainingAmount * (stage.percentage / 100);
+      const stageTotal = getRoundedStageTotal(stage.id);
+      // Distribute remaining amount proportionally based on actual stage totals
+      const stageAmount = designSubtotal > 0 ? remainingAmount * (stageTotal / designSubtotal) : 0;
+      const stagePercent = designSubtotal > 0 ? (stageAmount / designSubtotal) * 100 : 0;
 
       entries.push({
         id: generatePricingId('pay'),
@@ -127,6 +144,10 @@
       // Recalculate percentage when amount changes
       if (field === 'amount') {
         updated.percentage_of_total = grandTotal > 0 ? ((value as number) / grandTotal) * 100 : 0;
+      }
+      // Recalculate amount when percentage changes
+      if (field === 'percentage_of_total') {
+        updated.amount = grandTotal * ((value as number) / 100);
       }
       return updated;
     });
@@ -190,7 +211,8 @@
 
   // Total of all payments
   const scheduledTotal = $derived(schedule.entries.reduce((sum, e) => sum + e.amount, 0));
-  const scheduleValid = $derived(Math.abs(scheduledTotal - grandTotal) < 1);
+  const scheduleDifference = $derived(scheduledTotal - grandTotal);
+  const scheduleValid = $derived(Math.abs(scheduleDifference) < 1);
 </script>
 
 <PanelCard title="Payment Schedule">
@@ -207,17 +229,17 @@
 
   <!-- Payments Table -->
   {#if schedule.entries.length === 0}
-    <div class="p-4 text-center">
-      <p class="text-emittiv-light text-sm mb-1">No payment schedule defined.</p>
+    <div class="p-6 text-center">
+      <p class="text-emittiv-light text-sm mb-3">No payment schedule defined.</p>
       {#if !readonly}
-        <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={generateFromPricing}>
-          Generate from pricing breakdown
+        <button type="button" class="emittiv-btn emittiv-btn--primary emittiv-btn--lg" onclick={generateFromPricing}>
+          Generate from Pricing
         </button>
       {/if}
     </div>
   {:else}
     <!-- Header row -->
-    <div class="emittiv-sortable-header">
+    <div class="emittiv-sortable-header emittiv-sortable-header--compact">
       <div class="emittiv-sortable-col--grow">Payment</div>
       <div class="emittiv-sortable-col--number">Amount</div>
       <div class="emittiv-sortable-col--pct">%</div>
@@ -227,7 +249,7 @@
 
     <!-- Data rows -->
     {#each schedule.entries as entry (entry.id)}
-      <div class="emittiv-sortable-row emittiv-sortable-row--static">
+      <div class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact">
         <!-- Description -->
         <div class="emittiv-sortable-col--grow">
           {#if !readonly}
@@ -258,7 +280,22 @@
 
         <!-- Percentage -->
         <div class="emittiv-sortable-col--pct">
-          <span class="text-emittiv-light">{formatPercent(entry.percentage_of_total, 1)}</span>
+          {#if !readonly}
+            <div class="emittiv-field-suffix">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                class="emittiv-table-input emittiv-table-input--md"
+                value={Math.round(entry.percentage_of_total * 100) / 100}
+                onblur={(e) => updatePayment(entry.id, 'percentage_of_total', parseFloat(e.currentTarget.value) || 0)}
+              />
+              <span class="emittiv-field-suffix__unit">%</span>
+            </div>
+          {:else}
+            <span class="text-emittiv-light">{formatPercent(entry.percentage_of_total, 2)}</span>
+          {/if}
         </div>
 
         <!-- Status -->
@@ -300,7 +337,7 @@
     {/each}
 
     <!-- Footer/totals row -->
-    <div class="emittiv-sortable-footer">
+    <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
       <div class="emittiv-sortable-col--grow">TOTAL</div>
       <div class="emittiv-sortable-col--number">
         <span class:text-emittiv-splash={scheduleValid} class:text-red-500={!scheduleValid} class="font-bold">
@@ -308,7 +345,7 @@
         </span>
       </div>
       <div class="emittiv-sortable-col--pct">
-        <span class="text-emittiv-light">{formatPercent(grandTotal > 0 ? (scheduledTotal / grandTotal) * 100 : 0, 1)}</span>
+        <span class="text-emittiv-light">{formatPercent(grandTotal > 0 ? (scheduledTotal / grandTotal) * 100 : 0, 2)}</span>
       </div>
       <div class="emittiv-sortable-col--status"></div>
       {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}
@@ -316,8 +353,12 @@
 
     <!-- Validation warning -->
     {#if !scheduleValid}
-      <div class="emittiv-matrix-warning">
-        Schedule total ({formatNumber(scheduledTotal)}) doesn't match grand total ({formatNumber(grandTotal)})
+      <div class="emittiv-schedule-diff">
+        <span class="text-emittiv-light">Schedule difference:</span>
+        <span class={scheduleDifference > 0 ? 'text-green-500' : 'text-red-500'} class:font-medium={true}>
+          {scheduleDifference > 0 ? '+' : ''}{formatNumber(Math.round(scheduleDifference))}
+        </span>
+        <span class="text-emittiv-light">from target</span>
       </div>
     {/if}
   {/if}

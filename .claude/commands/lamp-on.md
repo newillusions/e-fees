@@ -1,1 +1,0 @@
-/Volumes/base/dev/claude/kb-agent/plugin/commands/lamp-on.md

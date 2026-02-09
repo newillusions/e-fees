@@ -193,6 +193,11 @@ export interface PricingConfig {
   rounding_mode: RoundingMode;  // 'ceiling' or 'nearest' (default: 'ceiling')
   tax_type: TaxType;            // 'vat', 'withholding', or 'none' (default: 'vat')
   show_tax_in_summary: boolean; // Show tax in summary panels (default: false)
+  // Multi-currency support (e.g., AED→SAR for Saudi projects)
+  exchange_rate?: number;       // Conversion rate (1 base currency = X client currency)
+  client_currency?: string;     // Target currency code (e.g., "SAR")
+  quote_currency?: string;      // Currency amounts are quoted in (default: same as currency)
+  rate_locked_at?: string;      // ISO datetime when the rate was locked (set on save)
 }
 
 /** Discipline × Stage pricing cell */
@@ -398,6 +403,20 @@ export function parseIssueDate(dateStr: string): Date | null {
 // ============================================================================
 // PRICING HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Convert an amount to the client currency using the exchange rate.
+ * Returns undefined if no exchange rate or client currency is configured.
+ */
+export function convertToClientCurrency(
+  amount: number,
+  config: PricingConfig
+): number | undefined {
+  if (!config.exchange_rate || !config.client_currency || config.client_currency === config.currency) {
+    return undefined;
+  }
+  return amount * config.exchange_rate;
+}
 
 /**
  * Calculate quoted fee from target fee using margin-based buffer.

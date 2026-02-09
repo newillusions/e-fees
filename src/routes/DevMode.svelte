@@ -234,6 +234,7 @@
         <PaymentSchedulePanel
           bind:schedule={paymentSchedule}
           {stages}
+          {cells}
           {config}
           grandTotal={totals.grand_total}
           onUpdate={handlePaymentScheduleUpdate}

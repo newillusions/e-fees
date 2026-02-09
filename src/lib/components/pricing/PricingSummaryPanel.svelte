@@ -7,6 +7,7 @@
     ReimbursableCost,
     PaymentSchedule
   } from '../../../types/database';
+  import { convertToClientCurrency } from '../../../types/database';
   import { formatCurrency, formatNumber, formatPercent } from '$lib/utils/format';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -29,6 +30,25 @@
   );
   const costs = $derived(pricing?.costs || []);
   const currency = $derived(pricing?.config?.currency || 'AED');
+  const clientCurrency = $derived(pricing?.config?.client_currency);
+  const hasConversion = $derived(
+    !!clientCurrency && clientCurrency !== currency && !!pricing?.config?.exchange_rate
+  );
+  const isRateLocked = $derived(!!pricing?.config?.rate_locked_at);
+
+  // Helper: convert amount using the config exchange rate
+  function convertAmount(amount: number): number | undefined {
+    if (!pricing?.config) return undefined;
+    return convertToClientCurrency(amount, pricing.config);
+  }
+
+  // Build a title string for hover showing converted value
+  function conversionTitle(amount: number): string {
+    if (!hasConversion || !clientCurrency) return '';
+    const converted = convertAmount(amount);
+    if (converted === undefined) return '';
+    return `${formatCurrency(converted, clientCurrency)}`;
+  }
 
   // Calculate discipline totals
   function getDisciplineTotal(disciplineId: string): number {
@@ -80,7 +100,7 @@
 
         <!-- Design Phase -->
         <div class="space-y-2 mb-4">
-          <div class="emittiv-summary-line">
+          <div class="emittiv-summary-line" title={conversionTitle(pricing.design_phase_total)}>
             <span class="text-emittiv-light">Design Phase</span>
             <span class="text-emittiv-white font-medium">
               {formatCurrency(pricing.design_phase_total, currency)}
@@ -143,7 +163,7 @@
 
       <!-- Totals -->
       <div class="emittiv-summary-section space-y-2">
-        <div class="emittiv-summary-line">
+        <div class="emittiv-summary-line" title={conversionTitle(pricing.subtotal)}>
           <span class="text-emittiv-light">SUBTOTAL</span>
           <span class="text-emittiv-white font-medium">
             {formatCurrency(pricing.subtotal, currency)}
@@ -165,6 +185,23 @@
             {formatCurrency(pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal, currency)}
           </span>
         </div>
+        {#if hasConversion && pricing?.config}
+          {@const totalToConvert = pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal}
+          {@const converted = convertToClientCurrency(totalToConvert, pricing.config)}
+          {#if converted !== undefined && clientCurrency}
+            <div class="emittiv-summary-line emittiv-summary-line--sub">
+              <span class="text-emittiv-dark">
+                Converted ({pricing.config.exchange_rate} {clientCurrency}/{currency})
+                {#if isRateLocked}
+                  <span class="emittiv-rate-lock-badge">locked</span>
+                {/if}
+              </span>
+              <span class="text-emittiv-lighter font-medium">
+                {formatCurrency(converted, clientCurrency)}
+              </span>
+            </div>
+          {/if}
+        {/if}
         {#if pricing.config.tax_type === 'vat' && !pricing.config.show_tax_in_summary}
           <div class="text-emittiv-dark text-xs mt-1">
             VAT will be added at the prevailing rate ({pricing.config.vat_percent}%)

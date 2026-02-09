@@ -3,6 +3,7 @@
   import ProposalCard from '$lib/components/ProposalCard.svelte';
   import ProposalModal from '$lib/components/ProposalModal.svelte';
   import ProposalDetail from '$lib/components/ProposalDetail.svelte';
+  import ImportWizard from '$lib/components/ImportWizard.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
 import { get } from 'svelte/store';
@@ -18,6 +19,7 @@ import { get } from 'svelte/store';
 
   // Modal states
   let showProposalModal = $state(false);
+  let showImportWizard = $state(false);
   let proposalModalMode: 'create' | 'edit' = $state('create');
   let isProposalDetailOpen = $state(false);
   let selectedProposal: Fee | null = $state(null);
@@ -118,6 +120,18 @@ import { get } from 'svelte/store';
     showProposalModal = true;
   }
 
+  function handleImportClick() {
+    showImportWizard = true;
+  }
+
+  function handleImportComplete() {
+    // Refresh data after import
+    paginatedFeesStore.actions.reset();
+    paginatedFeesStore.actions.loadInitialPage();
+    projectsActions.load();
+    companiesActions.load();
+  }
+
   function handleEditProposal(proposal: Fee) {
     selectedProposal = proposal;
     proposalModalMode = 'edit';
@@ -216,15 +230,28 @@ import { get } from 'svelte/store';
         on:clear-filters={clearFilters}
       />
     </div>
-    <button
-      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
-      onclick={handleNewProposal}
-      aria-label="Add new proposal"
-    >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-      </svg>
-    </button>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <button
+        class="import-btn"
+        onclick={handleImportClick}
+        aria-label="Import RFPs data"
+        title="Import from RFPs JSON"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <span>Import</span>
+      </button>
+      <button
+        class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+        onclick={handleNewProposal}
+        aria-label="Add new proposal"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
   </div>
   
   <!-- Filter Options -->
@@ -272,6 +299,26 @@ import { get } from 'svelte/store';
   select option:not(.has-items) {
     font-weight: 400;
     color: #999;
+  }
+
+  .import-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 8px;
+    color: var(--emittiv-lighter);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .import-btn:hover {
+    border-color: var(--emittiv-splash);
+    color: var(--emittiv-white);
   }
 </style>
   
@@ -349,9 +396,16 @@ import { get } from 'svelte/store';
 />
 
 <!-- Proposal Detail Panel -->
-<ProposalDetail 
+<ProposalDetail
   isOpen={isProposalDetailOpen}
   proposal={selectedProposal}
   on:close={handleCloseDetail}
   on:edit={handleEditFromDetail}
+/>
+
+<!-- Import Wizard Modal -->
+<ImportWizard
+  bind:isOpen={showImportWizard}
+  on:close={() => showImportWizard = false}
+  on:imported={handleImportComplete}
 />

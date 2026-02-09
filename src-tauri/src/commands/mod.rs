@@ -123,6 +123,12 @@ pub use folder_sync::{
     scan_folder_sync, resolve_folder_inconsistency,
 };
 
+// Import wizard
+pub mod import_wizard;
+pub use import_wizard::{
+    import_scan_directory, import_execute,
+};
+
 // Reference data
 pub mod reference_data;
 pub use reference_data::{
@@ -142,3 +148,7 @@ pub use system::{
     health_check, get_db_info, get_stats, get_table_schema,
     position_window_4k, investigate_record, log_message,
 };
+
+// Excel export
+pub mod export;
+pub use export::export_fee_excel;
