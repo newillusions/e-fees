@@ -25,7 +25,7 @@ gh auth status
 # Verify git remotes
 git remote -v
 # Should show:
-# origin  ssh://git@git.mms.name:2222/martin/fee-prop.git (Gitea)
+# origin  ssh://git@forge.mms.name:2222/emittiv/fee-prop.git (Forgejo)
 # github  git@github.com:newillusions/e-fees.git (GitHub)
 ```
 

@@ -14,8 +14,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-GITEA_SERVER="https://git.mms.name"
-GITEA_OWNER="martin"
+GITEA_SERVER="https://forge.mms.name"
+GITEA_OWNER="emittiv"
 GITEA_REPO="fee-prop"
 
 echo -e "${BLUE}╔═══════════════════════════════════════════════════════════╗${NC}"

@@ -160,7 +160,7 @@ export { default as logo } from './images/logo-white.svg?url';
 ```bash
 git add <files>
 git commit -m "message"
-git push origin main  # To git.mms.name/martin/fee-prop.git
+git push origin main  # To forge.mms.name/emittiv/fee-prop.git
 ```
 
 ## Next Steps

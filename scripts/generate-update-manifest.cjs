@@ -12,7 +12,7 @@ const path = require('path');
 const version = process.argv[2] || require('../package.json').version;
 
 // Configuration
-const GITEA_BASE_URL = 'https://git.mms.name/martin/fee-prop/releases/download';
+const GITEA_BASE_URL = 'https://forge.mms.name/emittiv/fee-prop/releases/download';
 
 // Build the update manifest
 function generateManifest(version, signatures = {}) {

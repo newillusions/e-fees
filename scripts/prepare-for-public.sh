@@ -34,7 +34,7 @@ fi
 # 4. List files that contain sensitive patterns (for manual review)
 echo ""
 echo "📋 Files containing potentially sensitive information:"
-echo "   (git.mms.name, private IPs, tokens - review manually)"
+echo "   (forge.mms.name, private IPs, tokens - review manually)"
 echo ""
 
 # Gitea token pattern
@@ -44,8 +44,8 @@ git grep -l "ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f" || echo "  ✓ No hardcod
 echo ""
 echo "⚠️  Manual actions required:"
 echo ""
-echo "1. Regenerate Gitea API token:"
-echo "   - Go to https://git.mms.name/user/settings/applications"
+echo "1. Regenerate Forgejo API token:"
+echo "   - Go to https://forge.mms.name/user/settings/applications"
 echo "   - Revoke token: ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f"
 echo "   - Generate new token"
 echo "   - Update GitHub secrets: GITEA_TOKEN"
@@ -56,7 +56,7 @@ echo "   - .claude/commands/gitea-release.md"
 echo "   - docs/development/UNRAID_GITEA_ACTIONS.md"
 echo "   Replace tokens with: 'your_gitea_token_here'"
 echo ""
-echo "3. Consider if git.mms.name references need to be genericized"
+echo "3. Consider if forge.mms.name references need to be genericized"
 echo ""
 echo "Run: git status"
 echo "Then: git commit -m 'chore: Remove sensitive data for public release'"

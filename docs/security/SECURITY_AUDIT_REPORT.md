@@ -1,7 +1,7 @@
 # Security Audit Report - Public Release Preparation
 
 **Date**: November 27, 2025
-**Repository**: newillusions/e-fees (GitHub), martin/fee-prop (Gitea)
+**Repository**: newillusions/e-fees (GitHub), emittiv/fee-prop (Gitea)
 **Status**: ⚠️ **PARTIALLY COMPLETE - CRITICAL ACTIONS REQUIRED**
 
 ---
@@ -28,7 +28,7 @@
 
 ### 4. Changes Pushed
 - ✅ Security cleanup committed to local repository
-- ✅ Pushed to Gitea (git.mms.name/martin/fee-prop)
+- ✅ Pushed to Gitea (forge.mms.name/emittiv/fee-prop)
 - ✅ Changes visible in git history
 
 ---
@@ -43,7 +43,7 @@
 **Steps to revoke**:
 ```bash
 # 1. Open Gitea settings
-open https://git.mms.name/user/settings/applications
+open https://forge.mms.name/user/settings/applications
 
 # 2. Find token in list and click "Delete"
 
@@ -66,7 +66,7 @@ gh secret set GITEA_TOKEN --repo newillusions/e-fees
 - Gitea token: `ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f`
 - Private IPs: `10.0.1.17`, `10.0.0.131`
 - Database password: `th38ret3ch`
-- Private server: `git.mms.name`
+- Private server: `forge.mms.name`
 
 **Choose one option**:
 
@@ -160,7 +160,7 @@ open https://github.com/settings/billing
 ## ℹ️ Acceptable Public Information
 
 These can safely remain in the public repo:
-- ✅ `git.mms.name` - Your Gitea server URL (for workflow documentation)
+- ✅ `forge.mms.name` - Your Gitea server URL (for workflow documentation)
 - ✅ Username `martin` - Public GitHub username
 - ✅ Workflow files - Use GitHub Secrets, not hardcoded values
 - ✅ Example/template .env files
@@ -173,7 +173,7 @@ These can safely remain in the public repo:
 
 Before making the repository public, complete this checklist:
 
-- [ ] **Step 1**: Revoke exposed Gitea token at git.mms.name
+- [ ] **Step 1**: Revoke exposed Gitea token at forge.mms.name
 - [ ] **Step 2**: Generate new Gitea token
 - [ ] **Step 3**: Update GitHub secret: `gh secret set GITEA_TOKEN`
 - [ ] **Step 4**: Clean git history (Option A or B)
@@ -245,7 +245,7 @@ Once repository is public:
 | Documentation sanitized | ✅ DONE | No hardcoded tokens in docs |
 | Working tree clean | ✅ DONE | No secrets currently committed |
 | Git history cleaned | ❌ TODO | Token still visible in history |
-| Gitea token revoked | ❌ TODO | Must do manually at git.mms.name |
+| Gitea token revoked | ❌ TODO | Must do manually at forge.mms.name |
 | GitHub billing fixed | ❌ TODO | Repo still private (or fix billing) |
 | Repository public | ❌ TODO | Waiting for above steps |
 

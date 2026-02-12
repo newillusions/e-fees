@@ -14,8 +14,8 @@
 The token `ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f` was committed to git history and **MUST** be revoked:
 
 ```bash
-# 1. Go to Gitea settings
-open https://git.mms.name/user/settings/applications
+# 1. Go to Forgejo settings
+open https://forge.mms.name/user/settings/applications
 
 # 2. Find and revoke the exposed token
 
@@ -81,7 +81,7 @@ gh repo edit newillusions/e-fees --visibility public
 ## Acceptable Public Information
 
 These **can** remain in the public repo:
-- ✅ `git.mms.name` - Your Gitea server URL (for workflow documentation)
+- ✅ `forge.mms.name` - Your Forgejo server URL (for workflow documentation)
 - ✅ Username `martin` - Public GitHub username
 - ✅ Workflow files - Use GitHub Secrets, not hardcoded values
 - ✅ Example/template .env files

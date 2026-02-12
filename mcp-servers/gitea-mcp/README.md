@@ -31,9 +31,9 @@ npm install
 Set these environment variables:
 
 ```bash
-export GITEA_TOKEN="your_gitea_access_token"
-export GITEA_SERVER="https://git.mms.name"  # Optional, defaults to this
-export GITEA_OWNER="martin"                   # Optional, defaults to this
+export GITEA_TOKEN="your_forgejo_access_token"
+export GITEA_SERVER="https://forge.mms.name"  # Optional, defaults to this
+export GITEA_OWNER="emittiv"                   # Optional, defaults to this
 export GITEA_REPO="fee-prop"                  # Optional, defaults to this
 ```
 
@@ -53,8 +53,8 @@ The server runs on stdio and is configured in `.mcp-config.json`:
       "args": ["mcp-servers/gitea-mcp/index.js"],
       "env": {
         "GITEA_TOKEN": "from-.env.local",
-        "GITEA_SERVER": "https://git.mms.name",
-        "GITEA_OWNER": "martin",
+        "GITEA_SERVER": "https://forge.mms.name",
+        "GITEA_OWNER": "emittiv",
         "GITEA_REPO": "fee-prop"
       }
     }
@@ -171,9 +171,9 @@ npx @modelcontextprotocol/inspector node index.js
 ### "GITEA_TOKEN environment variable is required"
 Make sure `GITEA_TOKEN` is set in your environment or `.env.local` file.
 
-### "Gitea API error (401)"
+### "Forgejo API error (401)"
 Your token may be expired or invalid. Generate a new one at:
-https://git.mms.name/user/settings/applications
+https://forge.mms.name/user/settings/applications
 
 ### "Failed to upload asset"
 Check that:
@@ -184,5 +184,5 @@ Check that:
 ## Links
 
 - [MCP Specification](https://modelcontextprotocol.io/)
-- [Gitea API Documentation](https://docs.gitea.com/api/1.20/)
-- [E-Fees Project](https://git.mms.name/martin/fee-prop)
+- [Forgejo API Documentation](https://forgejo.org/docs/latest/user/api-usage/)
+- [E-Fees Project](https://forge.mms.name/emittiv/fee-prop)

@@ -20,9 +20,9 @@ import {
 import fetch from 'node-fetch';
 
 // Configuration from environment variables
-const GITEA_SERVER = process.env.GITEA_SERVER || 'https://git.mms.name';
+const GITEA_SERVER = process.env.GITEA_SERVER || 'https://forge.mms.name';
 const GITEA_TOKEN = process.env.GITEA_TOKEN;
-const GITEA_OWNER = process.env.GITEA_OWNER || 'martin';
+const GITEA_OWNER = process.env.GITEA_OWNER || 'emittiv';
 const GITEA_REPO = process.env.GITEA_REPO || 'fee-prop';
 
 if (!GITEA_TOKEN) {

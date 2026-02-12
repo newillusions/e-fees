@@ -29,7 +29,7 @@ winget install OpenJS.NodeJS
 winget install Microsoft.VisualStudio.2022.BuildTools
 
 # Clone repository
-git clone https://git.mms.name/martin/fee-prop.git
+git clone https://forge.mms.name/emittiv/fee-prop.git
 cd fee-prop
 
 # Install dependencies

@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-GITEA_SERVER="https://git.mms.name"
-REPO_OWNER="martin"
+GITEA_SERVER="https://forge.mms.name"
+REPO_OWNER="emittiv"
 REPO_NAME="fee-prop"
 VERSION="${1:-0.10.0}"
 TAG="v${VERSION}"
@@ -27,7 +27,7 @@ echo ""
 if [ -z "$GITEA_TOKEN" ]; then
     echo -e "${YELLOW}⚠️  GITEA_TOKEN environment variable not set${NC}"
     echo ""
-    echo "To create a Gitea token:"
+    echo "To create a Forgejo token:"
     echo "1. Go to ${GITEA_SERVER}/user/settings/applications"
     echo "2. Generate New Token"
     echo "3. Select scopes: write:repository"
