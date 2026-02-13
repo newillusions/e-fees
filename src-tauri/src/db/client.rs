@@ -484,23 +484,19 @@ impl DatabaseClient {
             update_obj.insert("payment_schedule".to_string(), serde_json::to_value(schedule).unwrap_or(serde_json::Value::Null));
         }
 
-        // Create a nested time object with updated_at
-        let mut time_obj = serde_json::Map::new();
-        time_obj.insert("updated_at".to_string(), serde_json::Value::String(chrono::Utc::now().to_rfc3339()));
-        update_obj.insert("time".to_string(), serde_json::Value::Object(time_obj));
-
         let update_value = serde_json::Value::Object(update_obj);
 
-        // Use MERGE to update only the specified fields (including timestamp)
+        // Two-step update: MERGE pricing data, then SET timestamp with native datetime
+        // (MERGE with a JSON string for datetime fails SurrealDB schema validation)
         let query = format!(
-            "UPDATE fee:{} MERGE $data RETURN AFTER",
-            id
+            "UPDATE fee:{id} MERGE $data RETURN NONE; UPDATE fee:{id} SET time.updated_at = time::now() RETURN AFTER;",
+            id = id
         );
 
-        info!("Executing pricing update with MERGE");
+        info!("Executing pricing update with MERGE + timestamp SET");
 
         let mut response = self.query_bind(&query, ("data", update_value)).await?;
-        let result: Result<Vec<Fee>, _> = response.take(0);
+        let result: Result<Vec<Fee>, _> = response.take(1);
         match result {
             Ok(mut fees) => {
                 info!("Pricing update returned {} records", fees.len());

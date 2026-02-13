@@ -1365,8 +1365,14 @@
   bind:isOpen={showPricingModal}
   fee={proposal}
   on:close={() => showPricingModal = false}
-  on:save={() => {
-    feesActions.load();
+  on:save={async () => {
+    await feesActions.load();
+    // Refresh local proposal from store so pricing data persists
+    if (proposal?.id) {
+      const feeId = extractId(proposal.id);
+      const updated = $feesStore.find(f => extractId(f.id) === feeId);
+      if (updated) proposal = updated;
+    }
     showPricingModal = false;
   }}
 />
