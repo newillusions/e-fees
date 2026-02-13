@@ -1,23 +1,28 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. Import wizard and Agent API server built and tested. Fee CRUD endpoints complete. Agent API now network-accessible with X-API-Key auth. MCP E2E test suite expanded to 4 test files (48 tests).
+Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. Database successfully migrated to new server (10.0.21.8). Import wizard and Agent API server built and tested. Fee CRUD endpoints complete. Agent API network-accessible with X-API-Key auth. MCP E2E test suite with 4 test files (48 tests).
+
 - **Version**: 0.10.27
 - **Branch**: `feat/fee-pricing-calculator` (commit 43d43eb)
+- **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects) — **MIGRATION COMPLETE**
 - **Import Wizard**: Complete — reads RFPs JSON exports, imports into SurrealDB
 - **Agent API**: Complete — HTTP server with full project, fee, company, contact CRUD + X-API-Key auth
 - **Pricing Module**: Withholding tax fix complete, stage rounding working
 - **Integration**: Phase 1 import wizard + agent API are the key ecosystem bridges
 
-## Last Session (2026-02-09)
-**Summary**: Expanded MCP E2E test suite with 3 new test files (40 new tests) covering fee CRUD, company/contact relationships, and direct HTTP Agent API endpoint testing. All tests use "DELETE ME" prefix and gracefully skip when the agent server isn't running.
+## Last Session (2026-02-13)
+**Summary**: Completed SurrealDB migration from 10.0.1.17 to 10.0.21.8. Updated all critical configuration files (.mcp.json, claude.md, HANDOVER.md, MCP config docs, SQL scripts). Documented EFEES_AGENT_API_KEY usage (optional API key for Agent API authentication via X-API-Key header).
 
-### Files Added This Session
-- `e2e-mcp/tests/fee-crud.mcp.ts` — 8 tests: fee create, get, list, filter by project_id, Excel export, 404 handling
-- `e2e-mcp/tests/company-contact.mcp.ts` — 8 tests: company create, list, contact linked to company, filter by company_id, contact get with company_id reference
-- `e2e-mcp/tests/agent-api.mcp.ts` — 24 tests: health check, auth 401, all list endpoints, stats, 422 for bad bodies, 400 for bad project numbers, edge cases (unknown routes, empty body, malformed JSON)
+### Files Updated This Session
+- `.mcp.json` — SurrealDB MCP server URL (http://10.0.21.8:8000)
+- `claude.md` — Database Configuration section
+- `.claude/HANDOVER.md` — Database URL, migration context, next steps
+- `scripts/add-indexes.surql` — CLI command example
+- `.claude/MCP-SERVERS.md` — Remote database option
+- `.claude/MCP-CONFIG.md` — SurrealDB config table and JSON example
 
-### Agent API Endpoints (Updated)
+### Agent API Endpoints
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/health` | No | Health check (version, DB status, uptime) |
@@ -37,23 +42,25 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 
 ### Auth Configuration
 - `EFEES_AGENT_BIND`: Bind address (default: `0.0.0.0:3100`)
-- `EFEES_AGENT_API_KEY`: If set, all endpoints except /api/health require X-API-Key header
-- If `EFEES_AGENT_API_KEY` is not set, all requests are allowed (backwards compatible)
+- `EFEES_AGENT_API_KEY`: Optional env var for X-API-Key authentication
+  - If set: All endpoints except /api/health require `X-API-Key` header
+  - If not set: All requests allowed (backwards compatible)
+  - Used in: `src-tauri/src/agent_server.rs` (middleware), `e2e-mcp/tests/*.mcp.ts` (tests)
+  - No default value — user must generate and set if auth desired
 - 401 response: `{"error": "Unauthorized: missing or invalid X-API-Key"}`
 
 ## Next Steps
-1. **Begin DB migration** to 10.0.21.8 (export from 10.0.1.17, import, test, update config)
-3. **Add exchange rate/conversion** to PricingConfig (AED base, configurable factor per proposal)
-4. **Build Excel export** (Rust xlsx library, match RFPs client-facing template)
-5. **Test pricing workflow** end-to-end (existing priority)
-6. **Fix pre-existing project-crud.mcp.ts** — requires Tauri MCP tools (screenshot, SurrealDB MCP) which fail in test environment
+1. **Add exchange rate/conversion** to PricingConfig (AED base, configurable factor per proposal)
+2. **Build Excel export** (Rust xlsx library, match RFPs client-facing template)
+3. **Test pricing workflow** end-to-end
+4. **Fix pre-existing project-crud.mcp.ts** — requires Tauri MCP tools (screenshot, SurrealDB MCP) which fail in test environment
 
 ## Key Technical Context
 
 ### Tech Stack
 - **Frontend**: Svelte 5 with TypeScript, TailwindCSS
 - **Backend**: Tauri v2 (Rust) + Axum HTTP server
-- **Database**: SurrealDB @ ws://surreal-dev.internal:8000 (emittiv/projects)
+- **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects)
 - **Agent API**: http://0.0.0.0:3100/api/ (configurable via EFEES_AGENT_BIND, auth via EFEES_AGENT_API_KEY)
 - **Design**: Emittiv brand palette (black/orange theme)
 
@@ -71,11 +78,12 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 - Full reference: `docs/WITHHOLDING_TAX.md`
 
 ### DB Migration Context
-- Current: ws://10.0.1.17:8000 (ns:emittiv, db:projects)
-- Target: ws://10.0.21.8:8000 (ns:emittiv, db:projects) -- same SurrealDB instance as AILX
+- **COMPLETED (2026-02-13)**: Migrated to ws://10.0.21.8:8000 (ns:emittiv, db:projects)
+- Old IP (10.0.1.17) is now unreachable
 - Config is fully env-driven: `DatabaseConfig::from_env()` reads SURREALDB_URL, SURREALDB_NS, etc.
 - Also configurable via Settings UI in the app
 - Data volume: ~48 projects, ~37 rfps, ~19 companies, ~250 countries, ~180 currencies
+- Note: 38+ documentation files still reference old IP, but most are archived/test fixtures (not production-critical)
 
 ### Emittiv Ecosystem Context
 - **Hub Topic**: emittiv-ecosystem (5 members: ailx, e-fees, lx-specs, rfps, dev)
@@ -88,6 +96,7 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 ### Key Files
 | Purpose | Location |
 |---------|----------|
+| DB config (Rust) | `src-tauri/src/db/config.rs` (DatabaseConfig::from_env) |
 | Agent server (Rust) | `src-tauri/src/agent_server.rs` |
 | Agent client (TS) | `src/lib/api/agent.ts` |
 | Agent tests | `src/lib/api/agent.test.ts` |
@@ -104,9 +113,8 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 | Pricing calculation | `src/types/database.ts:calculatePricingTotals()` |
 | Withholding tax docs | `docs/WITHHOLDING_TAX.md` |
 | Format utilities | `src/lib/utils/format.ts` (includes `roundToIncrement`) |
-| DB config | `src-tauri/src/db/config.rs` (DatabaseConfig) |
 | Fee API | `src/lib/api/fees.ts` (CRUD + JSON export) |
 | Master CSS | `src/styles/app.css` |
 
 ---
-*Updated: 2026-02-09*
+*Updated: 2026-02-13*

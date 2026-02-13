@@ -47,7 +47,7 @@ claude --mcp-config .mcp-config.json
 
 | Server | Purpose | Configuration |
 |--------|---------|---------------|
-| **SurrealDB** | Database access | `e-fees-dev/test` @ `ws://10.0.1.17:8000/rpc` |
+| **SurrealDB** | Database access | `emittiv/projects` @ `ws://10.0.21.8:8000/rpc` |
 | **tauri-mcp** | Tauri app automation | Scoped to `/Volumes/base/dev/e-fees` |
 | **filesystem** | File operations | Scoped to `/Volumes/base/dev/e-fees` and `/tmp` |
 | **git** | Version control | Scoped to `/Volumes/base/dev/e-fees` |
@@ -104,9 +104,9 @@ claude --mcp-config .mcp-config.json
     "command": "/Users/martin/.cargo/bin/surrealmcp",
     "args": ["start"],
     "env": {
-      "SURREALDB_URL": "ws://10.0.1.17:8000/rpc",
-      "SURREALDB_NS": "e-fees-dev",
-      "SURREALDB_DB": "test",
+      "SURREALDB_URL": "ws://10.0.21.8:8000/rpc",
+      "SURREALDB_NS": "emittiv",
+      "SURREALDB_DB": "projects",
       "SURREALDB_USER": "martin",
       "SURREALDB_PASS": "th38ret3ch"
     }

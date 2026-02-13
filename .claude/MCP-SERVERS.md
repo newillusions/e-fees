@@ -272,7 +272,7 @@ SURREALDB_PASS="root"
 **Option 2: Remote Database** (If using external SurrealDB)
 ```bash
 # Add to .env.local
-SURREALDB_URL="ws://10.0.1.17:8000/rpc"
+SURREALDB_URL="ws://10.0.21.8:8000/rpc"
 SURREALDB_NS="e-fees-dev"
 SURREALDB_DB="test"
 SURREALDB_USER="${DB_USER}"
