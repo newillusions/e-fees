@@ -11,7 +11,7 @@
     stages: Stage[];
     cells: PricingCell[];
     config: PricingConfig;
-    grandTotal: number;
+    designTotal: number;
     onUpdate: (schedule: PaymentSchedule) => void;
     readonly?: boolean;
   }
@@ -21,10 +21,16 @@
     stages,
     cells,
     config,
-    grandTotal,
+    designTotal: rawDesignTotal,
     onUpdate,
     readonly = false
   }: Props = $props();
+
+  // Compute design total from cells + stages (same logic as generateFromPricing)
+  // This is more reliable than the prop which depends on Svelte 4 $: reactivity
+  const designTotal = $derived(
+    designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0)
+  );
 
   // Design stages for milestone generation
   const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
@@ -90,21 +96,23 @@
     });
 
     // Milestone payments using actual rounded stage totals
+    // Each stage payment = quoted stage value minus its share of mobilisation
     const remainingAmount = designSubtotal - mobilisationAmount;
 
     for (const stage of designStages) {
       const stageTotal = getRoundedStageTotal(stage.id);
-      // Distribute remaining amount proportionally based on actual stage totals
+      // Payment = stage's proportion of remaining (after mobilisation deduction)
       const stageAmount = designSubtotal > 0 ? remainingAmount * (stageTotal / designSubtotal) : 0;
       const stagePercent = designSubtotal > 0 ? (stageAmount / designSubtotal) * 100 : 0;
 
       entries.push({
         id: generatePricingId('pay'),
         type: 'milestone',
-        description: `${stage.name} Completion`,
+        description: `${stage.name} Submittal`,
         stage_id: stage.id,
         stage_percentage: 100,
         amount: stageAmount,
+        quoted_stage_amount: stageTotal,
         percentage_of_total: stagePercent,
         status: 'pending',
       });
@@ -143,11 +151,11 @@
       const updated = { ...entry, [field]: value };
       // Recalculate percentage when amount changes
       if (field === 'amount') {
-        updated.percentage_of_total = grandTotal > 0 ? ((value as number) / grandTotal) * 100 : 0;
+        updated.percentage_of_total = designTotal > 0 ? ((value as number) / designTotal) * 100 : 0;
       }
       // Recalculate amount when percentage changes
       if (field === 'percentage_of_total') {
-        updated.amount = grandTotal * ((value as number) / 100);
+        updated.amount = designTotal * ((value as number) / 100);
       }
       return updated;
     });
@@ -209,9 +217,19 @@
     onUpdate(newSchedule);
   }
 
+  // Withholding tax gross-up for payment tooltips
+  const isWithholding = $derived(config?.tax_type === 'withholding');
+  const whtRate = $derived(isWithholding ? (config?.vat_percent || 0) / 100 : 0);
+  function whtTooltip(amount: number): string {
+    if (!isWithholding || whtRate === 0) return `${Math.round(amount / designTotal * 10000) / 100}% of total`;
+    const invoiced = amount / (1 - whtRate);
+    const wht = invoiced - amount;
+    return `Invoice: ${formatNumber(Math.round(invoiced))} (incl. ${formatNumber(Math.round(wht))} WHT ${config.vat_percent}%)`;
+  }
+
   // Total of all payments
   const scheduledTotal = $derived(schedule.entries.reduce((sum, e) => sum + e.amount, 0));
-  const scheduleDifference = $derived(scheduledTotal - grandTotal);
+  const scheduleDifference = $derived(scheduledTotal - designTotal);
   const scheduleValid = $derived(Math.abs(scheduleDifference) < 1);
 </script>
 
@@ -241,8 +259,8 @@
     <!-- Header row -->
     <div class="emittiv-sortable-header emittiv-sortable-header--compact">
       <div class="emittiv-sortable-col--grow">Payment</div>
-      <div class="emittiv-sortable-col--number">Amount</div>
-      <div class="emittiv-sortable-col--pct">%</div>
+      <div class="emittiv-sortable-col--number">Quoted</div>
+      <div class="emittiv-sortable-col--number">Payment</div>
       <div class="emittiv-sortable-col--status">Status</div>
       {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}
     </div>
@@ -264,8 +282,19 @@
           {/if}
         </div>
 
-        <!-- Amount -->
+        <!-- Quoted stage value / mobilisation % -->
         <div class="emittiv-sortable-col--number">
+          {#if entry.type === 'mobilisation'}
+            <span class="text-emittiv-light">{formatPercent(config.mobilisation_percent)}</span>
+          {:else if entry.quoted_stage_amount !== undefined}
+            <span class="text-emittiv-light">{formatNumber(entry.quoted_stage_amount)}</span>
+          {:else}
+            <span class="text-emittiv-dark">—</span>
+          {/if}
+        </div>
+
+        <!-- Payment amount -->
+        <div class="emittiv-sortable-col--number" title={whtTooltip(entry.amount)}>
           {#if !readonly}
             <input
               type="text"
@@ -275,26 +304,6 @@
             />
           {:else}
             <span class="text-emittiv-splash font-medium">{formatNumber(entry.amount)}</span>
-          {/if}
-        </div>
-
-        <!-- Percentage -->
-        <div class="emittiv-sortable-col--pct">
-          {#if !readonly}
-            <div class="emittiv-field-suffix">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="emittiv-table-input emittiv-table-input--md"
-                value={Math.round(entry.percentage_of_total * 100) / 100}
-                onblur={(e) => updatePayment(entry.id, 'percentage_of_total', parseFloat(e.currentTarget.value) || 0)}
-              />
-              <span class="emittiv-field-suffix__unit">%</span>
-            </div>
-          {:else}
-            <span class="text-emittiv-light">{formatPercent(entry.percentage_of_total, 2)}</span>
           {/if}
         </div>
 
@@ -339,13 +348,11 @@
     <!-- Footer/totals row -->
     <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
       <div class="emittiv-sortable-col--grow">TOTAL</div>
+      <div class="emittiv-sortable-col--number"></div>
       <div class="emittiv-sortable-col--number">
         <span class:text-emittiv-splash={scheduleValid} class:text-red-500={!scheduleValid} class="font-bold">
           {formatNumber(scheduledTotal)}
         </span>
-      </div>
-      <div class="emittiv-sortable-col--pct">
-        <span class="text-emittiv-light">{formatPercent(grandTotal > 0 ? (scheduledTotal / grandTotal) * 100 : 0, 2)}</span>
       </div>
       <div class="emittiv-sortable-col--status"></div>
       {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}

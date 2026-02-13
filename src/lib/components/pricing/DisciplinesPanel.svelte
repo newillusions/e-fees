@@ -25,10 +25,16 @@
   // Sorted for display
   const sorted = $derived([...disciplines].sort((a, b) => a.order - b.order));
 
+  /** Generate a short code from a discipline name (first letter of each word, uppercase). */
+  function generateCode(name: string): string {
+    return name.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 4) || 'ND';
+  }
+
   function addDiscipline() {
     const newDiscipline: Discipline = {
       id: generatePricingId('disc'),
       name: 'New Discipline',
+      code: generateCode('New Discipline'),
       percentage: 0,
       order: disciplines.length + 1,
     };
@@ -43,10 +49,16 @@
     onUpdate(updated);
   }
 
-  function updateDiscipline(id: string, field: 'name' | 'percentage', value: string | number) {
-    const updated = disciplines.map(d =>
-      d.id === id ? { ...d, [field]: value } : d
-    );
+  function updateDiscipline(id: string, field: 'name' | 'percentage' | 'code', value: string | number) {
+    const updated = disciplines.map(d => {
+      if (d.id !== id) return d;
+      const patch: Partial<Discipline> = { [field]: value };
+      // Auto-regenerate code when name changes (unless user has manually edited the code)
+      if (field === 'name' && typeof value === 'string') {
+        patch.code = generateCode(value);
+      }
+      return { ...d, ...patch };
+    });
     onUpdate(updated);
   }
 
@@ -109,6 +121,7 @@
     <div class="emittiv-sortable-header">
       {#if !readonly}<div class="emittiv-sortable-col--handle"></div>{/if}
       <div class="emittiv-sortable-col--grow">Name</div>
+      <div class="emittiv-sortable-col--code">Code</div>
       <div class="emittiv-sortable-col--pct">Percentage</div>
       {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}
     </div>
@@ -143,6 +156,15 @@
                 onchange={(e) => updateDiscipline(discipline.id, 'name', e.currentTarget.value)}
               />
             </div>
+            <div class="emittiv-sortable-col--code">
+              <input
+                type="text"
+                maxlength="4"
+                class="emittiv-table-input emittiv-table-input--center"
+                value={discipline.code}
+                onchange={(e) => updateDiscipline(discipline.id, 'code', e.currentTarget.value.toUpperCase())}
+              />
+            </div>
             <div class="emittiv-sortable-col--pct">
               <input
                 type="number"
@@ -173,6 +195,9 @@
         <div class="emittiv-sortable-row">
           <div class="emittiv-sortable-col--grow">
             <span class="text-emittiv-white">{discipline.name}</span>
+          </div>
+          <div class="emittiv-sortable-col--code">
+            <span class="text-emittiv-dark text-xxs">{discipline.code}</span>
           </div>
           <div class="emittiv-sortable-col--pct">
             <span class="text-emittiv-white">{formatPercent(discipline.percentage)}</span>

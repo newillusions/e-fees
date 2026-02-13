@@ -159,6 +159,7 @@ export interface Currency {
 export interface Discipline {
   id: string;
   name: string;           // "Lighting Design", "Audio Visual"
+  code: string;           // Short abbreviation for column headers ("LD", "AV")
   percentage: number;     // Allocation percentage (0-100)
   order: number;          // Display order
 }
@@ -242,7 +243,8 @@ export interface PaymentScheduleEntry {
   description: string;        // "30% Mobilisation", "50% DD", "100% DD"
   stage_id?: string;          // Linked stage (for milestone payments)
   stage_percentage?: number;  // What % of the stage fee this represents (50, 100)
-  amount: number;             // Payment amount
+  amount: number;             // Payment amount (after mobilisation deduction)
+  quoted_stage_amount?: number; // Original quoted fee for the stage (before deduction)
   percentage_of_total: number; // What % of contract total this represents
   due_date?: string;          // Expected due date
   status: PaymentStatus;
@@ -292,23 +294,25 @@ export interface PricingRevision {
 // ============================================================================
 
 export const DEFAULT_DISCIPLINES: Omit<Discipline, 'id'>[] = [
-  { name: "Lighting", percentage: 50, order: 1 },
-  { name: "Video", percentage: 30, order: 2 },
-  { name: "Audio", percentage: 20, order: 3 },
+  { name: "Lighting", code: "LX", percentage: 45, order: 1 },
+  { name: "Video", code: "VID", percentage: 25, order: 2 },
+  { name: "Audio", code: "AUD", percentage: 20, order: 3 },
+  { name: "Control", code: "CTL", percentage: 10, order: 4 },
 ];
 
 export const DEFAULT_DESIGN_STAGES: Omit<Stage, 'id'>[] = [
-  { name: "Schematic Design", code: "SD", percentage: 20, order: 1, is_post_contract: false },
-  { name: "Design Development", code: "DD", percentage: 30, order: 2, is_post_contract: false },
-  { name: "Construction Documents", code: "CD", percentage: 35, order: 3, is_post_contract: false },
-  { name: "Bidding & Negotiation", code: "BN", percentage: 10, order: 4, is_post_contract: false },
-  { name: "Construction Administration", code: "CA", percentage: 5, order: 5, is_post_contract: false },
+  { name: "Concept Design", code: "CON", percentage: 25, order: 1, is_post_contract: false },
+  { name: "Schematic Design", code: "SD", percentage: 30, order: 2, is_post_contract: false },
+  { name: "Detailed Design", code: "DD", percentage: 35, order: 3, is_post_contract: false },
+  { name: "Construction Documents", code: "CD", percentage: 10, order: 4, is_post_contract: false },
 ];
 
 export const DEFAULT_POST_CONTRACT_STAGES: Omit<Stage, 'id'>[] = [
-  { name: "Site Visits", code: "SV", percentage: 0, order: 10, is_post_contract: true },
-  { name: "Commissioning Support", code: "CM", percentage: 0, order: 11, is_post_contract: true },
-  { name: "As-Built Documentation", code: "AB", percentage: 0, order: 12, is_post_contract: true },
+  { name: "Site Meetings", code: "SM", percentage: 0, order: 10, is_post_contract: true },
+  { name: "Construction Supervision", code: "CS", percentage: 0, order: 11, is_post_contract: true },
+  { name: "Installation Validation", code: "IV", percentage: 0, order: 12, is_post_contract: true },
+  { name: "Commissioning Supervision", code: "CMS", percentage: 0, order: 13, is_post_contract: true },
+  { name: "Programming Supervision", code: "PS", percentage: 0, order: 14, is_post_contract: true },
 ];
 
 export const DEFAULT_PRICING_CONFIG: Omit<PricingConfig, 'target_fee' | 'quoted_fee'> = {

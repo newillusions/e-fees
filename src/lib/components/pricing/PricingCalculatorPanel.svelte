@@ -203,6 +203,21 @@
   const designVat = $derived(config?.tax_type === 'vat' ? designSubtotal * (config?.vat_percent || 0) / 100 : 0);
   const grandTotal = $derived(designSubtotal + designVat);
 
+  // Withholding tax gross-up helper: invoiced_amount = quoted / (1 - rate)
+  // NOTE: Currently shows quoted amounts with gross-up on hover/info row.
+  // For invoicing integration, this may reverse: display gross-up amounts, hover shows quoted.
+  const isWithholding = $derived(config?.tax_type === 'withholding');
+  const whtRate = $derived(isWithholding ? (config?.vat_percent || 0) / 100 : 0);
+  function grossUp(amount: number): number {
+    return whtRate > 0 ? amount / (1 - whtRate) : amount;
+  }
+  function whtTooltip(amount: number): string {
+    if (!isWithholding || whtRate === 0) return '';
+    const invoiced = grossUp(amount);
+    const wht = invoiced - amount;
+    return `Invoice: ${formatNumber(Math.round(invoiced))} (incl. ${formatNumber(Math.round(wht))} WHT ${config.vat_percent}%)`;
+  }
+
   // Multi-currency conversion
   const hasClientCurrency = $derived(
     !!config?.client_currency && config.client_currency !== config.currency && !!config?.exchange_rate
@@ -358,7 +373,7 @@
         {/if}
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--pct">
-        <label class="emittiv-label">VAT</label>
+        <label class="emittiv-label">{config.tax_type === 'withholding' ? 'WHT' : 'VAT'}</label>
         {#if !readonly}
           <div class="emittiv-field-suffix">
             <input
@@ -445,11 +460,11 @@
             onchange={(e) => updateConfig('tax_type', e.currentTarget.value)}
           >
             <option value="vat">VAT</option>
-            <option value="withholding">Withholding</option>
+            <option value="withholding">WHT</option>
             <option value="none">None</option>
           </select>
         {:else}
-          <span class="text-emittiv-white">{config.tax_type === 'none' ? 'None' : config.tax_type === 'withholding' ? 'Withholding' : 'VAT'}</span>
+          <span class="text-emittiv-white">{config.tax_type === 'none' ? 'None' : config.tax_type === 'withholding' ? 'WHT' : 'VAT'}</span>
         {/if}
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--pct">
@@ -510,8 +525,8 @@
               value={config.quote_currency ?? config.currency}
               onchange={(e) => updateConfig('quote_currency', e.currentTarget.value)}
             >
-              <option value={config.currency}>{config.currency} (base)</option>
-              <option value={config.client_currency}>{config.client_currency} (client)</option>
+              <option value={config.currency}>{config.currency}</option>
+              <option value={config.client_currency}>{config.client_currency}</option>
             </select>
           {:else}
             <span class="text-emittiv-white">{config.quote_currency ?? config.currency}</span>
@@ -618,8 +633,8 @@
       <div class="emittiv-sortable-header emittiv-sortable-header--compact">
         <div class="emittiv-sortable-col--grow">Stage</div>
         {#each sortedDisciplines as disc}
-          <div class="emittiv-sortable-col--number">
-            {disc.name} <span class="text-emittiv-lighter">{formatPercent(disc.percentage)}</span>
+          <div class="emittiv-sortable-col--number" title="{disc.name} ({formatPercent(disc.percentage)})">
+            {disc.code || disc.name} <span class="text-emittiv-lighter">{formatPercent(disc.percentage)}</span>
           </div>
         {/each}
         <div class="emittiv-sortable-col--accent">Total</div>
@@ -638,7 +653,7 @@
           {#each sortedDisciplines as disc}
             {@const cellValue = getCellValue(disc.id, stage.id)}
             {@const isOverridden = hasOverride(disc.id, stage.id)}
-            <div class="emittiv-sortable-col--number">
+            <div class="emittiv-sortable-col--number" title={whtTooltip(cellValue)}>
               {#if !readonly}
                 <div class="emittiv-sortable-cell-group">
                   {#if isOverridden}
@@ -669,7 +684,7 @@
               {/if}
             </div>
           {/each}
-          <div class="emittiv-sortable-col--accent" title="Calculated: {formatNumber(getStageTotal(stage.id))} → Rounded: {formatNumber(roundToIncrement(getStageTotal(stage.id), config?.rounding_increment ?? 50, config?.rounding_mode ?? 'ceiling'))}">
+          <div class="emittiv-sortable-col--accent" title="{isWithholding ? whtTooltip(getRoundedStageTotal(stage.id)) : `Calculated: ${formatNumber(getStageTotal(stage.id))} → Rounded: ${formatNumber(roundToIncrement(getStageTotal(stage.id), config?.rounding_increment ?? 50, config?.rounding_mode ?? 'ceiling'))}`}">
             {#if !readonly}
               {@const isOverridden = hasStageTotalOverride(stage.id)}
               <div class="emittiv-sortable-cell-group">
@@ -705,11 +720,11 @@
       <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
         <div class="emittiv-sortable-col--grow">SUBTOTAL</div>
         {#each sortedDisciplines as disc}
-          <div class="emittiv-sortable-col--number">
+          <div class="emittiv-sortable-col--number" title={whtTooltip(getDisciplineTotal(disc.id))}>
             {formatNumber(getDisciplineTotal(disc.id))}
           </div>
         {/each}
-        <div class="emittiv-sortable-col--accent">
+        <div class="emittiv-sortable-col--accent" title={whtTooltip(designSubtotal)}>
           {formatNumber(designSubtotal)}
         </div>
       </div>
@@ -725,13 +740,29 @@
           </div>
         </div>
       {/if}
+      <!-- Withholding tax info note (gated by Show Tax) -->
+      {#if isWithholding && whtRate > 0 && config.show_tax_in_summary}
+        <div class="emittiv-sortable-footer emittiv-sortable-footer--compact">
+          <div class="emittiv-sortable-col--grow text-emittiv-light text-xs">
+            WHT {config.vat_percent}% gross-up at invoice
+          </div>
+          {#each sortedDisciplines as disc}
+            <div class="emittiv-sortable-col--number text-emittiv-light text-xs">
+              {formatNumber(Math.round(grossUp(getDisciplineTotal(disc.id))))}
+            </div>
+          {/each}
+          <div class="emittiv-sortable-col--accent text-emittiv-light text-xs">
+            {formatNumber(Math.round(grossUp(designSubtotal)))}
+          </div>
+        </div>
+      {/if}
       <!-- Total row -->
       <div class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total">
         <div class="emittiv-sortable-col--grow">{config.tax_type === 'vat' && config.show_tax_in_summary ? 'TOTAL (incl. VAT)' : 'TOTAL'}</div>
         {#each sortedDisciplines as disc}
           <div class="emittiv-sortable-col--number"></div>
         {/each}
-        <div class="emittiv-sortable-col--accent">
+        <div class="emittiv-sortable-col--accent" title={whtTooltip(designSubtotal)}>
           {formatNumber(config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal)}
         </div>
       </div>

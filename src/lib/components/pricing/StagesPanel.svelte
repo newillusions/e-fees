@@ -27,12 +27,17 @@
   // Round to 2 decimals before comparison to handle floating point
   const isDesignValid = $derived(Math.abs(Math.round(designTotal * 100) - 10000) === 0);
 
+  /** Generate a short code from a stage name (first letter of each word, uppercase). */
+  function generateCode(name: string): string {
+    return name.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 4) || 'NS';
+  }
+
   // Stage editing
   function addDesignStage() {
     const newStage: Stage = {
       id: generatePricingId('stage'),
       name: 'New Stage',
-      code: 'NS',
+      code: generateCode('New Stage'),
       percentage: 0,
       order: designStages.length + 1,
       is_post_contract: false,
@@ -56,9 +61,15 @@
   }
 
   function updateStage(id: string, field: keyof Stage, value: string | number | boolean) {
-    const updated = stages.map(s =>
-      s.id === id ? { ...s, [field]: value } : s
-    );
+    const updated = stages.map(s => {
+      if (s.id !== id) return s;
+      const patch: Partial<Stage> = { [field]: value };
+      // Auto-regenerate code when name changes
+      if (field === 'name' && typeof value === 'string') {
+        patch.code = generateCode(value);
+      }
+      return { ...s, ...patch };
+    });
     stages = updated;
     onUpdateStages(updated);
   }
@@ -88,7 +99,7 @@
     const newStage: Stage = {
       id: generatePricingId('stage'),
       name: 'New Service',
-      code: 'NS',
+      code: generateCode('New Service'),
       percentage: 0,
       order: 10 + postContractStages.length,
       is_post_contract: true,

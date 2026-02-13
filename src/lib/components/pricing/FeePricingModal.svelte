@@ -280,7 +280,7 @@
           {stages}
           {cells}
           {config}
-          grandTotal={totals.grand_total}
+          designTotal={totals.design_phase_total}
           onUpdate={handlePaymentScheduleUpdate}
         />
       {/if}

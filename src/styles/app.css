@@ -579,7 +579,7 @@
   }
 
   .emittiv-calc-field--currency select {
-    width: 80px;
+    width: 100px;
   }
 
   .emittiv-calc-field--pct {
@@ -1132,6 +1132,14 @@
   .emittiv-sortable-footer .emittiv-sortable-col--number,
   .emittiv-sortable-footer .emittiv-sortable-col--accent {
     padding-left: 8px;
+  }
+
+  .emittiv-sortable-col--code {
+    width: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .emittiv-sortable-col--pct {
