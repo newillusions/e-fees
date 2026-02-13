@@ -81,7 +81,7 @@ git push github v0.11.0
 
 Once complete, check your Gitea release:
 ```
-https://git.mms.name/martin/fee-prop/releases
+https://forge.mms.name/emittiv/fee-prop/releases
 ```
 
 You should see:
@@ -147,7 +147,7 @@ git push github v0.11.0   # GitHub (triggers build)
 - Wait ~30-40 minutes
 
 **Step 5: Verify Release**
-- Check: `https://git.mms.name/martin/fee-prop/releases`
+- Check: `https://forge.mms.name/emittiv/fee-prop/releases`
 - Download and test installers
 
 ## Dual Remote Management
@@ -159,8 +159,8 @@ git remote -v
 
 Expected output:
 ```
-origin  https://git.mms.name/martin/fee-prop.git (fetch)
-origin  https://git.mms.name/martin/fee-prop.git (push)
+origin  https://forge.mms.name/emittiv/fee-prop.git (fetch)
+origin  https://forge.mms.name/emittiv/fee-prop.git (push)
 github  https://github.com/YOUR_USERNAME/e-fees.git (fetch)
 github  https://github.com/YOUR_USERNAME/e-fees.git (push)
 ```
@@ -201,7 +201,7 @@ git push github --tags
 
 **Check:**
 1. Is `GITEA_TOKEN` secret added?
-2. Can GitHub reach `https://git.mms.name`? (must be public)
+2. Can GitHub reach `https://forge.mms.name`? (must be public)
 3. Check workflow logs for specific errors
 
 ### Builds Don't Upload to Gitea

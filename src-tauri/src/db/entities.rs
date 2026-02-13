@@ -147,6 +147,15 @@ pub struct Fee {
     pub rev: i32, // auto-computed
     #[serde(default)]
     pub revisions: Vec<Revision>,
+    // Pricing data (stored as opaque JSON, passed through to frontend)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pricing: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_contract_items: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reimbursable_costs: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_schedule: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub time: Option<TimeInfo>,
 }

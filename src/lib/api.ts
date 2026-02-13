@@ -22,6 +22,19 @@ import * as settings from './api/settings';
 import * as system from './api/system';
 import * as reference from './api/reference';
 import * as activity from './api/activity';
+import * as importWizard from './api/import';
+
+// Agent API (HTTP-based, standalone client)
+export { AgentApiClient } from './api/agent';
+export type {
+  AgentHealthResponse,
+  AgentStatsResponse,
+  AgentProjectResponse,
+  AgentFeeResponse,
+  AgentFeeCreate,
+  AgentCompanyResponse,
+  AgentListResponse,
+} from './api/agent';
 
 // Re-export types from types file
 export type {
@@ -132,6 +145,10 @@ export class ApiClient {
   // Activity log methods
   static createActivityLog = activity.createActivityLog;
   static getActivityLogs = activity.getActivityLogs;
+
+  // Import wizard methods
+  static importScanDirectory = importWizard.importScanDirectory;
+  static importExecute = importWizard.importExecute;
 }
 
 // Individual function exports for convenience
@@ -213,7 +230,11 @@ export const {
 
   // Activity log operations
   createActivityLog,
-  getActivityLogs
+  getActivityLogs,
+
+  // Import wizard operations
+  importScanDirectory,
+  importExecute
 } = ApiClient;
 
 export default ApiClient;

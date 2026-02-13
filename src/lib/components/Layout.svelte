@@ -73,7 +73,8 @@
     '/projects': 'Projects',
     '/proposals': 'Proposals',
     '/companies': 'Companies',
-    '/contacts': 'Contacts'
+    '/contacts': 'Contacts',
+    '/dev': 'Dev Mode'
   };
 
   $: pageTitle = pageTitles[$location] || 'Dashboard';

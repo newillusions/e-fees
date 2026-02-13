@@ -1,21 +1,21 @@
-# Gitea Actions Setup for Unraid
+# Forgejo Actions Setup for Unraid
 
-Complete guide for setting up Gitea Actions runners on Unraid.
+Complete guide for setting up Forgejo Actions runners on Unraid.
 
 ## Overview
 
-Your Gitea instance is running in Docker on Unraid. To enable Gitea Actions (CI/CD), you need to add a `gitea-act-runner` container that will execute the workflows.
+Your Forgejo instance is running in Docker on Unraid. To enable Forgejo Actions (CI/CD), you need to add a `gitea-act-runner` container that will execute the workflows (Forgejo uses Gitea-compatible runner).
 
 **Current Setup:**
-- **Gitea Container**: Official `gitea/gitea` image
-- **Data Location**: `/mnt/user/appdata/gitea`
-- **Web Access**: `https://git.mms.name` (port 3000 internally)
+- **Forgejo Container**: Official `forgejo/forgejo` image
+- **Data Location**: `/mnt/user/appdata/forgejo`
+- **Web Access**: `https://forge.mms.name` (port 3000 internally)
 - **Network**: Bridge mode
 
 **What We Need:**
-- **Act Runner Container**: `gitea/act_runner:latest`
+- **Act Runner Container**: `gitea/act_runner:latest` (Forgejo-compatible)
 - **Registration Token**: `hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE`
-- **Repository**: `martin/fee-prop`
+- **Repository**: `emittiv/fee-prop`
 
 ---
 
@@ -28,9 +28,9 @@ Your Gitea instance is running in Docker on Unraid. To enable Gitea Actions (CI/
 3. **Fill in these details:**
 
 ```
-Name: gitea-act-runner
+Name: forgejo-act-runner
 Repository: gitea/act_runner:latest
-Network Type: bridge (or same as Gitea container)
+Network Type: bridge (or same as Forgejo container)
 ```
 
 ### Step 2: Volume Mappings
@@ -39,7 +39,7 @@ Add these volume mappings:
 
 | Container Path | Host Path | Access Mode |
 |----------------|-----------|-------------|
-| `/data` | `/mnt/user/appdata/gitea-runner` | Read/Write |
+| `/data` | `/mnt/user/appdata/forgejo-runner` | Read/Write |
 | `/var/run/docker.sock` | `/var/run/docker.sock` | Read/Write |
 
 **Why `/var/run/docker.sock`?**
@@ -51,7 +51,7 @@ Add these environment variables:
 
 | Variable | Value |
 |----------|-------|
-| `GITEA_INSTANCE_URL` | `https://git.mms.name` |
+| `GITEA_INSTANCE_URL` | `https://forge.mms.name` |
 | `GITEA_RUNNER_REGISTRATION_TOKEN` | `hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE` |
 | `GITEA_RUNNER_NAME` | `unraid-runner-01` |
 | `GITEA_RUNNER_LABELS` | `ubuntu-latest,macos-latest,windows-latest` |
@@ -85,7 +85,7 @@ services:
     container_name: gitea-act-runner
     restart: always
     environment:
-      - GITEA_INSTANCE_URL=https://git.mms.name
+      - GITEA_INSTANCE_URL=https://forge.mms.name
       - GITEA_RUNNER_REGISTRATION_TOKEN=hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE
       - GITEA_RUNNER_NAME=unraid-runner-01
       - GITEA_RUNNER_LABELS=ubuntu-latest:docker://node:20-bullseye,macos-latest:docker://node:20-bullseye,windows-latest:docker://node:20-bullseye
@@ -116,7 +116,7 @@ SSH into your Unraid server and run:
 docker run -d \
   --name gitea-act-runner \
   --restart always \
-  -e GITEA_INSTANCE_URL=https://git.mms.name \
+  -e GITEA_INSTANCE_URL=https://forge.mms.name \
   -e GITEA_RUNNER_REGISTRATION_TOKEN=hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE \
   -e GITEA_RUNNER_NAME=unraid-runner-01 \
   -v /mnt/user/appdata/gitea-runner:/data \
@@ -130,7 +130,7 @@ docker run -d \
 
 ### Via Gitea Web UI:
 
-1. Go to: `https://git.mms.name/martin/fee-prop/settings/secrets`
+1. Go to: `https://forge.mms.name/emittiv/fee-prop/settings/secrets`
 2. Click "Add Secret"
 3. Name: `RELEASE_TOKEN` (**Important:** Cannot start with `GITEA_` - reserved by Gitea)
 4. Value: `YOUR_GITEA_TOKEN_HERE`
@@ -142,7 +142,7 @@ docker run -d \
 
 ```bash
 curl -X PUT \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/secrets/RELEASE_TOKEN" \
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/secrets/RELEASE_TOKEN" \
   -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{"data": "YOUR_GITEA_TOKEN_HERE"}'
@@ -156,7 +156,7 @@ Check if the runner is registered:
 
 ```bash
 curl -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/runners" | jq '.'
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/runners" | jq '.'
 ```
 
 **Expected output:**
@@ -181,7 +181,7 @@ curl -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
 
 ```bash
 curl -X POST \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/workflows/release-build.yml/dispatches" \
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/workflows/release-build.yml/dispatches" \
   -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{"ref": "main", "inputs": {"version": "0.10.0"}}'
@@ -196,11 +196,11 @@ git push origin v0.11.0-test
 
 ### Monitor Progress:
 
-1. **Via Web UI**: `https://git.mms.name/martin/fee-prop/actions`
+1. **Via Web UI**: `https://forge.mms.name/emittiv/fee-prop/actions`
 2. **Via API**:
 ```bash
 curl -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/runs?limit=5" | jq '.'
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/runs?limit=5" | jq '.'
 ```
 
 3. **Via Container Logs**:
@@ -227,7 +227,7 @@ docker logs gitea-act-runner
 - Network connectivity (can container reach Gitea?)
 
 **Fix - Network Issue**:
-If using bridge mode, the runner might not be able to reach `https://git.mms.name`. Try:
+If using bridge mode, the runner might not be able to reach `https://forge.mms.name`. Try:
 - Use Gitea's internal IP: `http://172.17.0.X:3000` (find with `docker inspect gitea`)
 - Or use custom bridge network shared between containers
 
@@ -281,7 +281,7 @@ For better performance, add multiple runners:
 docker run -d \
   --name gitea-act-runner-02 \
   --restart always \
-  -e GITEA_INSTANCE_URL=https://git.mms.name \
+  -e GITEA_INSTANCE_URL=https://forge.mms.name \
   -e GITEA_RUNNER_REGISTRATION_TOKEN=<NEW_TOKEN> \
   -e GITEA_RUNNER_NAME=unraid-runner-02 \
   -v /mnt/user/appdata/gitea-runner-02:/data \
@@ -319,11 +319,11 @@ docker ps | grep gitea-act-runner
 
 # Runner API status
 curl -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/runners"
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/runners"
 
 # Recent workflow runs
 curl -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/runs?status=completed&limit=10"
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/runs?status=completed&limit=10"
 ```
 
 ### Log Files
@@ -409,7 +409,7 @@ Monitor runner impact on Unraid:
 **Note:** Registration tokens can be regenerated via API if needed:
 ```bash
 curl -X POST -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
-  "https://git.mms.name/api/v1/repos/martin/fee-prop/actions/runners/registration-token"
+  "https://forge.mms.name/api/v1/repos/emittiv/fee-prop/actions/runners/registration-token"
 ```
 
 ---
@@ -418,7 +418,7 @@ curl -X POST -H "Authorization: token YOUR_GITEA_TOKEN_HERE" \
 
 Once the runner is working:
 1. Tag a new release to test: `git tag v0.11.0 && git push origin v0.11.0`
-2. Watch workflow execute: `https://git.mms.name/martin/fee-prop/actions`
+2. Watch workflow execute: `https://forge.mms.name/emittiv/fee-prop/actions`
 3. Download built artifacts from release page
 
 ---

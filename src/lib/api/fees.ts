@@ -7,7 +7,18 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type { Fee, FeeCreate, FeeUpdate, PaginatedResponse } from '../../types';
+import type { PricingBreakdown, PostContractItem, ReimbursableCost, PaymentSchedule } from '../../types/database';
 import { logApiError } from '../services/logger';
+
+/**
+ * Pricing update payload - contains only pricing-related fields.
+ */
+export interface PricingUpdate {
+  pricing?: PricingBreakdown;
+  post_contract_items?: PostContractItem[];
+  reimbursable_costs?: ReimbursableCost[];
+  payment_schedule?: PaymentSchedule;
+}
 
 /**
  * Retrieves all fee records from the database.
@@ -126,6 +137,24 @@ export async function deleteFee(id: string): Promise<Fee> {
     return deleted;
   } catch (error) {
     logApiError('deleteFee', error as Error, { component: 'FeesApi' });
+    throw error;
+  }
+}
+
+/**
+ * Updates only the pricing-related fields of a fee proposal.
+ * This is more efficient than updateFee when only pricing data changes.
+ * @param id - The string ID of the fee to update
+ * @param pricing - Partial pricing data to update
+ * @returns Updated fee
+ * @throws Error if update fails
+ */
+export async function updateFeePricing(id: string, pricing: PricingUpdate): Promise<Fee> {
+  try {
+    const updated = await invoke<Fee>('update_fee_pricing', { id, pricing });
+    return updated;
+  } catch (error) {
+    logApiError('updateFeePricing', error as Error, { component: 'FeesApi' });
     throw error;
   }
 }

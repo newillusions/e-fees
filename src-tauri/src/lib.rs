@@ -7,6 +7,8 @@ use tauri::Manager;
 mod db;
 mod commands;
 mod updater_logger;
+mod agent_server;
+mod excel_export;
 
 use db::{DatabaseManager, DatabaseConfig};
 use commands::{
@@ -29,6 +31,7 @@ use commands::{
     delete_contact,
     create_fee,
     update_fee,
+    update_fee_pricing,
     delete_fee,
     // Pagination commands
     get_projects_page,
@@ -80,6 +83,11 @@ use commands::{
     scan_folder_sync,
     resolve_folder_inconsistency,
     log_message,
+    // Import wizard commands
+    import_scan_directory,
+    import_execute,
+    // Excel export
+    export_fee_excel,
 };
 
 /// Load database configuration from the settings system.
@@ -232,6 +240,16 @@ pub fn run() {
                     // Start heartbeat monitoring
                     info!("Starting database heartbeat monitoring");
                     DatabaseManager::start_heartbeat(status, heartbeat_state).await;
+
+                    // Start agent API server (non-blocking, runs in background)
+                    let agent_state = init_state.clone();
+                    let agent_port = std::env::var("EFEES_AGENT_PORT")
+                        .ok()
+                        .and_then(|p| p.parse::<u16>().ok())
+                        .unwrap_or(3100);
+                    tauri::async_runtime::spawn(async move {
+                        agent_server::start_agent_server(agent_state, agent_port).await;
+                    });
                 }
             });
             
@@ -261,6 +279,7 @@ pub fn run() {
             delete_contact,
             create_fee,
             update_fee,
+            update_fee_pricing,
             delete_fee,
             // Pagination commands
             get_projects_page,
@@ -311,7 +330,12 @@ pub fn run() {
             log_message,
             // Activity log commands
             create_activity_log,
-            get_activity_logs
+            get_activity_logs,
+            // Import wizard commands
+            import_scan_directory,
+            import_execute,
+            // Excel export
+            export_fee_excel
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

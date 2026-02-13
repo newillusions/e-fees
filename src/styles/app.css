@@ -432,10 +432,10 @@
   .emittiv-select {
     width: 100%;
     height: 32px !important;
-    padding: 8px 12px !important;
+    padding: 6px 8px !important;
     font-size: 12px !important;
-    background-color: var(--emittiv-dark);
-    border: 1px solid var(--emittiv-dark);
+    background-color: rgba(0, 0, 0, 0.15);
+    border: 1px solid transparent;
     border-radius: 4px;
     color: var(--emittiv-white);
     cursor: pointer;
@@ -539,8 +539,292 @@
     gap: 12px;
   }
 
+  .emittiv-form-grid--3col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
   .emittiv-form-grid--full {
     grid-column: span 2;
+  }
+
+  /* Form field with suffix (e.g. input + "%" or input + "AED") */
+  .emittiv-field-suffix {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .emittiv-field-suffix__unit {
+    font-size: 12px;
+    color: var(--emittiv-light);
+    flex-shrink: 0;
+  }
+
+  /* Compact inline calculator row */
+  .emittiv-calc-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .emittiv-calc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .emittiv-calc-field--fee input {
+    width: 140px;
+  }
+
+  .emittiv-calc-field--currency select {
+    width: 100px;
+  }
+
+  .emittiv-calc-field--pct {
+    width: auto;
+  }
+
+  .emittiv-calc-field--quoted {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .emittiv-calc-quoted {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--emittiv-splash);
+    white-space: nowrap;
+  }
+
+  /* Exchange Rate Input Group */
+  .emittiv-exchange-rate-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .emittiv-exchange-rate-input .emittiv-input {
+    width: 120px;
+  }
+
+  /* Inline action buttons (Use Live, Lock/Unlock) */
+  .emittiv-btn-inline {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--emittiv-dark);
+    background: var(--emittiv-darker);
+    color: var(--emittiv-splash);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .emittiv-btn-inline:hover {
+    border-color: var(--emittiv-splash);
+    background: var(--emittiv-black);
+  }
+
+  .emittiv-btn-inline--warn {
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-btn-inline--warn:hover {
+    border-color: var(--emittiv-light);
+  }
+
+  /* Rate lock display */
+  .emittiv-rate-lock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Rate lock badge (used in summary panel) */
+  .emittiv-rate-lock-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    color: var(--emittiv-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  /* Summary Bar */
+  .emittiv-summary-bar {
+    width: 100%;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .emittiv-summary-bar:hover {
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-summary-bar--empty {
+    justify-content: center;
+    cursor: default;
+  }
+
+  .emittiv-summary-bar--empty:hover {
+    border-color: var(--emittiv-dark);
+  }
+
+  .emittiv-summary-bar__items {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .emittiv-summary-bar__currency {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--emittiv-light);
+    background-color: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .emittiv-summary-bar__item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .emittiv-summary-bar__label {
+    color: var(--emittiv-light);
+    font-size: 11px;
+  }
+
+  .emittiv-summary-bar__value {
+    color: var(--emittiv-white);
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  .emittiv-summary-bar__value--accent {
+    color: var(--emittiv-splash);
+  }
+
+  .emittiv-summary-bar__value--bold {
+    font-weight: 700;
+  }
+
+  .emittiv-summary-bar__sep {
+    width: 1px;
+    height: 14px;
+    background-color: var(--emittiv-dark);
+    flex-shrink: 0;
+  }
+
+  .emittiv-summary-bar__total {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .emittiv-summary-bar__total .emittiv-summary-bar__label {
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .emittiv-summary-bar__converted {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--emittiv-lighter);
+    margin-left: 6px;
+  }
+
+  .emittiv-summary-bar__chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--emittiv-light);
+    flex-shrink: 0;
+  }
+
+  /* Tab button - for tabbed panel navigation */
+  .emittiv-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 4px 4px 0 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--emittiv-light);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 200ms ease;
+  }
+
+  .emittiv-tab:hover {
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-tab--active {
+    background: var(--emittiv-black);
+    color: var(--emittiv-splash);
+  }
+
+  .emittiv-tab__icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Summary panel - ledger-style label/value rows */
+  .emittiv-summary-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .emittiv-summary-line--sub {
+    padding-left: 16px;
+    font-size: 14px;
+  }
+
+  .emittiv-summary-line--total {
+    border-top: 1px solid var(--emittiv-dark);
+    padding-top: 8px;
+  }
+
+  .emittiv-summary-section {
+    border-top: 1px solid var(--emittiv-dark);
+    padding-top: 16px;
+  }
+
+  .emittiv-summary-highlight {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  /* Compact form divider */
+  .emittiv-form-divider {
+    border-top: 1px solid rgba(102, 102, 102, 0.5);
+    padding-top: 8px;
+    margin-top: 8px;
   }
 
   /* Form Actions - Button container at bottom */
@@ -558,10 +842,8 @@
   }
 
   /* Button Styles - Consistent button sizing */
+  /* Button Base - Fixed px values for desktop app scaling */
   .emittiv-btn {
-    height: 28px !important;
-    padding: 6px 12px !important;
-    font-size: 12px !important;
     border-radius: 4px;
     font-weight: 500;
     cursor: pointer;
@@ -570,21 +852,50 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
+    outline: none;
   }
 
+  .emittiv-btn:focus {
+    box-shadow: 0 0 0 2px var(--emittiv-black), 0 0 0 4px var(--emittiv-splash);
+  }
+
+  .emittiv-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Button Sizes - Fixed px for 150% OS scaling */
+  .emittiv-btn--sm {
+    height: 28px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .emittiv-btn--md {
+    height: 32px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .emittiv-btn--lg {
+    height: 40px;
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  /* Button Variants */
   .emittiv-btn--primary {
     background-color: var(--emittiv-splash);
     border: none;
     color: var(--emittiv-black);
   }
 
-  .emittiv-btn--primary:hover {
+  .emittiv-btn--primary:hover:not(:disabled) {
     background-color: #e68a00;
   }
 
-  .emittiv-btn--primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .emittiv-btn--primary:active:not(:disabled) {
+    background-color: #cc7a00;
   }
 
   .emittiv-btn--secondary {
@@ -593,8 +904,19 @@
     color: var(--emittiv-light);
   }
 
-  .emittiv-btn--secondary:hover {
+  .emittiv-btn--secondary:hover:not(:disabled) {
     border-color: var(--emittiv-light);
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-btn--ghost {
+    background-color: transparent;
+    border: none;
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-btn--ghost:hover:not(:disabled) {
+    background-color: var(--emittiv-dark);
     color: var(--emittiv-white);
   }
 
@@ -604,7 +926,7 @@
     color: white;
   }
 
-  .emittiv-btn--danger:hover {
+  .emittiv-btn--danger:hover:not(:disabled) {
     background-color: #b91c1c;
   }
 
@@ -693,13 +1015,23 @@
     color: #93c5fd;
   }
 
-  /* Loading Spinner */
+  /* Loading Spinner - Fixed px for desktop app (150% OS scaling) */
   .emittiv-spinner {
     width: 12px !important;
     height: 12px !important;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  .emittiv-spinner-sm {
+    width: 14px !important;
+    height: 14px !important;
+    border: 2px solid var(--emittiv-black);
+    border-top-color: transparent;
+    border-radius: 50%;
+    margin-right: 8px;
     animation: spin 0.6s linear infinite;
   }
 
@@ -712,6 +1044,423 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* ============================================
+     INLINE INPUT UTILITIES - Fixed px for desktop app scaling
+     ============================================ */
+
+  /* Base inline input - transparent with hover/focus states */
+  .emittiv-inline-input {
+    padding: 2px 6px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    font-size: 13px; /* Increased from 12px for better readability */
+    transition: all 0.15s ease-in-out;
+  }
+
+  /* Number input spinner buttons - Fixed for desktop app (dark theme) */
+  .emittiv-inline-input::-webkit-inner-spin-button,
+  .emittiv-inline-input::-webkit-outer-spin-button,
+  .emittiv-table-input::-webkit-inner-spin-button,
+  .emittiv-table-input::-webkit-outer-spin-button {
+    opacity: 1;
+    height: 24px;
+    margin-left: 8px;
+    filter: invert(0.7);
+  }
+
+  /* Drag handle icon for reorderable rows */
+  .emittiv-drag-handle {
+    width: 8px;
+    height: 10px;
+    color: var(--emittiv-dark);
+    cursor: move;
+    flex-shrink: 0;
+  }
+
+  .emittiv-drag-handle:hover {
+    color: var(--emittiv-light);
+  }
+
+  /* Sortable row layout */
+  .emittiv-sortable-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--emittiv-dark);
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--emittiv-light);
+  }
+
+  .emittiv-sortable-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(102, 102, 102, 0.3);
+    cursor: grab;
+    user-select: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .emittiv-sortable-row:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .emittiv-sortable-col--handle {
+    width: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emittiv-sortable-col--grow {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Align footer totals with input text padding in data rows */
+  .emittiv-sortable-footer .emittiv-sortable-col--number,
+  .emittiv-sortable-footer .emittiv-sortable-col--accent {
+    padding-left: 8px;
+  }
+
+  .emittiv-sortable-col--code {
+    width: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emittiv-sortable-col--pct {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    width: 120px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .emittiv-sortable-col--status {
+    width: 88px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emittiv-status-btn {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 200ms;
+    white-space: nowrap;
+  }
+
+  .emittiv-status-btn:hover {
+    opacity: 0.8;
+  }
+
+  /* Text button - small utility actions in panel headers */
+  .emittiv-text-btn {
+    font-size: 10px;
+    color: var(--emittiv-light);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 200ms ease;
+    white-space: nowrap;
+  }
+
+  .emittiv-text-btn:hover {
+    color: var(--emittiv-white);
+  }
+
+  /* Primary variant - splash colored for prominent actions (Load Defaults, Generate) */
+  .emittiv-text-btn--primary {
+    color: var(--emittiv-splash);
+  }
+
+  .emittiv-text-btn--primary:hover {
+    color: #fb923c;
+  }
+
+  .emittiv-sortable-col--action {
+    width: 28px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Static (non-draggable) row variant - same layout, default cursor */
+  .emittiv-sortable-row--static {
+    cursor: default;
+    user-select: auto;
+  }
+
+  /* Compact row variant - matches table row density (Design Phase Breakdown) */
+  .emittiv-sortable-row--compact {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  /* Compact header variant */
+  .emittiv-sortable-header--compact {
+    font-size: 12px;
+  }
+
+  /* Compact footer variant */
+  .emittiv-sortable-footer--compact {
+    font-size: 12px;
+  }
+
+  /* Group header row variant - subtle background for section labels */
+  .emittiv-sortable-row--group {
+    background: rgba(0, 0, 0, 0.15);
+    padding: 6px 8px;
+  }
+
+  /* Select/dropdown column - fixed width for stage selects */
+  .emittiv-sortable-col--select {
+    width: 160px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  /* Numeric input column - fixed width for cost/markup fields */
+  .emittiv-sortable-col--number {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  /* Accent display column - fixed width for computed values (e.g. client cost) */
+  .emittiv-sortable-col--accent {
+    width: 88px;
+    flex-shrink: 0;
+    text-align: right;
+    color: var(--emittiv-splash);
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  /* Footer/totals row - matches header styling */
+  .emittiv-sortable-footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--emittiv-dark);
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--emittiv-white);
+  }
+
+  /* Grand total footer variant - heavier emphasis */
+  .emittiv-sortable-footer--total {
+    border-top: 2px solid var(--emittiv-dark);
+    font-weight: 700;
+  }
+
+  /* Subtitle text within header columns (e.g., discipline percentages) */
+  .emittiv-sortable-col--subtitle {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--emittiv-dark);
+    line-height: 14px;
+  }
+
+  /* Matrix validation warning bar */
+  .emittiv-matrix-warning {
+    padding: 6px 12px;
+    background-color: rgba(234, 179, 8, 0.1);
+    border-top: 1px solid rgba(234, 179, 8, 0.3);
+    font-size: 10px;
+    color: #eab308;
+  }
+
+  /* Schedule difference indicator */
+  .emittiv-schedule-diff {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: rgba(102, 102, 102, 0.1);
+    border-top: 1px solid var(--emittiv-dark);
+    font-size: 11px;
+  }
+
+  /* Override reset button (inside input, left-aligned) */
+  .emittiv-override-reset {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 2px;
+    color: #eab308;
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+    z-index: 1;
+  }
+
+  .emittiv-override-reset:hover {
+    color: #facc15;
+  }
+
+  .emittiv-override-reset svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Override text color for cells with manual overrides */
+  .emittiv-text--override {
+    color: #eab308;
+  }
+
+  /* Input with override has left padding for reset button */
+  .emittiv-table-input--has-override {
+    padding-left: 16px;
+  }
+
+  /* Cell with input + optional action button */
+  .emittiv-sortable-cell-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Input inside cell-group fills the width so reset button overlaps it */
+  .emittiv-sortable-cell-group .emittiv-table-input {
+    width: 100%;
+  }
+
+  /* Ensure accent column behaves like number column when containing inputs */
+  .emittiv-sortable-col--accent:has(.emittiv-sortable-cell-group) {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Drag-over highlight for reorderable rows */
+  .emittiv-drag-over {
+    background-color: rgba(255, 153, 0, 0.1);
+    border-left: 2px solid var(--emittiv-splash);
+  }
+
+  /* Currently dragging row */
+  .emittiv-sortable-dragging {
+    opacity: 0.5;
+    background-color: rgba(255, 153, 0, 0.05);
+  }
+
+  /* Validation check/tick icon */
+  .emittiv-icon-check {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+  }
+
+  .emittiv-inline-input:hover:not(:disabled):not(:read-only) {
+    border-color: var(--emittiv-dark);
+  }
+
+  .emittiv-inline-input:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    background-color: var(--emittiv-black);
+  }
+
+  .emittiv-inline-input:disabled,
+  .emittiv-inline-input:read-only {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Table input - similar to inline but optimized for tables */
+  .emittiv-table-input {
+    width: 100%;
+    height: 32px;
+    padding: 6px 8px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    font-size: 13px;
+    text-align: right;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .emittiv-table-input:hover:not(:disabled):not(:read-only) {
+    border-color: var(--emittiv-dark);
+  }
+
+  .emittiv-table-input:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+    background-color: var(--emittiv-black);
+  }
+
+  /* Sizing variants - Fixed px widths */
+  .emittiv-inline-input--sm,
+  .emittiv-table-input--sm {
+    width: 40px;
+  }
+
+  .emittiv-inline-input--md,
+  .emittiv-table-input--md {
+    width: 80px;
+  }
+
+  .emittiv-inline-input--lg,
+  .emittiv-table-input--lg {
+    width: 96px;
+  }
+
+  /* Alignment variants */
+  .emittiv-inline-input--left,
+  .emittiv-table-input--left {
+    text-align: left;
+  }
+
+  .emittiv-inline-input--right,
+  .emittiv-table-input--right {
+    text-align: right;
+  }
+
+  .emittiv-inline-input--center,
+  .emittiv-table-input--center {
+    text-align: center;
+  }
+
+  /* Accent color variant */
+  .emittiv-inline-input--accent,
+  .emittiv-table-input--accent {
+    color: var(--emittiv-splash);
+    font-weight: 500;
   }
 }
 /* ============================================

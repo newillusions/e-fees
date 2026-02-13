@@ -3,7 +3,7 @@
 //! This module provides Tauri commands for managing fee proposals (RFPs)
 //! including CRUD operations, pagination, and JSON export for InDesign.
 
-use crate::db::{Fee, FeeCreate, FeeUpdate, PaginatedResponse};
+use crate::db::{Fee, FeeCreate, FeeUpdate, PricingUpdate, PaginatedResponse};
 use crate::commands::utils::execute_with_manager;
 use crate::commands::fee_json;
 use crate::crud_command;
@@ -68,6 +68,24 @@ pub async fn update_fee(id: String, fee: FeeUpdate, state: State<'_, AppState>) 
             let id_clone = id.clone();
             Box::pin(async move {
                 manager.update_fee(&id_clone, fee).await
+            })
+        },
+        "update",
+        &fee_name
+    ).await
+}
+
+/// Update only the pricing-related fields of a fee proposal.
+/// This is more efficient than update_fee when only pricing data changes.
+#[tauri::command]
+pub async fn update_fee_pricing(id: String, pricing: PricingUpdate, state: State<'_, AppState>) -> Result<Fee, String> {
+    let fee_name = format!("fee pricing for '{}'", id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id_clone = id.clone();
+            Box::pin(async move {
+                manager.update_fee_pricing(&id_clone, pricing).await
             })
         },
         "update",

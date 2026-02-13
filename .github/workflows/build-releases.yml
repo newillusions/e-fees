@@ -15,8 +15,8 @@ on:
         default: '0.10.0'
 
 env:
-  GITEA_SERVER: https://git.mms.name
-  GITEA_OWNER: martin
+  GITEA_SERVER: https://forge.mms.name
+  GITEA_OWNER: emittiv
   GITEA_REPO: fee-prop
 
 jobs:
@@ -374,15 +374,15 @@ jobs:
             "platforms": {
               "darwin-aarch64": {
                 "signature": "$SIG_AARCH64",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_aarch64.app.tar.gz"
+                "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_aarch64.app.tar.gz"
               },
               "darwin-x86_64": {
                 "signature": "$SIG_X64",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64.app.tar.gz"
+                "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64.app.tar.gz"
               },
               "windows-x86_64": {
                 "signature": "$SIG_WIN",
-                "url": "https://git.mms.name/martin/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.exe"
+                "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64-setup.exe"
               }
             }
           }

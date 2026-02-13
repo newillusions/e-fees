@@ -107,6 +107,15 @@ export interface Contact {
 export type ContactCreate = Omit<Contact, 'id' | 'time' | 'full_name'>;
 export type ContactUpdate = Partial<ContactCreate>;
 
+// Import pricing types from database.ts
+import type {
+  PricingBreakdown,
+  PostContractItem,
+  ReimbursableCost,
+  PaymentSchedule,
+  PricingRevision
+} from './database';
+
 export interface Fee {
   id?: string | SurrealThing;
   name: string;
@@ -130,6 +139,14 @@ export interface Fee {
     created_at: string;
     updated_at: string;
   };
+  // Pricing fields (optional for backward compatibility)
+  pricing?: PricingBreakdown;
+  post_contract_items?: PostContractItem[];
+  reimbursable_costs?: ReimbursableCost[];
+  payment_schedule?: PaymentSchedule;
+  pricing_revisions?: PricingRevision[];
+  current_revision_number?: number;
+  current_release_number?: number;
 }
 
 // Create types for API operations

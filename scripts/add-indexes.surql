@@ -1,5 +1,5 @@
 -- E-Fees Database Index Additions
--- Run with: surreal sql --endpoint ws://10.0.1.17:8000 --namespace emittiv --database projects --username martin --password <pass> < scripts/add-indexes.surql
+-- Run with: surreal sql --endpoint ws://10.0.21.8:8000 --namespace emittiv --database projects --username martin --password <pass> < scripts/add-indexes.surql
 -- Or execute each statement individually in SurrealDB console
 
 -- ============================================================

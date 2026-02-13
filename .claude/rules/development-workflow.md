@@ -451,6 +451,94 @@ npm run lint
 
 ---
 
+## 🎨 Styling & CSS Architecture
+
+### Rule 19a: Tailwind Usage and Component Discipline
+
+**CRITICAL**: Tailwind must NEVER be used with massive inline class strings. Enforce strict component discipline.
+
+#### ⚠️ DESKTOP APP REQUIREMENT: Fixed Pixel Values
+
+**This is a Tauri desktop app with OS-level scaling (typically 150% on target machines).**
+
+- ✅ **USE fixed `px` values** in CSS classes - OS handles scaling automatically
+- ❌ **DO NOT use `rem` values** - can cause double-scaling or inconsistent behavior
+- ✅ All `emittiv-*` classes use fixed px (e.g., `font-size: 12px`, `padding: 6px 12px`)
+- ✅ Tailwind config defines sizes with px (e.g., `'xxs': ['10px', { lineHeight: '14px' }]`)
+
+**Why this matters**: Desktop apps rely on OS-level DPI scaling. Using rem values designed for responsive web can cause incorrect scaling on 4K/Retina displays with 150-200% system scaling.
+
+#### FORBIDDEN ❌
+
+**Never do these:**
+- Class strings longer than 50 characters repeated across files
+- Copy-pasting utility combinations multiple times
+- Arbitrary pixel values like `text-[10px]` (use semantic sizes: `text-xs`, `text-xxs`)
+- Ignoring existing CSS classes in `app.css` (`emittiv-input`, `emittiv-select`, `emittiv-btn`)
+
+**Example of what NOT to do:**
+```svelte
+<!-- ❌ BAD - 100+ char string repeated 8 times -->
+<input class="px-1.5 py-0.5 bg-transparent border border-transparent hover:border-emittiv-dark rounded text-emittiv-white text-xs focus:outline-none focus:border-emittiv-splash focus:bg-emittiv-black" />
+```
+
+#### REQUIRED ✅
+
+**Component Extraction Rules:**
+
+1. **Tailwind utilities ONLY for one-off layout/spacing tweaks**
+   - ✅ `flex`, `gap-2`, `ml-1`, `mt-4` - simple layout utilities
+   - ❌ Long combinations of states, colors, borders, padding
+
+2. **Extract ANY pattern that repeats 2+ times into:**
+   - Component files (`InlineInput.svelte`, `IconButton.svelte`, `PanelCard.svelte`)
+   - CSS classes with `@apply` in `app.css`
+   - Existing `emittiv-*` classes
+
+3. **Use semantic text sizes** (never arbitrary values)
+   - ✅ `text-xs` (12px), `text-xxs` (10px), `text-sm` (14px)
+   - ❌ `text-[10px]`, `text-[13px]`
+   - Add custom sizes to `tailwind.config.js` if needed
+
+4. **Components must have clean, readable markup**
+   - Styles should be in components or CSS files
+   - Markup should focus on structure, not styling details
+
+**Example of proper usage:**
+```svelte
+<!-- ✅ GOOD - Extract to component or CSS class -->
+<InlineInput bind:value={name} className="w-full" />
+<!-- or -->
+<input class="emittiv-inline-input w-full" bind:value={name} />
+```
+
+#### Existing Infrastructure
+
+**USE these existing CSS classes from `app.css`:**
+- `.emittiv-input` (lines 395-430) - MUST use for form inputs
+- `.emittiv-select` (lines 432-465) - MUST use for dropdowns
+- `.emittiv-btn` (lines 561-610) - MUST use for buttons
+- CSS variables for Emittiv design system (colors, spacing)
+
+#### Code Review Checklist
+
+**Before committing, check for:**
+- [ ] Class strings longer than 50 chars → extract to component
+- [ ] Same class combo used 2+ times → extract to CSS class
+- [ ] Arbitrary pixel values → use Tailwind scale or add to config
+- [ ] Ignored existing CSS classes → use them instead
+- [ ] Component markup is clean and readable
+
+**Rationale**: Frontend specialist audit (2026-01-27) found massive technical debt in pricing module:
+- 27× `text-[10px]` arbitrary values
+- 8× repeated 100+ character class strings
+- 50+ inline inputs ignoring `emittiv-input` class
+- 400+ lines of unnecessary repetition
+
+**Decision**: Keep Tailwind but enforce proper component extraction. This approach provides a path to pure-CSS if needed later.
+
+---
+
 ## 🔒 Security Practices
 
 ### Rule 20: Input Validation

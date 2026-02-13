@@ -213,4 +213,4 @@ git push github v$VERSION
 | Web releases | `/Volumes/www/e-fees-releases/` |
 | Update manifest | `https://apache.mms.name/e-fees-releases/update.json` |
 | GitHub repo | `newillusions/e-fees` |
-| Gitea repo | `git.mms.name/martin/fee-prop` |
+| Forgejo repo | `forge.mms.name/emittiv/fee-prop` |

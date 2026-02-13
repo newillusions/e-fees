@@ -1,6 +1,8 @@
-# Gitea Release Management
+# Forgejo Release Management
 
-Create and manage releases on the Gitea server (https://git.mms.name/martin/fee-prop).
+Create and manage releases on the Forgejo server (https://forge.mms.name/emittiv/fee-prop).
+
+**Note**: The MCP server directory is named `gitea-mcp` for backward compatibility with Gitea API.
 
 ## What You Should Do
 
@@ -17,13 +19,13 @@ When this command is invoked, help the user with Gitea release operations using 
 
 ### How to Execute
 
-The Gitea MCP server is NOT loaded by default (to save tokens). You need to run it directly:
+The Forgejo MCP server is NOT loaded by default (to save tokens). You need to run it directly:
 
 ```bash
 # All credentials are in .env.local
-cd /Volumes/base/dev/e-fees
+cd /Volumes/base/dev/app/e-fees
 
-# Run Gitea MCP operations by executing the server directly
+# Run Forgejo MCP operations by executing the server directly (uses Gitea-compatible API)
 GITEA_TOKEN="$(grep GITEA_TOKEN .env.local | cut -d= -f2 | tr -d '"')" \
 GITEA_SERVER="$(grep GITEA_SERVER .env.local | cut -d= -f2 | tr -d '"')" \
 GITEA_OWNER="$(grep GITEA_OWNER .env.local | cut -d= -f2 | tr -d '"')" \
@@ -41,7 +43,7 @@ For common operations, use the automated script:
 
 # The script will:
 # - Read credentials from .env.local
-# - Create the release on Gitea
+# - Create the release on Forgejo
 # - Upload DMG file from releases/v{VERSION}/
 # - Upload SHA256 checksum
 # - Use release notes from releases/v{VERSION}/RELEASE_NOTES.md
@@ -49,17 +51,17 @@ For common operations, use the automated script:
 
 ### When to Use This Command
 
-- **After building a new release** - Upload binaries to Gitea
+- **After building a new release** - Upload binaries to Forgejo
 - **Version tagging** - Create formal releases from git tags
 - **Release management** - List, update, or delete releases
 - **Asset uploads** - Add DMG, MSI, AppImage files to releases
 
 ### Files to Reference
 
-- **MCP Server**: `mcp-servers/gitea-mcp/index.js` - Full MCP implementation
+- **MCP Server**: `mcp-servers/gitea-mcp/index.js` - Full MCP implementation (Gitea-compatible API)
 - **README**: `mcp-servers/gitea-mcp/README.md` - Complete documentation and examples
 - **Script**: `scripts/create-gitea-release.sh` - Automated release creation
-- **Credentials**: `.env.local` - Gitea token and server config (NOT in git)
+- **Credentials**: `.env.local` - Forgejo token and server config (NOT in git)
 - **Docs**: `docs/development/GITEA_RELEASES.md` - Comprehensive guide
 
 ### Example: Create Release for v0.11.0
@@ -69,7 +71,7 @@ For common operations, use the automated script:
 npm run version:set 0.11.0
 npm run tauri:build
 
-# 2. Create release on Gitea using the script
+# 2. Create release on Forgejo using the script
 ./scripts/create-gitea-release.sh 0.11.0
 
 # Or manually using the MCP server (for more control):
@@ -80,14 +82,14 @@ npm run tauri:build
 
 ### Security Note
 
-- Gitea token is stored in `.env.local` (excluded from git)
-- Token: `YOUR_GITEA_TOKEN_HERE`
-- Server: `https://git.mms.name`
-- Repository: `martin/fee-prop`
+- Forgejo token is stored in `.env.local` (excluded from git)
+- Token: `YOUR_GITEA_TOKEN_HERE` (variable name kept for API compatibility)
+- Server: `https://forge.mms.name`
+- Repository: `emittiv/fee-prop`
 
-**For Gitea Actions workflows:**
+**For Forgejo Actions workflows:**
 - Secret name: `RELEASE_TOKEN` (NOT `GITEA_TOKEN` - that prefix is reserved)
-- Add at: `https://git.mms.name/martin/fee-prop/settings/secrets`
+- Add at: `https://forge.mms.name/emittiv/fee-prop/settings/secrets`
 
 ### Token Optimization
 
