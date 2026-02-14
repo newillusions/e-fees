@@ -4,7 +4,8 @@
   import { onMount } from 'svelte';
   import { extractId, findEntityById } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix, cloneFeeRevision, getFeesForProject, exportFeeTemplate } from '$lib/api';
+  import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
+  import { cloneFeeRevision, getFeesForProject, exportFeeTemplate } from '$lib/api/revisions';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';

@@ -26,6 +26,7 @@ import { get } from 'svelte/store';
 
   // Filter states
   let searchQuery = $state('');
+  let showAllRevisions = $state(false);
   let filters = $state({
     status: '',
     staff: ''
@@ -96,12 +97,42 @@ import { get } from 'svelte/store';
     };
   })());
 
+  // Filter to latest revision per project when toggle is off
+  function filterToLatestRevisions(fees: Fee[]): Fee[] {
+    const latestByProject = new Map<string, Fee>();
+    for (const fee of fees) {
+      const pid = extractId(fee.project_id);
+      const existing = latestByProject.get(pid);
+      if (!existing || (fee.rev ?? 0) > (existing.rev ?? 0)) {
+        latestByProject.set(pid, fee);
+      }
+    }
+    return Array.from(latestByProject.values());
+  }
+
+  // Apply revision filter first, then search/status filters
+  const revisionFilteredFees = $derived(showAllRevisions ? fees : filterToLatestRevisions(fees));
+
   // Reactive filtered proposals using optimized filter function
-  const filteredProposals = $derived(createFilterFunction(fees, searchQuery, filters, filterConfig));
+  const filteredProposals = $derived(createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig));
+
+  // Count projects with multiple revisions
+  const multiRevisionCount = $derived(() => {
+    const revCounts = new Map<string, number>();
+    for (const fee of fees) {
+      const pid = extractId(fee.project_id);
+      revCounts.set(pid, (revCounts.get(pid) ?? 0) + 1);
+    }
+    let count = 0;
+    for (const c of revCounts.values()) {
+      if (c > 1) count++;
+    }
+    return count;
+  });
 
   // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues(fees, (proposal) => proposal.status).filter(Boolean));
-  const uniqueStaff = $derived(getUniqueFieldValues(fees, (proposal) => proposal.staff_name || '').filter(Boolean));
+  const uniqueStatuses = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.status).filter(Boolean));
+  const uniqueStaff = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.staff_name || '').filter(Boolean));
 
   // Count proposals per status for styling (bold for non-empty)
   // Uses single-pass O(n) instead of O(n*statuses)
@@ -279,6 +310,20 @@ import { get } from 'svelte/store';
         <option value={staff}>{staff}</option>
       {/each}
     </select>
+
+    <!-- Revisions Toggle -->
+    {#if multiRevisionCount() > 0}
+      <label class="flex items-center gap-1.5 ml-2 cursor-pointer">
+        <input
+          type="checkbox"
+          bind:checked={showAllRevisions}
+          class="accent-emittiv-splash"
+        />
+        <span class="text-xs text-emittiv-light hover:text-emittiv-white transition-all">
+          Show all revisions ({multiRevisionCount()})
+        </span>
+      </label>
+    {/if}
   </div>
 
 <style>
