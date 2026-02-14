@@ -441,6 +441,7 @@ mod tests {
             pricing_revisions: None,
             current_revision_number: None,
             current_release_number: None,
+            import_source: None,
         }
     }
 

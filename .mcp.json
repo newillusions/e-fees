@@ -2,14 +2,14 @@
   "$schema": "https://modelcontextprotocol.io/schema/mcp-config.schema.json",
   "mcpServers": {
     "SurrealDB": {
-      "command": "/Users/martin/.cargo/bin/surrealmcp",
-      "args": ["start"],
+      "command": "/Users/martin/.claude/scripts/mcp-with-creds.sh",
+      "args": ["/Users/martin/.cargo/bin/surrealmcp", "start"],
       "env": {
-        "SURREALDB_URL": "http://10.0.21.8:8000",
-        "SURREALDB_NS": "emittiv",
-        "SURREALDB_DB": "projects",
-        "SURREALDB_USER": "martin",
-        "SURREALDB_PASS": "th38ret3ch"
+        "SURREALDB_URL_FROM": "EFEES_SURREALDB_URL",
+        "SURREALDB_NS_FROM": "EFEES_SURREALDB_NS",
+        "SURREALDB_DB_FROM": "EFEES_SURREALDB_DB",
+        "SURREALDB_USER_FROM": "EFEES_SURREALDB_USER",
+        "SURREALDB_PASS_FROM": "EFEES_SURREALDB_PASS"
       }
     },
     "tauri-mcp": {
@@ -33,11 +33,9 @@
       "args": ["-y", "@modelcontextprotocol/server-memory"]
     },
     "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
-      }
+      "command": "/Users/martin/.claude/scripts/mcp-with-creds.sh",
+      "args": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {}
     },
     "document-loader": {
       "command": "uvx",

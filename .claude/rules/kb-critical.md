@@ -2,17 +2,7 @@
 # KB Project Critical Rules
 
 *Auto-generated for E-Fees*
-*Last updated: 2026-02-05*
-
----
-
-## Unraid Smb Mount Paths
-
-**Priority:** 10 | **Type:** config
-
-CRITICAL PATH CHANGE (2026-02-04): Unraid SMB share mount points have changed. /Volumes/rootshare is the new mount point.
-
-*Source: observation:ikhna70wwulr4vzrwi2y | Scope: global | Access count: 7*
+*Last updated: 2026-02-14*
 
 ---
 
@@ -22,27 +12,17 @@ CRITICAL PATH CHANGE (2026-02-04): Unraid SMB share mount points have changed. /
 
 CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with massive inline class strings. Extract repeated patterns into components or CSS classes. Use existing emittiv-* classes. Use semantic text sizes (text-xs, text-xxs) not arbitrary values.
 
-*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 49*
+*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 132*
 
 ---
 
-## Claude Code Token Efficiency
+## E Fees Db Migration Complete
 
-**Priority:** 10 | **Type:** pattern
+**Priority:** 9 | **Type:** config
 
-CRITICAL RULE: All Claude Code instances MUST maximize token usage efficiency and minimize costs. When spawning sub-agents (Task tool), ALWAYS use model="haiku" for straightforward tasks.
+E-Fees SurrealDB migration completed (2026-02-13): All configuration files updated from old IP 10.0....
 
-*Source: observation:3uq1ed30fi5tb0qiswq1 | Scope: global | Access count: 53*
-
----
-
-## Process Management Safety
-
-**Priority:** 10 | **Type:** pattern
-
-CRITICAL RULE: NEVER use pkill, killall, or broad pattern-matching kill commands without EXPLICIT user permission. Always ask first, use specific PIDs.
-
-*Source: observation:yz1x62rdud27ejx4q83f | Scope: global | Access count: 63*
+*Source: observation:xcwj43gc64jzpj93b6rp | Scope: project | Access count: 13*
 
 ---
 
@@ -66,4 +46,34 @@ CRITICAL: E-Fees is a Tauri desktop app - Playwright/browser testing DOES NOT WO
 
 ---
 
-*Total: 6 project rules (3 project-scoped, 3 global)*
+## Acting As Parameter Test (SurrealDB Pattern)
+
+**Priority:** 9 | **Type:** pattern
+
+CRITICAL SurrealDB PATTERN: option<T> fields accept NONE (absent) but REJECT NULL. In SurrealDB, NUL...
+
+*Source: observation:x3jaqd4tpktm876nme6h | Scope: auto (surrealdb) | Access count: 48*
+
+---
+
+## Claude Code Token Efficiency
+
+**Priority:** 10 | **Type:** pattern
+
+CRITICAL RULE: All Claude Code instances MUST maximize token usage efficiency and minimize costs. When spawning sub-agents (Task tool), ALWAYS use model="haiku" for straightforward tasks.
+
+*Source: observation:3uq1ed30fi5tb0qiswq1 | Scope: global | Access count: 138*
+
+---
+
+## Process Management Safety
+
+**Priority:** 10 | **Type:** pattern
+
+CRITICAL RULE: NEVER use pkill, killall, or broad pattern-matching kill commands without EXPLICIT user permission. Always ask first, use specific PIDs.
+
+*Source: observation:yz1x62rdud27ejx4q83f | Scope: global | Access count: 147*
+
+---
+
+*Total: 7 project rules (4 project-scoped, 1 auto-matched, 2 global)*

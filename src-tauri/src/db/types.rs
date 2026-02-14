@@ -147,6 +147,8 @@ pub struct Fee {
     pub current_revision_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_release_number: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub import_source: Option<serde_json::Value>,
 }
 
 /// Fee creation struct.
@@ -184,6 +186,8 @@ pub struct FeeCreate {
     pub current_revision_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_release_number: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub import_source: Option<serde_json::Value>,
 }
 
 /// Fee update struct.

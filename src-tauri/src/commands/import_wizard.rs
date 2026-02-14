@@ -633,6 +633,7 @@ async fn import_proposal_from_json(
         pricing_revisions: None,
         current_revision_number: Some(1),
         current_release_number: Some(0),
+        import_source: None,
     };
 
     match manager.create_fee(fee_create).await {

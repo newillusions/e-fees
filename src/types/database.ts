@@ -108,6 +108,16 @@ export interface Fee {
   pricing_revisions?: PricingRevision[];
   current_revision_number?: number;
   current_release_number?: number;
+  import_source?: {
+    file_path: string;
+    file_modified: string;
+    file_size: number;
+    imported_at: string;
+    import_version: string;
+    checksum: string;
+    project_folder_status: string;
+    filename_pattern: string;
+  };
 }
 
 export interface Company {
