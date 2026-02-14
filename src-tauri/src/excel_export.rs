@@ -122,6 +122,31 @@ fn fmt_cell_header() -> Format {
 }
 
 // ============================================================================
+// TEMPLATE ROW CALCULATIONS
+// ============================================================================
+
+/// Subtotal row in the pricing template (1-indexed row number).
+/// Design stages occupy rows 9 to 8+N, subtotal is the next row.
+fn template_subtotal_row(stage_count: usize) -> u32 {
+    (8 + stage_count + 1) as u32
+}
+
+/// VAT row (1-indexed) = subtotal + 1
+fn template_vat_row(stage_count: usize) -> u32 {
+    template_subtotal_row(stage_count) + 1
+}
+
+/// Grand total row (1-indexed) = VAT + 1
+fn template_grand_row(stage_count: usize) -> u32 {
+    template_vat_row(stage_count) + 1
+}
+
+/// Post-contract section starts 3 rows after grand total (1-indexed)
+fn template_post_contract_start(stage_count: usize) -> u32 {
+    template_grand_row(stage_count) + 3
+}
+
+// ============================================================================
 // MAIN EXPORT FUNCTION
 // ============================================================================
 
@@ -207,6 +232,232 @@ pub fn generate_fee_excel(fee: &Fee, output_path: &Path) -> Result<String, Strin
     let _ = row;
 
     workbook.save(output_path).map_err(|e| format!("Failed to save Excel file: {}", e))?;
+
+    Ok(output_path.to_string_lossy().to_string())
+}
+
+/// Generate a pricing template Excel file (discipline × stage matrix with formulas).
+///
+/// This produces the working spreadsheet format used in project folders,
+/// with Excel formulas for calculations and the standard template layout.
+///
+/// Returns the canonical path to the written file.
+pub fn generate_fee_template(fee: &Fee, output_path: &Path, stage_count: usize) -> Result<String, String> {
+    let mut workbook = Workbook::new();
+    let worksheet = workbook.add_worksheet();
+
+    worksheet.set_name("Pricing Template").map_err(|e| e.to_string())?;
+
+    // Extract pricing data or return error if missing
+    let pricing = fee.pricing.as_ref()
+        .ok_or_else(|| "No pricing data available for template generation".to_string())?;
+
+    // Filter design stages only
+    let design_stages: Vec<&Stage> = pricing.stages.iter()
+        .filter(|s| !s.is_post_contract)
+        .collect();
+
+    let actual_stage_count = design_stages.len().max(stage_count);
+
+    // Calculate dynamic row positions (1-indexed)
+    let subtotal_row = template_subtotal_row(actual_stage_count);
+    let vat_row = template_vat_row(actual_stage_count);
+    let grand_row = template_grand_row(actual_stage_count);
+    let post_contract_start_row = template_post_contract_start(actual_stage_count);
+
+    // Column mapping: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, L=11, M=12, O=14, P=15, R=17
+
+    // ------------------------------------------------------------------
+    // ROW 1 (idx 0): Header row with discipline names
+    // ------------------------------------------------------------------
+    worksheet.write_string(0, 1, "Project Target").map_err(|e| e.to_string())?;
+    for (i, disc) in pricing.disciplines.iter().enumerate() {
+        worksheet.write_string(0, (2 + i) as u16, &disc.name).map_err(|e| e.to_string())?;
+    }
+    worksheet.write_string(0, 8, "Total").map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // ROW 2 (idx 1): Target fee + discipline percentages
+    // ------------------------------------------------------------------
+    worksheet.write_number(1, 1, pricing.config.target_fee).map_err(|e| e.to_string())?;
+    for (i, disc) in pricing.disciplines.iter().enumerate() {
+        worksheet.write_number(1, (2 + i) as u16, disc.percentage / 100.0).map_err(|e| e.to_string())?;
+    }
+    worksheet.write_formula(1, 8, "=SUM(C2:H2)").map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // ROW 3 (idx 2): Target Price formulas
+    // ------------------------------------------------------------------
+    worksheet.write_string(2, 1, "Target Price").map_err(|e| e.to_string())?;
+    for i in 0..pricing.disciplines.len() {
+        let col_letter = char::from_u32(67 + i as u32).unwrap(); // C=67, D=68, etc.
+        let formula = format!("=$B$2*{}2", col_letter);
+        worksheet.write_formula(2, (2 + i) as u16, formula.as_str()).map_err(|e| e.to_string())?;
+    }
+    worksheet.write_formula(2, 8, "=SUM(C3:H3)").map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // ROW 6 (idx 5): Remaining formulas
+    // ------------------------------------------------------------------
+    worksheet.write_string(5, 1, "Remaining").map_err(|e| e.to_string())?;
+    for i in 0..pricing.disciplines.len() {
+        let col_letter = char::from_u32(67 + i as u32).unwrap();
+        let formula = format!("={}3-{}{}", col_letter, col_letter, subtotal_row);
+        worksheet.write_formula(5, (2 + i) as u16, formula.as_str()).map_err(|e| e.to_string())?;
+    }
+    worksheet.write_formula(5, 8, "=SUM(C6:H6)").map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // ROW 8 (idx 7): Design Stages header + config labels
+    // ------------------------------------------------------------------
+    worksheet.write_string(7, 1, "Design Stages").map_err(|e| e.to_string())?;
+    worksheet.write_string(7, 11, "Rec Fee").map_err(|e| e.to_string())?;
+    worksheet.write_string(7, 12, "%").map_err(|e| e.to_string())?;
+    worksheet.write_string(7, 14, "Mobilisation").map_err(|e| e.to_string())?;
+    worksheet.write_string(7, 17, "Costs").map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // CONFIG SECTION (cols O-R, rows 2-4)
+    // ------------------------------------------------------------------
+    worksheet.write_string(1, 14, "Stages").map_err(|e| e.to_string())?;
+    worksheet.write_number(1, 15, actual_stage_count as f64).map_err(|e| e.to_string())?;
+
+    worksheet.write_string(2, 14, "VAT").map_err(|e| e.to_string())?;
+    worksheet.write_number(2, 15, pricing.config.vat_percent / 100.0).map_err(|e| e.to_string())?;
+
+    worksheet.write_string(3, 14, "Mobilisation").map_err(|e| e.to_string())?;
+    worksheet.write_number(3, 15, pricing.config.mobilisation_percent / 100.0).map_err(|e| e.to_string())?;
+
+    // P8: Mobilisation amount formula
+    let formula_p8 = format!("=I{}*P4", subtotal_row);
+    worksheet.write_formula(7, 15, formula_p8.as_str()).map_err(|e| e.to_string())?;
+
+    // L6: Recommended fee (quoted_fee)
+    worksheet.write_number(5, 11, pricing.config.quoted_fee).map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // DYNAMIC STAGE ROWS (9 to 8+N, idx 8 to 7+N)
+    // ------------------------------------------------------------------
+    for (stage_idx, stage) in design_stages.iter().enumerate() {
+        let row_idx = 8 + stage_idx;
+        let row_num = (row_idx + 1) as u32; // 1-indexed for formulas
+
+        // Col A: stage number
+        worksheet.write_number(row_idx as u32, 0, (stage_idx + 1) as f64).map_err(|e| e.to_string())?;
+
+        // Col B: stage name
+        worksheet.write_string(row_idx as u32, 1, &stage.name).map_err(|e| e.to_string())?;
+
+        // Cols C-H: actual amounts from pricing cells
+        for (disc_idx, disc) in pricing.disciplines.iter().enumerate() {
+            let amount = pricing.cells.iter()
+                .find(|c| c.discipline_id == disc.id && c.stage_id == stage.id)
+                .map(|c| c.override_amount.unwrap_or(c.amount))
+                .unwrap_or(0.0);
+            worksheet.write_number(row_idx as u32, (2 + disc_idx) as u16, amount).map_err(|e| e.to_string())?;
+        }
+
+        // Col I: SUM formula
+        let formula_i = format!("=SUM(C{}:H{})", row_num, row_num);
+        worksheet.write_formula(row_idx as u32, 8, formula_i.as_str()).map_err(|e| e.to_string())?;
+
+        // Col L: Recommended fee formula
+        let formula_l = format!("=$L$6*M{}", row_num);
+        worksheet.write_formula(row_idx as u32, 11, formula_l.as_str()).map_err(|e| e.to_string())?;
+
+        // Col M: stage percentage
+        worksheet.write_number(row_idx as u32, 12, stage.percentage / 100.0).map_err(|e| e.to_string())?;
+
+        // Col P: Net fee formula
+        let formula_p = format!("=I{}-($P$8/$P$2)", row_num);
+        worksheet.write_formula(row_idx as u32, 15, formula_p.as_str()).map_err(|e| e.to_string())?;
+
+        // Col R: costs (sum of reimbursable costs for this stage)
+        let stage_costs: f64 = pricing.costs.iter()
+            .filter(|c| c.stage_id == stage.id)
+            .map(|c| c.cost_to_client)
+            .sum();
+        worksheet.write_number(row_idx as u32, 17, stage_costs).map_err(|e| e.to_string())?;
+    }
+
+    // ------------------------------------------------------------------
+    // SUBTOTAL ROW
+    // ------------------------------------------------------------------
+    let subtotal_idx = (subtotal_row - 1) as u32; // 0-indexed
+    worksheet.write_string(subtotal_idx, 1, "Sub-Total").map_err(|e| e.to_string())?;
+
+    // Cols C-I: SUM formulas
+    for col in 2..=8 {
+        let col_letter = if col == 8 { 'I' } else { char::from_u32(65 + col as u32).unwrap() };
+        let formula = format!("=SUM({}9:{}{})", col_letter, col_letter, 8 + actual_stage_count);
+        worksheet.write_formula(subtotal_idx, col as u16, formula.as_str()).map_err(|e| e.to_string())?;
+    }
+
+    // ------------------------------------------------------------------
+    // VAT ROW
+    // ------------------------------------------------------------------
+    let vat_idx = (vat_row - 1) as u32; // 0-indexed
+    worksheet.write_string(vat_idx, 1, "VAT").map_err(|e| e.to_string())?;
+    let formula_vat = format!("=I{}*P3", subtotal_row);
+    worksheet.write_formula(vat_idx, 8, formula_vat.as_str()).map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // GRAND TOTAL ROW
+    // ------------------------------------------------------------------
+    let grand_idx = (grand_row - 1) as u32; // 0-indexed
+    worksheet.write_string(grand_idx, 1, "Grand Total").map_err(|e| e.to_string())?;
+    let formula_grand = format!("=SUM(I{}:I{})", subtotal_row, vat_row);
+    worksheet.write_formula(grand_idx, 8, formula_grand.as_str()).map_err(|e| e.to_string())?;
+
+    // ------------------------------------------------------------------
+    // POST-CONTRACT SECTION (starts at grand + 3)
+    // ------------------------------------------------------------------
+    if let Some(ref items) = fee.post_contract_items {
+        if !items.is_empty() {
+            let pc_start_idx = (post_contract_start_row - 1) as u32;
+
+            // Header row
+            worksheet.write_string(pc_start_idx, 1, "Post Contract").map_err(|e| e.to_string())?;
+
+            let mut pc_row = pc_start_idx + 1;
+            let mut pc_subtotal = 0.0_f64;
+
+            for item in items {
+                // B=description, C=qty, D=rate, E=formula
+                worksheet.write_string(pc_row, 1, &item.description).map_err(|e| e.to_string())?;
+                worksheet.write_number(pc_row, 2, item.quantity).map_err(|e| e.to_string())?;
+                worksheet.write_number(pc_row, 3, item.rate).map_err(|e| e.to_string())?;
+                let formula_amount = format!("=C{}*D{}", pc_row + 1, pc_row + 1); // 1-indexed
+                worksheet.write_formula(pc_row, 4, formula_amount.as_str()).map_err(|e| e.to_string())?;
+                pc_subtotal += item.amount;
+                pc_row += 1;
+            }
+
+            // Subtotal
+            pc_row += 1;
+            worksheet.write_string(pc_row, 1, "Sub-Total").map_err(|e| e.to_string())?;
+            let pc_first_item_row = pc_start_idx + 2; // 1-indexed
+            let pc_last_item_row = pc_first_item_row + items.len() as u32 - 1;
+            let formula_pc_sub = format!("=SUM(E{}:E{})", pc_first_item_row, pc_last_item_row);
+            worksheet.write_formula(pc_row, 4, formula_pc_sub.as_str()).map_err(|e| e.to_string())?;
+
+            // VAT
+            pc_row += 1;
+            worksheet.write_string(pc_row, 1, "VAT").map_err(|e| e.to_string())?;
+            let pc_subtotal_row_num = pc_row - 1; // previous row
+            let formula_pc_vat = format!("=E{}*P3", pc_subtotal_row_num);
+            worksheet.write_formula(pc_row, 4, formula_pc_vat.as_str()).map_err(|e| e.to_string())?;
+
+            // Grand
+            pc_row += 1;
+            worksheet.write_string(pc_row, 1, "Grand Total").map_err(|e| e.to_string())?;
+            let pc_vat_row_num = pc_row - 1;
+            let formula_pc_grand = format!("=SUM(E{}:E{})", pc_subtotal_row_num, pc_vat_row_num);
+            worksheet.write_formula(pc_row, 4, formula_pc_grand.as_str()).map_err(|e| e.to_string())?;
+        }
+    }
+
+    workbook.save(output_path).map_err(|e| format!("Failed to save template file: {}", e))?;
 
     Ok(output_path.to_string_lossy().to_string())
 }
@@ -579,5 +830,34 @@ mod tests {
         assert_eq!(&bytes[0..2], b"PK", "File does not have ZIP/XLSX magic bytes");
 
         let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_generate_fee_template_creates_valid_xlsx() {
+        let fee = full_fee();
+        let path = std::env::temp_dir().join("delete_me_test_template.xlsx");
+        let result = generate_fee_template(&fee, &path, 3);
+        assert!(result.is_ok(), "generate_fee_template failed: {:?}", result.err());
+
+        let metadata = fs::metadata(&path).unwrap();
+        assert!(metadata.len() > 0, "Generated file is empty");
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_template_row_calculation_3_stages() {
+        assert_eq!(template_subtotal_row(3), 12);
+        assert_eq!(template_vat_row(3), 13);
+        assert_eq!(template_grand_row(3), 14);
+        assert_eq!(template_post_contract_start(3), 17);
+    }
+
+    #[test]
+    fn test_template_row_calculation_4_stages() {
+        assert_eq!(template_subtotal_row(4), 13);
+        assert_eq!(template_vat_row(4), 14);
+        assert_eq!(template_grand_row(4), 15);
+        assert_eq!(template_post_contract_start(4), 18);
     }
 }
