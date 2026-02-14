@@ -90,6 +90,7 @@ use commands::{
     import_execute,
     // Excel export
     export_fee_excel,
+    export_fee_template,
 };
 
 /// Load database configuration from the settings system.
@@ -339,7 +340,8 @@ pub fn run() {
             import_scan_directory,
             import_execute,
             // Excel export
-            export_fee_excel
+            export_fee_excel,
+            export_fee_template
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
