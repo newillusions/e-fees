@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { extractId, findEntityById } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
+  import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix, cloneFeeRevision, getFeesForProject, exportFeeTemplate } from '$lib/api';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
@@ -34,6 +34,10 @@
     onConfirm: null,
     onCancel: null
   };
+
+  // Revision state
+  let projectRevisions: Fee[] = [];
+  let loadingRevisions = false;
 
   // Create optimized company lookup
   $: companyLookup = createCompanyLookup($companiesStore);
@@ -71,6 +75,26 @@
       return new Date(`20${dateStr.substring(0,2)}-${dateStr.substring(2,4)}-${dateStr.substring(4,6)}`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Load all revisions for the current proposal's project
+  async function loadRevisions() {
+    if (!proposal?.project_id) return;
+    loadingRevisions = true;
+    try {
+      const projectId = extractId(proposal.project_id);
+      projectRevisions = await getFeesForProject(projectId);
+    } catch (error) {
+      console.error('Failed to load revisions:', error);
+      projectRevisions = [];
+    } finally {
+      loadingRevisions = false;
+    }
+  }
+
+  // Reload revisions when proposal changes
+  $: if (proposal?.project_id) {
+    loadRevisions();
   }
   
   // Project creation workflow with existence check
@@ -222,18 +246,18 @@
       console.error('Cannot export: no proposal data');
       return;
     }
-    
+
     try {
       const proposalId = extractId(proposal.id);
       const result = await writeFeeToJsonSafe(proposalId);
-      
+
       if (result) {
         // Parse the result to show safety actions taken
         const lines = result.split('\n');
         const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
-        
+
         let message = `JSON file export completed successfully!\n\nFile: ${filePath}`;
-        
+
         // Add safety actions if present
         const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
         if (safetyIndex !== -1) {
@@ -245,7 +269,7 @@
             });
           }
         }
-        
+
         warningModal = {
           isOpen: true,
           title: 'Export Successful',
@@ -258,13 +282,73 @@
       } else {
         throw new Error('Export failed - no result returned');
       }
-      
+
     } catch (error) {
       console.error('Failed to export JSON:', error);
       warningModal = {
         isOpen: true,
         title: 'Export Failed',
         message: `Failed to export proposal to JSON:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
+  }
+
+  // Create new revision from current proposal
+  async function handleNewRevision() {
+    if (!proposal) return;
+    try {
+      const feeId = extractId(proposal.id);
+      const newFee = await cloneFeeRevision(feeId);
+      warningModal = {
+        isOpen: true,
+        title: 'Revision Created',
+        message: `New revision FP-${String(newFee.rev).padStart(2, '0')} created successfully.`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+      // Reload revisions list
+      loadRevisions();
+    } catch (error) {
+      console.error('Failed to create revision:', error);
+      warningModal = {
+        isOpen: true,
+        title: 'Error',
+        message: `Failed to create revision:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
+  }
+
+  // Export proposal pricing as template
+  async function handleExportTemplate() {
+    if (!proposal) return;
+    try {
+      const feeId = extractId(proposal.id);
+      const path = await exportFeeTemplate(feeId);
+      warningModal = {
+        isOpen: true,
+        title: 'Export Successful',
+        message: `Pricing template exported to:\n\n${path}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    } catch (error) {
+      console.error('Failed to export template:', error);
+      warningModal = {
+        isOpen: true,
+        title: 'Export Failed',
+        message: `Failed to export pricing template:\n\n${error}`,
         confirmText: 'OK',
         cancelText: '',
         onConfirm: null,
@@ -287,6 +371,20 @@
       label: 'Export to JSON',
       tooltip: 'Export proposal data to project JSON file with safety checks',
       icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      disabled: !proposal
+    },
+    {
+      handler: handleExportTemplate,
+      label: 'Export Pricing Template',
+      tooltip: 'Export pricing as working Excel template to temp folder',
+      icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      disabled: !proposal
+    },
+    {
+      handler: handleNewRevision,
+      label: 'New Revision',
+      tooltip: 'Clone this fee as a new revision (FP-N+1)',
+      icon: 'M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2',
       disabled: !proposal
     }
   ];
@@ -319,8 +417,8 @@
   <svelte:fragment slot="content">
     {#if proposal}
       <!-- Proposal Information Section -->
-      <InfoCard 
-        title="Proposal Information" 
+      <InfoCard
+        title="Proposal Information"
         columns={3}
         fields={[
           { label: 'FP Number', value: proposal.number },
@@ -333,7 +431,32 @@
           { label: 'Record ID', value: extractId(proposal.id), type: 'id' }
         ]}
       />
-    
+
+      <!-- Revision History Section -->
+      {#if projectRevisions.length > 1}
+        <section>
+          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Revision History</h2>
+          <div class="bg-emittiv-black/50 rounded-xl border border-emittiv-dark/50 overflow-hidden">
+            {#each projectRevisions as rev}
+              <div
+                class="flex items-center justify-between px-4 py-2 border-b border-emittiv-dark/30 last:border-b-0 {extractId(rev.id) === extractId(proposal.id) ? 'bg-emittiv-splash/10 border-l-2 border-l-emittiv-splash' : 'hover:bg-emittiv-darker/50'}"
+              >
+                <div class="flex items-center gap-3">
+                  <span class="text-xs font-mono text-emittiv-lighter">FP-{String(rev.rev ?? 0).padStart(2, '0')}</span>
+                  <span class="text-xs text-emittiv-light">{rev.status}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-emittiv-light">{rev.issue_date ? formatIssueDate(rev.issue_date) : '—'}</span>
+                  {#if extractId(rev.id) === extractId(proposal.id)}
+                    <span class="text-xxs text-emittiv-splash font-medium">Current</span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
     <!-- Project Information Section -->
     {#if relatedProject}
       <InfoCard

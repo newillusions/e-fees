@@ -71,6 +71,13 @@ export {
   renameVarJsonWithOldSuffix
 } from './filesystem';
 
+// Revision and template export operations
+export {
+  cloneFeeRevision,
+  getFeesForProject,
+  exportFeeTemplate
+} from './revisions';
+
 // Settings operations
 export { getSettings, saveSettings, reloadDatabaseConfig, reconnectDatabase } from './settings';
 
