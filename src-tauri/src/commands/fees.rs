@@ -94,6 +94,44 @@ pub async fn update_fee_pricing(id: String, pricing: PricingUpdate, state: State
 }
 
 // ============================================================================
+// FEE VERSIONING COMMANDS
+// ============================================================================
+
+/// Clone a fee as a new revision with incremented rev number.
+#[tauri::command]
+pub async fn clone_fee_revision(fee_id: String, state: State<'_, AppState>) -> Result<Fee, String> {
+    let fee_name = format!("fee revision from '{}'", fee_id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let id = fee_id.clone();
+            Box::pin(async move {
+                manager.clone_fee_as_revision(&id).await
+            })
+        },
+        "clone revision",
+        &fee_name
+    ).await
+}
+
+/// Get all fee revisions for a specific project.
+#[tauri::command]
+pub async fn get_fees_for_project(project_id: String, state: State<'_, AppState>) -> Result<Vec<Fee>, String> {
+    let desc = format!("fees for project '{}'", project_id);
+    execute_with_manager(
+        &state,
+        |manager| {
+            let pid = project_id.clone();
+            Box::pin(async move {
+                manager.get_fees_for_project(&pid).await
+            })
+        },
+        "fetch",
+        &desc
+    ).await
+}
+
+// ============================================================================
 // FEE JSON EXPORT COMMANDS
 // ============================================================================
 

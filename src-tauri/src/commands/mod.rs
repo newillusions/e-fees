@@ -75,6 +75,7 @@ pub mod fees;
 pub use fees::{
     get_fees, get_fees_page, create_fee, update_fee, update_fee_pricing, delete_fee,
     write_fee_to_json, write_fee_to_json_safe,
+    clone_fee_revision, get_fees_for_project,
 };
 
 // Company management

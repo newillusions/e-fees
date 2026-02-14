@@ -33,6 +33,8 @@ use commands::{
     update_fee,
     update_fee_pricing,
     delete_fee,
+    clone_fee_revision,
+    get_fees_for_project,
     // Pagination commands
     get_projects_page,
     get_companies_page,
@@ -281,6 +283,8 @@ pub fn run() {
             update_fee,
             update_fee_pricing,
             delete_fee,
+            clone_fee_revision,
+            get_fees_for_project,
             // Pagination commands
             get_projects_page,
             get_companies_page,

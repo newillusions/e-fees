@@ -203,6 +203,68 @@ impl DatabaseManager {
         client.update_fee_pricing(id, pricing).await?
             .ok_or_else(|| self.not_found_error("update fee pricing"))
     }
+
+    /// Clone a fee as a new revision with incremented rev number.
+    pub async fn clone_fee_as_revision(&self, source_fee_id: &str) -> Result<Fee, Error> {
+        // 1. Fetch the source fee
+        let source: Option<Fee> = self.get_by_id("fee", source_fee_id).await?;
+        let source = source.ok_or_else(|| self.not_found_error("source fee"))?;
+
+        // 2. Find max rev for this project using parameterized query
+        let client = self.get_client()?;
+        let project_id_val = format!("{}", source.project_id.id);
+        let mut response = client.query_bind(
+            "SELECT math::max(rev) AS max_rev FROM fee WHERE project_id = projects:$pid GROUP ALL",
+            ("pid", project_id_val)
+        ).await?;
+
+        let max_rev_result: Option<serde_json::Value> = response.take(0)?;
+        let new_rev = max_rev_result
+            .and_then(|v| v.get("max_rev").and_then(|r| r.as_i64()))
+            .map(|r| r as i32 + 1)
+            .unwrap_or(1);
+
+        // 3. Create new fee with incremented rev, copying pricing data
+        let new_fee = FeeCreate {
+            name: source.name.clone(),
+            number: source.number.clone(),
+            rev: new_rev,
+            status: "Draft".to_string(),
+            issue_date: chrono::Utc::now().format("%y%m%d").to_string(),
+            activity: source.activity.clone(),
+            package: source.package.clone(),
+            project_id: format!("{}", source.project_id.id),
+            company_id: format!("{}", source.company_id.id),
+            contact_id: format!("{}", source.contact_id.id),
+            staff_name: source.staff_name.clone(),
+            staff_email: source.staff_email.clone(),
+            staff_phone: source.staff_phone.clone(),
+            staff_position: source.staff_position.clone(),
+            strap_line: source.strap_line.clone(),
+            revisions: vec![],
+            pricing: source.pricing.clone(),
+            post_contract_items: source.post_contract_items.clone(),
+            reimbursable_costs: source.reimbursable_costs.clone(),
+            payment_schedule: None,
+            pricing_revisions: None,
+            current_revision_number: None,
+            current_release_number: None,
+            import_source: None,
+        };
+
+        self.create_fee(new_fee).await
+    }
+
+    /// Get all fees for a specific project, sorted by rev DESC.
+    pub async fn get_fees_for_project(&self, project_id: &str) -> Result<Vec<Fee>, Error> {
+        let client = self.get_client()?;
+        let mut result = client.query_bind(
+            "SELECT * FROM fee WHERE project_id = projects:$pid ORDER BY rev DESC",
+            ("pid", project_id.to_string())
+        ).await?;
+        let fees: Vec<Fee> = result.take(0)?;
+        Ok(fees)
+    }
 }
 
 // ==================== Reference Data Operations ====================
