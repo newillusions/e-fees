@@ -239,11 +239,11 @@ import { get } from 'svelte/store';
           type="text"
           placeholder="Search proposals..."
           bind:value={searchQuery}
-          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+          class="emittiv-search-input"
         />
       </div>
       <button
-        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        class="emittiv-search-button"
         aria-label="Search"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,7 +274,7 @@ import { get } from 'svelte/store';
         <span>Import</span>
       </button>
       <button
-        class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+        class="emittiv-fab"
         onclick={handleNewProposal}
         aria-label="Add new proposal"
       >
@@ -286,11 +286,11 @@ import { get } from 'svelte/store';
   </div>
   
   <!-- Filter Options -->
-  <div class="flex flex-wrap items-center gap-2 mb-2">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Status Filter -->
     <select
       bind:value={filters.status}
-      class="status-filter px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+      class="status-filter emittiv-filter-select"
     >
       <option value="">All Status</option>
       {#each PROPOSAL_STATUSES as status}
@@ -303,7 +303,7 @@ import { get } from 'svelte/store';
     <!-- Staff Filter -->
     <select 
       bind:value={filters.staff} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+      class="emittiv-filter-select"
     >
       <option value="">All Staff</option>
       {#each uniqueStaff as staff}
@@ -400,7 +400,7 @@ import { get } from 'svelte/store';
     <!-- Scrollable container for infinite scroll -->
     <div
       bind:this={scrollContainer}
-      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
     >
       {#each filteredProposals as proposal}
         <ProposalCard

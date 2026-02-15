@@ -196,8 +196,8 @@
   >
     <!-- Modal Content -->
     <div 
-      class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-h-[90vh] overflow-y-auto"
-      style="padding: 16px; max-width: 450px;"
+      class="bg-emittiv-darker border border-emittiv-dark rounded w-full overflow-y-auto"
+      style="padding: 16px; max-width: 450px; max-height: 90vh;"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="presentation"
@@ -238,8 +238,7 @@
                   bind:value={settings.surrealdb_url}
                   placeholder="ws://10.0.1.17:8000"
                   required
-                  class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                  style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                  class="emittiv-input"
                 />
               </div>
               
@@ -254,8 +253,7 @@
                     bind:value={settings.surrealdb_ns}
                     placeholder="emittiv"
                     required
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
                 
@@ -269,8 +267,7 @@
                     bind:value={settings.surrealdb_db}
                     placeholder="projects"
                     required
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
               </div>
@@ -285,8 +282,7 @@
                     type="text"
                     bind:value={settings.surrealdb_user}
                     placeholder="martin"
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
                 
@@ -300,8 +296,7 @@
                     bind:value={settings.surrealdb_pass}
                     on:input={onPasswordInput}
                     placeholder={hasExistingPassword ? 'Leave empty to keep existing' : 'Enter password'}
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
               </div>
@@ -349,8 +344,7 @@
                     type="text"
                     bind:value={settings.staff_name}
                     placeholder="John Smith"
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
                 
@@ -363,8 +357,7 @@
                     type="text"
                     bind:value={settings.staff_position}
                     placeholder="Senior Designer"
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
               </div>
@@ -379,8 +372,7 @@
                     type="email"
                     bind:value={settings.staff_email}
                     placeholder="john@emittiv.com"
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
                 
@@ -393,8 +385,7 @@
                     type="tel"
                     bind:value={settings.staff_phone}
                     placeholder="+971501234567"
-                    class="w-full bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                    style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                    class="emittiv-input"
                   />
                 </div>
               </div>
@@ -411,8 +402,7 @@
                 type="text"
                 bind:value={settings.project_folder_path}
                 placeholder="/Users/username/Projects"
-                class="flex-1 bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
-                style="padding: 8px 12px; font-size: 12px; height: 32px;"
+                class="emittiv-input flex-1"
               />
               <button
                 type="button"

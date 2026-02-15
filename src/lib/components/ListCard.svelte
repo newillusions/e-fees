@@ -31,7 +31,7 @@
 </script>
 
 <div
-  class="group list-card {clickable ? 'cursor-pointer' : ''} {customPadding ? '' : 'px-3 py-2'}"
+  class="group list-card {clickable ? 'cursor-pointer' : ''} {customPadding ? '' : 'px-4 py-3'}"
   on:click={handleClick}
   on:keydown={handleKeydown}
   on:mouseenter={handleMouseEnter}

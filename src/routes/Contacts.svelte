@@ -167,11 +167,11 @@
           type="text"
           placeholder="Search contacts..."
           bind:value={searchQuery}
-          class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+          class="emittiv-search-input"
         />
       </div>
       <button
-        class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+        class="emittiv-search-button"
         aria-label="Search"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +190,7 @@
       />
     </div>
     <button
-      class="w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg flex-shrink-0"
+      class="emittiv-fab flex-shrink-0"
       onclick={handleAddContact}
       aria-label="Add new contact"
     >
@@ -201,11 +201,11 @@
   </div>
   
   <!-- Filter Options -->
-  <div class="flex flex-wrap items-center gap-2 mb-2">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Company Filter -->
     <select 
       bind:value={filters.company} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+      class="emittiv-filter-select"
     >
       <option value="">All Companies</option>
       {#each uniqueCompanies as company}
@@ -216,7 +216,7 @@
     <!-- Country Filter -->
     <select 
       bind:value={filters.country} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+      class="emittiv-filter-select"
     >
       <option value="">All Countries</option>
       {#each uniqueCountries as country}
@@ -227,7 +227,7 @@
     <!-- Position Filter -->
     <select 
       bind:value={filters.position} 
-      class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+      class="emittiv-filter-select"
     >
       <option value="">All Positions</option>
       {#each uniquePositions as position}
@@ -280,7 +280,7 @@
     <!-- Scrollable container for infinite scroll -->
     <div
       bind:this={scrollContainer}
-      class="grid gap-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 pt-1"
+      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
     >
       {#each filteredContacts as contact}
         <ContactCard

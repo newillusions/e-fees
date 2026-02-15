@@ -148,8 +148,8 @@
     style="background: rgba(0, 0, 0, 0.8);"
   >
     <div
-      class="relative w-full max-h-[95vh] overflow-hidden rounded-lg shadow-2xl flex flex-col"
-      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); max-width: 500px;"
+      class="relative w-full overflow-hidden rounded-lg shadow-2xl flex flex-col"
+      style="background: var(--emittiv-darker); border: 1px solid var(--emittiv-dark); max-width: 500px; max-height: 95vh;"
       transition:fade={{ duration: 200 }}
     >
       <!-- Header -->

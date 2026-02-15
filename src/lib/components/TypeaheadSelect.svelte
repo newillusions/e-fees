@@ -218,7 +218,7 @@
       <button
         type="button"
         on:click={handleAddNew}
-        class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+        class="emittiv-fab-sm"
         aria-label={addButtonLabel}
         title={addButtonLabel}
       >

@@ -136,7 +136,7 @@
     </div>
     
     <!-- Connection Status -->
-    <div class="min-h-[2rem] flex items-center justify-center">
+    <div class="flex items-center justify-center" style="min-height: 2rem;">
       <p class="text-sm transition-all duration-300 text-gray-300">
         {connectionText}<span class="inline-block w-6 text-left">{dots}</span>
       </p>

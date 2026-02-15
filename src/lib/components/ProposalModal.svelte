@@ -945,7 +945,7 @@
           <button
             type="button"
             on:click={handleNewProject}
-            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            class="emittiv-fab-sm mt-6"
             aria-label="Add new project"
             title="Add new project"
           >
@@ -974,7 +974,7 @@
           <button
             type="button"
             on:click={handleNewCompany}
-            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            class="emittiv-fab-sm mt-6"
             aria-label="Add new company"
             title="Add new company"
           >
@@ -1001,7 +1001,7 @@
           <button
             type="button"
             on:click={handleNewContact}
-            class="w-8 h-8 bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded flex items-center justify-center transition-all hover:scale-105 active:scale-95 mt-6"
+            class="emittiv-fab-sm mt-6"
             aria-label="Add new contact"
             title="Add new contact"
           >

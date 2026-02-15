@@ -46,11 +46,11 @@
             type="text"
             {placeholder}
             bind:value={searchQuery}
-            class="w-full px-2 py-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-white placeholder-emittiv-light focus:outline-none focus:border-emittiv-splash focus:ring-1 focus:ring-emittiv-splash transition-all"
+            class="emittiv-search-input"
           />
         </div>
         <button 
-          class="p-2.5 bg-emittiv-darker border border-emittiv-dark rounded-lg text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
+          class="emittiv-search-button"
           aria-label="Search"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@
     </div>
     {#if onAdd}
       <button
-        class="ml-4 w-12 h-12 rounded-full bg-emittiv-splash hover:bg-orange-600 text-emittiv-black flex items-center justify-center transition-smooth hover:scale-105 active:scale-95 shadow-lg"
+        class="emittiv-fab ml-4"
         onclick={onAdd}
         aria-label={addLabel}
       >
@@ -78,7 +78,7 @@
       {#each filterOptions as filterOption}
         <select 
           bind:value={filters[filterOption.key]} 
-          class="px-2 py-1 pr-6 bg-emittiv-darker border border-emittiv-dark rounded text-emittiv-white text-xs hover:border-emittiv-splash focus:outline-none focus:border-emittiv-splash transition-all cursor-pointer"
+          class="emittiv-filter-select"
         >
           <option value="">{filterOption.label}</option>
           {#each filterOption.options as option}
