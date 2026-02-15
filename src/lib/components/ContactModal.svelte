@@ -11,7 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { get } from 'svelte/store';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Contact } from '$lib/../types';
+  import type { Contact } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   const dispatch = createEventDispatcher();
@@ -22,6 +22,46 @@
     mode?: 'create' | 'edit';
     zIndex?: number;
   } = $props();
+
+  // Company typeahead field (defined first so it can be included in fields array)
+  const companyField: FormFieldConfig = {
+    type: 'typeahead',
+    name: 'company',
+    label: 'Company',
+    placeholder: 'Search companies...',
+    required: true,
+    colSpan: 2,
+    displayFields: ['name'],
+    onSearch: async (searchText: string) => {
+      if (!searchText || searchText.length < 1) return [];
+
+      try {
+        const searchLower = searchText.toLowerCase();
+        const companies = get(companiesStore);
+
+        return companies
+          .filter(company => {
+            const nameMatch = company.name?.toLowerCase().includes(searchLower);
+            const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
+            const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
+            return nameMatch || shortNameMatch || abbreviationMatch;
+          })
+          .map(company => {
+            const companyId = getEntityId(company);
+            return {
+              id: String(companyId),
+              name: company.name || '',
+              name_short: company.name_short || '',
+              abbreviation: company.abbreviation || ''
+            };
+          })
+          .slice(0, 10);
+      } catch (error) {
+        console.warn('Failed to search companies:', error);
+        return [];
+      }
+    }
+  };
 
   // Form field configuration
   const fields: FormFieldConfig[] = [
@@ -80,53 +120,11 @@
           placeholder: 'Manager',
           required: false,
           colSpan: 1
-        }
+        },
+        companyField
       ]
     }
   ];
-
-  // Enhanced company field with add button functionality
-  const companyField: FormFieldConfig = {
-    type: 'typeahead',
-    name: 'company',
-    label: 'Company',
-    placeholder: 'Search companies...',
-    required: true,
-    colSpan: 2,
-    displayFields: ['name'],
-    onSearch: async (searchText: string) => {
-      if (!searchText || searchText.length < 1) return [];
-
-      try {
-        const searchLower = searchText.toLowerCase();
-        const companies = get(companiesStore);
-
-        return companies
-          .filter(company => {
-            const nameMatch = company.name?.toLowerCase().includes(searchLower);
-            const shortNameMatch = company.name_short?.toLowerCase().includes(searchLower);
-            const abbreviationMatch = company.abbreviation?.toLowerCase().includes(searchLower);
-            return nameMatch || shortNameMatch || abbreviationMatch;
-          })
-          .map(company => {
-            const companyId = getEntityId(company);
-            return {
-              id: String(companyId),
-              name: company.name || '',
-              name_short: company.name_short || '',
-              abbreviation: company.abbreviation || ''
-            };
-          })
-          .slice(0, 10);
-      } catch (error) {
-        console.warn('Failed to search companies:', error);
-        return [];
-      }
-    }
-  };
-
-  // Add company field to fields array
-  fields[0].fields?.push(companyField);
 
   // Validation rules
   const validationRules = [

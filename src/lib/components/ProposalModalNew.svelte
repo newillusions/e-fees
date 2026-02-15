@@ -13,7 +13,7 @@
   import { get } from 'svelte/store';
   import { PROPOSAL_STATUS_OPTIONS } from '$lib/constants';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Fee } from '$lib/../types';
+  import type { Fee } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   // Create optimized typeahead search functions (PERF-H5 + QUAL-H4 fix)

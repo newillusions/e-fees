@@ -11,7 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { searchCountries, getCitySuggestions } from '$lib/api';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Company } from '$lib/../types';
+  import type { Company } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   const dispatch = createEventDispatcher();

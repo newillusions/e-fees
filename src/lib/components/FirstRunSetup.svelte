@@ -218,8 +218,7 @@
                   type="text"
                   bind:value={dbConfig.url}
                   placeholder="e.g., ws://localhost:8000"
-                  class="w-full px-2 py-1.5 rounded text-sm"
-                  style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
+                  class="emittiv-input"
                 />
               </div>
 
@@ -332,8 +331,7 @@
                   type="text"
                   bind:value={staffInfo.name}
                   placeholder="John Doe"
-                  class="w-full px-2 py-1.5 rounded text-sm"
-                  style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
+                  class="emittiv-input"
                 />
               </div>
 
@@ -350,8 +348,7 @@
                   type="email"
                   bind:value={staffInfo.email}
                   placeholder="john.doe@company.com"
-                  class="w-full px-2 py-1.5 rounded text-sm"
-                  style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
+                  class="emittiv-input"
                 />
               </div>
 
@@ -414,8 +411,7 @@
                   type="text"
                   bind:value={projectPath}
                   placeholder="e.g., /Users/username/Projects/"
-                  class="w-full px-2 py-1.5 rounded text-sm"
-                  style="background: var(--emittiv-dark); color: var(--emittiv-white); border: 1px solid var(--emittiv-dark);"
+                  class="emittiv-input"
                 />
                 <p class="text-xs mt-1" style="color: var(--emittiv-light);">
                   This is where project folders will be created and managed

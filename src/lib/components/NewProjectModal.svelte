@@ -21,7 +21,7 @@
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project } from '$lib/../types';
+  import type { Project } from '../../types';
   import type { ProjectNumber } from '$lib/../types/database';
 
   // Local interface for pending folder confirmation

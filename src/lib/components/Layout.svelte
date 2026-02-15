@@ -6,19 +6,21 @@
   import GlobalSearchModal from './GlobalSearchModal.svelte';
   import { location } from 'svelte-spa-router';
   import { logoLight } from '../../assets';
-  // svelte:window used for keyboard events instead of onMount/onDestroy
+  import type { Snippet } from 'svelte';
+
+  let { children }: { children: Snippet } = $props();
 
   // Settings modal state
-  let isSettingsOpen = false;
+  let isSettingsOpen = $state(false);
 
   // Notifications state
-  let isNotificationsOpen = false;
+  let isNotificationsOpen = $state(false);
 
   // Search modal state
-  let isSearchOpen = false;
+  let isSearchOpen = $state(false);
 
   // Blur/privacy mode state
-  let isBlurMode = false;
+  let isBlurMode = $state(false);
 
   function toggleBlurMode() {
     isBlurMode = !isBlurMode;
@@ -80,7 +82,7 @@
   const pageTitle = $derived(pageTitles[$location] || 'Dashboard');
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="flex h-screen overflow-hidden glass-container">
   <!-- Fixed Sidebar -->
@@ -139,7 +141,7 @@
           <button
             class="search-button p-1 rounded-lg transition-smooth hover-lift"
             style="color: var(--emittiv-light);"
-            on:click={openSearch}
+            onclick={openSearch}
             aria-label="Search (Cmd+K)"
             title="Search (Cmd+K)"
           >
@@ -158,7 +160,7 @@
             class="p-1 rounded-lg transition-smooth hover-lift"
             class:blur-active={isBlurMode}
             style="color: var(--emittiv-light);"
-            on:click={toggleBlurMode}
+            onclick={toggleBlurMode}
             aria-label={isBlurMode ? "Show content" : "Hide sensitive content"}
             title={isBlurMode ? "Show content (privacy mode on)" : "Hide sensitive content"}
           >
@@ -200,7 +202,7 @@
           <button
             class="p-1 rounded-lg transition-smooth hover-lift"
             style="color: var(--emittiv-light);"
-            on:click={openSettings}
+            onclick={openSettings}
             aria-label="Settings"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +227,7 @@
     <!-- Content with enhanced gradient background -->
     <div class="flex-1 main-content-scroll glass-content" class:privacy-blur={isBlurMode}>
       <div class="page-enter">
-        <slot />
+        {@render children()}
       </div>
     </div>
   </main>

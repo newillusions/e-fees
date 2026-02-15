@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import CompanyModal from './CompanyModal.svelte';
-import type { Company } from '$lib/../types';
+import type { Company } from '../../types';
 
 // Mock the API
 vi.mock('$lib/api', () => ({

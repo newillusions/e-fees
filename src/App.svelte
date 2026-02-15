@@ -59,13 +59,8 @@
     // The ConnectionStatus component will handle database connectivity display
     setTimeout(async () => {
       try {
-        if (import.meta.env.DEV) {
-        }
         const { getSettings } = await import('$lib/api');
-
         const settings = await getSettings();
-        if (import.meta.env.DEV) {
-        }
 
         const isFirstRun =
           !settings ||
@@ -75,22 +70,12 @@
           settings.surrealdb_url === 'placeholder';
 
         if (isFirstRun) {
-          if (import.meta.env.DEV) {
-          }
           showFirstRun = true;
         } else {
-          if (import.meta.env.DEV) {
-          }
           appReady = true;
-          // Data will be loaded automatically when ConnectionStatus detects first connection
-          if (import.meta.env.DEV) {
-          }
         }
       } catch (error) {
         console.error('Failed during app initialization:', error);
-        // If we can't load settings at all, show first run setup
-        if (import.meta.env.DEV) {
-        }
         showFirstRun = true;
       }
     }, 800); // Reduced delay since we're not trying to test connections

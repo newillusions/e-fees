@@ -15,7 +15,7 @@
   import FormSelect from './FormSelect.svelte';
   import Button from './Button.svelte';
   import StatusChangeModal from './StatusChangeModal.svelte';
-  import type { Project, Fee } from '$lib/../types';
+  import type { Project, Fee } from '../../types';
   
   const dispatch = createEventDispatcher();
   

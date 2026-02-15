@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import ProposalModal from './ProposalModal.svelte';
-import type { Fee, Project, Company, Contact } from '$lib/../types';
+import type { Fee, Project, Company, Contact } from '../../types';
 import type { AppSettingsPublic } from '$lib/stores/settings';
 
 // Mock the API

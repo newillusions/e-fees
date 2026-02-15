@@ -19,7 +19,7 @@
   import NewProjectModal from './NewProjectModal.svelte';
   import CompanyModal from './CompanyModal.svelte';
   import ContactModal from './ContactModal.svelte';
-  import type { Fee, Project, Company, Contact, UnknownSurrealThing } from '$lib/../types';
+  import type { Fee, Project, Company, Contact, UnknownSurrealThing } from '../../types';
   import type { PricingBreakdown } from '../../types/database';
   import FeePricingModal from './pricing/FeePricingModal.svelte';
   

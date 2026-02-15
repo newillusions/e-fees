@@ -192,26 +192,6 @@
     border-color: var(--emittiv-lighter);
   }
   
-  .emittiv-input {
-    background-color: var(--emittiv-darker);
-    border: 1px solid var(--emittiv-dark);
-    color: var(--emittiv-white);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 8px;
-    font-family: var(--font-body);
-    transition: var(--transition-smooth);
-    width: 100%;
-  }
-  
-  .emittiv-input::placeholder {
-    color: var(--emittiv-light);
-  }
-  
-  .emittiv-input:focus {
-    border-color: var(--emittiv-splash);
-    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
-  }
-  
   /* Smooth transitions */
   .transition-smooth {
     transition: var(--transition-smooth);
@@ -423,9 +403,9 @@
   /* Form Input - Standard text input styling */
   .emittiv-input {
     width: 100%;
-    height: 32px !important;
-    padding: 8px 12px !important;
-    font-size: 12px !important;
+    height: 32px;
+    padding: 8px 12px;
+    font-size: 12px;
     background-color: var(--emittiv-dark);
     border: 1px solid var(--emittiv-dark);
     border-radius: 4px;
