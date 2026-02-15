@@ -28,8 +28,8 @@
   }
 
   // Internal state for typeahead fields
-  let searchText = '';
-  let options: Array<{ id: string; name: string; [key: string]: any }> = [];
+  let searchText = $state('');
+  let options: Array<{ id: string; name: string; [key: string]: any }> = $state([]);
 
   // Handle value changes
   function handleValueChange() {

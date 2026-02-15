@@ -22,13 +22,13 @@
   } = $props();
 
   // Scan state
-  let isScanning = false;
-  let scanResult: FolderSyncResult | null = null;
-  let scanError: string | null = null;
+  let isScanning = $state(false);
+  let scanResult: FolderSyncResult | null = $state(null);
+  let scanError: string | null = $state(null);
 
   // Resolution state
-  let resolvingId: string | null = null;
-  let resolveError: string | null = null;
+  let resolvingId: string | null = $state(null);
+  let resolveError: string | null = $state(null);
 
   // Get base path from settings
   const basePath = $derived($settingsStore?.project_folder_path || '');

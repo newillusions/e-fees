@@ -11,32 +11,32 @@
   } = $props();
 
   // Setup steps
-  let currentStep = 1;
+  let currentStep = $state(1);
   const totalSteps = 3;
 
   // Form data
-  let dbConfig = {
+  let dbConfig = $state({
     url: '',
     namespace: '',
     database: '',
     username: '',
     password: ''
-  };
+  });
 
-  let staffInfo = {
+  let staffInfo = $state({
     name: '',
     email: '',
     phone: '',
     position: ''
-  };
+  });
 
-  let projectPath = '';
+  let projectPath = $state('');
 
   // State
-  let isTestingConnection = false;
-  let connectionTestResult: 'pending' | 'success' | 'error' = 'pending';
-  let connectionTestMessage = '';
-  let isSaving = false;
+  let isTestingConnection = $state(false);
+  let connectionTestResult: 'pending' | 'success' | 'error' = $state('pending');
+  let connectionTestMessage = $state('');
+  let isSaving = $state(false);
 
   onMount(async () => {
     // Check if this is first run by testing connection

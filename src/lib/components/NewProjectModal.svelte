@@ -54,7 +54,7 @@
     folder: string;
   }
 
-  let formData: ProjectFormData = {
+  let formData: ProjectFormData = $state({
     name: '',
     name_short: '',
     status: 'Draft',
@@ -64,7 +64,7 @@
     year: new Date().getFullYear() % 100,
     project_number: '',
     folder: ''
-  };
+  });
 
   // Validation setup
   const validationRules = [
@@ -76,23 +76,23 @@
   ];
 
   // Form validation state
-  let formErrors: Record<string, string> = {};
+  let formErrors: Record<string, string> = $state({});
 
   // UI state
-  let isGenerating = false;
-  let isModalReady = false;
-  let showFolderConfirm = false;
-  let pendingProjectData: PendingFolderData | null = null;
+  let isGenerating = $state(false);
+  let isModalReady = $state(false);
+  let showFolderConfirm = $state(false);
+  let pendingProjectData: PendingFolderData | null = $state(null);
 
   // Typeahead search states
-  let countrySearchText = '';
-  let areaSearchText = '';
-  let citySearchText = '';
+  let countrySearchText = $state('');
+  let areaSearchText = $state('');
+  let citySearchText = $state('');
 
   // Options for typeahead components
-  let countryOptions: Array<{ id: string; name: string; dial_code: number }> = [];
-  let areaOptions: Array<{ id: string; name: string }> = [];
-  let cityOptions: Array<{ id: string; name: string }> = [];
+  let countryOptions: Array<{ id: string; name: string; dial_code: number }> = $state([]);
+  let areaOptions: Array<{ id: string; name: string }> = $state([]);
+  let cityOptions: Array<{ id: string; name: string }> = $state([]);
 
   // Auto-populate folder name when project number or short name changes
   $effect(() => {
@@ -106,8 +106,8 @@
   });
 
   // Track previous country and year to detect changes
-  let previousCountry = '';
-  let previousYear = 0;
+  let previousCountry = $state('');
+  let previousYear = $state(0);
 
   // Auto-generate project number when country or year changes
   $effect(() => {

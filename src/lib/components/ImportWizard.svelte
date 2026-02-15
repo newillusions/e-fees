@@ -13,16 +13,16 @@
   const dispatch = createEventDispatcher();
 
   // Wizard state
-  let step: 'select' | 'preview' | 'importing' | 'result' = 'select';
-  let directory = '';
-  let preview: ImportPreview | null = null;
-  let result: ImportResult | null = null;
-  let error = '';
-  let scanLoading = false;
+  let step: 'select' | 'preview' | 'importing' | 'result' = $state('select');
+  let directory = $state('');
+  let preview: ImportPreview | null = $state(null);
+  let result: ImportResult | null = $state(null);
+  let error = $state('');
+  let scanLoading = $state(false);
 
   // Import options
-  let importProposals = true;
-  let importCompanies = true;
+  let importProposals = $state(true);
+  let importCompanies = $state(true);
 
   function closeModal() {
     step = 'select';

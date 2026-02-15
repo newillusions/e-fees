@@ -17,12 +17,12 @@
     mode?: 'project-primary' | 'proposal-primary';
   } = $props();
   
-  let isProcessing = false;
-  let operationResult: FolderOperationResult | null = null;
-  let selectedFeeUpdates: Record<string, boolean> = {};
-  let selectedProjectUpdate: boolean = false;
-  let suggestedFeeStatus: string = '';
-  let suggestedProjectStatus: string = '';
+  let isProcessing = $state(false);
+  let operationResult: FolderOperationResult | null = $state(null);
+  let selectedFeeUpdates: Record<string, boolean> = $state({});
+  let selectedProjectUpdate: boolean = $state(false);
+  let suggestedFeeStatus: string = $state('');
+  let suggestedProjectStatus: string = $state('');
   
   // Determine primary and secondary entities based on mode
   const primaryEntity = $derived(mode === 'project-primary' ? project : proposal);

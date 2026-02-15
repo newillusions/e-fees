@@ -28,7 +28,7 @@
     cancelText: string;
     onConfirm: (() => void | Promise<void>) | null;
     onCancel: (() => void) | null;
-  } = {
+  } = $state({
     isOpen: false,
     title: 'Warning',
     message: '',
@@ -36,11 +36,11 @@
     cancelText: '',
     onConfirm: null,
     onCancel: null
-  };
+  });
 
   // Revision state
-  let projectRevisions: Fee[] = [];
-  let loadingRevisions = false;
+  let projectRevisions: Fee[] = $state([]);
+  let loadingRevisions = $state(false);
 
   // Create optimized company lookup
   const companyLookup = $derived(createCompanyLookup($companiesStore));

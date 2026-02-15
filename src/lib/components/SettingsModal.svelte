@@ -6,7 +6,7 @@
   import FolderSyncModal from './FolderSyncModal.svelte';
 
   // Folder sync modal state
-  let showFolderSyncModal = false;
+  let showFolderSyncModal = $state(false);
 
   const dispatch = createEventDispatcher();
 
@@ -17,7 +17,7 @@
   // Settings form data - initialize with defaults
   // This uses AppSettings (with surrealdb_pass) for the form, even though
   // the store holds AppSettingsPublic (with has_password instead)
-  let settings: AppSettings = {
+  let settings: AppSettings = $state({
     surrealdb_url: '',
     surrealdb_ns: '',
     surrealdb_db: '',
@@ -29,17 +29,17 @@
     staff_position: '',
     project_folder_path: '',
     dev_mode: false
-  };
+  });
 
   // Track whether a password exists (from backend) and if user entered new one
-  let hasExistingPassword = false;
-  let passwordChanged = false;
+  let hasExistingPassword = $state(false);
+  let passwordChanged = $state(false);
 
   // Loading states
-  let isSaving = false;
-  let saveMessage = '';
-  let isTesting = false;
-  let testMessage = '';
+  let isSaving = $state(false);
+  let saveMessage = $state('');
+  let isTesting = $state(false);
+  let testMessage = $state('');
 
   // Load settings when modal opens
   $effect(() => {

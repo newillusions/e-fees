@@ -8,11 +8,11 @@
     onComplete: () => void;
   } = $props();
 
-  let connectionText = 'Initializing...';
-  let dots = '';
-  let isConnecting = true;
-  let progress = 0;
-  let appVersion = '...';
+  let connectionText = $state('Initializing...');
+  let dots = $state('');
+  let isConnecting = $state(true);
+  let progress = $state(0);
+  let appVersion = $state('...');
   
   // Animated dots for connecting message
   let dotInterval: number;
@@ -28,7 +28,7 @@
     'Almost ready...'
   ];
   
-  let messageIndex = 0;
+  let messageIndex = $state(0);
   
   onMount(() => {
     // Load app version (async but not blocking)

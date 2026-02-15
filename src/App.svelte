@@ -22,9 +22,9 @@
     cleanupPluginListeners
   } from '../tauri-plugin-mcp/dist-js/index.js';
 
-  let showSplash = true;
-  let appReady = false;
-  let showFirstRun = false;
+  let showSplash = $state(true);
+  let appReady = $state(false);
+  let showFirstRun = $state(false);
 
   // Reset scroll position on route change
   $effect(() => {

@@ -25,9 +25,9 @@
   const dispatch = createEventDispatcher();
 
   // Search state
-  let searchQuery = '';
+  let searchQuery = $state('');
   let inputElement: HTMLInputElement;
-  let selectedIndex = 0;
+  let selectedIndex = $state(0);
 
   // Results
   interface SearchResult {

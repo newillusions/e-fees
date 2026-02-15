@@ -14,11 +14,11 @@
   } = $props();
   
   // Track the previous page to return to the correct location
-  let previousPage = '/projects'; // Default fallback
-  
-  let project: Project | null = null;
-  let loading = true;
-  let error: string | null = null;
+  let previousPage = $state('/projects'); // Default fallback
+
+  let project: Project | null = $state(null);
+  let loading = $state(true);
+  let error: string | null = $state(null);
 
   // Extract the project ID from params
   let projectId = $derived(params.id);

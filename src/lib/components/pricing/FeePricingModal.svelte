@@ -28,26 +28,26 @@
   } = $props();
 
   // UI state
-  let activeTab: 'disciplines' | 'stages' | 'costs' | 'calculator' | 'payments' = 'disciplines';
-  let saving = false;
-  let error = '';
-  let message = '';
+  let activeTab: 'disciplines' | 'stages' | 'costs' | 'calculator' | 'payments' = $state('disciplines');
+  let saving = $state(false);
+  let error = $state('');
+  let message = $state('');
 
   // Pricing state - initialized from fee or defaults
   // IMPORTANT: Initialize with empty defaults to prevent undefined errors
   // before initializePricingData() runs
-  let config: PricingConfig | null = null;
-  let disciplines: Discipline[] = [];
-  let stages: Stage[] = [];
-  let cells: PricingCell[] = [];
-  let postContractItems: PostContractItem[] = [];
-  let reimbursableCosts: ReimbursableCost[] = [];
-  let paymentSchedule: PaymentSchedule = {
+  let config: PricingConfig | null = $state(null);
+  let disciplines: Discipline[] = $state([]);
+  let stages: Stage[] = $state([]);
+  let cells: PricingCell[] = $state([]);
+  let postContractItems: PostContractItem[] = $state([]);
+  let reimbursableCosts: ReimbursableCost[] = $state([]);
+  let paymentSchedule: PaymentSchedule = $state({
     entries: [],
     total_invoiced: 0,
     total_paid: 0,
     total_outstanding: 0
-  };
+  });
 
   // Initialize pricing data when modal opens
   $effect(() => {

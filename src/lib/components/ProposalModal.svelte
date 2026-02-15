@@ -53,7 +53,7 @@
     staff_position: string;
   }
   
-  let formData: ProposalFormData = {
+  let formData: ProposalFormData = $state({
     number: '',
     name: 'Fee Proposal',
     issue_date: '',
@@ -69,9 +69,9 @@
     staff_email: '',
     staff_phone: '',
     staff_position: ''
-  };
-  
-  
+  });
+
+
   // Validation setup
   const validationRules = [
     { field: 'number' as keyof ProposalFormData, required: true, minLength: 1, maxLength: 50 },
@@ -80,42 +80,42 @@
     { field: 'project_id' as keyof ProposalFormData, required: true, minLength: 1 },
     { field: 'company_id' as keyof ProposalFormData, required: true, minLength: 1 }
   ];
-  
+
   // Form validation state
-  let formErrors: Record<string, string> = {};
-  
+  let formErrors: Record<string, string> = $state({});
+
   // UI state
-  let showDeleteConfirm = false;
-  let showProjectStatusSync = false;
-  let showJsonExportAlert = false;
-  let originalStatus = '';
-  let pendingUpdateData: Partial<Fee> | null = null;
-  let formInitialized = false;
-  let dataLoaded = false;
-  
+  let showDeleteConfirm = $state(false);
+  let showProjectStatusSync = $state(false);
+  let showJsonExportAlert = $state(false);
+  let originalStatus = $state('');
+  let pendingUpdateData: Partial<Fee> | null = $state(null);
+  let formInitialized = $state(false);
+  let dataLoaded = $state(false);
+
   // Failsafe: Store original proposal data when modal opens
-  let originalProposal: Fee | null = null;
-  
+  let originalProposal: Fee | null = $state(null);
+
   // Auto-export checkbox state (activated by default for new proposals)
-  let autoExportToJson = true;
-  
+  let autoExportToJson = $state(true);
+
   // Nested modal states
-  let showNewProjectModal = false;
-  let showCompanyModal = false;
-  let showContactModal = false;
-  let showPricingModal = false;
-  let companyModalMode: 'create' | 'edit' = 'create';
-  let contactModalMode: 'create' | 'edit' = 'create';
-  let selectedCompany: Company | null = null;
-  let selectedContact: Contact | null = null;
-  
+  let showNewProjectModal = $state(false);
+  let showCompanyModal = $state(false);
+  let showContactModal = $state(false);
+  let showPricingModal = $state(false);
+  let companyModalMode: 'create' | 'edit' = $state('create');
+  let contactModalMode: 'create' | 'edit' = $state('create');
+  let selectedCompany: Company | null = $state(null);
+  let selectedContact: Contact | null = $state(null);
+
   // Typeahead search states
-  let projectSearchText = '';
-  let companySearchText = '';
-  let contactSearchText = '';
-  
+  let projectSearchText = $state('');
+  let companySearchText = $state('');
+  let contactSearchText = $state('');
+
   // Filtered options for typeahead dropdowns (projectOptions is mutable, others are $derived below)
-  let projectOptions: Array<{ id: string; name: string; name_short: string | undefined; number: string; country: string; city: string; area: string | undefined; updated_at: string }> = [];
+  let projectOptions: Array<{ id: string; name: string; name_short: string | undefined; number: string; country: string; city: string; area: string | undefined; updated_at: string }> = $state([]);
   
   // Helper function to extract ID from various formats
   function extractId(value: UnknownSurrealThing): string {
@@ -723,9 +723,9 @@
   }
   
   // Keep track of store lengths to detect new entities
-  let previousProjectCount = 0;
-  let previousCompanyCount = 0;
-  let previousContactCount = 0;
+  let previousProjectCount = $state(0);
+  let previousCompanyCount = $state(0);
+  let previousContactCount = $state(0);
   
   // Handle successful creation from nested modals
   $effect(() => {

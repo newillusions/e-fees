@@ -9,20 +9,20 @@
   const dispatch = createEventDispatcher();
 
   // Activity log state
-  let activities: ActivityLog[] = [];
-  let loading = true;
-  let error: string | null = null;
+  let activities: ActivityLog[] = $state([]);
+  let loading = $state(true);
+  let error: string | null = $state(null);
 
   // Pagination state
-  let currentPage = 1;
-  let pageSize = 25;
-  let totalLoaded = 0;
-  let hasMore = true;
-  let loadingMore = false;
+  let currentPage = $state(1);
+  let pageSize = $state(25);
+  let totalLoaded = $state(0);
+  let hasMore = $state(true);
+  let loadingMore = $state(false);
 
   // Filter states
-  let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = 'all';
-  let actionFilter: 'all' | 'create' | 'update' | 'delete' | 'status_change' = 'all';
+  let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = $state('all');
+  let actionFilter: 'all' | 'create' | 'update' | 'delete' | 'status_change' = $state('all');
 
   // Load initial activities
   async function loadActivities(reset = true) {

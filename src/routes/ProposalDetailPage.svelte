@@ -15,16 +15,16 @@
   } = $props();
   
   // Track the previous page to return to the correct location
-  let previousPage = '/proposals'; // Default fallback
-  
-  let proposal: Fee | null = null;
-  let loading = true;
-  let error: string | null = null;
-  
+  let previousPage = $state('/proposals'); // Default fallback
+
+  let proposal: Fee | null = $state(null);
+  let loading = $state(true);
+  let error: string | null = $state(null);
+
   // Modal states
-  let showProposalModal = false;
-  let proposalModalMode: 'create' | 'edit' = 'edit';
-  let selectedProposal: Fee | null = null;
+  let showProposalModal = $state(false);
+  let proposalModalMode: 'create' | 'edit' = $state('edit');
+  let selectedProposal: Fee | null = $state(null);
 
   // Extract the proposal ID from params
   let proposalId = $derived(params.id);

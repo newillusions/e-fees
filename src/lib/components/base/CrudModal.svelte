@@ -42,9 +42,9 @@
   const { store: operationState, actions: operationActions } = useOperationState();
 
   // Form state - internal form data for editing
-  let formData: FormDataType = {};
-  let formErrors: Partial<Record<string, string>> = {};
-  let showDeleteConfirm = false;
+  let formData: FormDataType = $state({});
+  let formErrors: Partial<Record<string, string>> = $state({});
+  let showDeleteConfirm = $state(false);
 
   // Initialize form data structure based on field configurations
   function initializeFormData(): FormDataType {

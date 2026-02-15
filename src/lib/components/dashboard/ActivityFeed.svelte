@@ -14,18 +14,18 @@
   }
 
   // Activity log state
-  let activities: ActivityLog[] = [];
-  let loading = true;
-  let error: string | null = null;
+  let activities: ActivityLog[] = $state([]);
+  let loading = $state(true);
+  let error: string | null = $state(null);
 
   // Pagination state
-  let currentPage = 0;
-  let hasMore = true;
-  let loadingMore = false;
+  let currentPage = $state(0);
+  let hasMore = $state(true);
+  let loadingMore = $state(false);
   const PAGE_SIZE = 15;
 
   // Filter states
-  let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = 'all';
+  let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = $state('all');
 
   // Scroll container reference
   let scrollContainer: HTMLDivElement;

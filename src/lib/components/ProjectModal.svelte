@@ -29,9 +29,9 @@
   const { store: operationState, actions: operationActions } = useOperationState();
   
   // Status change modal state
-  let showStatusChangeModal = false;
-  let pendingStatusChange = '';
-  let originalProject: Project | null = null;
+  let showStatusChangeModal = $state(false);
+  let pendingStatusChange = $state('');
+  let originalProject: Project | null = $state(null);
   
   // Form data with better typing
   interface ProjectFormData {
@@ -44,7 +44,7 @@
     status: ProjectStatus;
   }
   
-  let formData: ProjectFormData = {
+  let formData: ProjectFormData = $state({
     name: '',
     name_short: '',
     area: '',
@@ -52,7 +52,7 @@
     country: '',
     folder: '',
     status: 'Draft'
-  };
+  });
   
   // Validation setup
   const validationRules = [
@@ -65,10 +65,10 @@
   ];
   
   // Form validation state
-  let formErrors: Record<string, string> = {};
-  
+  let formErrors: Record<string, string> = $state({});
+
   // UI state
-  let showDeleteConfirm = false;
+  let showDeleteConfirm = $state(false);
   
   
   // Form submission handler

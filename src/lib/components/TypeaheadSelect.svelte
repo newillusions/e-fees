@@ -22,9 +22,9 @@
     disabled?: boolean;
   } = $props();
   
-  let dropdownOpen = false;
+  let dropdownOpen = $state(false);
   let inputElement: HTMLInputElement;
-  let selectedIndex = -1; // Track which option is highlighted
+  let selectedIndex = $state(-1); // Track which option is highlighted
   
   // Clear the selection
   function clearSelection() {
