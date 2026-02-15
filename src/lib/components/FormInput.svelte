@@ -1,31 +1,33 @@
 <script lang="ts">
-  export let type = 'text';
-  export let value: string | number = '';
-  export let placeholder = '';
-  export let label = '';
-  export let id = '';
-  export let required = false;
-  export let disabled = false;
-  export let error = '';
-  export let readonly = false;
-  export let maxlength: number | undefined = undefined;
-  export let min: number | undefined = undefined;
-  export let max: number | undefined = undefined;
-  export let autocomplete: HTMLInputElement['autocomplete'] | undefined = undefined;
-  export let className = '';
+  let { type = 'text', value = $bindable(''), placeholder = '', label = '', id = '', required = false, disabled = false, error = '', readonly = false, maxlength = undefined as number | undefined, min = undefined as number | undefined, max = undefined as number | undefined, autocomplete = undefined as HTMLInputElement['autocomplete'] | undefined, className = '' }: {
+    type?: string;
+    value?: string | number;
+    placeholder?: string;
+    label?: string;
+    id?: string;
+    required?: boolean;
+    disabled?: boolean;
+    error?: string;
+    readonly?: boolean;
+    maxlength?: number | undefined;
+    min?: number | undefined;
+    max?: number | undefined;
+    autocomplete?: HTMLInputElement['autocomplete'] | undefined;
+    className?: string;
+  } = $props();
 
   // Generate ID if not provided
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
 
   // Build class list using shared emittiv-input styles
-  $: inputClasses = [
+  const inputClasses = $derived([
     'emittiv-input',
     error ? 'emittiv-input--error' : '',
     readonly ? 'emittiv-input--readonly' : '',
     className
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' '));
 </script>
 
 <div class="emittiv-form-field">

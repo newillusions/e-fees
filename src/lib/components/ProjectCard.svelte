@@ -7,10 +7,12 @@
   
   const dispatch = createEventDispatcher();
   
-  export let project: Project;
-  export let clickable = true;
-  export let showFolderLink = true;
-  export let onFolderClick: ((project: Project) => void) | undefined = undefined;
+  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined }: {
+    project: Project;
+    clickable?: boolean;
+    showFolderLink?: boolean;
+    onFolderClick?: ((project: Project) => void) | undefined;
+  } = $props();
   
   function handleCardClick() {
     if (clickable) {

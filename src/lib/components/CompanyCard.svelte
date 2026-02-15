@@ -6,8 +6,10 @@
 
   const dispatch = createEventDispatcher();
 
-  export let company: Company;
-  export let clickable = true;
+  let { company, clickable = true }: {
+    company: Company;
+    clickable?: boolean;
+  } = $props();
 
   function handleCardClick() {
     if (clickable) {

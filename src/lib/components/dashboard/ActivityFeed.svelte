@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
-  export let isLoading = false;
+  let { isLoading = false }: { isLoading?: boolean } = $props();
 
   const dispatch = createEventDispatcher();
 
@@ -81,14 +81,11 @@
     }
   }
 
-  onMount(() => {
-    loadActivities();
-  });
-
-  // Reload when filter changes
-  $: if (entityFilter !== undefined) {
+  // Load on mount and reload when filter changes
+  $effect(() => {
+    entityFilter; // track dependency
     loadActivities(true);
-  }
+  });
 
   // Get icon for action type
   function getActionIcon(action: string): string {

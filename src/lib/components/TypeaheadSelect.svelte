@@ -7,18 +7,20 @@
   
   const dispatch = createEventDispatcher();
   
-  export let label: string = '';
-  export let value: string = '';
-  export let searchText: string = '';
-  export let placeholder: string = 'Search...';
-  export let options: Array<{ id: string; [key: string]: unknown }> = [];
-  export let displayFields: string[] = ['name'];
-  export let required: boolean = false;
-  export let error: string = '';
-  export let showAddButton: boolean = false;
-  export let addButtonLabel: string = 'Add new';
-  export let maxHeight: string = '192px'; // max-h-48 = 192px
-  export let disabled: boolean = false;
+  let { label = '', value = $bindable(''), searchText = $bindable(''), placeholder = 'Search...', options = [] as Array<{ id: string; [key: string]: unknown }>, displayFields = ['name'], required = false, error = '', showAddButton = false, addButtonLabel = 'Add new', maxHeight = '192px', disabled = false }: {
+    label?: string;
+    value?: string;
+    searchText?: string;
+    placeholder?: string;
+    options?: Array<{ id: string; [key: string]: unknown }>;
+    displayFields?: string[];
+    required?: boolean;
+    error?: string;
+    showAddButton?: boolean;
+    addButtonLabel?: string;
+    maxHeight?: string;
+    disabled?: boolean;
+  } = $props();
   
   let dropdownOpen = false;
   let inputElement: HTMLInputElement;
@@ -122,17 +124,20 @@
   }
   
   // Update search text when an option is pre-selected
-  $: if (value && !searchText) {
-    const selectedOption = options.find(opt => opt.id === value);
-    if (selectedOption) {
-      searchText = displayFields.map(field => selectedOption[field]).filter(Boolean).join(' - ');
+  $effect(() => {
+    if (value && !searchText) {
+      const selectedOption = options.find(opt => opt.id === value);
+      if (selectedOption) {
+        searchText = displayFields.map(field => selectedOption[field]).filter(Boolean).join(' - ');
+      }
     }
-  }
-  
+  });
+
   // Reset selected index when options change
-  $: if (options) {
+  $effect(() => {
+    options; // track dependency
     selectedIndex = -1;
-  }
+  });
 </script>
 
 <div class="typeahead-select">

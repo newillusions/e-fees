@@ -8,12 +8,14 @@
   
   const dispatch = createEventDispatcher();
   
-  export let isOpen = false;
-  export let project: Project | null = null;
-  export let proposal: Fee | null = null;
-  export let newStatus: string = '';
-  export let relatedFees: Fee[] = [];
-  export let mode: 'project-primary' | 'proposal-primary' = 'project-primary';
+  let { isOpen = $bindable(false), project = null, proposal = null, newStatus = '', relatedFees = [], mode = 'project-primary' }: {
+    isOpen?: boolean;
+    project?: Project | null;
+    proposal?: Fee | null;
+    newStatus?: string;
+    relatedFees?: Fee[];
+    mode?: 'project-primary' | 'proposal-primary';
+  } = $props();
   
   let isProcessing = false;
   let operationResult: FolderOperationResult | null = null;
@@ -23,23 +25,23 @@
   let suggestedProjectStatus: string = '';
   
   // Determine primary and secondary entities based on mode
-  $: primaryEntity = mode === 'project-primary' ? project : proposal;
-  $: secondaryEntities = mode === 'project-primary' ? relatedFees : (project ? [project] : []);
-  $: primaryType = mode === 'project-primary' ? 'project' : 'proposal';
-  $: secondaryType = mode === 'project-primary' ? 'proposal' : 'project';
-  
-  $: currentFolder = project?.status ? getFolderForStatus(project.status) : '';
-  $: newFolder = mode === 'project-primary' 
+  const primaryEntity = $derived(mode === 'project-primary' ? project : proposal);
+  const secondaryEntities = $derived(mode === 'project-primary' ? relatedFees : (project ? [project] : []));
+  const primaryType = $derived(mode === 'project-primary' ? 'project' : 'proposal');
+  const secondaryType = $derived(mode === 'project-primary' ? 'proposal' : 'project');
+
+  const currentFolder = $derived(project?.status ? getFolderForStatus(project.status) : '');
+  const newFolder = $derived(mode === 'project-primary'
     ? (newStatus ? getFolderForStatus(newStatus) : '')
-    : (suggestedProjectStatus ? getFolderForStatus(suggestedProjectStatus) : '');
-  $: folderChangeRequired = currentFolder !== newFolder && currentFolder && newFolder;
-  $: affectedFees = relatedFees.filter(fee => 
+    : (suggestedProjectStatus ? getFolderForStatus(suggestedProjectStatus) : ''));
+  const folderChangeRequired = $derived(currentFolder !== newFolder && currentFolder && newFolder);
+  const affectedFees = $derived(relatedFees.filter(fee =>
     // Filter fees that might be affected by status change
     fee.status !== 'Completed' && fee.status !== 'Cancelled'
-  );
-  
+  ));
+
   // Determine suggested statuses based on primary entity change
-  $: {
+  $effect(() => {
     if (mode === 'project-primary') {
       // Project is changing, suggest fee status updates
       if (newStatus === 'Active' || newStatus === 'Awarded') {
@@ -55,7 +57,7 @@
       } else {
         suggestedFeeStatus = '';
       }
-      
+
       // Auto-select relevant fees for update
       affectedFees.forEach(fee => {
         const feeId = extractId(fee.id);
@@ -80,13 +82,13 @@
       } else {
         suggestedProjectStatus = '';
       }
-      
+
       // Auto-select project for update if suggestion exists
       if (project && suggestedProjectStatus && project.status !== suggestedProjectStatus) {
         selectedProjectUpdate = true;
       }
     }
-  }
+  });
   
   function handleCancel() {
     isOpen = false;

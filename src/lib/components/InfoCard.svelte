@@ -3,14 +3,16 @@
 
   const dispatch = createEventDispatcher();
 
-  export let title: string = 'Information';
-  export let fields: Array<{
-    label: string;
-    value: string | number | undefined;
-    type?: 'text' | 'date' | 'id' | 'link';
-    clickable?: boolean;
-  }> = [];
-  export let columns: number = 3;
+  let { title = 'Information', fields = [], columns = 3 }: {
+    title?: string;
+    fields?: Array<{
+      label: string;
+      value: string | number | undefined;
+      type?: 'text' | 'date' | 'id' | 'link';
+      clickable?: boolean;
+    }>;
+    columns?: number;
+  } = $props();
 
   function formatValue(value: string | number | undefined, type: string = 'text'): string {
     if (!value) return '—';

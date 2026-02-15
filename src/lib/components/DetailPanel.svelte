@@ -13,11 +13,13 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let title = '';
-  export let canEdit = true;
-  export let customActions: CustomAction[] = [];
-  export let show = true; // New prop to control visibility
+  let { isOpen = false, title = '', canEdit = true, customActions = [], show = true }: {
+    isOpen?: boolean;
+    title?: string;
+    canEdit?: boolean;
+    customActions?: CustomAction[];
+    show?: boolean;
+  } = $props();
 
   function closePanel() {
     dispatch('close');

@@ -5,7 +5,7 @@
   import { settingsStore } from '$lib/stores/settings';
 
   // Check if dev mode is enabled
-  $: devModeEnabled = $settingsStore?.dev_mode ?? false;
+  const devModeEnabled = $derived($settingsStore?.dev_mode ?? false);
 
   const navItems: NavItem[] = [
     {
@@ -48,7 +48,7 @@
   ];
 
   // Filter nav items based on dev mode setting
-  $: visibleNavItems = navItems.filter(item => !item.devOnly || devModeEnabled);
+  const visibleNavItems = $derived(navItems.filter(item => !item.devOnly || devModeEnabled));
 
   function handleNavClick(route: string) {
     push(route);

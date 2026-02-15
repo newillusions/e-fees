@@ -9,7 +9,9 @@
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import type { Project } from '../types';
 
-  export let params: { id: string } = { id: '' };
+  let { params = { id: '' } }: {
+    params?: { id: string };
+  } = $props();
   
   // Track the previous page to return to the correct location
   let previousPage = '/projects'; // Default fallback
@@ -19,10 +21,10 @@
   let error: string | null = null;
 
   // Extract the project ID from params
-  $: projectId = params.id;
+  let projectId = $derived(params.id);
 
   // Find the project when the store updates or ID changes
-  $: {
+  $effect(() => {
     if ($projectsStore.length > 0 && projectId) {
       const foundProject = findEntityById($projectsStore, projectId);
       if (foundProject) {
@@ -35,7 +37,7 @@
         error = `Project with ID "${projectId}" not found`;
       }
     }
-  }
+  });
 
   onMount(async () => {
     // Check if we came from the dashboard

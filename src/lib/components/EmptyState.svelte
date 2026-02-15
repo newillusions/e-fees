@@ -1,9 +1,11 @@
 <script lang="ts">
-  export let icon: string;
-  export let title: string;
-  export let description: string;
-  export let actionText = '';
-  export let onAction: (() => void) | null = null;
+  let { icon, title, description, actionText = '', onAction = null }: {
+    icon: string;
+    title: string;
+    description: string;
+    actionText?: string;
+    onAction?: (() => void) | null;
+  } = $props();
 </script>
 
 <div class="flex flex-col items-center justify-center py-12 px-4 text-center">

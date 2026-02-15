@@ -3,24 +3,26 @@
 
   const dispatch = createEventDispatcher();
 
-  export let totalItems: number = 0;
-  export let filteredItems: number = 0;
-  export let hasFilters: boolean = false;
-  export let entityName: string = 'items';
-  export let loadedItems: number | undefined = undefined;
-  export let hasMore: boolean = false;
-  export let inline: boolean = false;
+  let { totalItems = 0, filteredItems = 0, hasFilters = false, entityName = 'items', loadedItems = undefined as number | undefined, hasMore = false, inline = false }: {
+    totalItems?: number;
+    filteredItems?: number;
+    hasFilters?: boolean;
+    entityName?: string;
+    loadedItems?: number | undefined;
+    hasMore?: boolean;
+    inline?: boolean;
+  } = $props();
 
   function handleClearFilters() {
     dispatch('clear-filters');
   }
 
-  $: entityNameSingular = entityName.endsWith('ies')
+  const entityNameSingular = $derived(entityName.endsWith('ies')
     ? entityName.slice(0, -3) + 'y'
-    : entityName.slice(0, -1);
+    : entityName.slice(0, -1));
 
   // Determine if we're in paginated mode
-  $: isPaginated = loadedItems !== undefined && totalItems > 0;
+  const isPaginated = $derived(loadedItems !== undefined && totalItems > 0);
 </script>
 
 <!-- Results count and Clear button -->

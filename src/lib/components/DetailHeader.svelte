@@ -1,12 +1,14 @@
 <script lang="ts">
-  export let name: string;
-  export let subtitle: string = '';
-  export let location: string = '';
-  export let avatar: string = '';
-  export let avatarBg: string = 'from-emittiv-splash/20 to-emittiv-splash/10';
-  export let avatarBorder: string = 'border-emittiv-splash/30';
-  export let avatarText: string = 'text-emittiv-splash';
-  export let stats: Array<{ label: string; value: number }> = [];
+  let { name, subtitle = '', location = '', avatar = '', avatarBg = 'from-emittiv-splash/20 to-emittiv-splash/10', avatarBorder = 'border-emittiv-splash/30', avatarText = 'text-emittiv-splash', stats = [] }: {
+    name: string;
+    subtitle?: string;
+    location?: string;
+    avatar?: string;
+    avatarBg?: string;
+    avatarBorder?: string;
+    avatarText?: string;
+    stats?: Array<{ label: string; value: number }>;
+  } = $props();
 </script>
 
 <!-- Header Info -->

@@ -14,14 +14,16 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let contact: Contact | null = null;
+  let { isOpen = $bindable(false), contact = null }: {
+    isOpen?: boolean;
+    contact?: Contact | null;
+  } = $props();
 
   // Create optimized company lookup
-  $: companyLookup = createCompanyLookup($companiesStore);
+  const companyLookup = $derived(createCompanyLookup($companiesStore));
 
   // Find related company
-  $: relatedCompany = contact ? companyLookup.getCompany(contact.company) : null;
+  const relatedCompany = $derived(contact ? companyLookup.getCompany(contact.company) : null);
 
   // Helper to parse issue dates for sorting
   const parseIssueDate = (dateStr: string): Date => {
@@ -34,11 +36,11 @@
   };
 
   // Filter Fees where this contact is involved using type-safe comparison
-  $: contactFees = contact?.id
+  const contactFees = $derived(contact?.id
     ? $feesStore
         .filter(fee => compareIds(fee.contact_id, contact.id))
         .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
-    : [];
+    : []);
 
   // Load related data when component mounts
   onMount(() => {
@@ -55,14 +57,14 @@
   }
 
   // Generate initials for avatar
-  $: initials = contact
+  const initials = $derived(contact
     ? contact.full_name
         .split(' ')
         .map(n => n[0])
         .join('')
         .substring(0, 2)
         .toUpperCase()
-    : '';
+    : '');
 </script>
 
 <DetailPanel {isOpen} show={!!contact} title="contact" on:edit={handleEdit} on:close={handleClose}>

@@ -3,8 +3,10 @@
 
   const dispatch = createEventDispatcher();
 
-  export let clickable = true;
-  export let customPadding = false;
+  let { clickable = true, customPadding = false }: {
+    clickable?: boolean;
+    customPadding?: boolean;
+  } = $props();
 
   function handleClick(event: MouseEvent) {
     if (clickable) {

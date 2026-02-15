@@ -23,9 +23,11 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let proposal: Fee | null = null;
-  export let mode: 'create' | 'edit' = 'create';
+  let { isOpen = $bindable(false), proposal = null, mode = 'create' }: {
+    isOpen?: boolean;
+    proposal?: Fee | null;
+    mode?: 'create' | 'edit';
+  } = $props();
 
 
   // Form field configuration

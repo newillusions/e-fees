@@ -14,8 +14,10 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let proposal: Fee | null = null;
+  let { isOpen = $bindable(false), proposal = null }: {
+    isOpen?: boolean;
+    proposal?: Fee | null;
+  } = $props();
 
   // Modal state
   let warningModal: {
@@ -41,20 +43,20 @@
   let loadingRevisions = false;
 
   // Create optimized company lookup
-  $: companyLookup = createCompanyLookup($companiesStore);
+  const companyLookup = $derived(createCompanyLookup($companiesStore));
 
   // Find related project using type-safe utility
-  $: relatedProject = proposal?.project_id
+  const relatedProject = $derived(proposal?.project_id
     ? findEntityById($projectsStore, proposal.project_id)
-    : null;
+    : null);
 
   // Find related company
-  $: relatedCompany = proposal ? companyLookup.getCompany(proposal.company_id) : null;
+  const relatedCompany = $derived(proposal ? companyLookup.getCompany(proposal.company_id) : null);
 
   // Find related contact using type-safe utility
-  $: relatedContact = proposal?.contact_id
+  const relatedContact = $derived(proposal?.contact_id
     ? findEntityById($contactsStore, proposal.contact_id)
-    : null;
+    : null);
 
   // Load related data when component mounts
   onMount(() => {
@@ -94,9 +96,11 @@
   }
 
   // Reload revisions when proposal changes
-  $: if (proposal?.project_id) {
-    loadRevisions();
-  }
+  $effect(() => {
+    if (proposal?.project_id) {
+      loadRevisions();
+    }
+  });
   
   // Project creation workflow with existence check
   async function handleCreateProject() {
@@ -359,7 +363,7 @@
   }
   
   // Custom actions for the detail panel
-  $: customActions = [
+  const customActions = $derived([
     {
       handler: handleCreateProject,
       label: 'Create Project Folder',
@@ -388,7 +392,7 @@
       icon: 'M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2',
       disabled: !proposal
     }
-  ];
+  ]);
   
 </script>
 

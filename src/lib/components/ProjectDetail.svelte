@@ -16,8 +16,10 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let project: Project | null = null;
+  let { isOpen = $bindable(false), project = null }: {
+    isOpen?: boolean;
+    project?: Project | null;
+  } = $props();
 
   // Modal state
   let warningModal: {
@@ -39,7 +41,7 @@
   };
 
   // Create optimized company lookup
-  $: companyLookup = createCompanyLookup($companiesStore);
+  const companyLookup = $derived(createCompanyLookup($companiesStore));
 
   // Helper to parse issue dates for sorting
   const parseIssueDate = (dateStr: string): Date => {
@@ -50,11 +52,11 @@
   };
 
   // Filter fees for this project using type-safe comparison
-  $: projectFees = project?.id
+  const projectFees = $derived(project?.id
     ? $feesStore
         .filter(fee => compareIds(fee.project_id, project.id))
         .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
-    : [];
+    : []);
 
   // Load related data when component mounts
   onMount(() => {
@@ -230,7 +232,7 @@
   }
   
   // Custom actions for the detail panel
-  $: customActions = [
+  const customActions = $derived([
     {
       handler: handleCreateProjectFolder,
       label: 'Create Project Folder',
@@ -238,7 +240,7 @@
       icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4',
       disabled: !project
     }
-  ];
+  ]);
 </script>
 
 <DetailPanel 

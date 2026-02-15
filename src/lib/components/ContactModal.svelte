@@ -16,10 +16,12 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let contact: Contact | null = null;
-  export let mode: 'create' | 'edit' = 'create';
-  export let zIndex = 100; // Base z-index, can be increased for nested modals
+  let { isOpen = $bindable(false), contact = null, mode = 'create', zIndex = 100 }: {
+    isOpen?: boolean;
+    contact?: Contact | null;
+    mode?: 'create' | 'edit';
+    zIndex?: number;
+  } = $props();
 
   // Form field configuration
   const fields: FormFieldConfig[] = [

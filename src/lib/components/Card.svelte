@@ -1,7 +1,5 @@
 <script lang="ts">
-  export let hover = true;
-  export let padding = 'p-6';
-  export let className = '';
+  let { hover = true, padding = 'p-6', className = '' }: { hover?: boolean; padding?: string; className?: string } = $props();
 </script>
 
 <div
@@ -17,7 +15,8 @@
   }
 
   .hover-effect:hover {
-    @apply border-emittiv-splash transform -translate-y-0.5 shadow-lg;
+    border-color: var(--emittiv-splash);
+    transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(255, 153, 0, 0.1);
   }
 </style>

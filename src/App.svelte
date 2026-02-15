@@ -27,16 +27,18 @@
   let showFirstRun = false;
 
   // Reset scroll position on route change
-  $: if ($location && appReady) {
-    // Use setTimeout to ensure the DOM has updated
-    setTimeout(() => {
-      // Find the main content scroll container
-      const contentContainer = document.querySelector('.glass-content.overflow-auto');
-      if (contentContainer) {
-        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }, 50);
-  }
+  $effect(() => {
+    if ($location && appReady) {
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(() => {
+        // Find the main content scroll container
+        const contentContainer = document.querySelector('.glass-content.overflow-auto');
+        if (contentContainer) {
+          contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+    }
+  });
 
   // Define routes for SPA
   const routes = {

@@ -19,25 +19,27 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let company: Company | null = null;
+  let { isOpen = $bindable(false), company = null }: {
+    isOpen?: boolean;
+    company?: Company | null;
+  } = $props();
 
   // Filter contacts for this company using type-safe comparison
-  $: companyContacts = company?.id
+  const companyContacts = $derived(company?.id
     ? $contactsStore.filter(contact => compareIds(contact.company, company.id))
-    : [];
+    : []);
 
   // Filter Fees for this company using type-safe comparison
-  $: companyFees = company?.id
+  const companyFees = $derived(company?.id
     ? $feesStore
         .filter(fee => compareIds(fee.company_id, company.id))
         .sort((a, b) =>
           new Date(b.time?.created_at || 0).getTime() - new Date(a.time?.created_at || 0).getTime()
         )
-    : [];
+    : []);
 
   // Filter projects related to this company (through fees)
-  $: companyProjects = company?.id
+  const companyProjects = $derived(company?.id
     ? $projectsStore
         .filter(project =>
           companyFees.some(fee => compareIds(fee.project_id, project.id))
@@ -45,7 +47,7 @@
         .sort((a, b) =>
           new Date(b.time?.updated_at || 0).getTime() - new Date(a.time?.updated_at || 0).getTime()
         )
-    : [];
+    : []);
 
   // Load all related data when component mounts
   onMount(() => {

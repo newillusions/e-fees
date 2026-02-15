@@ -25,9 +25,11 @@
   
   const dispatch = createEventDispatcher();
   
-  export let isOpen = false;
-  export let proposal: Fee | null = null;
-  export let mode: 'create' | 'edit' = 'create';
+  let { isOpen = $bindable(false), proposal = null, mode = 'create' }: {
+    isOpen?: boolean;
+    proposal?: Fee | null;
+    mode?: 'create' | 'edit';
+  } = $props();
   
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -112,10 +114,8 @@
   let companySearchText = '';
   let contactSearchText = '';
   
-  // Filtered options for typeahead dropdowns
-  let projectOptions: typeof allProjectOptions = [];
-  let companyOptions: typeof allCompanyOptions = [];
-  let contactOptions: typeof allContactOptions = [];
+  // Filtered options for typeahead dropdowns (projectOptions is mutable, others are $derived below)
+  let projectOptions: Array<{ id: string; name: string; name_short: string | undefined; number: string; country: string; city: string; area: string | undefined; updated_at: string }> = [];
   
   // Helper function to extract ID from various formats
   function extractId(value: UnknownSurrealThing): string {
@@ -123,7 +123,7 @@
   }
   
   // All dropdown options for typeahead - sorted by update date (newest first)
-  $: allProjectOptions = $projectsStore
+  const allProjectOptions = $derived($projectsStore
     .map(project => ({
       id: extractId(project.id),
       name: project.name,
@@ -134,10 +134,10 @@
       area: project.area,
       updated_at: project.time?.updated_at || ''
     }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+
   // All company options - sorted by update date (newest first)
-  $: allCompanyOptions = $companiesStore
+  const allCompanyOptions = $derived($companiesStore
     .map(company => ({
       id: extractId(company.id),
       name: company.name,
@@ -145,30 +145,30 @@
       abbreviation: company.abbreviation,
       updated_at: company.time?.updated_at || ''
     }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+
   // All contact options - sorted by update date (newest first)
-  $: allContactOptions = $contactsStore
+  const allContactOptions = $derived($contactsStore
     .map(contact => ({
       id: extractId(contact.id),
       full_name: contact.full_name,
       company: extractId(contact.company),
       updated_at: contact.time?.updated_at || ''
     }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
 
   // Filtered options based on selections
-  $: filteredCompanyOptions = formData.contact_id 
+  const filteredCompanyOptions = $derived(formData.contact_id
     ? allCompanyOptions.filter(company => {
         const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
         return selectedContact ? company.id === selectedContact.company : true;
       })
-    : allCompanyOptions;
+    : allCompanyOptions);
 
   // Fix reactivity by explicitly depending on formData.company_id
-  $: filteredContactOptions = formData.company_id 
+  const filteredContactOptions = $derived(formData.company_id
     ? allContactOptions.filter(contact => contact.company === formData.company_id)
-    : allContactOptions;
+    : allContactOptions);
   
   // Project search handler with fuzzy search
   function handleProjectSearch(searchText: string) {
@@ -200,33 +200,35 @@
   }
   
   // Initialize project options
-  $: if (!projectSearchText) {
-    handleProjectSearch('');
-  }
+  $effect(() => {
+    if (!projectSearchText) {
+      handleProjectSearch('');
+    }
+  });
   
   // Filtered company options for search (use filtered options as base)
-  $: companyOptions = filteredCompanyOptions.filter(company => {
+  const companyOptions = $derived(filteredCompanyOptions.filter(company => {
     if (!companySearchText) return true;
-    
+
     const searchLower = companySearchText.toLowerCase().trim();
     const nameMatch = company.name && company.name.toLowerCase().includes(searchLower);
     const shortNameMatch = company.name_short && company.name_short.toLowerCase().includes(searchLower);
-    
+
     // Handle abbreviation search
     let abbreviationMatch = false;
     if (company.abbreviation) {
       const abbrev = String(company.abbreviation).toLowerCase().trim();
       abbreviationMatch = abbrev.includes(searchLower);
     }
-    
+
     return nameMatch || shortNameMatch || abbreviationMatch;
-  }).slice(0, 20);
-  
+  }).slice(0, 20));
+
   // Filtered contact options for search (use filtered options as base)
-  $: contactOptions = filteredContactOptions.filter(contact =>
+  const contactOptions = $derived(filteredContactOptions.filter(contact =>
     !contactSearchText ||
     contact.full_name.toLowerCase().includes(contactSearchText.toLowerCase())
-  ).slice(0, 20);
+  ).slice(0, 20));
   
   
   // Helper to format today's date in YYMMDD format
@@ -726,79 +728,97 @@
   let previousContactCount = 0;
   
   // Handle successful creation from nested modals
-  $: if ($projectsStore.length > previousProjectCount && !showNewProjectModal) {
-    // A new project was created
-    const latestProject = $projectsStore[$projectsStore.length - 1];
-    if (latestProject) {
-      const projectId = extractId(latestProject.id);
-      formData.project_id = projectId;
-      projectSearchText = `${latestProject.number?.id || ''} - ${latestProject.name}`;
-      generateProposalNumber(); // Auto-generate proposal number based on new project
+  $effect(() => {
+    if ($projectsStore.length > previousProjectCount && !showNewProjectModal) {
+      // A new project was created
+      const latestProject = $projectsStore[$projectsStore.length - 1];
+      if (latestProject) {
+        const projectId = extractId(latestProject.id);
+        formData.project_id = projectId;
+        projectSearchText = `${latestProject.number?.id || ''} - ${latestProject.name}`;
+        generateProposalNumber(); // Auto-generate proposal number based on new project
+      }
+      previousProjectCount = $projectsStore.length;
     }
-    previousProjectCount = $projectsStore.length;
-  }
-  
-  $: if ($companiesStore.length > previousCompanyCount && !showCompanyModal) {
-    // A new company was created
-    const latestCompany = $companiesStore[$companiesStore.length - 1];
-    if (latestCompany) {
-      const companyId = extractId(latestCompany.id);
-      formData.company_id = companyId;
-      companySearchText = latestCompany.name;
+  });
+
+  $effect(() => {
+    if ($companiesStore.length > previousCompanyCount && !showCompanyModal) {
+      // A new company was created
+      const latestCompany = $companiesStore[$companiesStore.length - 1];
+      if (latestCompany) {
+        const companyId = extractId(latestCompany.id);
+        formData.company_id = companyId;
+        companySearchText = latestCompany.name;
+      }
+      previousCompanyCount = $companiesStore.length;
     }
-    previousCompanyCount = $companiesStore.length;
-  }
-  
-  $: if ($contactsStore.length > previousContactCount && !showContactModal) {
-    // A new contact was created
-    const latestContact = $contactsStore[$contactsStore.length - 1];
-    if (latestContact) {
-      const contactId = extractId(latestContact.id);
-      formData.contact_id = contactId;
-      contactSearchText = latestContact.full_name;
-      
-      // Auto-select the contact's company if we don't have one selected
-      if (latestContact.company && !formData.company_id) {
-        const contactCompanyId = extractSurrealId(latestContact.company) || '';
-        if (contactCompanyId) {
-          formData.company_id = contactCompanyId;
-          const company = allCompanyOptions.find(c => c.id === contactCompanyId);
-          if (company) {
-            companySearchText = company.name;
+  });
+
+  $effect(() => {
+    if ($contactsStore.length > previousContactCount && !showContactModal) {
+      // A new contact was created
+      const latestContact = $contactsStore[$contactsStore.length - 1];
+      if (latestContact) {
+        const contactId = extractId(latestContact.id);
+        formData.contact_id = contactId;
+        contactSearchText = latestContact.full_name;
+
+        // Auto-select the contact's company if we don't have one selected
+        if (latestContact.company && !formData.company_id) {
+          const contactCompanyId = extractSurrealId(latestContact.company) || '';
+          if (contactCompanyId) {
+            formData.company_id = contactCompanyId;
+            const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+            if (company) {
+              companySearchText = company.name;
+            }
           }
         }
       }
+      previousContactCount = $contactsStore.length;
     }
-    previousContactCount = $contactsStore.length;
-  }
-  
+  });
+
   // Initialize store counts
-  $: if ($projectsStore.length > 0 && previousProjectCount === 0) {
-    previousProjectCount = $projectsStore.length;
-  }
-  $: if ($companiesStore.length > 0 && previousCompanyCount === 0) {
-    previousCompanyCount = $companiesStore.length;
-  }
-  $: if ($contactsStore.length > 0 && previousContactCount === 0) {
-    previousContactCount = $contactsStore.length;
-  }
+  $effect(() => {
+    if ($projectsStore.length > 0 && previousProjectCount === 0) {
+      previousProjectCount = $projectsStore.length;
+    }
+  });
+  $effect(() => {
+    if ($companiesStore.length > 0 && previousCompanyCount === 0) {
+      previousCompanyCount = $companiesStore.length;
+    }
+  });
+  $effect(() => {
+    if ($contactsStore.length > 0 && previousContactCount === 0) {
+      previousContactCount = $contactsStore.length;
+    }
+  });
   
   // Capture original proposal when modal opens (failsafe)
-  $: if (proposal && isOpen && !originalProposal) {
-    originalProposal = JSON.parse(JSON.stringify(proposal)); // Deep copy
-  }
-  
+  $effect(() => {
+    if (proposal && isOpen && !originalProposal) {
+      originalProposal = JSON.parse(JSON.stringify(proposal)); // Deep copy
+    }
+  });
+
   // Load form data when proposal changes - only when modal opens
-  $: if (proposal && mode === 'edit' && isOpen && !dataLoaded) {
-    loadProposalForEdit();
-  }
+  $effect(() => {
+    if (proposal && mode === 'edit' && isOpen && !dataLoaded) {
+      loadProposalForEdit();
+    }
+  });
 
   // Reset dataLoaded flag when modal closes
-  $: if (!isOpen) {
-    dataLoaded = false;
-    originalStatus = '';
-    originalProposal = null; // Clear failsafe data
-  }
+  $effect(() => {
+    if (!isOpen) {
+      dataLoaded = false;
+      originalStatus = '';
+      originalProposal = null; // Clear failsafe data
+    }
+  });
 
   function loadProposalForEdit() {
     if (!proposal || dataLoaded) return;
@@ -846,35 +866,43 @@
   }
 
   // Initialize form for create mode
-  $: if (mode === 'create' && isOpen && !formInitialized) {
-    resetForm();
-  }
+  $effect(() => {
+    if (mode === 'create' && isOpen && !formInitialized) {
+      resetForm();
+    }
+  });
 
   // Set form as initialized after modal opens and data is loaded
-  $: if (isOpen && !formInitialized) {
-    // Small delay to ensure all reactive statements have run
-    setTimeout(() => {
-      formInitialized = true;
-    }, 100);
-  } else if (!isOpen) {
-    formInitialized = false;
-  }
+  $effect(() => {
+    if (isOpen && !formInitialized) {
+      // Small delay to ensure all reactive statements have run
+      setTimeout(() => {
+        formInitialized = true;
+      }, 100);
+    } else if (!isOpen) {
+      formInitialized = false;
+    }
+  });
 
   // Auto-populate staff fields from settings when settings change or form is reset
-  $: if (mode === 'create' && $settingsStore.staff_name) {
-    if (!formData.staff_name) formData.staff_name = $settingsStore.staff_name;
-    if (!formData.staff_email) formData.staff_email = $settingsStore.staff_email || '';
-    if (!formData.staff_phone) formData.staff_phone = $settingsStore.staff_phone || '';
-    if (!formData.staff_position) formData.staff_position = $settingsStore.staff_position || '';
-  }
+  $effect(() => {
+    if (mode === 'create' && $settingsStore.staff_name) {
+      if (!formData.staff_name) formData.staff_name = $settingsStore.staff_name;
+      if (!formData.staff_email) formData.staff_email = $settingsStore.staff_email || '';
+      if (!formData.staff_phone) formData.staff_phone = $settingsStore.staff_phone || '';
+      if (!formData.staff_position) formData.staff_position = $settingsStore.staff_position || '';
+    }
+  });
 
   // Regenerate proposal number when revision changes
-  $: if (formData.project_id && formData.rev && mode === 'create') {
-    const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
-    if (project?.number?.id) {
-      formData.number = `${project.number.id}-FP-${formData.rev}`;
+  $effect(() => {
+    if (formData.project_id && formData.rev && mode === 'create') {
+      const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
+      if (project?.number?.id) {
+        formData.number = `${project.number.id}-FP-${formData.rev}`;
+      }
     }
-  }
+  });
 </script>
 
 <BaseModal 

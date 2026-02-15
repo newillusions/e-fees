@@ -4,13 +4,15 @@
    * Uses fixed px values for desktop app OS scaling
    */
 
-  export let icon: 'plus' | 'minus' | 'trash' | 'check' | 'x' | 'edit' | 'split' = 'plus';
-  export let label = '';
-  export let variant: 'primary' | 'secondary' | 'danger' = 'secondary';
-  export let size: 'sm' | 'md' = 'sm';
-  export let disabled = false;
-  export let title = '';
-  export let className = '';
+  let { icon = 'plus', label = '', variant = 'secondary', size = 'sm', disabled = false, title = '', className = '' }: {
+    icon?: 'plus' | 'minus' | 'trash' | 'check' | 'x' | 'edit' | 'split';
+    label?: string;
+    variant?: 'primary' | 'secondary' | 'danger';
+    size?: 'sm' | 'md';
+    disabled?: boolean;
+    title?: string;
+    className?: string;
+  } = $props();
 
   // SVG paths for each icon
   const icons = {
@@ -24,7 +26,7 @@
   };
 
   // Build class string - uses fixed px in CSS
-  $: buttonClass = `emittiv-icon-btn emittiv-icon-btn--${variant} emittiv-icon-btn--${size} ${className}`;
+  const buttonClass = $derived(`emittiv-icon-btn emittiv-icon-btn--${variant} emittiv-icon-btn--${size} ${className}`);
 </script>
 
 <button

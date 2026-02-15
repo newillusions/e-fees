@@ -4,7 +4,9 @@
   import { getAppVersion } from '../utils';
   
   
-  export let onComplete: () => void;
+  let { onComplete }: {
+    onComplete: () => void;
+  } = $props();
 
   let connectionText = 'Initializing...';
   let dots = '';

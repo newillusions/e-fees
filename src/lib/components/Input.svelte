@@ -1,12 +1,14 @@
 <script lang="ts">
-  export let type: 'text' | 'email' | 'password' | 'number' | 'search' = 'text';
-  export let value = '';
-  export let placeholder = '';
-  export let label = '';
-  export let error = '';
-  export let disabled = false;
-  export let required = false;
-  export let className = '';
+  let { type = 'text', value = $bindable(''), placeholder = '', label = '', error = '', disabled = false, required = false, className = '' }: {
+    type?: 'text' | 'email' | 'password' | 'number' | 'search';
+    value?: string;
+    placeholder?: string;
+    label?: string;
+    error?: string;
+    disabled?: boolean;
+    required?: boolean;
+    className?: string;
+  } = $props();
 
   let inputElement: HTMLInputElement;
 

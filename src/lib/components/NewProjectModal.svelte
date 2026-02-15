@@ -32,9 +32,11 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let mode: 'create' = 'create';
-  export let zIndex = 100; // Base z-index, can be increased for nested modals
+  let { isOpen = $bindable(false), mode = 'create', zIndex = 100 }: {
+    isOpen?: boolean;
+    mode?: 'create';
+    zIndex?: number;
+  } = $props();
 
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -93,27 +95,31 @@
   let cityOptions: Array<{ id: string; name: string }> = [];
 
   // Auto-populate folder name when project number or short name changes
-  $: if (formData.project_number && formData.name_short) {
-    formData.folder = `${formData.project_number} ${formData.name_short}`;
-  } else if (formData.name_short) {
-    formData.folder = formData.name_short;
-  } else {
-    formData.folder = '';
-  }
+  $effect(() => {
+    if (formData.project_number && formData.name_short) {
+      formData.folder = `${formData.project_number} ${formData.name_short}`;
+    } else if (formData.name_short) {
+      formData.folder = formData.name_short;
+    } else {
+      formData.folder = '';
+    }
+  });
 
   // Track previous country and year to detect changes
   let previousCountry = '';
   let previousYear = 0;
 
   // Auto-generate project number when country or year changes
-  $: if (isModalReady && formData.country && formData.year && !isGenerating) {
-    // Check if country or year actually changed
-    if (formData.country !== previousCountry || formData.year !== previousYear) {
-      previousCountry = formData.country;
-      previousYear = formData.year;
-      generateProjectNumber();
+  $effect(() => {
+    if (isModalReady && formData.country && formData.year && !isGenerating) {
+      // Check if country or year actually changed
+      if (formData.country !== previousCountry || formData.year !== previousYear) {
+        previousCountry = formData.country;
+        previousYear = formData.year;
+        generateProjectNumber();
+      }
     }
-  }
+  });
 
   // Generate the next available project number
   async function generateProjectNumber() {
@@ -392,25 +398,33 @@
   }
 
   // Initialize modal when it opens/closes
-  $: if (isOpen && !isModalReady) {
-    // Small delay to ensure modal is fully rendered before enabling auto-generation
-    setTimeout(() => {
-      isModalReady = true;
-    }, 100);
-  } else if (!isOpen) {
-    isModalReady = false;
-  }
+  $effect(() => {
+    if (isOpen && !isModalReady) {
+      // Small delay to ensure modal is fully rendered before enabling auto-generation
+      setTimeout(() => {
+        isModalReady = true;
+      }, 100);
+    } else if (!isOpen) {
+      isModalReady = false;
+    }
+  });
 
   // Sync search text with form values (in case they get out of sync)
-  $: if (formData.country && !countrySearchText) {
-    countrySearchText = formData.country;
-  }
-  $: if (formData.city && !citySearchText) {
-    citySearchText = formData.city;
-  }
-  $: if (formData.area && !areaSearchText) {
-    areaSearchText = formData.area;
-  }
+  $effect(() => {
+    if (formData.country && !countrySearchText) {
+      countrySearchText = formData.country;
+    }
+  });
+  $effect(() => {
+    if (formData.city && !citySearchText) {
+      citySearchText = formData.city;
+    }
+  });
+  $effect(() => {
+    if (formData.area && !areaSearchText) {
+      areaSearchText = formData.area;
+    }
+  });
 
   // Typeahead handlers
   function handleCountrySelect(event: CustomEvent) {

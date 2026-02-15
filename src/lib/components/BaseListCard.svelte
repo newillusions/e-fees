@@ -4,9 +4,11 @@
   const dispatch = createEventDispatcher();
 
   // Props for flexible card configuration
-  export let clickable = true;
-  export let href: string = '';
-  export let customClass = '';
+  let { clickable = true, href = '', customClass = '' }: {
+    clickable?: boolean;
+    href?: string;
+    customClass?: string;
+  } = $props();
 
   // Mouse event handlers - now using CSS classes for consistent hover effects
   function handleMouseEnter(event: MouseEvent) {

@@ -5,13 +5,15 @@
   
   const dispatch = createEventDispatcher();
   
-  export let isOpen = false;
-  export let title = 'Warning';
-  export let message = '';
-  export let confirmText = 'OK';
-  export let cancelText = '';
-  export let onConfirm: (() => void) | null = null;
-  export let onCancel: (() => void) | null = null;
+  let { isOpen = false, title = 'Warning', message = '', confirmText = 'OK', cancelText = '', onConfirm = null, onCancel = null }: {
+    isOpen?: boolean;
+    title?: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm?: (() => void) | null;
+    onCancel?: (() => void) | null;
+  } = $props();
   
   function handleConfirm() {
     if (onConfirm) {

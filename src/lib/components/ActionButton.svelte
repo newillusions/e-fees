@@ -3,13 +3,14 @@
 
   const dispatch = createEventDispatcher();
 
-  export let type: 'edit' | 'view' | 'delete' | 'email' | 'phone' | 'custom' = 'custom';
-  export let href: string = '';
-  export let ariaLabel: string = '';
-  export let size: number = 16;
-  export let customIcon: string = '';
-  let className: string = '';
-  export { className as class };
+  let { type = 'custom', href = '', ariaLabel = '', size = 16, customIcon = '', class: className = '' }: {
+    type?: 'edit' | 'view' | 'delete' | 'email' | 'phone' | 'custom';
+    href?: string;
+    ariaLabel?: string;
+    size?: number;
+    customIcon?: string;
+    class?: string;
+  } = $props();
 
   function handleClick(event: MouseEvent) {
     event.stopPropagation();

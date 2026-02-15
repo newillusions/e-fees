@@ -22,8 +22,10 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
-  export let fee: Fee | null = null;
+  let { isOpen = $bindable(false), fee = null as Fee | null }: {
+    isOpen?: boolean;
+    fee?: Fee | null;
+  } = $props();
 
   // UI state
   let activeTab: 'disciplines' | 'stages' | 'costs' | 'calculator' | 'payments' = 'disciplines';
@@ -48,9 +50,11 @@
   };
 
   // Initialize pricing data when modal opens
-  $: if (isOpen && fee) {
-    initializePricingData();
-  }
+  $effect(() => {
+    if (isOpen && fee) {
+      initializePricingData();
+    }
+  });
 
   function initializePricingData() {
     if (fee?.pricing) {
@@ -94,23 +98,23 @@
   }
 
   // Calculate totals reactively
-  $: totals = calculatePricingTotals(
+  const totals = $derived(calculatePricingTotals(
     cells,
     postContractItems,
     reimbursableCosts,
     config ?? DEFAULT_PRICING_CONFIG as any,
     stages,
-  );
+  ));
 
   // Build pricing breakdown for summary bar
-  $: pricingBreakdown = config ? {
+  const pricingBreakdown = $derived(config ? {
     config,
     disciplines,
     stages,
     cells,
     costs: reimbursableCosts,
     ...totals
-  } as PricingBreakdown : null;
+  } as PricingBreakdown : null);
 
   // Build pricing breakdown for saving
   function buildPricingBreakdown(): PricingBreakdown {

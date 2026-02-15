@@ -1,21 +1,23 @@
 <script lang="ts">
-  export let value = '';
-  export let label = '';
-  export let id = '';
-  export let required = false;
-  export let disabled = false;
-  export let error = '';
-  export let options: Array<{ value: string; label: string }> = [];
-  export let placeholder = 'Select an option';
-  export let className = '';
+  let { value = $bindable(''), label = '', id = '', required = false, disabled = false, error = '', options = [] as Array<{ value: string; label: string }>, placeholder = 'Select an option', className = '' }: {
+    value?: string;
+    label?: string;
+    id?: string;
+    required?: boolean;
+    disabled?: boolean;
+    error?: string;
+    options?: Array<{ value: string; label: string }>;
+    placeholder?: string;
+    className?: string;
+  } = $props();
 
   // Generate ID if not provided
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
 
   // Build class list using shared emittiv-select styles
-  $: selectClasses = ['emittiv-select', error ? 'emittiv-select--error' : '', className]
+  const selectClasses = $derived(['emittiv-select', error ? 'emittiv-select--error' : '', className]
     .filter(Boolean)
-    .join(' ');
+    .join(' '));
 </script>
 
 <div class="emittiv-form-field">

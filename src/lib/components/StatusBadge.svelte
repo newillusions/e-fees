@@ -1,6 +1,8 @@
 <script lang="ts">
-  export let status: string;
-  export let type: 'project' | 'proposal' | 'general' = 'general';
+  let { status, type = 'general' }: {
+    status: string;
+    type?: 'project' | 'proposal' | 'general';
+  } = $props();
   
   function getStatusClasses(status: string, type: string): string {
     const baseClasses = 'px-2 py-1 rounded-lg text-xs font-medium';

@@ -6,7 +6,9 @@
   import { push } from 'svelte-spa-router';
   import type { UnknownSurrealThing, Fee } from '../../../types';
 
-  export let isLoading = false;
+  let { isLoading = false }: {
+    isLoading?: boolean;
+  } = $props();
 
   // Helper functions
   function getProjectName(projectId: UnknownSurrealThing): string {
@@ -36,7 +38,7 @@
   }
 
   // Filter for pending proposals (Sent + Draft - not closed)
-  $: pendingProposals = $feesStore
+  const pendingProposals = $derived($feesStore
     .filter(fee => fee.status === 'Sent' || fee.status === 'Draft')
     .filter(fee => fee.time) // Filter out fees without time info
     .sort(
@@ -44,10 +46,10 @@
         new Date(b.time!.updated_at || b.time!.created_at).getTime() -
         new Date(a.time!.updated_at || a.time!.created_at).getTime()
     )
-    .slice(0, 8); // Show top 8 pending
+    .slice(0, 8)); // Show top 8 pending
 
   // Calculate total pending count
-  $: totalPendingCount = pendingProposals.length;
+  const totalPendingCount = $derived(pendingProposals.length);
 
   function handleProposalClick(fee: Fee) {
     const feeId = extractId(fee.id);

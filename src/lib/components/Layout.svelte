@@ -77,7 +77,7 @@
     '/dev': 'Dev Mode'
   };
 
-  $: pageTitle = pageTitles[$location] || 'Dashboard';
+  const pageTitle = $derived(pageTitles[$location] || 'Dashboard');
 </script>
 
 <svelte:window on:keydown={handleKeydown} />

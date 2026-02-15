@@ -17,7 +17,9 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
+  let { isOpen = false }: {
+    isOpen?: boolean;
+  } = $props();
 
   // Scan state
   let isScanning = false;
@@ -29,14 +31,16 @@
   let resolveError: string | null = null;
 
   // Get base path from settings
-  $: basePath = $settingsStore?.project_folder_path || '';
+  const basePath = $derived($settingsStore?.project_folder_path || '');
 
   // Reset state when modal opens
-  $: if (isOpen) {
-    scanResult = null;
-    scanError = null;
-    resolveError = null;
-  }
+  $effect(() => {
+    if (isOpen) {
+      scanResult = null;
+      scanError = null;
+      resolveError = null;
+    }
+  });
 
   async function startScan() {
     if (!basePath) {

@@ -10,7 +10,9 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: {
+    isOpen?: boolean;
+  } = $props();
 
   // Settings form data - initialize with defaults
   // This uses AppSettings (with surrealdb_pass) for the form, even though
@@ -40,30 +42,34 @@
   let testMessage = '';
 
   // Load settings when modal opens
-  $: if (isOpen) {
-    loadSettings();
-  }
+  $effect(() => {
+    if (isOpen) {
+      loadSettings();
+    }
+  });
 
   // Update form when store changes (store holds public settings without password)
-  $: if ($settingsStore) {
-    hasExistingPassword = $settingsStore.has_password;
-    settings = {
-      surrealdb_url: $settingsStore.surrealdb_url || '',
-      surrealdb_ns: $settingsStore.surrealdb_ns || '',
-      surrealdb_db: $settingsStore.surrealdb_db || '',
-      surrealdb_user: $settingsStore.surrealdb_user || '',
-      // Password is never returned from backend - start empty
-      // User can enter new password or leave empty to keep existing
-      surrealdb_pass: '',
-      staff_name: $settingsStore.staff_name || '',
-      staff_email: $settingsStore.staff_email || '',
-      staff_phone: $settingsStore.staff_phone || '',
-      staff_position: $settingsStore.staff_position || '',
-      project_folder_path: $settingsStore.project_folder_path || '',
-      dev_mode: $settingsStore.dev_mode || false
-    };
-    passwordChanged = false;
-  }
+  $effect(() => {
+    if ($settingsStore) {
+      hasExistingPassword = $settingsStore.has_password;
+      settings = {
+        surrealdb_url: $settingsStore.surrealdb_url || '',
+        surrealdb_ns: $settingsStore.surrealdb_ns || '',
+        surrealdb_db: $settingsStore.surrealdb_db || '',
+        surrealdb_user: $settingsStore.surrealdb_user || '',
+        // Password is never returned from backend - start empty
+        // User can enter new password or leave empty to keep existing
+        surrealdb_pass: '',
+        staff_name: $settingsStore.staff_name || '',
+        staff_email: $settingsStore.staff_email || '',
+        staff_phone: $settingsStore.staff_phone || '',
+        staff_position: $settingsStore.staff_position || '',
+        project_folder_path: $settingsStore.project_folder_path || '',
+        dev_mode: $settingsStore.dev_mode || false
+      };
+      passwordChanged = false;
+    }
+  });
 
   // Track when user modifies the password field
   function onPasswordInput() {

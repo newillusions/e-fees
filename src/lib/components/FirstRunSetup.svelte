@@ -6,7 +6,9 @@
 
   const dispatch = createEventDispatcher();
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: {
+    isOpen?: boolean;
+  } = $props();
 
   // Setup steps
   let currentStep = 1;

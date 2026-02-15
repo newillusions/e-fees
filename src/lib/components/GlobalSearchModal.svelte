@@ -18,7 +18,9 @@
   } from '$lib/utils/search';
   import type { Project, Company, Contact, Fee } from '../../types';
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: {
+    isOpen?: boolean;
+  } = $props();
 
   const dispatch = createEventDispatcher();
 
@@ -36,7 +38,6 @@
     route: string;
   }
 
-  let results: SearchResult[] = [];
   const MAX_RESULTS_PER_TYPE = 5;
 
   // Entity icons
@@ -179,10 +180,12 @@
   }
 
   // Reactive search
-  $: results = performSearch(searchQuery);
-  $: if (results.length > 0 && selectedIndex >= results.length) {
-    selectedIndex = 0;
-  }
+  const results = $derived(performSearch(searchQuery));
+  $effect(() => {
+    if (results.length > 0 && selectedIndex >= results.length) {
+      selectedIndex = 0;
+    }
+  });
 
   // Navigation
   function navigateToResult(result: SearchResult) {
@@ -228,9 +231,11 @@
   }
 
   // Focus input when modal opens
-  $: if (isOpen && inputElement) {
-    setTimeout(() => inputElement?.focus(), 50);
-  }
+  $effect(() => {
+    if (isOpen && inputElement) {
+      setTimeout(() => inputElement?.focus(), 50);
+    }
+  });
 
   // Handle backdrop click
   function handleBackdropClick(event: MouseEvent) {

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from './LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: { isOpen?: boolean } = $props();
 
   const dispatch = createEventDispatcher();
 
@@ -76,9 +76,11 @@
   }
 
   // Load when modal opens
-  $: if (isOpen) {
-    loadActivities(true);
-  }
+  $effect(() => {
+    if (isOpen) {
+      loadActivities(true);
+    }
+  });
 
   // Reload when filters change
   function handleFilterChange() {

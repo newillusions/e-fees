@@ -24,17 +24,19 @@
   const dispatch = createEventDispatcher();
 
   // Props - EntityType allows any entity object to be passed in
-  export let isOpen = false;
-  export let entity: EntityType | null = null;
-  export let mode: 'create' | 'edit' = 'create';
-  export let title: string;
-  export let fields: FormFieldConfig[];
-  export let validationRules: ValidationRule<FormDataType>[] = [];
-  export let onSave: (data: FormDataType) => Promise<void>;
-  export let onDelete: DeleteCallback | null = null;
-  export let maxWidth = '500px';
-  export let customClass = '';
-  export let zIndex = 100; // Base z-index, can be increased for nested modals
+  let { isOpen = $bindable(false), entity = null as EntityType | null, mode = 'create' as 'create' | 'edit', title, fields, validationRules = [] as ValidationRule<FormDataType>[], onSave, onDelete = null as DeleteCallback | null, maxWidth = '500px', customClass = '', zIndex = 100 }: {
+    isOpen?: boolean;
+    entity?: EntityType | null;
+    mode?: 'create' | 'edit';
+    title: string;
+    fields: FormFieldConfig[];
+    validationRules?: ValidationRule<FormDataType>[];
+    onSave: (data: FormDataType) => Promise<void>;
+    onDelete?: DeleteCallback | null;
+    maxWidth?: string;
+    customClass?: string;
+    zIndex?: number;
+  } = $props();
 
   // Operation state management
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -139,18 +141,17 @@
   }
 
   // Reactive statements
-  $: if (isOpen) {
-    if (mode === 'edit' && entity) {
-      loadEntityData();
+  $effect(() => {
+    if (isOpen) {
+      if (mode === 'edit' && entity) {
+        loadEntityData();
+      } else {
+        resetForm();
+      }
     } else {
       resetForm();
     }
-  }
-
-  // Clear form when modal closes
-  $: if (!isOpen) {
-    resetForm();
-  }
+  });
 </script>
 
 <BaseModal {isOpen} {title} {maxWidth} {customClass} {zIndex} on:close={closeModal}>

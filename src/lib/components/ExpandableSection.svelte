@@ -1,11 +1,13 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
 
-  export let title: string;
-  export let totalCount: number;
-  export let showAll: boolean = false;
-  export let items: unknown[] = [];
-  export let maxItems: number = 3;
+  let { title, totalCount, showAll = $bindable(false), items = [], maxItems = 3 }: {
+    title: string;
+    totalCount: number;
+    showAll?: boolean;
+    items?: unknown[];
+    maxItems?: number;
+  } = $props();
 
   function toggleExpanded() {
     showAll = !showAll;

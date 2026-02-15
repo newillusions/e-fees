@@ -1,7 +1,9 @@
 <script lang="ts">
-  export let rows = 3;
-  export let height = 'h-4';
-  export let width = 'w-full';
+  let { rows = 3, height = 'h-4', width = 'w-full' }: {
+    rows?: number;
+    height?: string;
+    width?: string;
+  } = $props();
 </script>
 
 <div class="animate-pulse space-y-3">

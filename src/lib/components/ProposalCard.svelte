@@ -7,11 +7,13 @@
   
   const dispatch = createEventDispatcher();
   
-  export let proposal: Fee;
-  export let clickable = true;
-  export let projectName: string = '';
-  export let companyName: string = '';
-  export let contactName: string = '';
+  let { proposal, clickable = true, projectName = '', companyName = '', contactName = '' }: {
+    proposal: Fee;
+    clickable?: boolean;
+    projectName?: string;
+    companyName?: string;
+    contactName?: string;
+  } = $props();
   
   function handleCardClick() {
     if (clickable) {

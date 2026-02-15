@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 
 export default defineConfig(async () => ({
-  plugins: [svelte()],
+  plugins: [tailwindcss(), svelte()],
   clearScreen: false,
   server: {
     port: 1420,

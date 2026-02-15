@@ -10,7 +10,9 @@
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import type { Fee } from '../types';
 
-  export let params: { id: string } = { id: '' };
+  let { params = { id: '' } }: {
+    params?: { id: string };
+  } = $props();
   
   // Track the previous page to return to the correct location
   let previousPage = '/proposals'; // Default fallback
@@ -25,10 +27,10 @@
   let selectedProposal: Fee | null = null;
 
   // Extract the proposal ID from params
-  $: proposalId = params.id;
+  let proposalId = $derived(params.id);
 
   // Find the proposal when the store updates or ID changes
-  $: {
+  $effect(() => {
     if ($feesStore.length > 0 && proposalId) {
       const foundProposal = findEntityById($feesStore, proposalId);
       if (foundProposal) {
@@ -41,7 +43,7 @@
         error = `Proposal with ID "${proposalId}" not found`;
       }
     }
-  }
+  });
 
   onMount(async () => {
     // Check if we came from the dashboard

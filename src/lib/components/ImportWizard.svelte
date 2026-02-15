@@ -6,7 +6,9 @@
   import type { ImportPreview, ImportResult } from '$lib/api/import';
   import { selectFolder } from '$lib/api';
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: {
+    isOpen?: boolean;
+  } = $props();
 
   const dispatch = createEventDispatcher();
 

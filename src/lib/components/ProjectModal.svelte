@@ -19,9 +19,11 @@
   
   const dispatch = createEventDispatcher();
   
-  export let isOpen = false;
-  export let project: Project | null = null;
-  export let mode: 'create' | 'edit' = 'create';
+  let { isOpen = $bindable(false), project = null as Project | null, mode = 'create' as 'create' | 'edit' }: {
+    isOpen?: boolean;
+    project?: Project | null;
+    mode?: 'create' | 'edit';
+  } = $props();
   
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
@@ -261,25 +263,27 @@
   }
   
   // Get related fees for impact analysis (uses utility for SurrealDB ID comparison)
-  $: relatedFees = project
+  const relatedFees = $derived(project
     ? $feesStore.filter(fee => fee.project_id && project?.id && compareSurrealIds(fee.project_id, project.id))
-    : [];
+    : []);
 
   // Load form data when project changes
-  $: if (project && mode === 'edit') {
-    // Store original project for comparison
-    originalProject = { ...project };
-    
-    formData = {
-      name: project.name || '',
-      name_short: project.name_short || '',
-      area: project.area || '',
-      city: project.city || '',
-      country: project.country || '',
-      folder: project.folder || '',
-      status: (project.status as ProjectStatus) || 'Draft'
-    };
-  }
+  $effect(() => {
+    if (project && mode === 'edit') {
+      // Store original project for comparison
+      originalProject = { ...project };
+
+      formData = {
+        name: project.name || '',
+        name_short: project.name_short || '',
+        area: project.area || '',
+        city: project.city || '',
+        country: project.country || '',
+        folder: project.folder || '',
+        status: (project.status as ProjectStatus) || 'Draft'
+      };
+    }
+  });
 </script>
 
 <BaseModal 

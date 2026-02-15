@@ -3,18 +3,16 @@
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
-  export let isOpen = false;
-  export let title = '';
-  export let maxWidth = '450px';
-  export let showCloseButton = true;
-  export let customClass = '';
-  export let zIndex = 100; // Base z-index, can be increased for nested modals
+  let { isOpen = $bindable(false), title = '', maxWidth = '450px', showCloseButton = true, customClass = '', zIndex = 100 }: {
+    isOpen?: boolean;
+    title?: string;
+    maxWidth?: string;
+    showCloseButton?: boolean;
+    customClass?: string;
+    zIndex?: number;
+  } = $props();
 
   const dispatch = createEventDispatcher();
-
-  // Debug logging
-  $: if (import.meta.env.DEV) {
-  }
 
   function closeModal() {
     dispatch('close');

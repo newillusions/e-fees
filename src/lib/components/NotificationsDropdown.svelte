@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
-  export let isOpen = false;
+  let { isOpen = $bindable(false) }: {
+    isOpen?: boolean;
+  } = $props();
 
   // Close dropdown when clicking outside
   function handleClickOutside(event: MouseEvent) {

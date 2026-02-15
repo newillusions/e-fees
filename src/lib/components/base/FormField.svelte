@@ -13,12 +13,14 @@
 
   const dispatch = createEventDispatcher<{ fieldChange: FieldChangeEvent }>();
 
-  export let field: FormFieldConfig;
-  export let formData: any = {};
-  export let error: string = '';
+  let { field, formData = $bindable({}), error = '' }: {
+    field: FormFieldConfig;
+    formData?: any;
+    error?: string;
+  } = $props();
 
   // Get/set value from formData
-  $: value = formData[field.name] || '';
+  const value = $derived(formData[field.name] || '');
 
   function setValue(newValue: any) {
     formData[field.name] = newValue;
@@ -61,9 +63,11 @@
   }
 
   // Reactive statements
-  $: if (field.type === 'typeahead' && value && typeof value === 'string') {
-    searchText = value;
-  }
+  $effect(() => {
+    if (field.type === 'typeahead' && value && typeof value === 'string') {
+      searchText = value;
+    }
+  });
 </script>
 
 {#if field.type === 'group'}
