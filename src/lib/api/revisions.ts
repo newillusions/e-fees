@@ -44,15 +44,16 @@ export async function getFeesForProject(projectId: string): Promise<Fee[]> {
  * Export a fee proposal as a pricing template Excel file
  *
  * @param feeId - ID of the fee to export (extracted string ID)
+ * @param outputPath - Optional file path from save dialog. Falls back to temp dir if omitted.
  * @returns Promise resolving to file path where template was exported
  * @throws Error if export fails
  *
  * @example
- * const path = await exportFeeTemplate('abc123')
+ * const path = await exportFeeTemplate('abc123', '/Users/me/Desktop/Pricing.xlsx')
  */
-export async function exportFeeTemplate(feeId: string): Promise<string> {
+export async function exportFeeTemplate(feeId: string, outputPath?: string): Promise<string> {
   try {
-    return await invoke<string>('export_fee_template', { feeId });
+    return await invoke<string>('export_fee_template', { feeId, outputPath });
   } catch (error) {
     logApiError('exportFeeTemplate', error as Error, { component: 'ExportApi' });
     throw error;

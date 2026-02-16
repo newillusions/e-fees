@@ -59,7 +59,7 @@
   >
     <!-- Modal -->
     <div 
-      class="bg-emittiv-darker rounded-lg shadow-2xl border border-emittiv-dark max-w-xs w-full mx-4"
+      class="bg-emittiv-darker rounded-lg shadow-2xl border border-emittiv-dark max-w-sm w-full mx-4"
       on:click|stopPropagation
       on:keydown|stopPropagation
       role="dialog"
@@ -80,7 +80,7 @@
       
       <!-- Body -->
       <div class="px-4 py-3">
-        <p class="text-sm text-emittiv-lighter whitespace-pre-line">
+        <p class="text-sm text-emittiv-lighter whitespace-pre-line" style="overflow-wrap: break-word; word-break: break-word;">
           {message}
         </p>
       </div>

@@ -262,14 +262,21 @@ pub struct Stage {
 }
 
 /// Pricing configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PricingConfig {
+    #[serde(default)]
     pub target_fee: f64,
+    #[serde(default)]
     pub buffer_percent: f64,
+    #[serde(default)]
     pub quoted_fee: f64,
+    #[serde(default)]
     pub currency: String,
+    #[serde(default)]
     pub vat_percent: f64,
+    #[serde(default)]
     pub vat_included: bool,
+    #[serde(default)]
     pub mobilisation_percent: f64,
 }
 
@@ -345,18 +352,29 @@ pub struct PaymentSchedule {
 }
 
 /// Complete pricing breakdown.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PricingBreakdown {
+    #[serde(default)]
     pub config: PricingConfig,
+    #[serde(default)]
     pub disciplines: Vec<Discipline>,
+    #[serde(default)]
     pub stages: Vec<Stage>,
+    #[serde(default)]
     pub cells: Vec<PricingCell>,
+    #[serde(default)]
     pub costs: Vec<ReimbursableCost>,
+    #[serde(default)]
     pub design_phase_total: f64,
+    #[serde(default)]
     pub post_contract_total: f64,
+    #[serde(default)]
     pub costs_total: f64,
+    #[serde(default)]
     pub subtotal: f64,
+    #[serde(default)]
     pub vat_amount: f64,
+    #[serde(default)]
     pub grand_total: f64,
 }
 

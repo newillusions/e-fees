@@ -1,6 +1,6 @@
 //! Excel export Tauri commands.
 
-use tauri::{State, AppHandle, Manager};
+use tauri::State;
 use log::{info, error};
 use std::path::PathBuf;
 
@@ -9,11 +9,12 @@ use crate::excel_export::{generate_fee_excel, generate_fee_template};
 
 /// Export a fee proposal to a formatted .xlsx file.
 ///
-/// Fetches the fee from the database, generates the Excel file in the system
-/// temp directory, and returns the file path.
+/// If `output_path` is provided (from a save dialog), writes there.
+/// Otherwise falls back to the system temp directory.
 #[tauri::command]
 pub async fn export_fee_excel(
     id: String,
+    output_path: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     info!("export_fee_excel called for id: {}", id);
@@ -29,12 +30,16 @@ pub async fn export_fee_excel(
 
     let fee = fee.ok_or_else(|| "Fee not found".to_string())?;
 
-    // Build output filename: fee-{number}-rev{rev}.xlsx
-    let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
-    let filename = format!("fee-{}-rev{}.xlsx", safe_number, fee.rev);
-    let output_path = std::env::temp_dir().join(&filename);
+    let resolved_path = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+            let filename = format!("fee-{}-rev{}.xlsx", safe_number, fee.rev);
+            std::env::temp_dir().join(&filename)
+        }
+    };
 
-    let path = generate_fee_excel(&fee, &output_path)?;
+    let path = generate_fee_excel(&fee, &resolved_path)?;
 
     info!("Excel export saved to: {}", path);
     Ok(path)
@@ -44,13 +49,16 @@ pub async fn export_fee_excel(
 ///
 /// Generates a working spreadsheet with discipline × stage matrix and formulas,
 /// matching the format used in project folders (`*-FP-NN Pricing.xlsx`).
+///
+/// If `output_path` is provided (from a save dialog), writes there.
+/// Otherwise falls back to the system temp directory.
 #[tauri::command]
 pub async fn export_fee_template(
     fee_id: String,
+    output_path: Option<String>,
     state: State<'_, AppState>,
-    app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("export_fee_template called for id: {}", fee_id);
+    info!("export_fee_template called for id: {}, output_path: {:?}", fee_id, output_path);
 
     let record_id = fee_id.strip_prefix("fee:").unwrap_or(&fee_id).to_string();
 
@@ -67,12 +75,16 @@ pub async fn export_fee_template(
         .map(|p| p.stages.iter().filter(|s| !s.is_post_contract).count())
         .unwrap_or(3);
 
-    // Build output filename: {number}-FP-{rev:02} Pricing.xlsx
-    let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
-    let filename = format!("{}-FP-{:02} Pricing.xlsx", safe_number, fee.rev);
-    let output_path = std::env::temp_dir().join(&filename);
+    let resolved_path = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+            let filename = format!("{}-{:02} Pricing.xlsx", safe_number, fee.rev);
+            std::env::temp_dir().join(&filename)
+        }
+    };
 
-    let path = generate_fee_template(&fee, &output_path, stage_count)?;
+    let path = generate_fee_template(&fee, &resolved_path, stage_count)?;
 
     info!("Template export saved to: {}", path);
     Ok(path)

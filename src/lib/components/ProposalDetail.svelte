@@ -6,6 +6,7 @@
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { copyProjectTemplate, writeFeeToJson, writeFeeToJsonSafe, checkProjectFolderExists, checkVarJsonExists, checkVarJsonTemplateExists, renameVarJsonWithOldSuffix } from '$lib/api';
   import { cloneFeeRevision, getFeesForProject, exportFeeTemplate } from '$lib/api/revisions';
+  import { save } from '@tauri-apps/plugin-dialog';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
@@ -338,11 +339,22 @@
     if (!proposal) return;
     try {
       const feeId = extractId(proposal.id);
-      const path = await exportFeeTemplate(feeId);
+      const safeNumber = proposal.number.replace(/[\/\\:*?"<>|]/g, '-');
+      const defaultName = `${safeNumber}-${String(proposal.rev).padStart(2, '0')} Pricing.xlsx`;
+
+      const savePath = await save({
+        defaultPath: defaultName,
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+      });
+
+      if (!savePath) return; // User cancelled
+
+      const path = await exportFeeTemplate(feeId, savePath);
+      const filename = path.split('/').pop() || path.split('\\').pop() || path;
       warningModal = {
         isOpen: true,
         title: 'Export Successful',
-        message: `Pricing template exported to:\n\n${path}`,
+        message: `Pricing template exported:\n\n${filename}`,
         confirmText: 'OK',
         cancelText: '',
         onConfirm: null,
@@ -381,9 +393,9 @@
     {
       handler: handleExportTemplate,
       label: 'Export Pricing Template',
-      tooltip: 'Export pricing as working Excel template to temp folder',
+      tooltip: proposal?.pricing ? 'Export pricing as working Excel template' : 'No pricing data — configure pricing first',
       icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-      disabled: !proposal
+      disabled: !proposal || !proposal.pricing
     },
     {
       handler: handleNewRevision,
