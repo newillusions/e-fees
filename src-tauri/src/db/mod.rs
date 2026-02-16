@@ -340,6 +340,11 @@ impl DatabaseManager {
     {
         let client = self.get_client()?;
 
+        // SEC-C1: Validate ID to prevent injection (table is always hardcoded internally)
+        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+            return Err(self.invalid_request_error("Invalid record ID format"));
+        }
+
         info!("Fetching {} by ID: {}", table, id);
         let query = format!("SELECT * FROM {}:{}", table, id);
         let mut response = client.query(&query).await?;

@@ -158,10 +158,18 @@
     }))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
 
+  // PERF-C2: O(1) lookup maps instead of O(n) .find() calls
+  const projectOptionsMap = $derived(new Map(allProjectOptions.map(p => [p.id, p])));
+  const companyOptionsMap = $derived(new Map(allCompanyOptions.map(c => [c.id, c])));
+  const contactOptionsMap = $derived(new Map(allContactOptions.map(c => [c.id, c])));
+  const projectStoreMap = $derived(new Map($projectsStore.map(p => [extractId(p.id), p])));
+  // Set of project IDs that already have fee proposals
+  const projectsWithFees = $derived(new Set($feesStore.map(fee => extractId(fee.project_id))));
+
   // Filtered options based on selections
   const filteredCompanyOptions = $derived(formData.contact_id
     ? allCompanyOptions.filter(company => {
-        const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
+        const selectedContact = contactOptionsMap.get(formData.contact_id);
         return selectedContact ? company.id === selectedContact.company : true;
       })
     : allCompanyOptions);
@@ -174,17 +182,17 @@
   // Project search handler with fuzzy search
   function handleProjectSearch(searchText: string) {
     if (!searchText || searchText.length < 1) {
-      projectOptions = allProjectOptions.filter(project => 
+      projectOptions = allProjectOptions.filter(project =>
         // Don't show projects that already have an RFP
-        !$feesStore.some(fee => extractId(fee.project_id) === project.id)
+        !projectsWithFees.has(project.id)
       ).slice(0, 10);
       return;
     }
-    
+
     const search = searchText.toLowerCase();
     projectOptions = allProjectOptions.filter(project => {
       // Don't show projects that already have an RFP
-      if ($feesStore.some(fee => extractId(fee.project_id) === project.id)) {
+      if (projectsWithFees.has(project.id)) {
         return false;
       }
       
@@ -244,7 +252,7 @@
   // Auto-generate proposal number
   function generateProposalNumber() {
     if (!formData.number && formData.project_id) {
-      const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
+      const project = projectStoreMap.get(formData.project_id);
       if (project?.number?.id) {
         formData.number = `${project.number.id}-FP-${formData.rev}`;
       }
@@ -506,7 +514,7 @@
           const projectStatus = getProjectStatusFromProposalStatus(formData.status);
           
           // Get the current project data from the store and update only the status
-          const currentProject = $projectsStore.find(p => extractId(p.id) === projectId);
+          const currentProject = projectStoreMap.get(projectId);
           if (currentProject) {
             const fullUpdateData = {
               name: currentProject.name,
@@ -658,12 +666,12 @@
     
     // Only auto-select company if form is initialized and not loading existing data
     if (formInitialized && mode === 'create') {
-      const selectedContact = allContactOptions.find(c => c.id === event.detail.id);
+      const selectedContact = contactOptionsMap.get(event.detail.id);
       if (selectedContact && selectedContact.company) {
         const contactCompanyId = selectedContact.company;
         if (contactCompanyId && contactCompanyId !== formData.company_id) {
           formData.company_id = contactCompanyId;
-          const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+          const company = companyOptionsMap.get(contactCompanyId);
           if (company) {
             companySearchText = company.name;
           }
@@ -769,7 +777,7 @@
           const contactCompanyId = extractSurrealId(latestContact.company) || '';
           if (contactCompanyId) {
             formData.company_id = contactCompanyId;
-            const company = allCompanyOptions.find(c => c.id === contactCompanyId);
+            const company = companyOptionsMap.get(contactCompanyId);
             if (company) {
               companySearchText = company.name;
             }
@@ -846,17 +854,17 @@
     };
     
     // Set search texts for selected items
-    const selectedProject = allProjectOptions.find(p => p.id === formData.project_id);
+    const selectedProject = projectOptionsMap.get(formData.project_id);
     if (selectedProject) {
       projectSearchText = `${selectedProject.number} - ${selectedProject.name}`;
     }
-    
-    const selectedCompany = allCompanyOptions.find(c => c.id === formData.company_id);
+
+    const selectedCompany = companyOptionsMap.get(formData.company_id);
     if (selectedCompany) {
       companySearchText = selectedCompany.name;
     }
-    
-    const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
+
+    const selectedContact = contactOptionsMap.get(formData.contact_id);
     if (selectedContact) {
       contactSearchText = selectedContact.full_name || '';
     }
@@ -897,7 +905,7 @@
   // Regenerate proposal number when revision changes
   $effect(() => {
     if (formData.project_id && formData.rev && mode === 'create') {
-      const project = $projectsStore.find(p => extractId(p.id) === formData.project_id);
+      const project = projectStoreMap.get(formData.project_id);
       if (project?.number?.id) {
         formData.number = `${project.number.id}-FP-${formData.rev}`;
       }
