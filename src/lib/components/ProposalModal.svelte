@@ -4,6 +4,7 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import type { ProjectStatus } from '../../types';
   import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
   import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
@@ -227,7 +228,7 @@
   // Filtered contact options for search (use filtered options as base)
   const contactOptions = $derived(filteredContactOptions.filter(contact =>
     !contactSearchText ||
-    contact.full_name.toLowerCase().includes(contactSearchText.toLowerCase())
+    (contact.full_name || '').toLowerCase().includes(contactSearchText.toLowerCase())
   ).slice(0, 20));
   
   
@@ -267,7 +268,6 @@
   }
   
   // Get the mapped project status for a proposal status
-  type ProjectStatus = 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'active';
   function getProjectStatusFromProposalStatus(proposalStatus: string): ProjectStatus {
     const proposalToProjectMapping: Record<string, ProjectStatus> = {
       'Draft': 'Draft',
@@ -762,7 +762,7 @@
       if (latestContact) {
         const contactId = extractId(latestContact.id);
         formData.contact_id = contactId;
-        contactSearchText = latestContact.full_name;
+        contactSearchText = latestContact.full_name || '';
 
         // Auto-select the contact's company if we don't have one selected
         if (latestContact.company && !formData.company_id) {
@@ -858,9 +858,9 @@
     
     const selectedContact = allContactOptions.find(c => c.id === formData.contact_id);
     if (selectedContact) {
-      contactSearchText = selectedContact.full_name;
+      contactSearchText = selectedContact.full_name || '';
     }
-    
+
     // Clear any existing validation errors when loading edit data
     formErrors = {};
   }

@@ -29,9 +29,11 @@ describe('Tauri Commands Integration', () => {
       country: 'United Arab Emirates',
       city: 'Dubai',
       client_company: 'Emittiv Engineering',
-      status: 'active' as const,
-      created_at: '2025-08-21T09:00:00Z',
-      updated_at: '2025-08-21T09:00:00Z'
+      status: 'Active',
+      time: {
+        created_at: '2025-08-21T09:00:00Z',
+        updated_at: '2025-08-21T09:00:00Z'
+      }
     };
 
     it('should get all projects', async () => {
@@ -51,7 +53,7 @@ describe('Tauri Commands Integration', () => {
         country: 'United Arab Emirates',
         city: 'Abu Dhabi',
         client_company: 'Test Company',
-        status: 'active' as const
+        status: 'Active' as const
       };
 
       const expectedProjectWithId = {
@@ -104,7 +106,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test',
-        status: 'active' as const
+        status: 'Active' as const
       })).rejects.toThrow('Project number already exists');
       expect(invoke).toHaveBeenCalledWith('create_project', expect.any(Object));
     });
@@ -535,7 +537,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test Company',
-        status: 'active' as const
+        status: 'Active' as const
       })).rejects.toThrow('Database connection lost');
     });
 
@@ -571,7 +573,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test Company',
-        status: 'active' as const,
+        status: 'Active' as const,
         created_at: '2025-08-21T09:00:00Z',
         updated_at: '2025-08-21T09:00:00Z'
       };

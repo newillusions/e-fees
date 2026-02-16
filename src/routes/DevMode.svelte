@@ -236,7 +236,7 @@
           {stages}
           {cells}
           {config}
-          grandTotal={totals.grand_total}
+          designTotal={totals.grand_total}
           onUpdate={handlePaymentScheduleUpdate}
         />
       {/if}

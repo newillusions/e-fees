@@ -33,7 +33,7 @@ export const contactFormFields: FormFieldConfig[] = [
         type: 'computed',
         name: 'full_name',
         label: 'Full Name (Auto-generated)',
-        computeFn: (formData: any) => {
+        computeFn: (formData: Record<string, unknown>) => {
           const firstName = formData.first_name || '';
           const lastName = formData.last_name || '';
           return `${firstName} ${lastName}`.trim();

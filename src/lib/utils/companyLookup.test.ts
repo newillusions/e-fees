@@ -15,8 +15,8 @@ import {
 } from './companyLookup';
 import type { Company } from '../../types';
 
-// Test company data
-const mockCompanies: Company[] = [
+// Test company data — id values use SurrealDB Thing objects to match real DB responses
+const mockCompanies = [
   {
     id: { tb: 'company', id: 'PTG' },
     name: 'P&T Group',
@@ -49,7 +49,7 @@ const mockCompanies: Company[] = [
     city: 'Dubai',
     country: 'UAE'
   }
-];
+] as unknown as Company[];
 
 describe('Company Lookup Utilities', () => {
   let lookup: CompanyLookup;
@@ -111,14 +111,14 @@ describe('Company Lookup Utilities', () => {
 
     it('should fall back to full name when short name missing', () => {
       // Create company without name_short
-      const companiesNoShort: Company[] = [{
+      const companiesNoShort = [{
         id: { tb: 'company', id: 'TEST' },
         name: 'Test Company Full Name',
         abbreviation: 'TEST',
         city: 'Test City',
         country: 'Test Country'
       }];
-      const testLookup = createCompanyLookup(companiesNoShort);
+      const testLookup = createCompanyLookup(companiesNoShort as unknown as Company[]);
       const shortName = testLookup.getCompanyShortName({ tb: 'company', id: 'TEST' });
       expect(shortName).toBe('Test Company Full Name');
     });
@@ -136,14 +136,14 @@ describe('Company Lookup Utilities', () => {
     });
 
     it('should return "N/A" for company without country', () => {
-      const companiesNoCountry: Partial<Company>[] = [{
+      const companiesNoCountry = [{
         id: { tb: 'company', id: 'NOCOUNTRY' },
         name: 'No Country Company',
         abbreviation: 'NC',
         city: 'Some City'
         // country intentionally omitted to test fallback
       }];
-      const testLookup = createCompanyLookup(companiesNoCountry as Company[]);
+      const testLookup = createCompanyLookup(companiesNoCountry as unknown as Company[]);
       const country = testLookup.getCompanyCountry({ tb: 'company', id: 'NOCOUNTRY' });
       expect(country).toBe('N/A');
     });
@@ -168,14 +168,14 @@ describe('Company Lookup Utilities', () => {
     });
 
     it('should return "N/A" for company without abbreviation', () => {
-      const companiesNoAbbr: Partial<Company>[] = [{
+      const companiesNoAbbr = [{
         id: { tb: 'company', id: 'NOABBR' },
         name: 'No Abbreviation Company',
         city: 'Some City',
         country: 'Some Country'
         // abbreviation intentionally omitted to test fallback
       }];
-      const testLookup = createCompanyLookup(companiesNoAbbr as Company[]);
+      const testLookup = createCompanyLookup(companiesNoAbbr as unknown as Company[]);
       const abbr = testLookup.getCompanyAbbreviation({ tb: 'company', id: 'NOABBR' });
       expect(abbr).toBe('N/A');
     });
@@ -220,13 +220,13 @@ describe('Company Lookup Utilities', () => {
     });
 
     it('should handle company with partial fields', () => {
-      const partialCompanies: Partial<Company>[] = [{
+      const partialCompanies = [{
         id: { tb: 'company', id: 'PARTIAL' },
         name: 'Only Name Company',
         city: 'City',
         country: 'Country'
       }];
-      const testLookup = createCompanyLookup(partialCompanies as Company[]);
+      const testLookup = createCompanyLookup(partialCompanies as unknown as Company[]);
       const searchText = testLookup.getCompanySearchText({ tb: 'company', id: 'PARTIAL' });
       expect(searchText).toBe('Only Name Company');
     });

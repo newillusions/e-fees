@@ -15,21 +15,21 @@
 
   let { field, formData = $bindable({}), error = '' }: {
     field: FormFieldConfig;
-    formData?: any;
+    formData?: Record<string, unknown>;
     error?: string;
   } = $props();
 
-  // Get/set value from formData
-  const value = $derived(formData[field.name] || '');
+  // Get/set value from formData (cast to string for form elements)
+  const value = $derived((formData[field.name] as string) || '');
 
-  function setValue(newValue: any) {
+  function setValue(newValue: unknown) {
     formData[field.name] = newValue;
     handleValueChange();
   }
 
   // Internal state for typeahead fields
   let searchText = $state('');
-  let options: Array<{ id: string; name: string; [key: string]: any }> = $state([]);
+  let options: Array<{ id: string; name: string; [key: string]: unknown }> = $state([]);
 
   // Handle value changes
   function handleValueChange() {

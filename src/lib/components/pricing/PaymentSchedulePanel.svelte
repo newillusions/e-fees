@@ -26,14 +26,14 @@
     readonly = false
   }: Props = $props();
 
+  // Design stages for milestone generation
+  const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
+
   // Compute design total from cells + stages (same logic as generateFromPricing)
   // This is more reliable than the prop which depends on Svelte 4 $: reactivity
   const designTotal = $derived(
     designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0)
   );
-
-  // Design stages for milestone generation
-  const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
 
   // Calculate rounded stage total from cells (same logic as PricingCalculatorPanel)
   function getRoundedStageTotal(stageId: string): number {

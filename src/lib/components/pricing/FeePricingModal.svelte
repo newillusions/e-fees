@@ -102,7 +102,7 @@
     cells,
     postContractItems,
     reimbursableCosts,
-    config ?? DEFAULT_PRICING_CONFIG as any,
+    config ?? DEFAULT_PRICING_CONFIG,
     stages,
   ));
 

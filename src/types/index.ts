@@ -35,131 +35,32 @@ export type UnknownSurrealThing = {
   String?: string;
 } | string | null | undefined;
 
-export interface Project {
-  id?: string | SurrealThing;
-  name: string;
-  name_short?: string;
-  status: 'Draft' | 'RFP' | 'Active' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'active';
-  area?: string;
-  city: string;
-  country: string;
-  folder?: string;
-  // Support both new and legacy field names
-  project_number?: string;
-  client_company?: string;
-  created_at?: string;
-  updated_at?: string;
-  number?: {
-    year: number;
-    country: number;
-    seq: number;
-    id: string;
-  };
-  time?: {
-    created_at: string;
-    updated_at: string;
-  };
-}
+// Import types needed within this file
+import type { Project } from './database';
 
-// Create types for API operations
-export type ProjectCreate = Omit<Project, 'id' | 'time' | 'number'>;
-export type ProjectUpdate = Partial<ProjectCreate>;
-
-export interface Company {
-  id?: string | SurrealThing;
-  name: string;
-  name_short?: string;
-  abbreviation?: string;
-  city: string;
-  country: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  reg_no?: string;
-  tax_no?: string;
-  time?: {
-    created_at: string;
-    updated_at: string;
-  };
-}
-
-// Create types for API operations
-export type CompanyCreate = Omit<Company, 'id' | 'time'>;
-export type CompanyUpdate = Partial<CompanyCreate>;
-
-export interface Contact {
-  id?: string | SurrealThing;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  position: string;
-  company: string | SurrealThing;
-  time?: {
-    created_at: string;
-    updated_at: string;
-  };
-}
-
-// Create types for API operations
-export type ContactCreate = Omit<Contact, 'id' | 'time' | 'full_name'>;
-export type ContactUpdate = Partial<ContactCreate>;
-
-// Import pricing types from database.ts
-import type {
-  PricingBreakdown,
-  PostContractItem,
-  ReimbursableCost,
-  PaymentSchedule,
-  PricingRevision
+// Re-export all entity types from database.ts (single source of truth)
+export type {
+  Project,
+  Company,
+  Contact,
+  Fee,
+  Revision,
+  ProjectStatus,
+  ProjectActivity,
+  ProjectStage,
+  FeeStatus,
+  FeeStage,
+  TimeInfo,
+  ProjectNumber,
+  ProjectCreate,
+  ProjectUpdate,
+  CompanyCreate,
+  CompanyUpdate,
+  ContactCreate,
+  ContactUpdate,
+  FeeCreate,
+  FeeUpdate,
 } from './database';
-
-export interface Fee {
-  id?: string | SurrealThing;
-  name: string;
-  number: string;
-  rev?: number;
-  status: 'Draft' | 'Sent' | 'Negotiation' | 'Awarded' | 'Completed' | 'Lost' | 'Cancelled' | 'On Hold' | 'Revised' | 'Active';
-  stage?: 'Draft' | 'Prepared' | 'Sent' | 'Under Review' | 'Clarification' | 'Negotiation' | 'Awarded' | 'Lost';
-  issue_date: string;
-  activity?: string;
-  package?: string;
-  project_id: string | SurrealThing;
-  company_id: string | SurrealThing;
-  contact_id: string | SurrealThing;
-  staff_name?: string;
-  staff_email?: string;
-  staff_phone?: string;
-  staff_position?: string;
-  strap_line?: string;
-  revisions: Revision[];
-  time?: {
-    created_at: string;
-    updated_at: string;
-  };
-  // Pricing fields (optional for backward compatibility)
-  pricing?: PricingBreakdown;
-  post_contract_items?: PostContractItem[];
-  reimbursable_costs?: ReimbursableCost[];
-  payment_schedule?: PaymentSchedule;
-  pricing_revisions?: PricingRevision[];
-  current_revision_number?: number;
-  current_release_number?: number;
-}
-
-// Create types for API operations
-export type FeeCreate = Omit<Fee, 'id' | 'time'>;
-export type FeeUpdate = Partial<FeeCreate>;
-
-export interface Revision {
-  revision_number: number;
-  revision_date: string;
-  author_email: string;
-  author_name: string;
-  notes: string;
-}
 
 
 // ============================================================================

@@ -11,7 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { searchCountries, getCitySuggestions } from '$lib/api';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Company } from '../../types';
+  import type { Company, CompanyCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   const dispatch = createEventDispatcher();
@@ -125,7 +125,7 @@
   ];
 
   // Save handler
-  async function handleSave(formData: any) {
+  async function handleSave(formData: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
 
     if (mode === 'create') {
@@ -136,7 +136,7 @@
           updated_at: timestamp
         }
       };
-      await companiesActions.create(companyData);
+      await companiesActions.create(companyData as unknown as CompanyCreate);
     } else if (company) {
       const companyId = getEntityId(company);
       if (!companyId) {
@@ -150,7 +150,7 @@
           updated_at: timestamp
         }
       };
-      await companiesActions.update(companyId, companyData);
+      await companiesActions.update(companyId, companyData as Partial<Company>);
     }
   }
 

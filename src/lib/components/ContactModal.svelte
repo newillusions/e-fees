@@ -11,7 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { get } from 'svelte/store';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Contact } from '../../types';
+  import type { Contact, ContactCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   const dispatch = createEventDispatcher();
@@ -90,7 +90,7 @@
           type: 'computed',
           name: 'full_name_display',
           label: 'Full Name (Auto-generated)',
-          computeFn: (formData: any) => {
+          computeFn: (formData: Record<string, unknown>) => {
             const firstName = formData.first_name || '';
             const lastName = formData.last_name || '';
             return `${firstName} ${lastName}`.trim();
@@ -135,7 +135,7 @@
   ];
 
   // Save handler
-  async function handleSave(formData: any) {
+  async function handleSave(formData: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
     const fullName = `${formData.first_name} ${formData.last_name}`.trim();
 
@@ -148,7 +148,7 @@
           updated_at: timestamp
         }
       };
-      await contactsActions.create(contactData);
+      await contactsActions.create(contactData as unknown as ContactCreate);
     } else if (contact) {
       const contactId = getEntityId(contact);
       if (!contactId) {
@@ -156,13 +156,13 @@
       }
 
       const contactData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        first_name: formData.first_name as string,
+        last_name: formData.last_name as string,
         full_name: fullName,
-        email: formData.email,
-        phone: formData.phone,
-        position: formData.position,
-        company: formData.company
+        email: formData.email as string,
+        phone: formData.phone as string,
+        position: formData.position as string,
+        company: formData.company as string
       };
       await contactsActions.update(String(contactId), contactData);
     }

@@ -10,12 +10,15 @@ export type ProjectActivity =
   | 'Research'
   | 'Other';
 
-export type ProjectStatus = 
+export type ProjectStatus =
   | 'Draft'
   | 'RFP'
   | 'Active'
+  | 'Awarded'
+  | 'Revised'
   | 'On Hold'
   | 'Completed'
+  | 'Lost'
   | 'Cancelled';
 
 export type ProjectStage = 
@@ -26,11 +29,15 @@ export type ProjectStage =
   | 'Construction'
   | 'Handover';
 
-export type FeeStatus = 
+export type FeeStatus =
   | 'Draft'
   | 'Active'
   | 'Sent'
+  | 'Negotiation'
   | 'Awarded'
+  | 'Revised'
+  | 'Completed'
+  | 'On Hold'
   | 'Lost'
   | 'Cancelled';
 
@@ -69,13 +76,15 @@ export interface Revision {
 export interface Project {
   id?: string; // projects:YY_CCCNN
   name: string;
-  name_short: string;
+  name_short?: string;
   status: ProjectStatus;
-  area: string;
+  area?: string;
   city: string;
   country: string;
-  folder: string;
-  number: ProjectNumber;
+  folder?: string;
+  number?: ProjectNumber;
+  project_number?: string;
+  client_company?: string;
   time?: TimeInfo;
 }
 
@@ -87,7 +96,7 @@ export interface Fee {
   company_id: string; // record<company>
   contact_id: string; // record<contacts>
   status: FeeStatus;
-  stage: FeeStage;
+  stage?: FeeStage;
   issue_date: string; // YYMMDD format
   activity?: string;
   package?: string;
@@ -123,10 +132,14 @@ export interface Fee {
 export interface Company {
   id?: string; // company:ABBREVIATION
   name: string;
-  name_short: string;
-  abbreviation: string;
+  name_short?: string;
+  abbreviation?: string;
   city: string;
   country: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
   reg_no?: string;
   tax_no?: string;
   time?: TimeInfo;
@@ -343,7 +356,7 @@ export const DEFAULT_COST_MARKUP_PERCENT = 15;
 export type ProjectCreate = Omit<Project, 'id' | 'time'>;
 export type ProjectUpdate = Partial<ProjectCreate>;
 
-export type FeeCreate = Omit<Fee, 'id' | 'time' | 'rev'>;
+export type FeeCreate = Omit<Fee, 'id' | 'time'>;
 export type FeeUpdate = Partial<FeeCreate>;
 
 export type CompanyCreate = Omit<Company, 'id' | 'time'>;
@@ -520,7 +533,7 @@ export function calculatePricingTotals(
   cells: PricingCell[],
   postContractItems: PostContractItem[],
   costs: ReimbursableCost[],
-  config: PricingConfig,
+  config: Omit<PricingConfig, 'target_fee' | 'quoted_fee'>,
   stages?: Stage[]
 ): {
   design_phase_total: number;

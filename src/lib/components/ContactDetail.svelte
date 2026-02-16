@@ -58,7 +58,7 @@
 
   // Generate initials for avatar
   const initials = $derived(contact
-    ? contact.full_name
+    ? (contact.full_name || '')
         .split(' ')
         .map(n => n[0])
         .join('')
@@ -71,7 +71,7 @@
   <svelte:fragment slot="header">
     {#if contact}
       <DetailHeader
-        name={contact.full_name}
+        name={contact.full_name || ''}
         subtitle="{contact.position || 'Contact'}{relatedCompany
           ? ` • ${relatedCompany.name}`
           : ''}"

@@ -72,18 +72,9 @@ export async function createFee(fee: FeeCreate): Promise<Fee> {
       issue_date: fee.issue_date,
       activity: fee.activity,
       package: fee.package,
-      project_id:
-        typeof fee.project_id === 'string'
-          ? fee.project_id.replace('projects:', '')
-          : fee.project_id?.toString() || '',
-      company_id:
-        typeof fee.company_id === 'string'
-          ? fee.company_id.replace('company:', '')
-          : fee.company_id?.toString() || '',
-      contact_id:
-        typeof fee.contact_id === 'string'
-          ? fee.contact_id.replace('contacts:', '')
-          : fee.contact_id?.toString() || '',
+      project_id: (fee.project_id || '').replace('projects:', ''),
+      company_id: (fee.company_id || '').replace('company:', ''),
+      contact_id: (fee.contact_id || '').replace('contacts:', ''),
       staff_name: fee.staff_name,
       staff_email: fee.staff_email,
       staff_phone: fee.staff_phone,

@@ -69,8 +69,8 @@
     try {
       preview = await importScanDirectory(directory);
       step = 'preview';
-    } catch (err: any) {
-      error = typeof err === 'string' ? err : err?.message || 'Failed to scan directory';
+    } catch (err: unknown) {
+      error = typeof err === 'string' ? err : (err as Error)?.message || 'Failed to scan directory';
     } finally {
       scanLoading = false;
     }
@@ -85,8 +85,8 @@
     try {
       result = await importExecute(directory, importProposals, importCompanies);
       step = 'result';
-    } catch (err: any) {
-      error = typeof err === 'string' ? err : err?.message || 'Import failed';
+    } catch (err: unknown) {
+      error = typeof err === 'string' ? err : (err as Error)?.message || 'Import failed';
       step = 'preview';
     }
   }

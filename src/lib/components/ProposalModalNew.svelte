@@ -13,7 +13,7 @@
   import { get } from 'svelte/store';
   import { PROPOSAL_STATUS_OPTIONS } from '$lib/constants';
   import CrudModal from './base/CrudModal.svelte';
-  import type { Fee } from '../../types';
+  import type { Fee, FeeCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
   // Create optimized typeahead search functions (PERF-H5 + QUAL-H4 fix)
@@ -133,7 +133,7 @@
   ];
 
   // Save handler
-  async function handleSave(formData: any) {
+  async function handleSave(formData: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
     
     if (mode === 'create') {
@@ -151,7 +151,7 @@
           updated_at: timestamp
         }
       };
-      await feesActions.create(proposalData);
+      await feesActions.create(proposalData as unknown as FeeCreate);
     } else if (proposal) {
       const proposalId = getEntityId(proposal);
       if (!proposalId) {

@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { check } from '@tauri-apps/plugin-updater';
+  import { check, type DownloadEvent } from '@tauri-apps/plugin-updater';
+  import type { Update } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
   import { logMessage, getDevMode, type LogLevel } from '$lib/api/system';
 
@@ -15,7 +16,7 @@
   let totalBytes = 0;
   let readyToInstall = false;
   let error: string | null = null;
-  let updateObject: any = null;
+  let updateObject: Update | null = null;
   let devMode = false;
 
   // Enhanced logging function - logs to console and backend
@@ -92,7 +93,7 @@
       await log('debug', 'Calling updateObject.downloadAndInstall()');
 
       // Download the update with progress tracking
-      await updateObject.downloadAndInstall((event: any) => {
+      await updateObject!.downloadAndInstall((event: DownloadEvent) => {
         switch (event.event) {
           case 'Started':
             totalBytes = event.data.contentLength || 0;

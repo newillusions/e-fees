@@ -308,8 +308,10 @@ export const TestDataHelpers = {
     city: 'Dubai',
     client_company: 'Test Company',
     status: 'Active',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    time: {
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
     ...overrides
   }),
 
