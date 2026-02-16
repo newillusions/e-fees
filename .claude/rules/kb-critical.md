@@ -2,7 +2,7 @@
 # KB Project Critical Rules
 
 *Auto-generated for E-Fees*
-*Last updated: 2026-02-14*
+*Last updated: 2026-02-15*
 
 ---
 
@@ -12,7 +12,7 @@
 
 CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with massive inline class strings. Extract repeated patterns into components or CSS classes. Use existing emittiv-* classes. Use semantic text sizes (text-xs, text-xxs) not arbitrary values.
 
-*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 132*
+*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 147*
 
 ---
 
@@ -22,7 +22,7 @@ CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with 
 
 E-Fees SurrealDB migration completed (2026-02-13): All configuration files updated from old IP 10.0....
 
-*Source: observation:xcwj43gc64jzpj93b6rp | Scope: project | Access count: 13*
+*Source: observation:xcwj43gc64jzpj93b6rp | Scope: project | Access count: 28*
 
 ---
 
@@ -62,7 +62,7 @@ CRITICAL SurrealDB PATTERN: option<T> fields accept NONE (absent) but REJECT NUL
 
 CRITICAL RULE: All Claude Code instances MUST maximize token usage efficiency and minimize costs. When spawning sub-agents (Task tool), ALWAYS use model="haiku" for straightforward tasks.
 
-*Source: observation:3uq1ed30fi5tb0qiswq1 | Scope: global | Access count: 138*
+*Source: observation:3uq1ed30fi5tb0qiswq1 | Scope: global | Access count: 153*
 
 ---
 
@@ -72,8 +72,8 @@ CRITICAL RULE: All Claude Code instances MUST maximize token usage efficiency an
 
 CRITICAL RULE: NEVER use pkill, killall, or broad pattern-matching kill commands without EXPLICIT user permission. Always ask first, use specific PIDs.
 
-*Source: observation:yz1x62rdud27ejx4q83f | Scope: global | Access count: 147*
+*Source: observation:yz1x62rdud27ejx4q83f | Scope: global | Access count: 162*
 
 ---
 
-*Total: 7 project rules (4 project-scoped, 1 auto-matched, 2 global)*
+*Total: 7 project rules (3 project-scoped, 1 auto-matched, 2 global, 1 unscoped e-fees-related)*

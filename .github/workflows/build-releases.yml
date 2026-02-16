@@ -1,7 +1,7 @@
 name: Build macOS and Windows Releases
 
 # This workflow runs on GitHub's free runners (macOS + Windows)
-# Builds are uploaded to Gitea releases automatically
+# Builds are uploaded to Forgejo releases automatically (env vars use GITEA_ prefix for API compatibility)
 
 on:
   push:

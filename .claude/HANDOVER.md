@@ -1,36 +1,30 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. **v0.11.0 released** with fee pricing calculator, multi-currency support, WHT gross-up, and pricing persistence. All platforms built and published to Forgejo.
+Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. **v0.11.0 released** + code review completed + CSS restructure completed.
 
 - **Version**: 0.11.0 (released 2026-02-13)
-- **Branch**: `main` (commit 153f649)
+- **Branch**: `main` (commit cc7e47d, pushed to origin)
 - **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects)
-- **Pricing Module**: Calculator integrated into proposals, persistence working
-- **Auto-updater**: update.json on GitHub, artifacts on Forgejo
+- **Tests**: 86 Rust tests passing, 8 pre-existing svelte-check warnings
 
-## Last Session (2026-02-13)
-**Summary**: Released v0.11.0. Pushed to GitHub, triggered CI build (macOS aarch64/x86_64 + Windows). Forgejo upload failed due to stale GITEA_TOKEN. Manually uploaded 6 artifacts. Created new Forgejo API token and updated GitHub secret. Updated local credentials.
+## Last Session (2026-02-16)
+**Summary**: Completed full CSS restructure (phases 2-7). Migrated 30+ components from utility class strings to semantic `.emittiv-*` classes. Pruned 161 unused utility definitions. Fixed build-breaking duplicate variant attributes.
 
-### Key Changes in v0.11.0
-- Fee pricing calculator with multi-currency and WHT tax support
-- Live exchange rates from ECB with rate locking
-- Discipline codes (LX, VID, AUD, CTL) and stage codes (CON, SD, DD, CD)
-- WHT gross-up display with per-cell hover tooltips
-- Payment schedule improvements
-- Pricing persistence fix (Rust Fee struct + SurrealDB datetime fix)
+### CSS Restructure Results
+- **37 files changed**, 765 insertions, 457 deletions
+- **CSS**: 85.16 KB → 82.04 KB (-3.7%)
+- **JS**: 497.47 KB → 487.67 KB (-2.0%)
+- Added 15 new semantic classes: empty-state__icon, card-title, card-meta, chip, alert variants, badge variants, detail-panel, etc.
+- Pruned 161 unused utility class definitions from `@layer utilities`
+- Fixed duplicate `variant` attributes in ProposalModal, CrudModal, ProjectModal
+- Removed 17 redundant `className` overrides on Button components
 
-### Fixes Applied
-- **SurrealDB datetime**: Two-statement query with `SET time.updated_at = time::now()` (not string)
-- **Rust Fee struct**: Added `Option<serde_json::Value>` for pricing, post_contract_items, reimbursable_costs, payment_schedule
-- **Forgejo tokens**: Old Gitea tokens replaced. New `github-actions-releases` token with `repository:read+write` scope. Updated `GITEA_TOKEN` GitHub secret.
-
-## Next Steps
-1. **Update window title** — `tauri.conf.json` line 15 still says "v0.10.25"
-2. **Clean up feature branch** — `feat/fee-pricing-calculator` merged, can delete
-3. **Build Excel export** — Rust xlsx library, match RFPs client-facing template
-4. **Multi-currency hover** — Show AED equivalents on hover when quoting in foreign currency
-5. **Test pricing workflow** end-to-end with real proposal data
+## Next Steps (Priority Order)
+1. **Run the import agent** — `docs/agents/excel-import-agent.md` to import ~60 Excel pricing files
+2. **Update window title** — `tauri.conf.json` line 15 still says "v0.10.25"
+3. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
+4. **Version bump + release** — v0.12.0 with all recent improvements
 
 ## Key Technical Context
 
@@ -39,30 +33,32 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 2. Push main to GitHub + create `v*` tag → triggers GitHub Actions
 3. Builds macOS (aarch64 + x86_64) + Windows
 4. Artifacts auto-upload to Forgejo release via `GITEA_TOKEN` secret
-5. `update.json` generated with signatures, pushed to both remotes
-6. Existing installs check `raw.githubusercontent.com/.../update.json`
-7. Download URLs point to `forge.mms.name` releases
+
+### CSS Architecture (Post-Restructure)
+- `app.css` has 3 layers: `@layer base`, `@layer components`, `@layer utilities`
+- ~130 `.emittiv-*` semantic classes in components layer
+- ~490 utility lines remaining (layout primitives, spacing, flex)
+- 16 CSS custom properties (`--emittiv-*`) for design tokens
+- All values in fixed `px` (desktop app, OS handles DPI scaling)
 
 ### Critical Rules
-1. **Screenshots**: Use Peekaboo MCP with `app_target: "app"` - NEVER Playwright for Tauri apps
-2. **Dev command**: Use `npm run tauri:dev` (not `npm run dev`)
-3. **CSS**: All styling through master CSS classes in `app.css` - no inline Tailwind > 50 chars
+1. **Screenshots**: Peekaboo MCP with `app_target: "app"` — NEVER browser tools for Tauri
+2. **Dev command**: `npm run tauri:dev` (not `npm run dev`)
+3. **CSS**: Semantic `.emittiv-*` classes, NOT utility strings > 50 chars
 4. **Fixed px values**: Desktop app with OS-level scaling, never use rem
 5. **Process safety**: NEVER pkill without permission
+6. **Git**: Push to Forgejo (origin) for daily work. GitHub only for tagged releases.
 
 ### Key Files
 | Purpose | Location |
 |---------|----------|
-| DB config (Rust) | `src-tauri/src/db/config.rs` |
-| Fee entities (Rust) | `src-tauri/src/db/entities.rs` (pricing fields line 123-152) |
-| Fee update (Rust) | `src-tauri/src/db/client.rs` (two-statement query line 468-502) |
-| Pricing panels | `src/lib/components/pricing/*.svelte` |
-| ProposalModal | `src/lib/components/ProposalModal.svelte` (pricing integration) |
-| Pricing types | `src/types/database.ts` (Stage, PricingConfig, calculatePricingTotals) |
-| WHT docs | `docs/WITHHOLDING_TAX.md` |
+| CSS Restructure Plan | `docs/CSS_RESTRUCTURE_PLAN.md` |
 | Master CSS | `src/styles/app.css` |
+| Code Review Findings | `docs/code-review/CODE_REVIEW_FINDINGS_2026-01.md` |
+| Excel template export | `src-tauri/src/excel_export.rs` |
+| DB operations | `src-tauri/src/db/operations.rs` |
+| ProposalModal (largest) | `src/lib/components/ProposalModal.svelte` |
 | Build workflow | `.github/workflows/build-releases.yml` |
-| Update manifest | `update.json` |
 
 ---
-*Updated: 2026-02-13*
+*Updated: 2026-02-16*

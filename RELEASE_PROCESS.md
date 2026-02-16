@@ -6,7 +6,7 @@
 
 The E-Fees application uses a hybrid build and release process:
 - **GitHub Actions**: Handles builds (especially Windows which requires Windows runners)
-- **Gitea**: Primary code repository (private)
+- **Forgejo**: Primary code repository (private, forge.mms.name)
 - **Apache Web Server**: Hosts release binaries for auto-updates
 - **GitHub**: Mirror for CI/CD and update manifest hosting
 

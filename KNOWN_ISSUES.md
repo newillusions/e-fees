@@ -170,7 +170,7 @@ killall "app" "E-Fees"
 
 **Description**:
 Repository has two remotes requiring dual push:
-- `origin`: Gitea (primary, private)
+- `origin`: Forgejo (primary, private — forge.mms.name)
 - `github`: GitHub (mirror for CI/CD)
 
 **Current Workflow**:
