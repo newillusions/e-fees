@@ -438,11 +438,7 @@ async fn get_fee_handler(
     let manager = state.db.read().await;
 
     // Parse the id — if it contains "fee:", strip the table prefix
-    let record_id = if id.starts_with("fee:") {
-        id.strip_prefix("fee:").unwrap().to_string()
-    } else {
-        id.clone()
-    };
+    let record_id = id.strip_prefix("fee:").unwrap_or(&id).to_string();
 
     let fee = manager.get_fee_by_id(&record_id).await.map_err(|e| {
         error!("Agent API: Failed to get fee: {}", e);
@@ -671,11 +667,7 @@ async fn get_contact_handler(
 ) -> Result<Json<ContactResponse>, (StatusCode, Json<ErrorResponse>)> {
     let manager = state.db.read().await;
 
-    let record_id = if id.starts_with("contacts:") {
-        id.strip_prefix("contacts:").unwrap().to_string()
-    } else {
-        id.clone()
-    };
+    let record_id = id.strip_prefix("contacts:").unwrap_or(&id).to_string();
 
     let contact = manager.get_contact_by_id(&record_id).await.map_err(|e| {
         error!("Agent API: Failed to get contact: {}", e);
@@ -760,11 +752,7 @@ async fn export_fee_handler(
 ) -> Result<Json<ExportResponse>, (StatusCode, Json<ErrorResponse>)> {
     let manager = state.db.read().await;
 
-    let record_id = if id.starts_with("fee:") {
-        id.strip_prefix("fee:").unwrap().to_string()
-    } else {
-        id.clone()
-    };
+    let record_id = id.strip_prefix("fee:").unwrap_or(&id).to_string();
 
     let fee = manager.get_fee_by_id(&record_id).await.map_err(|e| {
         error!("Agent API: Failed to get fee for export: {}", e);

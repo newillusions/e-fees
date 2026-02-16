@@ -290,7 +290,7 @@ pub fn generate_fee_template(fee: &Fee, output_path: &Path, stage_count: usize) 
     // ------------------------------------------------------------------
     worksheet.write_string(2, 1, "Target Price").map_err(|e| e.to_string())?;
     for i in 0..pricing.disciplines.len() {
-        let col_letter = char::from_u32(67 + i as u32).unwrap(); // C=67, D=68, etc.
+        let col_letter = char::from_u32(67 + i as u32).unwrap_or('?'); // C=67, D=68, etc.
         let formula = format!("=$B$2*{}2", col_letter);
         worksheet.write_formula(2, (2 + i) as u16, formula.as_str()).map_err(|e| e.to_string())?;
     }
@@ -301,7 +301,7 @@ pub fn generate_fee_template(fee: &Fee, output_path: &Path, stage_count: usize) 
     // ------------------------------------------------------------------
     worksheet.write_string(5, 1, "Remaining").map_err(|e| e.to_string())?;
     for i in 0..pricing.disciplines.len() {
-        let col_letter = char::from_u32(67 + i as u32).unwrap();
+        let col_letter = char::from_u32(67 + i as u32).unwrap_or('?');
         let formula = format!("={}3-{}{}", col_letter, col_letter, subtotal_row);
         worksheet.write_formula(5, (2 + i) as u16, formula.as_str()).map_err(|e| e.to_string())?;
     }
@@ -388,7 +388,7 @@ pub fn generate_fee_template(fee: &Fee, output_path: &Path, stage_count: usize) 
 
     // Cols C-I: SUM formulas
     for col in 2..=8 {
-        let col_letter = if col == 8 { 'I' } else { char::from_u32(65 + col as u32).unwrap() };
+        let col_letter = if col == 8 { 'I' } else { char::from_u32(65 + col as u32).unwrap_or('?') };
         let formula = format!("=SUM({}9:{}{})", col_letter, col_letter, 8 + actual_stage_count);
         worksheet.write_formula(subtotal_idx, col as u16, formula.as_str()).map_err(|e| e.to_string())?;
     }
