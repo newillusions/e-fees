@@ -371,7 +371,7 @@ import { get } from 'svelte/store';
   {#if isLoading && fees.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-2 border-emittiv-splash border-t-transparent mb-4"></div>
+      <div class="emittiv-spinner emittiv-spinner--page"></div>
       <p class="text-emittiv-light text-sm">Loading proposals...</p>
     </div>
   {:else if fees.length === 0}
@@ -391,7 +391,7 @@ import { get } from 'svelte/store';
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
       <button
         onclick={clearFilters}
-        class="text-sm text-emittiv-splash hover:text-orange-400 transition-smooth"
+        class="emittiv-link text-sm"
       >
         Clear all filters
       </button>
@@ -418,7 +418,7 @@ import { get } from 'svelte/store';
         <div class="text-center py-4 text-emittiv-light text-xs opacity-60">
           {#if isLoading && fees.length > 0}
             <div class="flex items-center justify-center gap-2">
-              <div class="animate-spin rounded-full h-4 w-4 border-2 border-emittiv-splash border-t-transparent"></div>
+              <div class="emittiv-spinner"></div>
               <span>Loading more...</span>
             </div>
           {:else if hasMore}

@@ -16,14 +16,14 @@
 
 <section>
   <div class="flex items-center justify-between mb-2">
-    <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">{title}</h2>
+    <h2 class="emittiv-section-title">{title}</h2>
     <span class="text-xs text-emittiv-light bg-emittiv-darker px-2 py-1 rounded-lg">
       {totalCount} total
     </span>
   </div>
 
   {#if items.length === 0}
-    <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+    <div class="emittiv-empty-state">
       <slot name="empty-state" />
     </div>
   {:else}
@@ -42,7 +42,7 @@
       {#if items.length > maxItems}
         <button
           on:click={toggleExpanded}
-          class="text-sm text-emittiv-splash hover:text-orange-400 transition-colors text-center py-2"
+          class="emittiv-link text-sm text-center py-2"
         >
           {showAll ? '↑ Show less' : `View all ${items.length} ${title.toLowerCase()} →`}
         </button>

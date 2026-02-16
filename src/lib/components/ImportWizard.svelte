@@ -105,7 +105,7 @@
 
 {#if isOpen}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50"
+    class="emittiv-backdrop"
     style="z-index: 100;"
     on:click={handleBackdropClick}
     on:keydown={() => {}}

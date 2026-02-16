@@ -46,8 +46,9 @@
 
 {#if isOpen}
   <!-- Backdrop -->
-  <div 
-    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-80 flex items-center justify-center"
+  <div
+    class="emittiv-backdrop emittiv-backdrop--dark emittiv-backdrop--blur flex items-center justify-center"
+    style="z-index: 80;"
     on:click={cancelText ? handleCancel : handleConfirm}
     on:keydown={(e) => e.key === 'Escape' && (cancelText ? handleCancel() : handleConfirm())}
     role="button"
@@ -89,14 +90,14 @@
         {#if cancelText}
           <button
             on:click={handleCancel}
-            class="px-2 py-1 bg-emittiv-dark text-emittiv-lighter rounded text-xs font-medium hover:bg-emittiv-dark/80 hover:text-emittiv-white transition-colors"
+            class="emittiv-confirm-btn emittiv-confirm-btn--secondary"
           >
             {cancelText}
           </button>
         {/if}
         <button
           on:click={handleConfirm}
-          class="px-2 py-1 bg-emittiv-splash text-emittiv-black rounded text-xs font-medium hover:bg-emittiv-splash/90 transition-colors"
+          class="emittiv-confirm-btn emittiv-confirm-btn--primary"
         >
           {confirmText}
         </button>

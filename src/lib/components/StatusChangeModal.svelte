@@ -276,7 +276,7 @@
                   <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">Select proposals to update:</h5>
                   {#each affectedFees as fee}
                     {@const feeId = extractId(fee.id) ?? ''}
-                    <label class="flex items-center gap-2 py-0.5 px-1 bg-emittiv-black/30 rounded text-xs cursor-pointer hover:bg-emittiv-black/40">
+                    <label class="emittiv-checkbox-option">
                       <input
                         type="checkbox"
                         bind:checked={selectedFeeUpdates[feeId]}
@@ -311,7 +311,7 @@
                 
                 <div class="space-y-0.5">
                   <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">Update related project:</h5>
-                  <label class="flex items-center gap-2 py-0.5 px-1 bg-emittiv-black/30 rounded text-xs cursor-pointer hover:bg-emittiv-black/40">
+                  <label class="emittiv-checkbox-option">
                     <input
                       type="checkbox"
                       bind:checked={selectedProjectUpdate}
@@ -349,16 +349,14 @@
     <Button 
       variant="ghost" 
       size="sm"
-      className="!py-1 !px-2.5 !text-xs"
       on:click={handleCancel}
       disabled={isProcessing}
     >
       Cancel
     </Button>
-    <Button 
-      variant="primary" 
+    <Button
+      variant="primary"
       size="sm"
-      className="!py-1 !px-3 !text-xs"
       on:click={handleConfirm}
       disabled={isProcessing || !project || !newStatus}
       loading={isProcessing}

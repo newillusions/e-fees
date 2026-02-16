@@ -38,7 +38,7 @@
 {#if href}
   <a
     {href}
-    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all {className}"
+    class="emittiv-icon-btn {className}"
     aria-label={ariaLabel}
   >
     <svg
@@ -53,7 +53,7 @@
 {:else}
   <button
     on:click={handleClick}
-    class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all {className}"
+    class="emittiv-icon-btn {className}"
     aria-label={ariaLabel}
   >
     <svg

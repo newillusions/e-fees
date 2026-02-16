@@ -103,7 +103,7 @@
       <!-- Projects Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">
+          <h2 class="emittiv-section-title">
             Related Projects
           </h2>
           <span
@@ -115,9 +115,9 @@
         </div>
 
         {#if companyProjects.length === 0}
-          <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+          <div class="emittiv-empty-state">
             <svg
-              class="w-12 h-12 mx-auto mb-3 text-emittiv-dark"
+              class="emittiv-empty-state__icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -157,7 +157,7 @@
       <!-- Fee Proposals Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">
+          <h2 class="emittiv-section-title">
             Fee Proposals
           </h2>
           <span
@@ -169,9 +169,9 @@
         </div>
 
         {#if companyFees.length === 0}
-          <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+          <div class="emittiv-empty-state">
             <svg
-              class="w-12 h-12 mx-auto mb-3 text-emittiv-dark"
+              class="emittiv-empty-state__icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -226,7 +226,7 @@
       <!-- Contacts Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">Contacts</h2>
+          <h2 class="emittiv-section-title">Contacts</h2>
           <span
             class="text-xs text-emittiv-light px-2 py-1 rounded-lg"
             style="background-color: #111;"
@@ -236,9 +236,9 @@
         </div>
 
         {#if companyContacts.length === 0}
-          <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+          <div class="emittiv-empty-state">
             <svg
-              class="w-12 h-12 mx-auto mb-3 text-emittiv-dark"
+              class="emittiv-empty-state__icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -268,7 +268,7 @@
                       <div class="flex items-center gap-1" style="width: 180px;">
                         <a
                           href="tel:{contact.phone || '#'}"
-                          class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+                          class="emittiv-icon-btn"
                           aria-label="Call {contact.full_name}"
                         >
                           <svg
@@ -290,7 +290,7 @@
                       <div class="flex items-center gap-1 flex-1">
                         <a
                           href="mailto:{contact.email}"
-                          class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+                          class="emittiv-icon-btn"
                           aria-label="Email {contact.full_name}"
                         >
                           <svg

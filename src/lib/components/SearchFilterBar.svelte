@@ -91,7 +91,7 @@
 
   <!-- Results count and Clear button -->
   <div class="flex justify-between items-center">
-    <div class="px-2 py-0.5 text-xs text-emittiv-light border border-emittiv-dark rounded bg-emittiv-darker">
+    <div class="emittiv-chip">
       {#if hasFiltersActive}
         Showing {resultCount} of {totalCount} {itemName}
       {:else if totalCount > 0}
@@ -101,7 +101,7 @@
     {#if hasFiltersActive}
       <button 
         onclick={clearFilters}
-        class="px-2 py-0.5 text-xs text-emittiv-light hover:text-emittiv-white border border-emittiv-dark hover:border-emittiv-light rounded bg-emittiv-darker transition-smooth flex items-center gap-1"
+        class="emittiv-chip emittiv-chip--btn"
       >
         <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

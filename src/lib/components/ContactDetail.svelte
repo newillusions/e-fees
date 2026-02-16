@@ -121,12 +121,12 @@
         />
       {:else}
         <section>
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">
+          <h2 class="emittiv-section-title">
             Company Information
           </h2>
-          <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+          <div class="emittiv-empty-state">
             <svg
-              class="w-12 h-12 mx-auto mb-3 text-emittiv-dark"
+              class="emittiv-empty-state__icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -146,7 +146,7 @@
       <!-- Fee Proposals Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider">
+          <h2 class="emittiv-section-title">
             Fee Proposals
           </h2>
           <span
@@ -158,9 +158,9 @@
         </div>
 
         {#if contactFees.length === 0}
-          <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
+          <div class="emittiv-empty-state">
             <svg
-              class="w-12 h-12 mx-auto mb-3 text-emittiv-dark"
+              class="emittiv-empty-state__icon"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -198,7 +198,7 @@
                           <p class="text-sm text-emittiv-white">{fee.staff_name}</p>
                         </div>
                       {/if}
-                      <div class="flex items-center gap-4 text-xs text-emittiv-light">
+                      <div class="emittiv-card-meta">
                         <span>Rev: {fee.rev}</span>
                         <span>
                           {new Date(

@@ -520,28 +520,23 @@
             >
               Project Number *
             </label>
-            <div class="relative flex" style="max-width: 100%;">
+            <div class="emittiv-input-group">
               <input
                 type="text"
                 bind:value={formData.project_number}
                 placeholder="Auto-generated"
                 readonly
-                class="flex-1 bg-emittiv-darker border border-emittiv-dark rounded-l text-emittiv-light placeholder-emittiv-light opacity-60 cursor-not-allowed"
-                style="padding: 8px 12px; font-size: 12px; height: 32px; min-width: 0;"
+                class="emittiv-input-group__input"
               />
               <button
                 type="button"
                 on:click={regenerateProjectNumber}
                 disabled={!formData.country || !formData.year || isGenerating}
-                class="bg-emittiv-dark border border-emittiv-dark border-l-0 rounded-r text-emittiv-light hover:bg-emittiv-light hover:text-emittiv-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                style="height: 32px; font-size: 12px; padding: 0 8px; flex-shrink: 0;"
+                class="emittiv-input-group__btn"
                 title="Regenerate project number"
               >
                 {#if isGenerating}
-                  <div
-                    class="border-2 border-current border-t-transparent rounded-full animate-spin"
-                    style="width: 12px; height: 12px;"
-                  ></div>
+                  <div class="emittiv-spinner"></div>
                 {:else}
                   ↻
                 {/if}
@@ -626,20 +621,20 @@
 
     <!-- Error/Success Messages -->
     {#if $operationState.error}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--error">
         {$operationState.error}
       </div>
     {/if}
 
     {#if $operationState.message}
-      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--success">
         {$operationState.message}
       </div>
     {/if}
 
     <!-- Folder Overwrite Confirmation -->
     {#if showFolderConfirm}
-      <div class="text-yellow-400 text-sm bg-yellow-900/20 border border-yellow-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--warning">
         <p class="font-medium mb-2">Project folder already exists</p>
         <p class="text-xs opacity-80 mb-3">
           A folder for project "{pendingProjectData?.projectNumber}
@@ -650,8 +645,7 @@
           <button
             type="button"
             on:click={() => handleFolderConfirm(true)}
-            class="bg-yellow-600 hover:bg-yellow-700 text-white rounded font-medium transition-all flex items-center justify-center disabled:opacity-50"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--yellow"
             disabled={$operationState.saving}
           >
             Yes, overwrite
@@ -659,8 +653,7 @@
           <button
             type="button"
             on:click={() => handleFolderConfirm(false)}
-            class="border border-yellow-500/30 rounded text-yellow-300 hover:text-yellow-200 transition-all"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-yellow"
             disabled={$operationState.saving}
           >
             No, skip folder creation
@@ -675,7 +668,7 @@
         <Button
           variant="secondary"
           size="sm"
-          className="h-full !py-1 !flex !items-center !justify-center"
+          className=""
           on:click={closeModal}
           disabled={$operationState.saving || showFolderConfirm}
         >
@@ -686,12 +679,12 @@
           type="submit"
           variant="primary"
           size="sm"
-          className="h-full !py-1 !flex !items-center !justify-center"
+          className=""
           disabled={$operationState.saving || isGenerating || showFolderConfirm}
         >
           {#if $operationState.saving}
             <div
-              class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+              class="emittiv-spinner-sm"
               style="width: 14px; height: 14px; margin-right: 6px;"
             ></div>
           {/if}

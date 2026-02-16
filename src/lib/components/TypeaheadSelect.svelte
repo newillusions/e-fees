@@ -180,8 +180,7 @@
         <button
           type="button"
           on:click={clearSelection}
-          class="absolute right-1 top-1/2 transform -translate-y-1/2 text-emittiv-light hover:text-emittiv-white flex items-center justify-center"
-          style="width: 16px; height: 16px;"
+          class="emittiv-typeahead-clear"
           aria-label="Clear selection"
         >
           <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,16 +192,15 @@
       <!-- Dropdown Options -->
       {#if dropdownOpen && options.length > 0 && !disabled}
         <div 
-          class="absolute top-full left-0 right-0 bg-emittiv-darker border border-emittiv-dark rounded-b overflow-y-auto z-50" 
-          style="margin-top: 1px; max-height: {maxHeight};"
+          class="emittiv-typeahead-dropdown"
+          style="max-height: {maxHeight};"
         >
           {#each options as option, index}
             <button
               type="button"
               on:click={() => selectOption(option.id)}
               on:mouseenter={() => selectedIndex = index}
-              class="w-full text-left text-emittiv-white hover:bg-emittiv-dark text-xs border-b border-emittiv-dark last:border-b-0 truncate {selectedIndex === index ? 'bg-emittiv-dark' : ''}"
-              style="height: 24px; line-height: 22px; padding: 1px 8px;"
+              class="emittiv-dropdown-item {selectedIndex === index ? 'emittiv-dropdown-item--active' : ''}"
             >
               <slot name="option" {option}>
                 {displayFields.map(field => option[field]).filter(Boolean).join(' - ')}

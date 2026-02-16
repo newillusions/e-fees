@@ -440,7 +440,7 @@
       <!-- Revision History Section -->
       {#if projectRevisions.length > 1}
         <section>
-          <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Revision History</h2>
+          <h2 class="emittiv-section-title">Revision History</h2>
           <div class="bg-emittiv-black/50 rounded-xl border border-emittiv-dark/50 overflow-hidden">
             {#each projectRevisions as rev}
               <div
@@ -478,9 +478,9 @@
       />
     {:else}
       <section>
-        <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Related Project</h2>
-        <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
-          <svg class="w-12 h-12 mx-auto mb-3 text-emittiv-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <h2 class="emittiv-section-title">Related Project</h2>
+        <div class="emittiv-empty-state">
+          <svg class="emittiv-empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
           <p class="text-emittiv-light text-sm">Project not found</p>
@@ -504,9 +504,9 @@
       />
     {:else}
       <section>
-        <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Client Company</h2>
-        <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
-          <svg class="w-12 h-12 mx-auto mb-3 text-emittiv-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <h2 class="emittiv-section-title">Client Company</h2>
+        <div class="emittiv-empty-state">
+          <svg class="emittiv-empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
           <p class="text-emittiv-light text-sm">Company not found</p>
@@ -528,9 +528,9 @@
       />
     {:else}
       <section>
-        <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">Primary Contact</h2>
-        <div class="bg-emittiv-black/50 rounded-xl p-8 text-center border border-emittiv-dark/50">
-          <svg class="w-12 h-12 mx-auto mb-3 text-emittiv-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <h2 class="emittiv-section-title">Primary Contact</h2>
+        <div class="emittiv-empty-state">
+          <svg class="emittiv-empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
           <p class="text-emittiv-light text-sm">Contact not found</p>

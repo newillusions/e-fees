@@ -129,7 +129,7 @@
     <div class="mb-6">
       <div class="w-full h-1 rounded-full bg-gray-700">
         <div 
-          class="h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-orange-500 to-orange-400"
+          class="splash-progress-fill"
           style="width: {progress}%;"
         ></div>
       </div>
@@ -153,5 +153,10 @@
 </div>
 
 <style>
-  /* Component uses Tailwind classes for styling */
+  .splash-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(to right, #f97316, #fb923c);
+    transition: width 0.3s ease-out;
+  }
 </style>

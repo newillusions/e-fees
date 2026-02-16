@@ -171,7 +171,7 @@
 {#if showModal && updateAvailable}
   <!-- Modal backdrop -->
   <div
-    class="fixed inset-0 bg-black bg-opacity-50"
+    class="emittiv-backdrop"
     style="z-index: 200;"
     on:click={closeModal}
     on:keydown={() => {}}
@@ -223,7 +223,7 @@
 
       <!-- Error message -->
       {#if error}
-        <div class="mb-4 p-3 bg-red-900 bg-opacity-50 border border-red-700 rounded text-sm text-red-200">
+        <div class="emittiv-alert emittiv-alert--error mb-4">
           {error}
         </div>
       {/if}

@@ -1189,20 +1189,20 @@
     
     <!-- Error/Success Messages -->
     {#if $operationState.error}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--error">
         {$operationState.error}
       </div>
     {/if}
     
     {#if $operationState.message}
-      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--success">
         {$operationState.message}
       </div>
     {/if}
     
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit'}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded" style="padding: 8px 12px;">
+      <div class="emittiv-alert emittiv-alert--sm emittiv-alert--error">
         <p class="font-medium" style="margin-bottom: 4px;">Are you sure you want to delete this proposal?</p>
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
@@ -1210,7 +1210,7 @@
     
     <!-- Project Status Sync Confirmation -->
     {#if showProjectStatusSync}
-      <div class="text-blue-400 text-sm bg-blue-900/20 border border-blue-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--info">
         <p class="font-medium mb-2">Update Project Status</p>
         <p class="text-xs opacity-80 mb-3">
           The proposal status change would also update the project status to "{getProjectStatusFromProposalStatus(formData.status)}". 
@@ -1220,8 +1220,7 @@
           <button
             type="button"
             on:click={() => handleProjectStatusSync(true)}
-            class="bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-all flex items-center justify-center disabled:opacity-50"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--blue"
             disabled={$operationState.saving}
           >
             Yes, sync both
@@ -1229,8 +1228,7 @@
           <button
             type="button"
             on:click={() => handleProjectStatusSync(false)}
-            class="border border-blue-500/30 rounded text-blue-300 hover:text-blue-200 transition-all"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-blue"
             disabled={$operationState.saving}
           >
             No, proposal only
@@ -1241,14 +1239,13 @@
     
     <!-- JSON Export Alert -->
     {#if showJsonExportAlert}
-      <div class="text-emittiv-splash text-sm bg-orange-900/20 border border-orange-500/30 rounded" style="padding: 8px 12px;">
+      <div class="emittiv-alert emittiv-alert--sm emittiv-alert--warning">
         <p class="font-medium" style="margin-bottom: 4px;">Export to JSON?</p>
         <div class="flex gap-2">
           <button
             type="button"
             on:click={handleJsonExportFromAlert}
-            class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded font-medium transition-all flex items-center justify-center disabled:opacity-50"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--primary"
             disabled={$operationState.saving}
           >
             Yes, export
@@ -1256,8 +1253,7 @@
           <button
             type="button"
             on:click={handleJsonExportDismiss}
-            class="border border-orange-500/30 rounded text-orange-300 hover:text-orange-200 transition-all"
-            style="height: 24px; padding: 4px 8px; font-size: 11px;"
+            class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-orange"
             disabled={$operationState.saving}
           >
             No, close
@@ -1272,9 +1268,9 @@
         <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
         <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            className="h-full"
             on:click={() => showDeleteConfirm = true}
             disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
           >
@@ -1285,7 +1281,7 @@
             <Button
               variant="secondary"
               size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
+              className=""
               on:click={closeModal}
               disabled={$operationState.saving || $operationState.deleting}
             >
@@ -1296,12 +1292,12 @@
               type="submit"
               variant="primary"
               size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
+              className=""
               disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
             >
               {#if $operationState.saving}
                 <div 
-                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  class="emittiv-spinner-sm"
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
@@ -1313,24 +1309,21 @@
         <!-- Delete Confirmation Mode -->
         <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            className="h-full"
             on:click={handleDelete}
             disabled={$operationState.deleting}
           >
             {#if $operationState.deleting}
-              <div 
-                class="border-2 border-white border-t-transparent rounded-full animate-spin"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
+              <div class="emittiv-spinner-sm" style="border-color: white; border-top-color: transparent; margin-right: 6px;"></div>
             {/if}
             Confirm Delete
           </Button>
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             on:click={() => showDeleteConfirm = false}
             disabled={$operationState.deleting}
           >
@@ -1343,7 +1336,7 @@
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             on:click={closeModal}
             disabled={$operationState.saving}
           >
@@ -1354,12 +1347,12 @@
             type="submit"
             variant="primary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             disabled={$operationState.saving || showProjectStatusSync || showJsonExportAlert}
           >
             {#if $operationState.saving}
               <div 
-                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                class="emittiv-spinner-sm"
                 style="width: 14px; height: 14px; margin-right: 6px;"
               ></div>
             {/if}

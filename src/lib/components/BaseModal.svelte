@@ -36,7 +36,7 @@
 {#if isOpen}
   <!-- Modal backdrop -->
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 {customClass}"
+    class="emittiv-backdrop {customClass}"
     style="z-index: {zIndex};"
     on:click={handleBackdropClick}
     on:keydown={() => {}}
@@ -96,8 +96,3 @@
   </div>
 {/if}
 
-<style>
-  .transition-smooth {
-    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-</style>

@@ -185,8 +185,9 @@
 
 {#if isOpen}
   <!-- Modal Backdrop -->
-  <div 
-    class="fixed inset-0 bg-black bg-opacity-50 z-80 flex items-center justify-center p-4"
+  <div
+    class="emittiv-backdrop flex items-center justify-center p-4"
+    style="z-index: 80;"
     on:click={closeModal}
     on:keydown={(e) => e.key === 'Escape' && closeModal()}
     role="dialog"
@@ -218,7 +219,7 @@
 
       {#if $settingsLoading}
         <div class="flex items-center justify-center py-8">
-          <div class="w-6 h-6 border-2 border-emittiv-splash border-t-transparent rounded-full animate-spin"></div>
+          <div class="emittiv-spinner emittiv-spinner--lg" style="border-color: var(--emittiv-splash); border-top-color: transparent;"></div>
           <span class="ml-2 text-emittiv-light">Loading settings...</span>
         </div>
       {:else}
@@ -307,11 +308,11 @@
                   type="button"
                   on:click={testConnection}
                   disabled={isTesting}
-                  class="bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 6px;"
+                  class="emittiv-btn emittiv-btn--sm emittiv-btn--dark"
+                  style="gap: 6px;"
                 >
                   {#if isTesting}
-                    <div class="border-2 border-emittiv-light border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
+                    <div class="emittiv-spinner" style="border-color: var(--emittiv-light); border-top-color: transparent;"></div>
                     <span>Reconnecting...</span>
                   {:else}
                     <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,8 +408,7 @@
               <button
                 type="button"
                 on:click={selectFolder}
-                class="bg-emittiv-dark border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-all"
-                style="padding: 8px 16px; font-size: 12px; height: 32px;"
+                class="emittiv-btn emittiv-btn--md emittiv-btn--dark"
               >
                 Browse
               </button>
@@ -417,8 +417,8 @@
             <button
               type="button"
               on:click={() => showFolderSyncModal = true}
-              class="bg-emittiv-dark border-emittiv-dark text-emittiv-light hover:text-emittiv-white hover:border-emittiv-splash transition-smooth"
-              style="margin-top: 12px; width: 100%; padding: 8px 16px; font-size: 12px; height: 32px; border: 1px solid; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"
+              class="emittiv-btn emittiv-btn--md emittiv-btn--dark"
+              style="margin-top: 12px; width: 100%; gap: 8px;"
               style:opacity={!settings.project_folder_path ? '0.5' : '1'}
               style:cursor={!settings.project_folder_path ? 'not-allowed' : 'pointer'}
               disabled={!settings.project_folder_path}
@@ -449,7 +449,7 @@
 
           <!-- Save Message -->
           {#if saveMessage}
-            <div class="rounded-lg {saveMessage.startsWith('Error') ? 'bg-red-900/20 border border-red-500/30 text-red-300' : 'bg-green-900/20 border border-green-500/30 text-green-300'}" style="padding: 8px; font-size: 11px;">
+            <div class="emittiv-alert emittiv-alert--sm {saveMessage.startsWith('Error') ? 'emittiv-alert--error' : 'emittiv-alert--success'}">
               {saveMessage}
             </div>
           {/if}
@@ -459,20 +459,19 @@
             <button
               type="button"
               on:click={closeModal}
-              class="border border-emittiv-dark rounded text-emittiv-light hover:text-emittiv-white hover:border-emittiv-light transition-all"
-              style="padding: 6px 12px; font-size: 12px; height: 28px;"
+              class="emittiv-btn emittiv-btn--sm emittiv-btn--secondary"
               disabled={isSaving}
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="bg-emittiv-splash hover:bg-orange-600 text-emittiv-black rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              style="padding: 6px 12px; font-size: 12px; height: 28px; gap: 4px;"
+              class="emittiv-btn emittiv-btn--sm emittiv-btn--primary"
+              style="gap: 4px;"
               disabled={isSaving}
             >
               {#if isSaving}
-                <div class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin" style="width: 12px; height: 12px;"></div>
+                <div class="emittiv-spinner-sm"></div>
                 <span>Saving...</span>
               {:else}
                 <span>Save Settings</span>

@@ -92,8 +92,8 @@
 </script>
 
 <!-- Backdrop -->
-<div 
-  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
+<div
+  class="emittiv-backdrop emittiv-backdrop--blur"
   on:click={handleClose}
   on:keydown={(e) => e.key === 'Escape' && handleClose()}
   role="button"
@@ -105,7 +105,7 @@
 
 <!-- Sliding Panel -->
 <div 
-  class="fixed top-0 right-0 h-full bg-emittiv-black z-50 overflow-hidden shadow-2xl flex flex-col project-detail-page" 
+  class="emittiv-detail-panel project-detail-page"
   style="width: calc(100vw - 240px); left: 240px;"
   in:fly={{ x: '100%', duration: 300, easing: cubicOut }}
   out:fly={{ x: '100%', duration: 250, easing: cubicOut }}

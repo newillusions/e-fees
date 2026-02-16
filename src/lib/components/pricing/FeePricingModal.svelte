@@ -292,13 +292,13 @@
 
     <!-- Error/Success Messages -->
     {#if error}
-      <div class="mt-2 text-red-400 text-xs bg-red-900/20 border border-red-500/30 rounded px-2 py-1.5">
+      <div class="emittiv-alert emittiv-alert--sm emittiv-alert--error mt-2">
         {error}
       </div>
     {/if}
 
     {#if message}
-      <div class="mt-2 text-green-400 text-xs bg-green-900/20 border border-green-500/30 rounded px-2 py-1.5">
+      <div class="emittiv-alert emittiv-alert--sm emittiv-alert--success mt-2">
         {message}
       </div>
     {/if}

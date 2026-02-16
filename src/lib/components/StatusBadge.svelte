@@ -3,61 +3,57 @@
     status: string;
     type?: 'project' | 'proposal' | 'general';
   } = $props();
-  
+
   function getStatusClasses(status: string, type: string): string {
-    const baseClasses = 'px-2 py-1 rounded-lg text-xs font-medium';
-    
     switch (type) {
       case 'project':
         switch (status) {
           case 'Draft':
-            return `${baseClasses} bg-blue-500/10 text-blue-400`;
           case 'RFP':
-            return `${baseClasses} bg-blue-500/10 text-blue-400`;
+            return 'emittiv-badge emittiv-badge--blue';
           case 'Active':
-            return `${baseClasses} bg-green-500/10 text-green-400`;
+            return 'emittiv-badge emittiv-badge--green';
           case 'Awarded':
-            return `${baseClasses} bg-emerald-500/10 text-emerald-400`;
+            return 'emittiv-badge emittiv-badge--green';
           case 'Completed':
-            return `${baseClasses} bg-purple-500/10 text-purple-400`;
+            return 'emittiv-badge emittiv-badge--purple';
           case 'Lost':
-            return `${baseClasses} bg-red-500/10 text-red-400`;
+            return 'emittiv-badge emittiv-badge--red';
           case 'Cancelled':
-            return `${baseClasses} bg-gray-500/10 text-gray-400`;
+            return 'emittiv-badge emittiv-badge--gray';
           case 'On Hold':
-            return `${baseClasses} bg-yellow-500/10 text-yellow-400`;
+            return 'emittiv-badge emittiv-badge--yellow';
           case 'Revised':
-            return `${baseClasses} bg-orange-500/10 text-orange-400`;
+            return 'emittiv-badge emittiv-badge--orange';
           default:
-            return `${baseClasses} bg-emittiv-dark text-emittiv-light`;
+            return 'emittiv-badge emittiv-badge--gray';
         }
-      
+
       case 'proposal':
         switch (status) {
           case 'Draft':
-            return `${baseClasses} bg-gray-500/10 text-gray-400`;
-          case 'Sent':
-            return `${baseClasses} bg-blue-500/10 text-blue-400`;
-          case 'Negotiation':
-            return `${baseClasses} bg-yellow-500/10 text-yellow-400`;
-          case 'Awarded':
-            return `${baseClasses} bg-emerald-500/10 text-emerald-400`;
-          case 'Completed':
-            return `${baseClasses} bg-purple-500/10 text-purple-400`;
-          case 'Lost':
-            return `${baseClasses} bg-red-500/10 text-red-400`;
           case 'Cancelled':
-            return `${baseClasses} bg-gray-500/10 text-gray-400`;
+            return 'emittiv-badge emittiv-badge--gray';
+          case 'Sent':
+            return 'emittiv-badge emittiv-badge--blue';
+          case 'Negotiation':
+            return 'emittiv-badge emittiv-badge--yellow';
+          case 'Awarded':
+            return 'emittiv-badge emittiv-badge--green';
+          case 'Completed':
+            return 'emittiv-badge emittiv-badge--purple';
+          case 'Lost':
+            return 'emittiv-badge emittiv-badge--red';
           case 'On Hold':
-            return `${baseClasses} bg-yellow-500/10 text-yellow-400`;
+            return 'emittiv-badge emittiv-badge--yellow';
           case 'Revised':
-            return `${baseClasses} bg-orange-500/10 text-orange-400`;
+            return 'emittiv-badge emittiv-badge--orange';
           default:
-            return `${baseClasses} bg-emittiv-dark text-emittiv-light`;
+            return 'emittiv-badge emittiv-badge--gray';
         }
-      
+
       default:
-        return `${baseClasses} bg-emittiv-splash/10 text-emittiv-splash`;
+        return 'emittiv-badge emittiv-badge--splash';
     }
   }
 </script>

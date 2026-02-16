@@ -41,7 +41,7 @@
 {#if show && isOpen}
   <!-- Backdrop -->
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
+    class="emittiv-backdrop emittiv-backdrop--blur"
     on:click={closePanel}
     on:keydown={e => e.key === 'Escape' && closePanel()}
     role="button"
@@ -53,7 +53,7 @@
 
   <!-- Sliding Panel -->
   <div
-    class="fixed top-0 right-0 h-full bg-emittiv-black z-50 overflow-hidden shadow-2xl flex flex-col"
+    class="emittiv-detail-panel"
     style="width: calc(100vw - 240px); left: 240px;"
     in:fly={{ x: '100%', duration: 300, easing: cubicOut }}
     out:fly={{ x: '100%', duration: 250, easing: cubicOut }}
@@ -68,17 +68,12 @@
         {#each customActions as action}
           <button
             on:click={() => action.handler()}
-            class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+            class="emittiv-icon-btn"
             aria-label={action.label}
             disabled={action.disabled}
             title={action.tooltip}
           >
-            <svg
-              style="width: 16px; height: 16px;"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -92,15 +87,10 @@
           <!-- Edit Button -->
           <button
             on:click={handleEdit}
-            class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+            class="emittiv-icon-btn"
             aria-label="Edit {title}"
           >
-            <svg
-              style="width: 16px; height: 16px;"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -113,15 +103,10 @@
         <!-- Close Button -->
         <button
           on:click={closePanel}
-          class="p-1 rounded text-emittiv-light hover:text-emittiv-splash hover:bg-emittiv-dark transition-all"
+          class="emittiv-icon-btn"
           aria-label="Close detail view"
         >
-          <svg
-            style="width: 16px; height: 16px;"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"

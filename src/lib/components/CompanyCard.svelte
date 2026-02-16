@@ -32,7 +32,7 @@
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3
-      class="text-base font-medium text-emittiv-white group-hover:text-emittiv-splash transition-colors truncate"
+      class="emittiv-card-title"
     >
       {company.name}
     </h3>
@@ -47,7 +47,7 @@
 
   <!-- Badge -->
   <svelte:fragment slot="badge">
-    <span class="px-2 py-1 rounded-lg text-xs font-medium text-emittiv-splash bg-emittiv-splash/10">
+    <span class="emittiv-badge emittiv-badge--splash">
       {company.abbreviation}
     </span>
   </svelte:fragment>
@@ -60,7 +60,7 @@
 
   <!-- Extra - Full width body section with all metadata -->
   <svelte:fragment slot="extra">
-    <div class="flex items-center gap-4 text-xs text-emittiv-light">
+    <div class="emittiv-card-meta">
       <span>Short:<br />{company.name_short}</span>
       {#if company.reg_no}
         <span>Reg:<br />{company.reg_no}</span>

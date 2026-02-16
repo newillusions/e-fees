@@ -41,7 +41,7 @@
 <BaseListCard {clickable} on:click={handleCardClick}>
   <!-- Title -->
   <svelte:fragment slot="title">
-    <h3 class="text-base font-medium text-emittiv-white group-hover:text-emittiv-splash transition-colors truncate">
+    <h3 class="emittiv-card-title">
       {project.number?.id} - {project.name}
     </h3>
   </svelte:fragment>
@@ -74,11 +74,11 @@
   
   <!-- Extra - Full width body section with all metadata -->
   <svelte:fragment slot="extra">
-    <div class="flex items-center gap-4 text-xs text-emittiv-light">
+    <div class="emittiv-card-meta">
       {#if showFolderLink && project.folder}
         <button 
           on:click={handleFolderClick}
-          class="text-emittiv-splash hover:text-orange-400 underline hover:no-underline transition-all"
+          class="emittiv-link"
           title="Click to open in file explorer"
         >
           {project.folder}

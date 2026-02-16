@@ -33,7 +33,7 @@
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3
-      class="text-base font-medium text-emittiv-white group-hover:text-emittiv-splash transition-colors truncate"
+      class="emittiv-card-title"
     >
       {contact.full_name}
     </h3>
@@ -51,7 +51,7 @@
   <!-- Badge -->
   <svelte:fragment slot="badge">
     {#if contact.position}
-      <span class="px-2 py-1 rounded-lg text-xs font-medium text-purple-400 bg-purple-400/10">
+      <span class="emittiv-badge emittiv-badge--purple">
         {contact.position}
       </span>
     {/if}

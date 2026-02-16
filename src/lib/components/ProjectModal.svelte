@@ -369,20 +369,20 @@
     
     <!-- Error/Success Messages -->
     {#if $operationState.error}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--error">
         {$operationState.error}
       </div>
     {/if}
     
     {#if $operationState.message}
-      <div class="text-green-400 text-sm bg-green-900/20 border border-green-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--success">
         {$operationState.message}
       </div>
     {/if}
     
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit'}
-      <div class="text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded p-3">
+      <div class="emittiv-alert emittiv-alert--error">
         <p class="font-medium mb-2">Are you sure you want to delete this project?</p>
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
@@ -394,9 +394,9 @@
         <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
         <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            className="h-full"
             on:click={() => showDeleteConfirm = true}
             disabled={$operationState.saving || $operationState.deleting}
           >
@@ -407,7 +407,7 @@
             <Button
               variant="secondary"
               size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
+              className=""
               on:click={closeModal}
               disabled={$operationState.saving || $operationState.deleting}
             >
@@ -418,12 +418,12 @@
               type="submit"
               variant="primary"
               size="sm"
-              className="h-full !py-1 !flex !items-center !justify-center"
+              className=""
               disabled={$operationState.saving || $operationState.deleting}
             >
               {#if $operationState.saving}
                 <div 
-                  class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                  class="emittiv-spinner-sm"
                   style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
@@ -435,24 +435,21 @@
         <!-- Delete Confirmation: Confirm/Cancel delete buttons -->
         <div class="flex justify-center items-stretch h-full" style="gap: 12px;">
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
-            className="!bg-red-600 !text-white hover:!bg-red-700 !border !border-red-500 h-full !py-1 !flex !items-center !justify-center"
+            className="h-full"
             on:click={handleDelete}
             disabled={$operationState.deleting}
           >
             {#if $operationState.deleting}
-              <div 
-                class="border-2 border-white border-t-transparent rounded-full animate-spin"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
+              <div class="emittiv-spinner-sm" style="border-color: white; border-top-color: transparent; margin-right: 6px;"></div>
             {/if}
             Confirm Delete
           </Button>
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             on:click={() => showDeleteConfirm = false}
             disabled={$operationState.deleting}
           >
@@ -465,7 +462,7 @@
           <Button
             variant="secondary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             on:click={closeModal}
             disabled={$operationState.saving}
           >
@@ -476,12 +473,12 @@
             type="submit"
             variant="primary"
             size="sm"
-            className="h-full !py-1 !flex !items-center !justify-center"
+            className=""
             disabled={$operationState.saving}
           >
             {#if $operationState.saving}
               <div 
-                class="border-2 border-emittiv-black border-t-transparent rounded-full animate-spin"
+                class="emittiv-spinner-sm"
                 style="width: 14px; height: 14px; margin-right: 6px;"
               ></div>
             {/if}

@@ -35,7 +35,7 @@
 <BaseListCard {clickable} on:click={handleCardClick}>
   <!-- Title -->
   <svelte:fragment slot="title">
-    <h3 class="text-base font-medium text-emittiv-white group-hover:text-emittiv-splash transition-colors truncate">
+    <h3 class="emittiv-card-title">
       {proposal.number} - {projectName || 'Unknown Project'}
     </h3>
   </svelte:fragment>
@@ -77,7 +77,7 @@
           Package: {proposal.package}
         </div>
       {/if}
-      <div class="flex items-center gap-4 text-xs text-emittiv-light">
+      <div class="emittiv-card-meta">
         <span>Rev:<br/>{proposal.rev}</span>
         <span>Staff:<br/>{proposal.staff_name || 'N/A'}</span>
         <span>Issue Date:<br/>{proposal.issue_date.length === 6 ? proposal.issue_date : new Date(proposal.issue_date).toISOString().slice(2,10).replace(/-/g,'')}</span>

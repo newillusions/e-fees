@@ -33,7 +33,7 @@
 </script>
 
 <section>
-  <h2 class="text-sm font-medium text-emittiv-light uppercase tracking-wider mb-2">{title}</h2>
+  <h2 class="emittiv-section-title">{title}</h2>
   <div class="bg-emittiv-black rounded-xl px-3 py-2 border border-emittiv-dark">
     <div
       class="grid gap-2 text-sm"
@@ -47,7 +47,7 @@
           <div class="text-xs text-emittiv-light">{field.label}</div>
           {#if field.clickable && field.value && field.value !== '—'}
             <button
-              class="text-sm text-emittiv-splash hover:text-orange-400 underline hover:no-underline transition-all text-left"
+              class="emittiv-link text-sm text-left"
               on:click={() => dispatch('field-click', { field, index })}
               title="Click to open"
             >

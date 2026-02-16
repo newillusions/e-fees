@@ -101,11 +101,11 @@
   // Get color class for action type
   function getActionColor(action: string): string {
     switch (action) {
-      case 'create': return 'text-green-400 bg-green-400/20';
-      case 'update': return 'text-blue-400 bg-blue-400/20';
-      case 'delete': return 'text-red-400 bg-red-400/20';
-      case 'status_change': return 'text-orange-400 bg-orange-400/20';
-      default: return 'text-gray-400 bg-gray-400/20';
+      case 'create': return 'emittiv-badge--green';
+      case 'update': return 'emittiv-badge--blue';
+      case 'delete': return 'emittiv-badge--red';
+      case 'status_change': return 'emittiv-badge--orange';
+      default: return 'emittiv-badge--gray';
     }
   }
 
