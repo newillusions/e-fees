@@ -365,6 +365,11 @@ pub async fn move_project_to_archive(app_handle: AppHandle, project_number: Stri
 
 #[command]
 pub async fn list_projects_in_folder(app_handle: AppHandle, folder_path: String) -> Result<Vec<String>, String> {
+    // Security: reject path traversal in subfolder name
+    if folder_path.contains("..") {
+        return Err("Invalid path: path traversal not allowed".to_string());
+    }
+
     let base_path = get_projects_base_path(&app_handle).await?;
     let full_path = base_path.join(&folder_path);
 

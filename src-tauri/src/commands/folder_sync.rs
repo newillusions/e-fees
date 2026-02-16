@@ -257,7 +257,15 @@ pub async fn scan_folder_sync(
 ) -> Result<FolderSyncResult, String> {
     info!("Starting folder sync scan at: {}", base_path);
 
+    // Security: reject path traversal
+    if base_path.contains("..") {
+        return Err("Invalid path: path traversal not allowed".to_string());
+    }
+
     let base = Path::new(&base_path);
+    if !base.is_absolute() {
+        return Err("Invalid path: must be an absolute path".to_string());
+    }
     if !base.exists() {
         return Err(format!("Base path does not exist: {}", base_path));
     }
