@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
+  import { invoke } from '@tauri-apps/api/core';
   import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
   import { loadAllData } from '$lib/stores';
   import FolderSyncModal from './FolderSyncModal.svelte';
@@ -28,7 +29,8 @@
     staff_phone: '',
     staff_position: '',
     project_folder_path: '',
-    dev_mode: false
+    dev_mode: false,
+    log_level: 'info'
   });
 
   // Track whether a password exists (from backend) and if user entered new one
@@ -65,7 +67,8 @@
         staff_phone: $settingsStore.staff_phone || '',
         staff_position: $settingsStore.staff_position || '',
         project_folder_path: $settingsStore.project_folder_path || '',
-        dev_mode: $settingsStore.dev_mode || false
+        dev_mode: $settingsStore.dev_mode || false,
+        log_level: $settingsStore.log_level || 'info'
       };
       passwordChanged = false;
     }
@@ -74,6 +77,15 @@
   // Track when user modifies the password field
   function onPasswordInput() {
     passwordChanged = true;
+  }
+
+  // Apply log level change immediately (no save needed)
+  async function handleLogLevelChange() {
+    try {
+      await invoke('set_log_level', { level: settings.log_level || 'info' });
+    } catch (e) {
+      console.error('Failed to set log level:', e);
+    }
   }
   
   async function loadSettings() {
@@ -434,17 +446,40 @@
           <div>
             <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Developer Options</h3>
             <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Advanced settings for debugging and development</p>
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                bind:checked={settings.dev_mode}
-                class="emittiv-checkbox"
-              />
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Log Level -->
               <div>
-                <span class="text-emittiv-white" style="font-size: 12px;">Development Mode</span>
-                <p class="text-emittiv-light" style="font-size: 11px;">Enable verbose logging for auto-updater and other diagnostics. Logs written to /tmp/e-fees-updater.log</p>
+                <label class="text-emittiv-white" style="font-size: 12px; display: block; margin-bottom: 4px;">Log Level</label>
+                <select
+                  bind:value={settings.log_level}
+                  on:change={handleLogLevelChange}
+                  class="emittiv-select"
+                  style="width: 160px;"
+                >
+                  <option value="off">Off</option>
+                  <option value="info">Info (Default)</option>
+                  <option value="debug">Debug</option>
+                  <option value="trace">Trace</option>
+                </select>
+                <p class="text-emittiv-light" style="font-size: 11px; margin-top: 4px;">
+                  Controls log verbosity. Changes take effect immediately. Stream logs with: curl -N http://localhost:3100/api/logs/stream
+                </p>
               </div>
-            </label>
+
+              <!-- Dev Mode checkbox -->
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  bind:checked={settings.dev_mode}
+                  class="emittiv-checkbox"
+                />
+                <div>
+                  <span class="text-emittiv-white" style="font-size: 12px;">Updater Verbose Mode</span>
+                  <p class="text-emittiv-light" style="font-size: 11px;">Enable verbose logging for auto-updater. Logs written to /tmp/e-fees-updater.log</p>
+                </div>
+              </label>
+            </div>
           </div>
 
           <!-- Save Message -->

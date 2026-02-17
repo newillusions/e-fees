@@ -101,6 +101,9 @@ pub struct AppSettings {
     /// Development mode flag - enables verbose logging when true
     #[serde(default)]
     pub dev_mode: Option<bool>,
+    /// Log level setting - "off", "error", "warn", "info", "debug", "trace"
+    #[serde(default)]
+    pub log_level: Option<String>,
 }
 
 /// Public application settings structure for frontend consumption.
@@ -128,6 +131,9 @@ pub struct AppSettingsPublic {
     pub project_folder_path: Option<String>,
     #[serde(default)]
     pub dev_mode: Option<bool>,
+    /// Log level setting - "off", "error", "warn", "info", "debug", "trace"
+    #[serde(default)]
+    pub log_level: Option<String>,
 }
 
 impl From<&AppSettings> for AppSettingsPublic {
@@ -144,6 +150,7 @@ impl From<&AppSettings> for AppSettingsPublic {
             staff_position: settings.staff_position.clone(),
             project_folder_path: settings.project_folder_path.clone(),
             dev_mode: settings.dev_mode,
+            log_level: settings.log_level.clone(),
         }
     }
 }

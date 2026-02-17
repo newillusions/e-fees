@@ -335,16 +335,18 @@ fn populate_config(
     // B2: target fee
     sheet.get_cell_value_mut("B2").set_value_number(pricing.config.target_fee);
 
-    // C1:H1 — discipline names (up to 6 columns)
+    // C1:H1 — discipline names, C2:H2 — percentages (up to 6 columns)
+    let disc_count = pricing.disciplines.len().min(6);
     for (i, disc) in pricing.disciplines.iter().enumerate().take(6) {
-        let addr = format!("{}1", col_letter(3 + i as u32));
-        sheet.get_cell_value_mut(addr.as_str()).set_value(disc.name.as_str());
+        let col = col_letter(3 + i as u32);
+        sheet.get_cell_value_mut(format!("{}1", col).as_str()).set_value(disc.name.as_str());
+        sheet.get_cell_value_mut(format!("{}2", col).as_str()).set_value_number(disc.percentage / 100.0);
     }
-
-    // C2:H2 — discipline percentages (as decimals, e.g. 0.70)
-    for (i, disc) in pricing.disciplines.iter().enumerate().take(6) {
-        let addr = format!("{}2", col_letter(3 + i as u32));
-        sheet.get_cell_value_mut(addr.as_str()).set_value_number(disc.percentage / 100.0);
+    // Clear unused discipline columns so template defaults don't leak through
+    for i in disc_count..6 {
+        let col = col_letter(3 + i as u32);
+        sheet.get_cell_value_mut(format!("{}1", col).as_str()).set_value("");
+        sheet.get_cell_value_mut(format!("{}2", col).as_str()).set_value_number(0.0);
     }
 
     // M6: first discipline name (used by HLOOKUP dropdown)
@@ -357,8 +359,10 @@ fn populate_config(
     sheet.get_cell_value_mut("P3").set_value_number(pricing.config.vat_percent / 100.0);
     sheet.get_cell_value_mut("P4").set_value_number(pricing.config.mobilisation_percent / 100.0);
 
-    // L6: recommended / quoted fee
-    sheet.get_cell_value_mut("L6").set_value_number(pricing.config.quoted_fee);
+    // L6: discipline target price (target fee × selected discipline %)
+    // M6 holds the discipline name; HLOOKUP finds its percentage in row 2
+    sheet.get_cell_value_mut("L6")
+        .set_formula("B2*HLOOKUP(M6,C1:H2,2,FALSE)");
 }
 
 /// Write data + formulas for each design stage row.

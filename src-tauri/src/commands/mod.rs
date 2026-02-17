@@ -148,6 +148,7 @@ pub mod system;
 pub use system::{
     health_check, get_db_info, get_stats, get_table_schema,
     position_window_4k, investigate_record, log_message,
+    set_log_level, get_log_level,
 };
 
 // Excel export

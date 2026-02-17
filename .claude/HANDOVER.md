@@ -1,27 +1,41 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. **v0.11.0 released** + code review completed + CSS restructure completed.
+Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. **v0.11.0 released** + code review completed + CSS restructure completed + Excel pricing import done + export save dialog added.
 
 - **Version**: 0.11.0 (released 2026-02-13)
-- **Branch**: `main` (commit cc7e47d, pushed to origin)
+- **Branch**: `main` (commit aaaa8d4, pushed to origin)
 - **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects)
 - **Tests**: 86 Rust tests passing, 8 pre-existing svelte-check warnings
 
 ## Last Session (2026-02-16)
-**Summary**: Completed full CSS restructure (phases 2-7). Migrated 30+ components from utility class strings to semantic `.emittiv-*` classes. Pruned 161 unused utility definitions. Fixed build-breaking duplicate variant attributes.
+**Summary**: Excel pricing import (27 fees from 78 Excel files), post-import audit with 10 fixes, CSS visual verification, and Excel export save dialog implementation.
 
-### CSS Restructure Results
-- **37 files changed**, 765 insertions, 457 deletions
-- **CSS**: 85.16 KB → 82.04 KB (-3.7%)
-- **JS**: 497.47 KB → 487.67 KB (-2.0%)
-- Added 15 new semantic classes: empty-state__icon, card-title, card-meta, chip, alert variants, badge variants, detail-panel, etc.
-- Pruned 161 unused utility class definitions from `@layer utilities`
-- Fixed duplicate `variant` attributes in ProposalModal, CrudModal, ProjectModal
-- Removed 17 redundant `className` overrides on Button components
+### Excel Pricing Import
+- Imported pricing data from 78 Excel files into 27 fee records
+- Post-import audit found and fixed 10 data issues in SurrealDB
+- Validation report in `docs/IMPORT_VALIDATION_REPORT.md`
+- Commit: 7576ced
+
+### Excel Export — Save Dialog Fix
+- **Problem**: Export went to macOS temp dir, no save dialog, modal text overflow
+- **Fix (commit aaaa8d4)**: Native save dialog via `@tauri-apps/plugin-dialog`
+- **Files changed**: export.rs, types.rs, revisions.ts, ProposalDetail.svelte, WarningModal.svelte
+- **Serde fix**: `PricingConfig`/`PricingBreakdown` now have `#[serde(default)]` + `Default` derive — fixes deserialization of imported data with partial config fields
+- **Status**: Save dialog confirmed working (screenshot verified), but needs **clean rebuild to test end-to-end** — the dev session used a cached binary without the Rust changes. File still went to temp dir during testing because old binary was running.
+
+### MUST VERIFY TOMORROW
+- Start fresh `npm run tauri:dev` (ensures Rust changes are compiled)
+- Click Export on a proposal with pricing (e.g., 25-96501-FP-1)
+- Verify native save dialog appears AND file saves to chosen location
+- Verify filename format: `25-96501-FP-1-00 Pricing.xlsx` (no `-FP-` duplication)
+
+### CSS Restructure Visual Verification
+- All pages verified via Peekaboo screenshots: Dashboard, Projects, Companies, Contacts, Proposals, Proposal Detail, Pricing Calculator, Dev Mode
+- All rendering correctly with semantic CSS classes
 
 ## Next Steps (Priority Order)
-1. **Run the import agent** — `docs/agents/excel-import-agent.md` to import ~60 Excel pricing files
+1. **Verify export save dialog** — Clean rebuild + end-to-end test (see above)
 2. **Update window title** — `tauri.conf.json` line 15 still says "v0.10.25"
 3. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
 4. **Version bump + release** — v0.12.0 with all recent improvements
@@ -54,10 +68,10 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 |---------|----------|
 | CSS Restructure Plan | `docs/CSS_RESTRUCTURE_PLAN.md` |
 | Master CSS | `src/styles/app.css` |
-| Code Review Findings | `docs/code-review/CODE_REVIEW_FINDINGS_2026-01.md` |
-| Excel template export | `src-tauri/src/excel_export.rs` |
-| DB operations | `src-tauri/src/db/operations.rs` |
-| ProposalModal (largest) | `src/lib/components/ProposalModal.svelte` |
+| Excel export commands | `src-tauri/src/commands/export.rs` |
+| Excel template generator | `src-tauri/src/excel_export.rs` |
+| DB types (serde) | `src-tauri/src/db/types.rs` |
+| ProposalDetail (export handler) | `src/lib/components/ProposalDetail.svelte` |
 | Build workflow | `.github/workflows/build-releases.yml` |
 
 ---

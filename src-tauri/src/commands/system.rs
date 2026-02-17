@@ -263,6 +263,41 @@ pub async fn investigate_record(record_id: String, state: State<'_, AppState>) -
     }
 }
 
+/// Change the runtime log level filter.
+///
+/// This allows dynamic control of log verbosity without restarting the app.
+/// The tauri-plugin-log is initialized at Debug level, but the global filter
+/// controls what actually gets written. Changing this affects all log output
+/// (file + console).
+///
+/// # Parameters
+/// - `level`: One of "off", "error", "warn", "info", "debug", "trace"
+///
+/// # Returns
+/// - `Ok(String)`: Confirmation of the new level
+/// - `Err(String)`: Unknown level string
+#[tauri::command]
+pub fn set_log_level(level: String) -> Result<String, String> {
+    let filter = match level.to_lowercase().as_str() {
+        "off" => log::LevelFilter::Off,
+        "error" => log::LevelFilter::Error,
+        "warn" => log::LevelFilter::Warn,
+        "info" => log::LevelFilter::Info,
+        "debug" => log::LevelFilter::Debug,
+        "trace" => log::LevelFilter::Trace,
+        _ => return Err(format!("Unknown log level: {}", level)),
+    };
+    log::set_max_level(filter);
+    log::info!("Log level changed to: {}", level);
+    Ok(format!("Log level set to {}", level))
+}
+
+/// Get the current runtime log level filter.
+#[tauri::command]
+pub fn get_log_level() -> String {
+    log::max_level().to_string().to_lowercase()
+}
+
 /// Frontend logging command for unified logging across frontend and backend.
 ///
 /// This command allows the Svelte frontend to send log messages to the Rust

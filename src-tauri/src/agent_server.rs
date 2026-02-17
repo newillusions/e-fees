@@ -20,19 +20,27 @@
 //! - `GET  /api/contacts/:id`    - Get contact by ID
 //! - `POST /api/contacts`        - Create a new contact
 //! - `POST /api/fees/:id/export` - Export fee as .xlsx file
+//! - `GET  /api/logs/stream`     - SSE real-time log stream (public)
+//! - `GET  /api/logs/level`      - Get current log level
+//! - `POST /api/logs/level`      - Set log level at runtime
 
 use axum::{
     extract::{Path, Query, Request, State},
     http::StatusCode,
     middleware::{self, Next},
-    response::{IntoResponse, Json, Response},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Json, Response,
+    },
     routing::{get, post},
     Router,
 };
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::RwLock;
 
 use crate::db::{DatabaseManager, CompanyCreate, ContactCreate, FeeCreate};
@@ -60,6 +68,8 @@ pub struct HealthResponse {
     pub version: String,
     pub db_connected: bool,
     pub uptime_seconds: u64,
+    pub log_file: String,
+    pub log_level: String,
 }
 
 #[derive(Serialize)]
@@ -232,6 +242,8 @@ async fn health_handler(State(state): State<AgentState>) -> Json<HealthResponse>
         version: env!("CARGO_PKG_VERSION").to_string(),
         db_connected,
         uptime_seconds: uptime,
+        log_file: get_log_file_path(),
+        log_level: log::max_level().to_string().to_lowercase(),
     })
 }
 
@@ -791,6 +803,136 @@ async fn export_fee_handler(
 }
 
 // ============================================================================
+// LOGGING ENDPOINTS
+// ============================================================================
+
+/// Resolve the log file path for the current platform.
+fn get_log_file_path() -> String {
+    if let Some(home) = dirs::home_dir() {
+        if cfg!(target_os = "macos") {
+            home.join("Library/Logs/com.emittiv.e-fees/E-Fees.log")
+                .to_string_lossy()
+                .to_string()
+        } else if cfg!(target_os = "windows") {
+            home.join("AppData/Local/com.emittiv.e-fees/logs/E-Fees.log")
+                .to_string_lossy()
+                .to_string()
+        } else {
+            home.join(".local/share/com.emittiv.e-fees/logs/E-Fees.log")
+                .to_string_lossy()
+                .to_string()
+        }
+    } else {
+        "unknown".to_string()
+    }
+}
+
+/// SSE endpoint that tails the log file in real-time.
+///
+/// Seeks to end of file and streams new lines as SSE events.
+/// Public endpoint (no auth) for easy `curl -N` access.
+async fn log_stream_handler() -> Result<
+    Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
+    (StatusCode, Json<ErrorResponse>),
+> {
+    let log_path = get_log_file_path();
+    let path = std::path::PathBuf::from(&log_path);
+
+    let file = tokio::fs::File::open(&path).await.map_err(|e| {
+        error!("Failed to open log file {}: {}", log_path, e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: format!("Failed to open log file: {}", e),
+            }),
+        )
+    })?;
+
+    let stream = async_stream::stream! {
+        let path_clone = path.clone();
+        let mut pos = {
+            let meta = tokio::fs::metadata(&path_clone).await;
+            meta.map(|m| m.len()).unwrap_or(0)
+        };
+        let mut line = String::new();
+        loop {
+            // Check if file has grown since last read
+            let current_len = tokio::fs::metadata(&path_clone).await
+                .map(|m| m.len()).unwrap_or(0);
+            if current_len > pos {
+                // New data available — open, seek to last position, read lines
+                if let Ok(mut file) = tokio::fs::File::open(&path_clone).await {
+                    if file.seek(std::io::SeekFrom::Start(pos)).await.is_ok() {
+                        let mut reader = BufReader::new(&mut file);
+                        loop {
+                            line.clear();
+                            match reader.read_line(&mut line).await {
+                                Ok(0) => break, // caught up
+                                Ok(n) => {
+                                    pos += n as u64;
+                                    let trimmed = line.trim().to_string();
+                                    if !trimmed.is_empty() {
+                                        yield Ok(Event::default().data(trimmed));
+                                    }
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                    }
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+    };
+
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
+#[derive(Deserialize)]
+struct SetLogLevelRequest {
+    level: String,
+}
+
+#[derive(Serialize)]
+struct LogLevelResponse {
+    level: String,
+}
+
+/// GET /api/logs/level — return current log level.
+async fn get_log_level_handler() -> Json<LogLevelResponse> {
+    Json(LogLevelResponse {
+        level: log::max_level().to_string().to_lowercase(),
+    })
+}
+
+/// POST /api/logs/level — set log level at runtime.
+async fn set_log_level_handler(
+    Json(req): Json<SetLogLevelRequest>,
+) -> Result<Json<LogLevelResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let filter = match req.level.to_lowercase().as_str() {
+        "off" => log::LevelFilter::Off,
+        "error" => log::LevelFilter::Error,
+        "warn" => log::LevelFilter::Warn,
+        "info" => log::LevelFilter::Info,
+        "debug" => log::LevelFilter::Debug,
+        "trace" => log::LevelFilter::Trace,
+        _ => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: format!("Unknown log level: {}", req.level),
+                }),
+            ))
+        }
+    };
+    log::set_max_level(filter);
+    info!("Log level changed via API to: {}", req.level);
+    Ok(Json(LogLevelResponse {
+        level: req.level.to_lowercase(),
+    }))
+}
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -853,9 +995,10 @@ async fn api_key_auth(
 
 /// Build the axum router with all agent API routes.
 pub fn build_router(state: AgentState) -> Router {
-    // Health endpoint — exempt from auth
+    // Public endpoints — exempt from auth
     let public = Router::new()
         .route("/api/health", get(health_handler))
+        .route("/api/logs/stream", get(log_stream_handler))
         .with_state(state.clone());
 
     // All other endpoints — protected by API key middleware
@@ -869,6 +1012,7 @@ pub fn build_router(state: AgentState) -> Router {
         .route("/api/contacts", get(list_contacts_handler).post(create_contact_handler))
         .route("/api/contacts/{id}", get(get_contact_handler))
         .route("/api/fees/{id}/export", post(export_fee_handler))
+        .route("/api/logs/level", get(get_log_level_handler).post(set_log_level_handler))
         .route_layer(middleware::from_fn_with_state(state.clone(), api_key_auth))
         .with_state(state);
 

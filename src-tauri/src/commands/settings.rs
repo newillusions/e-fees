@@ -63,6 +63,7 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         staff_position: None,
         project_folder_path: None,
         dev_mode: None,
+        log_level: None,
     };
 
     info!("Looking for .env file at: {:?}", env_path);
@@ -96,6 +97,7 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
                             "STAFF_POSITION" => settings.staff_position = Some(value.to_string()),
                             "PROJECT_FOLDER_PATH" => settings.project_folder_path = Some(value.to_string()),
                             "DEV_MODE" => settings.dev_mode = Some(value.to_lowercase() == "true"),
+                            "LOG_LEVEL" => settings.log_level = Some(value.to_lowercase()),
                             _ => {} // Ignore unknown variables
                         }
                     }
@@ -244,7 +246,7 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                             "SURREALDB_USER" | "SURREALDB_PASS" |
                             "SURREALDB_VERIFY_CERTS" | "SURREALDB_ACCEPT_INVALID_HOSTNAMES" |
                             "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
-                            "PROJECT_FOLDER_PATH" | "DEV_MODE" => continue,
+                            "PROJECT_FOLDER_PATH" | "DEV_MODE" | "LOG_LEVEL" => continue,
                             _ => lines.push(line.to_string()),
                         }
                     } else {
@@ -314,6 +316,10 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     // Write dev_mode setting (defaults to false if not set)
     let dev_mode_value = settings.dev_mode.unwrap_or(false);
     lines.push(format!("DEV_MODE=\"{}\"", dev_mode_value));
+
+    // Write log_level setting (defaults to "info" if not set)
+    let log_level_value = settings.log_level.as_deref().unwrap_or("info");
+    lines.push(format!("LOG_LEVEL=\"{}\"", log_level_value));
 
     // Write to file atomically
     let content = lines.join("\n");

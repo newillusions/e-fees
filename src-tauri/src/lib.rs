@@ -85,6 +85,9 @@ use commands::{
     scan_folder_sync,
     resolve_folder_inconsistency,
     log_message,
+    // Log level control
+    set_log_level,
+    get_log_level,
     // Import wizard commands
     import_scan_directory,
     import_execute,
@@ -140,12 +143,15 @@ pub fn run() {
             info!("Single instance enforcement - prevented duplicate launch");
         }))
         .setup(|app| {
-            // Setup logging
+            // Setup logging — init plugin at Debug so it captures everything,
+            // then control visibility via the runtime max_level filter
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Info)
+                    .level(log::LevelFilter::Debug)
                     .build(),
             )?;
+            // Default runtime filter to Info (user can change via Settings)
+            log::set_max_level(log::LevelFilter::Info);
             
             // Setup MCP plugin - don't crash app if it fails
             info!("Attempting to initialize MCP plugin with socket server");
@@ -195,7 +201,23 @@ pub fn run() {
             
             tauri::async_runtime::spawn(async move {
                 info!("Starting database initialization");
-                
+
+                // Restore saved log level from settings
+                if let Ok(settings) = commands::settings::get_settings_internal(&app_handle_clone).await {
+                    if let Some(ref level) = settings.log_level {
+                        let filter = match level.as_str() {
+                            "off" => log::LevelFilter::Off,
+                            "error" => log::LevelFilter::Error,
+                            "warn" => log::LevelFilter::Warn,
+                            "debug" => log::LevelFilter::Debug,
+                            "trace" => log::LevelFilter::Trace,
+                            _ => log::LevelFilter::Info,
+                        };
+                        log::set_max_level(filter);
+                        info!("Log level restored from settings: {}", level);
+                    }
+                }
+
                 // Try to load configuration from settings first, then from environment
                 let configured_manager = match load_database_config_from_settings(&app_handle_clone).await {
                     Ok(config) => {
@@ -333,6 +355,9 @@ pub fn run() {
             scan_folder_sync,
             resolve_folder_inconsistency,
             log_message,
+            // Log level control
+            set_log_level,
+            get_log_level,
             // Activity log commands
             create_activity_log,
             get_activity_logs,

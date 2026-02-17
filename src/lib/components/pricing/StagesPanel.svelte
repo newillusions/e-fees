@@ -63,12 +63,7 @@
   function updateStage(id: string, field: keyof Stage, value: string | number | boolean) {
     const updated = stages.map(s => {
       if (s.id !== id) return s;
-      const patch: Partial<Stage> = { [field]: value };
-      // Auto-regenerate code when name changes
-      if (field === 'name' && typeof value === 'string') {
-        patch.code = generateCode(value);
-      }
-      return { ...s, ...patch };
+      return { ...s, [field]: value };
     });
     stages = updated;
     onUpdateStages(updated);
@@ -211,7 +206,13 @@
                     value={stage.name}
                     onchange={(e) => updateStage(stage.id, 'name', e.currentTarget.value)}
                   />
-                  <span class="text-emittiv-dark text-xxs flex-shrink-0">({stage.code})</span>
+                  <input
+                    type="text"
+                    class="emittiv-table-input text-emittiv-dark text-xxs flex-shrink-0"
+                    style="width: 48px; text-align: center;"
+                    value={stage.code}
+                    onchange={(e) => updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
+                  />
                 </div>
               </div>
               <div class="emittiv-sortable-col--pct">
@@ -331,7 +332,13 @@
                     value={stage.name}
                     onchange={(e) => updateStage(stage.id, 'name', e.currentTarget.value)}
                   />
-                  <span class="text-emittiv-dark text-xxs flex-shrink-0">({stage.code})</span>
+                  <input
+                    type="text"
+                    class="emittiv-table-input text-emittiv-dark text-xxs flex-shrink-0"
+                    style="width: 48px; text-align: center;"
+                    value={stage.code}
+                    onchange={(e) => updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
+                  />
                 </div>
               </div>
               <div class="emittiv-sortable-col--action ml-auto">

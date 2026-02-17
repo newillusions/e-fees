@@ -24,6 +24,8 @@ export interface AppSettingsPublic {
   project_folder_path?: string;
   /** Development mode - enables verbose logging for debugging */
   dev_mode?: boolean;
+  /** Log level - "off", "info", "debug", "trace" */
+  log_level?: string;
 }
 
 /**
@@ -46,6 +48,8 @@ export interface AppSettings {
   project_folder_path?: string;
   /** Development mode - enables verbose logging for debugging */
   dev_mode?: boolean;
+  /** Log level - "off", "info", "debug", "trace" */
+  log_level?: string;
 }
 
 // Settings store - holds the public settings (without password)
