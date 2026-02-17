@@ -1,11 +1,27 @@
 //! Excel export Tauri commands.
 
 use tauri::State;
-use log::{info, error};
+use log::{info, warn, error};
 use std::path::PathBuf;
 
 use super::AppState;
 use crate::excel_export::{generate_fee_excel, generate_fee_template};
+
+/// Reveal a file in the native file manager (Finder on macOS, Explorer on Windows).
+fn reveal_in_file_manager(path: &str) {
+    #[cfg(target_os = "macos")]
+    {
+        if let Err(e) = std::process::Command::new("open").arg("-R").arg(path).spawn() {
+            warn!("Failed to reveal file in Finder: {}", e);
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Err(e) = std::process::Command::new("explorer").arg(format!("/select,{}", path)).spawn() {
+            warn!("Failed to reveal file in Explorer: {}", e);
+        }
+    }
+}
 
 /// Export a fee proposal to a formatted .xlsx file.
 ///
@@ -42,6 +58,7 @@ pub async fn export_fee_excel(
     let path = generate_fee_excel(&fee, &resolved_path)?;
 
     info!("Excel export saved to: {}", path);
+    reveal_in_file_manager(&path);
     Ok(path)
 }
 
@@ -87,5 +104,6 @@ pub async fn export_fee_template(
     let path = generate_fee_template(&fee, &resolved_path, stage_count)?;
 
     info!("Template export saved to: {}", path);
+    reveal_in_file_manager(&path);
     Ok(path)
 }
