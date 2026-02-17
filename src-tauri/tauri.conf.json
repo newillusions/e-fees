@@ -56,6 +56,9 @@
       },
       "allowDowngrades": true
     },
+    "resources": [
+      "resources/pricing-template.xlsx"
+    ],
     "createUpdaterArtifacts": true
   },
   "plugins": {

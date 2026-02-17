@@ -1,10 +1,11 @@
 //! Excel export Tauri commands.
 
-use tauri::State;
+use tauri::{AppHandle, State};
 use log::{info, warn, error};
 use std::path::PathBuf;
 
 use super::AppState;
+use crate::commands::folder_management::get_project_folder_location;
 use crate::excel_export::{generate_fee_excel, generate_fee_template};
 
 /// Reveal a file in the native file manager (Finder on macOS, Explorer on Windows).
@@ -64,22 +65,25 @@ pub async fn export_fee_excel(
 
 /// Export a fee to the project folder as a pricing template Excel file.
 ///
-/// Generates a working spreadsheet with discipline × stage matrix and formulas,
-/// matching the format used in project folders (`*-FP-NN Pricing.xlsx`).
+/// Locates the project's existing pricing spreadsheet via `find_project_folder()`,
+/// opens it with umya-spreadsheet (preserving formatting), populates it with
+/// pricing data from the fee, and saves in-place (or to `output_path` if the
+/// user chose "Export As…").
 ///
-/// If `output_path` is provided (from a save dialog), writes there.
-/// Otherwise falls back to the system temp directory.
+/// Falls back to the embedded blank template when the project folder doesn't
+/// exist yet (e.g. new RFPs before folder creation).
 #[tauri::command]
 pub async fn export_fee_template(
     fee_id: String,
     output_path: Option<String>,
+    app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     info!("export_fee_template called for id: {}, output_path: {:?}", fee_id, output_path);
 
     let record_id = fee_id.strip_prefix("fee:").unwrap_or(&fee_id).to_string();
 
-    // Fetch the fee
+    // Fetch the fee and its related project
     let manager = state.read().await;
     let fee = manager.get_fee_by_id(&record_id).await.map_err(|e| {
         error!("Failed to fetch fee for template export: {}", e);
@@ -87,23 +91,84 @@ pub async fn export_fee_template(
     })?;
     let fee = fee.ok_or_else(|| "Fee not found".to_string())?;
 
-    // Count design stages from pricing data
-    let stage_count = fee.pricing.as_ref()
-        .map(|p| p.stages.iter().filter(|s| !s.is_post_contract).count())
-        .unwrap_or(3);
+    // Extract project number from fee number (e.g. "25-97105-R1" → "25-97105")
+    let project_number = fee.number
+        .split("-R")
+        .next()
+        .unwrap_or(&fee.number)
+        .to_string();
 
+    // Try to find the project's existing pricing file
+    let source_path = find_pricing_file(&app_handle, &project_number, &fee.number, fee.rev).await;
+
+    // Determine output path
     let resolved_path = match output_path {
         Some(p) => PathBuf::from(p),
         None => {
-            let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
-            let filename = format!("{}-{:02} Pricing.xlsx", safe_number, fee.rev);
-            std::env::temp_dir().join(&filename)
+            // Default: save in-place to the project folder's pricing file
+            match &source_path {
+                Some(p) => p.clone(),
+                None => {
+                    // No project folder → save to temp
+                    let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+                    let filename = format!("{}-{:02} Pricing.xlsx", safe_number, fee.rev);
+                    std::env::temp_dir().join(&filename)
+                }
+            }
         }
     };
 
-    let path = generate_fee_template(&fee, &resolved_path, stage_count)?;
+    let path = generate_fee_template(
+        &fee,
+        &resolved_path,
+        source_path.as_deref(),
+    )?;
 
     info!("Template export saved to: {}", path);
     reveal_in_file_manager(&path);
     Ok(path)
+}
+
+/// Search for the project's existing pricing xlsx file.
+///
+/// Constructs the expected path:
+/// `{project_folder}/02 Proposal/{fee_number}-FP-{rev:02} Pricing.xlsx`
+async fn find_pricing_file(
+    app_handle: &AppHandle,
+    project_number: &str,
+    fee_number: &str,
+    rev: i32,
+) -> Option<PathBuf> {
+    let folder_info = get_project_folder_location(app_handle.clone(), project_number.to_string())
+        .await
+        .ok()?;
+
+    if !folder_info.exists {
+        info!("Project folder not found for {}, will use embedded template", project_number);
+        return None;
+    }
+
+    let proposal_dir = PathBuf::from(&folder_info.full_path).join("02 Proposal");
+    if !proposal_dir.exists() {
+        info!("02 Proposal directory not found in project folder");
+        return None;
+    }
+
+    // Strip table prefix from fee_number for filename (e.g. "25-97105" not "fee:xxx")
+    let safe_number = fee_number
+        .split("-R")
+        .next()
+        .unwrap_or(fee_number)
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+
+    let filename = format!("{}-FP-{:02} Pricing.xlsx", safe_number, rev);
+    let pricing_path = proposal_dir.join(&filename);
+
+    if pricing_path.exists() {
+        info!("Found existing pricing file: {:?}", pricing_path);
+        Some(pricing_path)
+    } else {
+        info!("Pricing file not found at {:?}, will use embedded template", pricing_path);
+        None
+    }
 }

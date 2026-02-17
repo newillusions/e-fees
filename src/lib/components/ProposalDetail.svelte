@@ -334,8 +334,39 @@
     }
   }
 
-  // Export proposal pricing as template
-  async function handleExportTemplate() {
+  // Update pricing in project folder (in-place save)
+  async function handleUpdatePricing() {
+    if (!proposal) return;
+    try {
+      const feeId = extractId(proposal.id);
+      // No outputPath → backend saves in-place to the project folder
+      const path = await exportFeeTemplate(feeId);
+      const filename = path.split('/').pop() || path.split('\\').pop() || path;
+      warningModal = {
+        isOpen: true,
+        title: 'Pricing Updated',
+        message: `Pricing updated in project folder:\n\n${filename}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    } catch (error) {
+      console.error('Failed to update pricing:', error);
+      warningModal = {
+        isOpen: true,
+        title: 'Update Failed',
+        message: `Failed to update pricing template:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
+  }
+
+  // Export pricing as a copy to a chosen location
+  async function handleExportTemplateAs() {
     if (!proposal) return;
     try {
       const feeId = extractId(proposal.id);
@@ -391,10 +422,17 @@
       disabled: !proposal
     },
     {
-      handler: handleExportTemplate,
-      label: 'Export Pricing Template',
-      tooltip: proposal?.pricing ? 'Export pricing as working Excel template' : 'No pricing data — configure pricing first',
+      handler: handleUpdatePricing,
+      label: 'Update Pricing',
+      tooltip: proposal?.pricing ? 'Update pricing in project folder (in-place)' : 'No pricing data — configure pricing first',
       icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      disabled: !proposal || !proposal.pricing
+    },
+    {
+      handler: handleExportTemplateAs,
+      label: 'Export Pricing As...',
+      tooltip: proposal?.pricing ? 'Export pricing template to a chosen location' : 'No pricing data — configure pricing first',
+      icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       disabled: !proposal || !proposal.pricing
     },
     {

@@ -46,6 +46,7 @@ fs_extra = "1.3"
 axum = "0.8"
 # Excel export
 rust_xlsxwriter = "0.82"
+umya-spreadsheet = "2.3"
 
 [dev-dependencies]
 serial_test = "3.1"
