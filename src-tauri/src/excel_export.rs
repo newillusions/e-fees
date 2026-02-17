@@ -812,7 +812,7 @@ mod tests {
 
     #[test]
     fn test_template_with_3_stages_fallback() {
-        let mut fee = full_fee();
+        let fee = full_fee();
         // 3 stages = default test data (fewer than template's 4 → row removal)
         let path = std::env::temp_dir().join("delete_me_test_template_3stages.xlsx");
         let result = generate_fee_template(&fee, &path, None);

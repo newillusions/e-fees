@@ -339,24 +339,24 @@
     if (!proposal) return;
     try {
       const feeId = extractId(proposal.id);
-      // No outputPath → backend saves in-place to the project folder
+      // No outputPath → backend creates next PRI version in project folder
       const path = await exportFeeTemplate(feeId);
       const filename = path.split('/').pop() || path.split('\\').pop() || path;
       warningModal = {
         isOpen: true,
-        title: 'Pricing Updated',
-        message: `Pricing updated in project folder:\n\n${filename}`,
+        title: 'Pricing Exported',
+        message: `New pricing version saved:\n\n${filename}`,
         confirmText: 'OK',
         cancelText: '',
         onConfirm: null,
         onCancel: null
       };
     } catch (error) {
-      console.error('Failed to update pricing:', error);
+      console.error('Failed to export pricing:', error);
       warningModal = {
         isOpen: true,
-        title: 'Update Failed',
-        message: `Failed to update pricing template:\n\n${error}`,
+        title: 'Export Failed',
+        message: `Failed to export pricing:\n\n${error}`,
         confirmText: 'OK',
         cancelText: '',
         onConfirm: null,
@@ -423,8 +423,8 @@
     },
     {
       handler: handleUpdatePricing,
-      label: 'Update Pricing',
-      tooltip: proposal?.pricing ? 'Update pricing in project folder (in-place)' : 'No pricing data — configure pricing first',
+      label: 'Save Pricing',
+      tooltip: proposal?.pricing ? 'Save new PRI version to project folder' : 'No pricing data — configure pricing first',
       icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       disabled: !proposal || !proposal.pricing
     },

@@ -2,7 +2,8 @@
 
 use tauri::{AppHandle, State};
 use log::{info, warn, error};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use regex::Regex;
 
 use super::AppState;
 use crate::commands::folder_management::get_project_folder_location;
@@ -65,13 +66,14 @@ pub async fn export_fee_excel(
 
 /// Export a fee to the project folder as a pricing template Excel file.
 ///
-/// Locates the project's existing pricing spreadsheet via `find_project_folder()`,
-/// opens it with umya-spreadsheet (preserving formatting), populates it with
-/// pricing data from the fee, and saves in-place (or to `output_path` if the
-/// user chose "Export As…").
+/// Uses PRI-NN versioning: each export creates the next numbered version
+/// (e.g. `25-97105-PRI-01 Pricing.xlsx`, `PRI-02`, etc.). The latest
+/// existing PRI file is used as the source template so manual edits are
+/// preserved. Falls back to the embedded blank template when no project
+/// folder or previous PRI file exists.
 ///
-/// Falls back to the embedded blank template when the project folder doesn't
-/// exist yet (e.g. new RFPs before folder creation).
+/// If `output_path` is provided (from "Export As…" dialog), saves there
+/// instead of auto-incrementing in the project folder.
 #[tauri::command]
 pub async fn export_fee_template(
     fee_id: String,
@@ -83,7 +85,6 @@ pub async fn export_fee_template(
 
     let record_id = fee_id.strip_prefix("fee:").unwrap_or(&fee_id).to_string();
 
-    // Fetch the fee and its related project
     let manager = state.read().await;
     let fee = manager.get_fee_by_id(&record_id).await.map_err(|e| {
         error!("Failed to fetch fee for template export: {}", e);
@@ -98,20 +99,28 @@ pub async fn export_fee_template(
         .unwrap_or(&fee.number)
         .to_string();
 
-    // Try to find the project's existing pricing file
-    let source_path = find_pricing_file(&app_handle, &project_number, &fee.number, fee.rev).await;
+    let safe_number = project_number
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+
+    // Find the project's proposal directory and scan for existing PRI files
+    let proposal_dir = find_proposal_dir(&app_handle, &project_number).await;
+    let (source_path, next_version) = match &proposal_dir {
+        Some(dir) => find_latest_pri_file(dir, &safe_number),
+        None => (None, 1),
+    };
 
     // Determine output path
     let resolved_path = match output_path {
         Some(p) => PathBuf::from(p),
         None => {
-            // Default: save in-place to the project folder's pricing file
-            match &source_path {
-                Some(p) => p.clone(),
+            match &proposal_dir {
+                Some(dir) => {
+                    let filename = format!("{}-PRI-{:02} Pricing.xlsx", safe_number, next_version);
+                    dir.join(&filename)
+                }
                 None => {
                     // No project folder → save to temp
-                    let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
-                    let filename = format!("{}-{:02} Pricing.xlsx", safe_number, fee.rev);
+                    let filename = format!("{}-PRI-{:02} Pricing.xlsx", safe_number, next_version);
                     std::env::temp_dir().join(&filename)
                 }
             }
@@ -129,15 +138,10 @@ pub async fn export_fee_template(
     Ok(path)
 }
 
-/// Search for the project's existing pricing xlsx file.
-///
-/// Constructs the expected path:
-/// `{project_folder}/02 Proposal/{fee_number}-FP-{rev:02} Pricing.xlsx`
-async fn find_pricing_file(
+/// Locate the project's `02 Proposal` directory via `find_project_folder()`.
+async fn find_proposal_dir(
     app_handle: &AppHandle,
     project_number: &str,
-    fee_number: &str,
-    rev: i32,
 ) -> Option<PathBuf> {
     let folder_info = get_project_folder_location(app_handle.clone(), project_number.to_string())
         .await
@@ -154,21 +158,47 @@ async fn find_pricing_file(
         return None;
     }
 
-    // Strip table prefix from fee_number for filename (e.g. "25-97105" not "fee:xxx")
-    let safe_number = fee_number
-        .split("-R")
-        .next()
-        .unwrap_or(fee_number)
-        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+    Some(proposal_dir)
+}
 
-    let filename = format!("{}-FP-{:02} Pricing.xlsx", safe_number, rev);
-    let pricing_path = proposal_dir.join(&filename);
+/// Scan a proposal directory for existing PRI-NN files and return the latest
+/// as `source_path` plus the next version number.
+///
+/// Pattern: `{project_number}-PRI-{NN} Pricing.xlsx`
+/// Also matches legacy `{project_number}-FP-{NN} Pricing.xlsx` files as sources.
+fn find_latest_pri_file(
+    proposal_dir: &Path,
+    safe_number: &str,
+) -> (Option<PathBuf>, i32) {
+    let pattern = format!(r"^{}-(?:PRI|FP)-(\d+)\s+Pricing\.xlsx$", regex::escape(safe_number));
+    let re = match Regex::new(&pattern) {
+        Ok(r) => r,
+        Err(_) => return (None, 1),
+    };
 
-    if pricing_path.exists() {
-        info!("Found existing pricing file: {:?}", pricing_path);
-        Some(pricing_path)
-    } else {
-        info!("Pricing file not found at {:?}, will use embedded template", pricing_path);
-        None
+    let mut best_version: i32 = 0;
+    let mut best_path: Option<PathBuf> = None;
+
+    if let Ok(entries) = std::fs::read_dir(proposal_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if let Some(caps) = re.captures(&name_str) {
+                if let Ok(ver) = caps[1].parse::<i32>() {
+                    if ver > best_version {
+                        best_version = ver;
+                        best_path = Some(entry.path());
+                    }
+                }
+            }
+        }
     }
+
+    if let Some(ref p) = best_path {
+        info!("Found latest pricing file: {:?} (version {})", p, best_version);
+    } else {
+        info!("No existing PRI/FP files found in {:?}", proposal_dir);
+    }
+
+    (best_path, best_version + 1)
 }
