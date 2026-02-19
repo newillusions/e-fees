@@ -44,6 +44,7 @@ use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::RwLock;
 
 use crate::db::{DatabaseManager, CompanyCreate, ContactCreate, FeeCreate};
+use crate::db::types::{record_key_string, record_id_string};
 use crate::commands::AppState;
 
 // ============================================================================
@@ -287,7 +288,7 @@ async fn list_projects_handler(
     let items: Vec<ProjectResponse> = projects
         .into_iter()
         .map(|p| ProjectResponse {
-            id: p.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: p.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: p.name,
             name_short: p.name_short,
             status: p.status,
@@ -320,7 +321,7 @@ async fn get_project_handler(
 
     match project {
         Some(p) => Ok(Json(ProjectResponse {
-            id: p.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: p.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: p.name,
             name_short: p.name_short,
             status: p.status,
@@ -384,7 +385,7 @@ async fn create_project_handler(
     Ok((
         StatusCode::CREATED,
         Json(ProjectResponse {
-            id: created.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: created.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: created.name,
             name_short: created.name_short,
             status: created.status,
@@ -416,7 +417,7 @@ async fn list_fees_handler(
         .into_iter()
         .filter(|f| {
             if let Some(ref filter_project) = params.project_id {
-                let fee_project_id = format!("{}:{}", f.project_id.tb, f.project_id.id);
+                let fee_project_id = record_id_string(&f.project_id);
                 &fee_project_id == filter_project
             } else {
                 true
@@ -426,13 +427,13 @@ async fn list_fees_handler(
             let total_fee = f.pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
             let currency = f.pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
             FeeResponse {
-                id: f.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+                id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
                 number: f.number,
                 rev: f.rev,
                 status: f.status,
-                project_id: format!("{}:{}", f.project_id.tb, f.project_id.id),
-                company_id: format!("{}:{}", f.company_id.tb, f.company_id.id),
+                project_id: record_id_string(&f.project_id),
+                company_id: record_id_string(&f.company_id),
                 total_fee,
                 currency,
             }
@@ -467,13 +468,13 @@ async fn get_fee_handler(
             let total_fee = f.pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
             let currency = f.pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
             Ok(Json(FeeResponse {
-                id: f.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+                id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
                 number: f.number,
                 rev: f.rev,
                 status: f.status,
-                project_id: format!("{}:{}", f.project_id.tb, f.project_id.id),
-                company_id: format!("{}:{}", f.company_id.tb, f.company_id.id),
+                project_id: record_id_string(&f.project_id),
+                company_id: record_id_string(&f.company_id),
                 total_fee,
                 currency,
             }))
@@ -544,13 +545,13 @@ async fn create_fee_handler(
     Ok((
         StatusCode::CREATED,
         Json(FeeResponse {
-            id: created.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: created.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: created.name,
             number: created.number,
             rev: created.rev,
             status: created.status,
-            project_id: format!("{}:{}", created.project_id.tb, created.project_id.id),
-            company_id: format!("{}:{}", created.company_id.tb, created.company_id.id),
+            project_id: record_id_string(&created.project_id),
+            company_id: record_id_string(&created.company_id),
             total_fee,
             currency,
         }),
@@ -574,7 +575,7 @@ async fn list_companies_handler(
     let items: Vec<CompanyResponse> = companies
         .into_iter()
         .map(|c| CompanyResponse {
-            id: c.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: c.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: c.name,
             name_short: c.name_short,
             abbreviation: c.abbreviation,
@@ -615,7 +616,7 @@ async fn create_company_handler(
     Ok((
         StatusCode::CREATED,
         Json(CompanyResponse {
-            id: created.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: created.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             name: created.name,
             name_short: created.name_short,
             abbreviation: created.abbreviation,
@@ -645,7 +646,7 @@ async fn list_contacts_handler(
         .filter(|c| {
             if let Some(ref filter_company) = params.company_id {
                 if let Some(ref company) = c.company {
-                    let company_id = format!("{}:{}", company.tb, company.id);
+                    let company_id = record_id_string(&company);
                     &company_id == filter_company
                 } else {
                     false
@@ -655,9 +656,9 @@ async fn list_contacts_handler(
             }
         })
         .map(|c| {
-            let company_id = c.company.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default();
+            let company_id = c.company.map(|t| record_id_string(&t)).unwrap_or_default();
             ContactResponse {
-                id: c.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+                id: c.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 first_name: c.first_name.unwrap_or_default(),
                 last_name: c.last_name.unwrap_or_default(),
                 full_name: c.full_name.unwrap_or_default(),
@@ -693,9 +694,9 @@ async fn get_contact_handler(
 
     match contact {
         Some(c) => {
-            let company_id = c.company.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default();
+            let company_id = c.company.map(|t| record_id_string(&t)).unwrap_or_default();
             Ok(Json(ContactResponse {
-                id: c.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+                id: c.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 first_name: c.first_name.unwrap_or_default(),
                 last_name: c.last_name.unwrap_or_default(),
                 full_name: c.full_name.unwrap_or_default(),
@@ -741,12 +742,12 @@ async fn create_contact_handler(
         )
     })?;
 
-    let company_id = created.company.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default();
+    let company_id = created.company.map(|t| record_id_string(&t)).unwrap_or_default();
 
     Ok((
         StatusCode::CREATED,
         Json(ContactResponse {
-            id: created.id.map(|t| format!("{}:{}", t.tb, t.id)).unwrap_or_default(),
+            id: created.id.map(|t| record_id_string(&t)).unwrap_or_default(),
             first_name: created.first_name.unwrap_or_default(),
             last_name: created.last_name.unwrap_or_default(),
             full_name: created.full_name.unwrap_or_default(),

@@ -4,6 +4,7 @@
 //! multiple command modules, eliminating duplicate definitions.
 
 use serde::{Deserialize, Serialize};
+use surrealdb::types::SurrealValue;
 
 /// Partial company update structure for modifying existing companies.
 ///
@@ -19,7 +20,7 @@ use serde::{Deserialize, Serialize};
 /// - `country`: Company headquarters country
 /// - `reg_no`: Company registration number (optional)
 /// - `tax_no`: Tax identification number (optional)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct CompanyUpdate {
     pub name: Option<String>,
     pub name_short: Option<String>,
@@ -35,7 +36,7 @@ pub struct CompanyUpdate {
 /// Similar to CompanyUpdate, this struct allows updating specific fields
 /// of a contact without affecting other fields. All fields are optional
 /// to support partial updates via the database merge operation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ContactUpdate {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -51,7 +52,7 @@ pub struct ContactUpdate {
 /// This struct allows updating specific fields of a project without affecting
 /// other fields. All fields are optional to support partial updates via the
 /// database merge operation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ProjectUpdate {
     pub name: Option<String>,
     pub name_short: Option<String>,

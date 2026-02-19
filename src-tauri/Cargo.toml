@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.11.0"
+version = "0.12.0"
 description = "e-fees - Fee Proposal Management System"
 authors = ["you"]
 license = ""
@@ -24,7 +24,8 @@ tauri = { version = "2.5.0", features = [ "macos-private-api", "config-toml"] }
 tauri-plugin-dialog = "2.2.2"
 tauri-plugin-single-instance = "2.2.2"
 tokio = { version = "1", features = ["full"] }
-surrealdb = { version = "2.3", features = ["kv-mem", "protocol-ws", "protocol-http", "rustls"] }
+surrealdb = { version = "3.0", features = ["kv-mem", "protocol-ws", "protocol-http", "rustls"] }
+surrealdb-types = "3.0"
 log = "0.4"
 tauri-plugin-log = "2.0.0-rc"
 uuid = { version = "1.0", features = ["v4", "serde"] }

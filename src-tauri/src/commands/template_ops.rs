@@ -4,6 +4,7 @@
 //! copying folder structures, and checking file existence.
 
 use crate::db::{Project, NewProject};
+use crate::db::types::{record_key_string, record_id_string};
 use crate::commands::settings::get_settings;
 use super::AppState;
 
@@ -166,12 +167,12 @@ pub async fn populate_project_data(
     info!("Looking for FP ID: {}", fp_id);
     let fp = fps.iter().find(|f| {
         if let Some(id) = &f.id {
-            let db_id_clean = id.id.to_string()
+            let db_id_clean = record_key_string(&id.key)
                 .trim_start_matches('⟨')
                 .trim_end_matches('⟩')
                 .to_string();
             let input_id_clean = fp_id.trim_start_matches("fee:").to_string();
-            db_id_clean == input_id_clean || id.to_string().contains(&fp_id)
+            db_id_clean == input_id_clean || record_id_string(id).contains(&fp_id)
         } else {
             false
         }

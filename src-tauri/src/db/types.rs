@@ -1,16 +1,34 @@
 //! Database entity types and structures.
 
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::Thing;
+use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
+
+// ============================================================================
+// RECORD ID HELPERS (v3 RecordIdKey has no Display impl)
+// ============================================================================
+
+/// Convert a RecordIdKey to its string representation.
+pub fn record_key_string(key: &RecordIdKey) -> String {
+    match key {
+        RecordIdKey::String(s) => s.clone(),
+        RecordIdKey::Number(n) => n.to_string(),
+        _ => format!("{:?}", key),
+    }
+}
+
+/// Format a RecordId as "table:key".
+pub fn record_id_string(id: &RecordId) -> String {
+    format!("{}:{}", id.table, record_key_string(&id.key))
+}
 
 // ============================================================================
 // ENTITY STRUCTURES
 // ============================================================================
 
 /// Project entity representing core business projects.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Project {
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub name_short: String,
     pub status: String,
@@ -23,7 +41,7 @@ pub struct Project {
 }
 
 /// Project number structure implementing the YY-CCCNN numbering system.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ProjectNumber {
     pub year: i32,
     pub country: i32,
@@ -32,14 +50,14 @@ pub struct ProjectNumber {
 }
 
 /// Timestamp structure for created_at and updated_at.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct TimeStamps {
     pub created_at: String,
     pub updated_at: String,
 }
 
 /// Project creation struct without auto-managed fields.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct NewProject {
     pub name: String,
     pub name_short: String,
@@ -52,9 +70,9 @@ pub struct NewProject {
 }
 
 /// Company entity representing client organizations.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Company {
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub name_short: String,
     pub abbreviation: String,
@@ -66,7 +84,7 @@ pub struct Company {
 }
 
 /// CompanyCreate represents a new company being created.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct CompanyCreate {
     pub name: String,
     pub name_short: String,
@@ -78,9 +96,9 @@ pub struct CompanyCreate {
 }
 
 /// Contact entity.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Contact {
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     #[serde(default)]
     pub first_name: Option<String>,
     #[serde(default)]
@@ -94,13 +112,13 @@ pub struct Contact {
     #[serde(default)]
     pub position: Option<String>,
     #[serde(default)]
-    pub company: Option<Thing>,
+    pub company: Option<RecordId>,
     #[serde(default)]
     pub time: Option<TimeStamps>,
 }
 
 /// Contact creation struct.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ContactCreate {
     pub first_name: String,
     pub last_name: String,
@@ -111,9 +129,9 @@ pub struct ContactCreate {
 }
 
 /// Fee entity representing fee proposals.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Fee {
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub number: String,
     pub rev: i32,
@@ -121,9 +139,9 @@ pub struct Fee {
     pub issue_date: String,
     pub activity: String,
     pub package: String,
-    pub project_id: Thing,
-    pub company_id: Thing,
-    pub contact_id: Thing,
+    pub project_id: RecordId,
+    pub company_id: RecordId,
+    pub contact_id: RecordId,
     pub staff_name: String,
     pub staff_email: String,
     pub staff_phone: String,
@@ -152,7 +170,7 @@ pub struct Fee {
 }
 
 /// Fee creation struct.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct FeeCreate {
     pub name: String,
     pub number: String,
@@ -191,7 +209,7 @@ pub struct FeeCreate {
 }
 
 /// Fee update struct.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct FeeUpdate {
     pub name: String,
     pub number: String,
@@ -228,7 +246,7 @@ pub struct FeeUpdate {
 }
 
 /// Revision entry for fee proposals.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Revision {
     pub revision_number: i32,
     pub revision_date: String,
@@ -242,7 +260,7 @@ pub struct Revision {
 // ============================================================================
 
 /// Discipline allocation for fee breakdown.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Discipline {
     pub id: String,
     pub name: String,
@@ -251,7 +269,7 @@ pub struct Discipline {
 }
 
 /// Design stage definition.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Stage {
     pub id: String,
     pub name: String,
@@ -262,7 +280,7 @@ pub struct Stage {
 }
 
 /// Pricing configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, Default)]
 pub struct PricingConfig {
     #[serde(default)]
     pub target_fee: f64,
@@ -281,7 +299,7 @@ pub struct PricingConfig {
 }
 
 /// Discipline × Stage pricing cell.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PricingCell {
     pub discipline_id: String,
     pub stage_id: String,
@@ -291,7 +309,7 @@ pub struct PricingCell {
 }
 
 /// Reimbursable cost/expense.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ReimbursableCost {
     pub id: String,
     pub description: String,
@@ -307,7 +325,7 @@ pub struct ReimbursableCost {
 }
 
 /// Post-contract line item (different structure from design stages).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PostContractItem {
     pub id: String,
     pub stage_id: String,
@@ -319,7 +337,7 @@ pub struct PostContractItem {
 }
 
 /// Payment schedule entry.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PaymentScheduleEntry {
     pub id: String,
     #[serde(rename = "type")]
@@ -343,7 +361,7 @@ pub struct PaymentScheduleEntry {
 }
 
 /// Payment tracking summary.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PaymentSchedule {
     pub entries: Vec<PaymentScheduleEntry>,
     pub total_invoiced: f64,
@@ -352,7 +370,7 @@ pub struct PaymentSchedule {
 }
 
 /// Complete pricing breakdown.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, Default)]
 pub struct PricingBreakdown {
     #[serde(default)]
     pub config: PricingConfig,
@@ -379,7 +397,7 @@ pub struct PricingBreakdown {
 }
 
 /// Pricing update struct - for updating only pricing-related fields on a fee.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PricingUpdate {
     pub pricing: Option<PricingBreakdown>,
     pub post_contract_items: Option<Vec<PostContractItem>>,
@@ -388,7 +406,7 @@ pub struct PricingUpdate {
 }
 
 /// Pricing revision tracking (append-only).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct PricingRevision {
     pub id: String,
     pub fee_id: String,
@@ -407,8 +425,8 @@ pub struct PricingRevision {
 // ============================================================================
 
 /// Paginated response structure for lazy loading.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginatedResponse<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct PaginatedResponse<T: SurrealValue> {
     pub items: Vec<T>,
     pub total: usize,
     pub page: usize,
@@ -416,7 +434,7 @@ pub struct PaginatedResponse<T> {
     pub has_more: bool,
 }
 
-impl<T> PaginatedResponse<T> {
+impl<T: SurrealValue> PaginatedResponse<T> {
     pub fn new(items: Vec<T>, total: usize, page: usize, page_size: usize) -> Self {
         let has_more = page * page_size < total;
         Self { items, total, page, page_size, has_more }
@@ -424,7 +442,7 @@ impl<T> PaginatedResponse<T> {
 }
 
 /// Entity counts for Dashboard statistics.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct EntityCounts {
     pub total_projects: usize,
     pub total_companies: usize,
@@ -438,9 +456,9 @@ pub struct EntityCounts {
 // ============================================================================
 
 /// Activity log entry for tracking user actions.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ActivityLog {
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub action: String,
     pub entity_type: String,
     pub entity_id: String,
@@ -454,7 +472,7 @@ pub struct ActivityLog {
 }
 
 /// Create structure for new activity log entries.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ActivityLogCreate {
     pub action: String,
     pub entity_type: String,

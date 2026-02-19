@@ -2,7 +2,7 @@
 // Auto-generated from database schema
 
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::{Datetime, Thing};
+use surrealdb::types::{Datetime, RecordId};
 
 // Enums
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,7 +102,7 @@ pub struct Revision {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub name_short: String,
     pub activity: ProjectActivity,
@@ -122,12 +122,12 @@ pub struct Project {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fee {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub number: String,
-    pub project_id: Thing,
-    pub company_id: Thing,
-    pub contact_id: Thing,
+    pub project_id: RecordId,
+    pub company_id: RecordId,
+    pub contact_id: RecordId,
     pub status: String,
     pub issue_date: String, // YYMMDD format
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -163,7 +163,7 @@ pub struct Fee {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Company {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub name_short: String,
     pub abbreviation: String,
@@ -180,13 +180,13 @@ pub struct Company {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contact {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub first_name: String,
     pub last_name: String,
     pub email: String,
     pub phone: String,
     pub position: String,
-    pub company: Thing,
+    pub company: RecordId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_name: Option<String>, // auto-computed
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -196,7 +196,7 @@ pub struct Contact {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub name: String,
     pub name_formal: String,
     pub name_official: String,
@@ -204,13 +204,13 @@ pub struct Country {
     pub code_alt: String,
     pub dial_code: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency_code: Option<Thing>,
+    pub currency_code: Option<RecordId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Currency {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<RecordId>,
     pub code: String,
     pub name: String,
 }
@@ -292,7 +292,7 @@ pub struct ContactCreate {
     pub email: String,
     pub phone: String,
     pub position: String,
-    pub company: Thing,
+    pub company: RecordId,
 }
 
 // Default functions

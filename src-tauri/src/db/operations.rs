@@ -3,9 +3,10 @@
 //! This module contains impl blocks for database entity operations,
 //! extracted from mod.rs to reduce file size and improve organization.
 
-use surrealdb::{Error, Value};
+use surrealdb::{Error, types::Value};
 use log::{error, info};
 use chrono::Datelike;
+use crate::db::types::record_key_string;
 
 use super::{
     DatabaseManager, PaginatedResponse,
@@ -212,7 +213,7 @@ impl DatabaseManager {
 
         // 2. Find max rev for this project using parameterized query
         let client = self.get_client()?;
-        let project_id_val = format!("{}", source.project_id.id);
+        let project_id_val = record_key_string(&source.project_id.key);
         let mut response = client.query_bind(
             "SELECT math::max(rev) AS max_rev FROM fee WHERE project_id = projects:$pid GROUP ALL",
             ("pid", project_id_val)
@@ -233,9 +234,9 @@ impl DatabaseManager {
             issue_date: chrono::Utc::now().format("%y%m%d").to_string(),
             activity: source.activity.clone(),
             package: source.package.clone(),
-            project_id: format!("{}", source.project_id.id),
-            company_id: format!("{}", source.company_id.id),
-            contact_id: format!("{}", source.contact_id.id),
+            project_id: record_key_string(&source.project_id.key),
+            company_id: record_key_string(&source.company_id.key),
+            contact_id: record_key_string(&source.contact_id.key),
             staff_name: source.staff_name.clone(),
             staff_email: source.staff_email.clone(),
             staff_phone: source.staff_phone.clone(),

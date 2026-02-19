@@ -248,12 +248,12 @@ mod tests {
 
     #[test]
     fn test_extract_thing_id() {
-        use surrealdb::sql::Thing;
+        use surrealdb::types::RecordId;
 
-        // Create a Thing object using from method
-        let thing = Thing::from(("contacts", "john_doe"));
+        // Create a RecordId using new method
+        let record_id = RecordId::new("contacts", "john_doe");
 
-        let extracted = extract_thing_id(&thing);
+        let extracted = extract_thing_id(&record_id);
         assert_eq!(extracted, Some("john_doe".to_string()));
     }
 
@@ -372,8 +372,9 @@ mod tests {
         }
     }
 
-    fn extract_thing_id(thing: &surrealdb::sql::Thing) -> Option<String> {
-        Some(thing.id.to_string())
+    fn extract_thing_id(record_id: &surrealdb::types::RecordId) -> Option<String> {
+        use crate::db::types::record_key_string;
+        Some(record_key_string(&record_id.key))
     }
 
     fn extract_id_string(id: &str) -> Option<String> {

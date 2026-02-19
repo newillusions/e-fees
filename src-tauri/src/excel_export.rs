@@ -637,16 +637,16 @@ fn write_summary_section(ws: &mut Worksheet, start_row: u32, pricing: &PricingBr
 mod tests {
     use super::*;
     use crate::db::types::*;
-    use surrealdb::sql::Thing;
+    use surrealdb::types::RecordId;
     use std::fs;
 
-    fn make_thing(table: &str, id: &str) -> Thing {
-        Thing::from((table.to_string(), id.to_string()))
+    fn make_record_id(table: &str, id: &str) -> RecordId {
+        RecordId::new(table, id)
     }
 
     fn minimal_fee() -> Fee {
         Fee {
-            id: Some(make_thing("fee", "test123")),
+            id: Some(make_record_id("fee", "test123")),
             name: "DELETE ME - Test Fee Proposal".to_string(),
             number: "26-97101-R1".to_string(),
             rev: 1,
@@ -654,9 +654,9 @@ mod tests {
             issue_date: "260209".to_string(),
             activity: "Design and Consultancy".to_string(),
             package: "Lighting".to_string(),
-            project_id: make_thing("projects", "proj001"),
-            company_id: make_thing("company", "comp001"),
-            contact_id: make_thing("contacts", "cont001"),
+            project_id: make_record_id("projects", "proj001"),
+            company_id: make_record_id("company", "comp001"),
+            contact_id: make_record_id("contacts", "cont001"),
             staff_name: "Martin Robert".to_string(),
             staff_email: "martin@emittiv.com".to_string(),
             staff_phone: "+971501234567".to_string(),

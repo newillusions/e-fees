@@ -299,16 +299,16 @@ impl DatabaseManager {
     }
 
     fn invalid_request_error(&self, message: &str) -> Error {
-        Error::Api(surrealdb::error::Api::InvalidRequest(message.to_string()))
+        Error::thrown(message.to_string())
     }
 
     fn not_found_error(&self, operation: &str) -> Error {
-        Error::Api(surrealdb::error::Api::InvalidRequest(format!("Failed to {}", operation)))
+        Error::thrown(format!("Failed to {}", operation))
     }
 
     async fn paginate<T>(&self, table: &str, page: usize, page_size: usize) -> Result<PaginatedResponse<T>, Error>
     where
-        T: serde::de::DeserializeOwned + Clone,
+        T: serde::de::DeserializeOwned + Clone + surrealdb::types::SurrealValue,
     {
         let client = self.get_client()?;
 
@@ -336,7 +336,7 @@ impl DatabaseManager {
 
     async fn get_by_id<T>(&self, table: &str, id: &str) -> Result<Option<T>, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: serde::de::DeserializeOwned + surrealdb::types::SurrealValue,
     {
         let client = self.get_client()?;
 

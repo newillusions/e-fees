@@ -119,6 +119,8 @@ impl DatabaseClient {
 
     /// Sign in with root credentials.
     pub async fn signin_root(&self, username: &str, password: &str) -> Result<(), Error> {
+        let username = username.to_string();
+        let password = password.to_string();
         match self {
             DatabaseClient::Http(client) => {
                 client.signin(Root { username, password }).await?;
@@ -133,6 +135,9 @@ impl DatabaseClient {
 
     /// Sign in with namespace credentials.
     pub async fn signin_namespace(&self, namespace: &str, username: &str, password: &str) -> Result<(), Error> {
+        let namespace = namespace.to_string();
+        let username = username.to_string();
+        let password = password.to_string();
         match self {
             DatabaseClient::Http(client) => {
                 client.signin(Namespace { namespace, username, password }).await?;
@@ -147,6 +152,10 @@ impl DatabaseClient {
 
     /// Sign in with database credentials.
     pub async fn signin_database(&self, namespace: &str, database: &str, username: &str, password: &str) -> Result<(), Error> {
+        let namespace = namespace.to_string();
+        let database = database.to_string();
+        let username = username.to_string();
+        let password = password.to_string();
         match self {
             DatabaseClient::Http(client) => {
                 client.signin(Database { namespace, database, username, password }).await?;
@@ -162,26 +171,26 @@ impl DatabaseClient {
     /// Select namespace and database.
     pub async fn use_ns_db(&self, namespace: &str, database: &str) -> Result<(), Error> {
         match self {
-            DatabaseClient::Http(client) => client.use_ns(namespace).use_db(database).await,
-            DatabaseClient::WebSocket(client) => client.use_ns(namespace).use_db(database).await,
+            DatabaseClient::Http(client) => { client.use_ns(namespace).use_db(database).await?; Ok(()) },
+            DatabaseClient::WebSocket(client) => { client.use_ns(namespace).use_db(database).await?; Ok(()) },
         }
     }
 
     /// Select all records from a table.
     pub async fn select<T>(&self, table: &str) -> Result<Vec<T>, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: surrealdb::types::SurrealValue,
     {
         delegate_to_client!(self, select, table)
     }
 
     /// Execute a raw query.
-    pub async fn query(&self, query: &str) -> Result<surrealdb::Response, Error> {
+    pub async fn query(&self, query: &str) -> Result<surrealdb::IndexedResults, Error> {
         delegate_to_client!(self, query, query)
     }
 
     /// Execute a parameterized query with bindings (SQL injection safe).
-    pub async fn query_bind<T: serde::Serialize + 'static>(&self, query: &str, bindings: T) -> Result<surrealdb::Response, Error> {
+    pub async fn query_bind<T: surrealdb::types::SurrealValue + 'static>(&self, query: &str, bindings: T) -> Result<surrealdb::IndexedResults, Error> {
         match self {
             DatabaseClient::Http(client) => client.query(query).bind(bindings).await,
             DatabaseClient::WebSocket(client) => client.query(query).bind(bindings).await,
@@ -251,13 +260,13 @@ impl DatabaseClient {
 
         let search_query = format!(
             r#"SELECT * FROM projects WHERE
-               string::lowercase(name) CONTAINS string::lowercase('{}') OR
-               string::lowercase(name_short) CONTAINS string::lowercase('{}') OR
-               string::lowercase(number.id) CONTAINS string::lowercase('{}') OR
-               string::lowercase(city) CONTAINS string::lowercase('{}') OR
-               string::lowercase(area) CONTAINS string::lowercase('{}') OR
-               string::lowercase(country) CONTAINS string::lowercase('{}') OR
-               string::lowercase(folder) CONTAINS string::lowercase('{}')
+               string::lower(name) CONTAINS string::lower('{}') OR
+               string::lower(name_short) CONTAINS string::lower('{}') OR
+               string::lower(number.id) CONTAINS string::lower('{}') OR
+               string::lower(city) CONTAINS string::lower('{}') OR
+               string::lower(area) CONTAINS string::lower('{}') OR
+               string::lower(country) CONTAINS string::lower('{}') OR
+               string::lower(folder) CONTAINS string::lower('{}')
                ORDER BY time.created_at DESC"#,
             escaped_query, escaped_query, escaped_query, escaped_query,
             escaped_query, escaped_query, escaped_query
@@ -522,12 +531,12 @@ impl DatabaseClient {
         let search_query = r#"
             SELECT name, name_formal, name_official, code, code_alt, dial_code
             FROM country
-            WHERE (name IS NOT NONE AND string::lowercase(name) CONTAINS string::lowercase($search))
-               OR (name_formal IS NOT NONE AND string::lowercase(name_formal) CONTAINS string::lowercase($search))
-               OR (name_official IS NOT NONE AND string::lowercase(name_official) CONTAINS string::lowercase($search))
-               OR (code IS NOT NONE AND string::lowercase(code) CONTAINS string::lowercase($search))
-               OR (code_alt IS NOT NONE AND string::lowercase(code_alt) CONTAINS string::lowercase($search))
-               OR (dial_code IS NOT NONE AND string::contains(<string>dial_code, $search))
+            WHERE (name IS NOT NONE AND string::lower(name) CONTAINS string::lower($search))
+               OR (name_formal IS NOT NONE AND string::lower(name_formal) CONTAINS string::lower($search))
+               OR (name_official IS NOT NONE AND string::lower(name_official) CONTAINS string::lower($search))
+               OR (code IS NOT NONE AND string::lower(code) CONTAINS string::lower($search))
+               OR (code_alt IS NOT NONE AND string::lower(code_alt) CONTAINS string::lower($search))
+               OR (dial_code IS NOT NONE AND string::contains(dial_code, $search))
             ORDER BY name ASC
             LIMIT 15
         "#;

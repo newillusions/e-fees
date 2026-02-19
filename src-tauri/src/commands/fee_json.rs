@@ -8,17 +8,18 @@ use std::path::Path;
 use chrono::Utc;
 use log::{info, error};
 use serde_json::json;
-use surrealdb::sql::Thing;
+use surrealdb::types::RecordId;
 
 use crate::db::{Fee, Project, Company, Contact};
+use crate::db::types::record_key_string;
 
 /// Find a fee record by ID from a list of fees.
 ///
-/// Handles SurrealDB Thing ID format variations including angle bracket wrappers.
+/// Handles SurrealDB RecordId format variations including angle bracket wrappers.
 pub fn find_fee_by_id<'a>(fees: &'a [Fee], rfp_id: &str) -> Option<&'a Fee> {
     fees.iter().find(|f| {
         if let Some(id) = &f.id {
-            let db_id_clean = id.id.to_string()
+            let db_id_clean = record_key_string(&id.key)
                 .trim_start_matches('⟨')
                 .trim_end_matches('⟩')
                 .to_string();
@@ -30,14 +31,14 @@ pub fn find_fee_by_id<'a>(fees: &'a [Fee], rfp_id: &str) -> Option<&'a Fee> {
     })
 }
 
-/// Find an entity by matching its Thing ID against a reference Thing.
-fn find_by_thing_id<'a, T, F>(items: &'a [T], reference: &Thing, get_id: F) -> Option<&'a T>
+/// Find an entity by matching its RecordId key against a reference RecordId.
+fn find_by_record_id<'a, T, F>(items: &'a [T], reference: &RecordId, get_id: F) -> Option<&'a T>
 where
-    F: Fn(&'a T) -> Option<&'a Thing>,
+    F: Fn(&'a T) -> Option<&'a RecordId>,
 {
     items.iter().find(|item| {
         if let Some(id) = get_id(item) {
-            reference.id.to_string() == id.id.to_string()
+            record_key_string(&reference.key) == record_key_string(&id.key)
         } else {
             false
         }
@@ -46,17 +47,17 @@ where
 
 /// Find a project by matching its ID against a fee's project_id.
 pub fn find_project_for_fee<'a>(projects: &'a [Project], fee: &Fee) -> Option<&'a Project> {
-    find_by_thing_id(projects, &fee.project_id, |p| p.id.as_ref())
+    find_by_record_id(projects, &fee.project_id, |p| p.id.as_ref())
 }
 
 /// Find a company by matching its ID against a fee's company_id.
 pub fn find_company_for_fee<'a>(companies: &'a [Company], fee: &Fee) -> Option<&'a Company> {
-    find_by_thing_id(companies, &fee.company_id, |c| c.id.as_ref())
+    find_by_record_id(companies, &fee.company_id, |c| c.id.as_ref())
 }
 
 /// Find a contact by matching its ID against a fee's contact_id.
 pub fn find_contact_for_fee<'a>(contacts: &'a [Contact], fee: &Fee) -> Option<&'a Contact> {
-    find_by_thing_id(contacts, &fee.contact_id, |c| c.id.as_ref())
+    find_by_record_id(contacts, &fee.contact_id, |c| c.id.as_ref())
 }
 
 /// Format a fee issue date from YYMMDD format to "dd MMM yyyy".

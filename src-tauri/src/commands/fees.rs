@@ -4,6 +4,7 @@
 //! including CRUD operations, pagination, and JSON export for InDesign.
 
 use crate::db::{Fee, FeeCreate, FeeUpdate, PricingUpdate, PaginatedResponse};
+use crate::db::types::record_key_string;
 use crate::commands::utils::execute_with_manager;
 use crate::commands::fee_json;
 use crate::crud_command;
@@ -162,9 +163,9 @@ pub async fn write_fee_to_json(
             .ok_or_else(|| format!("Fee not found: {}", rfp_id))?;
 
         // Extract IDs from fee and fetch related records directly
-        let project_id = fee.project_id.id.to_string();
-        let company_id = fee.company_id.id.to_string();
-        let contact_id = fee.contact_id.id.to_string();
+        let project_id = record_key_string(&fee.project_id.key);
+        let company_id = record_key_string(&fee.company_id.key);
+        let contact_id = record_key_string(&fee.contact_id.key);
 
         let project = manager.get_project_by_id(&project_id).await
             .map_err(|e| format!("Failed to fetch project: {}", e))?
@@ -252,9 +253,9 @@ pub async fn write_fee_to_json_safe(
         })?;
 
         // Extract IDs from fee and fetch related records directly
-        let project_id = fee.project_id.id.to_string();
-        let company_id = fee.company_id.id.to_string();
-        let contact_id = fee.contact_id.id.to_string();
+        let project_id = record_key_string(&fee.project_id.key);
+        let company_id = record_key_string(&fee.company_id.key);
+        let contact_id = record_key_string(&fee.contact_id.key);
 
         let project = manager.get_project_by_id(&project_id).await.map_err(|e| {
             error!("Failed to fetch project: {}", e);

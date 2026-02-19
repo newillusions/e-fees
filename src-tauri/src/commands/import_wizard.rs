@@ -10,6 +10,7 @@ use log::{error, info, warn};
 use std::path::Path;
 
 use super::AppState;
+use crate::db::types::record_key_string;
 
 // ============================================================================
 // IMPORT DATA STRUCTURES (matching RFPs JSON export format)
@@ -769,7 +770,7 @@ async fn find_company_id(
                 .find(|c| c.name.to_lowercase().contains(&lower_name)
                     || lower_name.contains(&c.name.to_lowercase()))
                 .and_then(|c| c.id.as_ref())
-                .map(|id| id.id.to_string())
+                .map(|id| record_key_string(&id.key))
         }
         Err(_) => None,
     }

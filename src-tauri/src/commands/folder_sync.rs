@@ -26,6 +26,7 @@ use regex::Regex;
 use once_cell::sync::Lazy;
 
 use crate::commands::AppState;
+use crate::db::types::record_key_string;
 
 // ============================================================================
 // STATIC REGEX PATTERNS (compiled once at startup)
@@ -221,7 +222,7 @@ async fn get_projects_from_db(state: &State<'_, AppState>) -> Result<Vec<DbProje
         // Extract ID properly - use id.id.to_string() and strip the special ⟨⟩ characters
         // that SurrealDB uses for string IDs
         let id_str = match &p.id {
-            Some(id) => id.id.to_string()
+            Some(id) => record_key_string(&id.key)
                 .trim_start_matches('⟨')
                 .trim_end_matches('⟩')
                 .to_string(),
