@@ -176,14 +176,6 @@ impl DatabaseClient {
         }
     }
 
-    /// Select all records from a table.
-    pub async fn select<T>(&self, table: &str) -> Result<Vec<T>, Error>
-    where
-        T: surrealdb::types::SurrealValue,
-    {
-        delegate_to_client!(self, select, table)
-    }
-
     /// Execute a raw query.
     pub async fn query(&self, query: &str) -> Result<surrealdb::IndexedResults, Error> {
         delegate_to_client!(self, query, query)
@@ -430,7 +422,7 @@ impl DatabaseClient {
         info!("DatabaseClient::update_fee called with id: '{}'", id);
 
         let query = format!(
-            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at OR time::now(), updated_at: time::now() }} RETURN AFTER",
+            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at ?? time::now(), updated_at: time::now() }} RETURN AFTER",
             id,
             fee.name.replace("'", "''"),
             fee.number.replace("'", "''"),

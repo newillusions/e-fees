@@ -22,7 +22,10 @@ impl DatabaseManager {
     pub async fn get_projects(&self) -> Result<Vec<Project>, Error> {
         let client = self.get_client()?;
         info!("Attempting to query projects table");
-        client.select("projects").await.or_else(|_| Ok(vec![]))
+        let mut response = client.query("SELECT * FROM projects ORDER BY time.created_at DESC").await?;
+        let projects: Vec<Project> = response.take(0)?;
+        info!("Successfully fetched {} projects", projects.len());
+        Ok(projects)
     }
 
     pub async fn get_projects_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Project>, Error> {
@@ -69,7 +72,10 @@ impl DatabaseManager {
     pub async fn get_companies(&self) -> Result<Vec<Company>, Error> {
         let client = self.get_client()?;
         info!("Attempting to query company table");
-        client.select("company").await.or_else(|_| Ok(vec![]))
+        let mut response = client.query("SELECT * FROM company ORDER BY time.created_at DESC").await?;
+        let companies: Vec<Company> = response.take(0)?;
+        info!("Successfully fetched {} companies", companies.len());
+        Ok(companies)
     }
 
     pub async fn get_companies_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Company>, Error> {
@@ -111,11 +117,11 @@ impl DatabaseManager {
         // Filter at database level instead of fetching all and filtering in Rust
         let query = r#"
             SELECT * FROM contacts
-            WHERE first_name IS NOT NONE AND first_name != ''
-            AND last_name IS NOT NONE AND last_name != ''
-            AND email IS NOT NONE AND email != ''
-            AND phone IS NOT NONE AND phone != ''
-            AND position IS NOT NONE AND position != ''
+            WHERE first_name IS NOT NONE AND first_name IS NOT ''
+            AND last_name IS NOT NONE AND last_name IS NOT ''
+            AND email IS NOT NONE AND email IS NOT ''
+            AND phone IS NOT NONE AND phone IS NOT ''
+            AND position IS NOT NONE AND position IS NOT ''
             AND company IS NOT NONE
             ORDER BY time.updated_at DESC
         "#;
@@ -160,17 +166,10 @@ impl DatabaseManager {
     pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
         info!("Attempting to query fee table");
-
-        match client.select("fee").await {
-            Ok(fees) => {
-                info!("Successfully fetched {} fee records", fees.len());
-                Ok(fees)
-            }
-            Err(e) => {
-                error!("Failed to select from fee table: {}", e);
-                Ok(Vec::new())
-            }
-        }
+        let mut response = client.query("SELECT * FROM fee ORDER BY time.created_at DESC").await?;
+        let fees: Vec<Fee> = response.take(0)?;
+        info!("Successfully fetched {} fee records", fees.len());
+        Ok(fees)
     }
 
     pub async fn get_fees_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Fee>, Error> {
