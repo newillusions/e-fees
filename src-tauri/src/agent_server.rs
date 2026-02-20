@@ -366,8 +366,8 @@ async fn create_project_handler(
         folder: req.folder,
         number,
         time: TimeStamps {
-            created_at: chrono::Utc::now().to_rfc3339(),
-            updated_at: chrono::Utc::now().to_rfc3339(),
+            created_at: surrealdb_types::Datetime::now(),
+            updated_at: surrealdb_types::Datetime::now(),
         },
     };
 

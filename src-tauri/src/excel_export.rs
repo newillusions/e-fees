@@ -664,8 +664,8 @@ mod tests {
             strap_line: String::new(),
             revisions: vec![],
             time: TimeStamps {
-                created_at: "2026-02-09T00:00:00Z".to_string(),
-                updated_at: "2026-02-09T00:00:00Z".to_string(),
+                created_at: surrealdb_types::Datetime::default(),
+                updated_at: surrealdb_types::Datetime::default(),
             },
             pricing: None,
             post_contract_items: None,

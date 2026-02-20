@@ -21,10 +21,9 @@ use crate::commands::{CompanyUpdate, ProjectUpdate};
 impl DatabaseManager {
     pub async fn get_projects(&self) -> Result<Vec<Project>, Error> {
         let client = self.get_client()?;
-        info!("Attempting to query projects table");
         let mut response = client.query("SELECT * FROM projects ORDER BY time.created_at DESC").await?;
         let projects: Vec<Project> = response.take(0)?;
-        info!("Successfully fetched {} projects", projects.len());
+        info!("Fetched {} projects", projects.len());
         Ok(projects)
     }
 
@@ -71,10 +70,9 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn get_companies(&self) -> Result<Vec<Company>, Error> {
         let client = self.get_client()?;
-        info!("Attempting to query company table");
         let mut response = client.query("SELECT * FROM company ORDER BY time.created_at DESC").await?;
         let companies: Vec<Company> = response.take(0)?;
-        info!("Successfully fetched {} companies", companies.len());
+        info!("Fetched {} companies", companies.len());
         Ok(companies)
     }
 
@@ -112,8 +110,6 @@ impl DatabaseManager {
     /// Filtering is done at the database level for efficiency.
     pub async fn get_contacts(&self) -> Result<Vec<Contact>, Error> {
         let client = self.get_client()?;
-        info!("Attempting to query contacts table with database-level filtering");
-
         // Filter at database level instead of fetching all and filtering in Rust
         let query = r#"
             SELECT * FROM contacts
@@ -165,10 +161,9 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
-        info!("Attempting to query fee table");
         let mut response = client.query("SELECT * FROM fee ORDER BY time.created_at DESC").await?;
         let fees: Vec<Fee> = response.take(0)?;
-        info!("Successfully fetched {} fee records", fees.len());
+        info!("Fetched {} fees", fees.len());
         Ok(fees)
     }
 

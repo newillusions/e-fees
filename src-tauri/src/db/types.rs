@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
+use surrealdb_types::Datetime;
 
 // ============================================================================
 // RECORD ID HELPERS (v3 RecordIdKey has no Display impl)
@@ -50,10 +51,11 @@ pub struct ProjectNumber {
 }
 
 /// Timestamp structure for created_at and updated_at.
+/// Uses SurrealDB's native Datetime type for v3 binary protocol compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct TimeStamps {
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: Datetime,
+    pub updated_at: Datetime,
 }
 
 /// Project creation struct without auto-managed fields.
@@ -150,7 +152,11 @@ pub struct Fee {
     pub revisions: Vec<Revision>,
     pub time: TimeStamps,
 
-    // Pricing fields (optional for backward compatibility)
+    // Pricing fields — typed structs for Rust-side access.
+    // payment_schedule uses serde_json::Value passthrough because PaymentScheduleEntry
+    // has #[serde(rename = "type")] which SurrealValue derive doesn't respect,
+    // causing field name mismatch on read (SurrealValue looks for "payment_type"
+    // but DB stores "type").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing: Option<PricingBreakdown>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -158,7 +164,7 @@ pub struct Fee {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reimbursable_costs: Option<Vec<ReimbursableCost>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_schedule: Option<PaymentSchedule>,
+    pub payment_schedule: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing_revisions: Option<Vec<PricingRevision>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -467,7 +473,7 @@ pub struct ActivityLog {
     pub old_value: Option<String>,
     pub new_value: Option<String>,
     pub user: String,
-    pub timestamp: String,
+    pub timestamp: Datetime,
     pub metadata: Option<serde_json::Value>,
 }
 
