@@ -1,58 +1,63 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend. **v0.11.0 released** + code review completed + CSS restructure completed + Excel pricing import done + export save dialog added.
+Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 backend. **v0.12.2** — SurrealDB v3 migration complete, all entity pages loading.
 
-- **Version**: 0.11.0 (released 2026-02-13)
-- **Branch**: `main` (commit aaaa8d4, pushed to origin)
-- **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects)
+- **Version**: 0.12.2 (released, tag v0.12.2, Forgejo + GitHub)
+- **Branch**: `main`
+- **Database**: SurrealDB v3 @ ws://surreal-dev.internal:8000 (emittiv/projects)
 - **Tests**: 86 Rust tests passing, 8 pre-existing svelte-check warnings
 
-## Last Session (2026-02-16)
-**Summary**: Excel pricing import (27 fees from 78 Excel files), post-import audit with 10 fixes, CSS visual verification, and Excel export save dialog implementation.
+## Last Session (2026-02-20)
+**Summary**: Fixed SurrealDB v3 binary protocol deserialization failures that caused all entity pages to show empty data. Root cause: v3 SDK sends native `datetime` and `record` types that can't deserialize into `String` or `serde_json::Value`.
 
-### Excel Pricing Import
-- Imported pricing data from 78 Excel files into 27 fee records
-- Post-import audit found and fixed 10 data issues in SurrealDB
-- Validation report in `docs/IMPORT_VALIDATION_REPORT.md`
-- Commit: 7576ced
+### Changes (commits 7df9d1a, 1484fe4)
+- `src-tauri/src/db/types.rs` — TimeStamps: String → surrealdb_types::Datetime; ActivityLog.timestamp: String → Datetime; Fee.payment_schedule: PaymentSchedule → serde_json::Value (SurrealValue derive ignores #[serde(rename)])
+- `src-tauri/src/db/operations.rs` — Removed verbose diagnostic logging from entity fetch functions
+- `src-tauri/src/agent_server.rs` — TimeStamps construction: chrono::Utc::now().to_rfc3339() → Datetime::now()
+- `src-tauri/src/excel_export.rs` — Test helper: string timestamps → Datetime::default()
+- Version bumped to 0.12.2
 
-### Excel Export — Save Dialog Fix
-- **Problem**: Export went to macOS temp dir, no save dialog, modal text overflow
-- **Fix (commit aaaa8d4)**: Native save dialog via `@tauri-apps/plugin-dialog`
-- **Files changed**: export.rs, types.rs, revisions.ts, ProposalDetail.svelte, WarningModal.svelte
-- **Serde fix**: `PricingConfig`/`PricingBreakdown` now have `#[serde(default)]` + `Default` derive — fixes deserialization of imported data with partial config fields
-- **Status**: Save dialog confirmed working (screenshot verified), but needs **clean rebuild to test end-to-end** — the dev session used a cached binary without the Rust changes. File still went to temp dir during testing because old binary was running.
-
-### MUST VERIFY TOMORROW
-- Start fresh `npm run tauri:dev` (ensures Rust changes are compiled)
-- Click Export on a proposal with pricing (e.g., 25-96501-FP-1)
-- Verify native save dialog appears AND file saves to chosen location
-- Verify filename format: `25-96501-FP-1-00 Pricing.xlsx` (no `-FP-` duplication)
-
-### CSS Restructure Visual Verification
-- All pages verified via Peekaboo screenshots: Dashboard, Projects, Companies, Contacts, Proposals, Proposal Detail, Pricing Calculator, Dev Mode
-- All rendering correctly with semantic CSS classes
+### SurrealDB v3 Migration Notes
+- **v3 binary protocol**: Uses `SurrealValue` deserialization (not serde JSON). Native types `record` and `datetime` can't map to `serde_json::Value` or `String`.
+- **SurrealValue derive limitation**: Does NOT respect `#[serde(rename = "...")]`. PaymentScheduleEntry has `#[serde(rename = "type")] pub payment_type: String` — serde writes `type` to DB, but SurrealValue reads `payment_type` → field not found → deserialization fails.
+- **Workaround**: Use `serde_json::Value` passthrough for structs with serde renames. Only `payment_schedule` needed this.
+- **Crates**: `surrealdb = "3.0"`, `surrealdb-types = "3.0"`
 
 ## Next Steps (Priority Order)
-1. **Verify export save dialog** — Clean rebuild + end-to-end test (see above)
-2. **Update window title** — `tauri.conf.json` line 15 still says "v0.10.25"
-3. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
-4. **Version bump + release** — v0.12.0 with all recent improvements
+1. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
+2. **Verify export save dialog** — Clean rebuild + end-to-end test
 
 ## Key Technical Context
 
+### Real-Time Log Streaming
+```bash
+# Stream logs in real time
+curl -N http://localhost:3100/api/logs/stream
+
+# Check current log level and file path
+curl http://localhost:3100/api/health
+
+# Set log level (with API key)
+curl -X POST http://localhost:3100/api/logs/level \
+  -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"level":"debug"}'
+
+# Or just tail the log file
+tail -f ~/Library/Logs/com.emittiv.e-fees/E-Fees.log
+```
+
 ### Build & Release Process
-1. Bump version in package.json, tauri.conf.json, Cargo.toml
-2. Push main to GitHub + create `v*` tag → triggers GitHub Actions
-3. Builds macOS (aarch64 + x86_64) + Windows
-4. Artifacts auto-upload to Forgejo release via `GITEA_TOKEN` secret
+Use `/release` skill for the complete workflow. Summary:
+1. `node scripts/sync-version.cjs <VERSION>` — bumps all 3 files + window title
+2. Commit, push to both remotes, create `v*` tag → triggers GitHub Actions
+3. CI builds macOS (aarch64 + x64) + Windows, uploads to Forgejo releases
+4. CI pushes update.json to Forgejo via API
+5. Pull update.json from Forgejo, push to GitHub (for Tauri updater endpoint)
 
 ### CSS Architecture (Post-Restructure)
 - `app.css` has 3 layers: `@layer base`, `@layer components`, `@layer utilities`
 - ~130 `.emittiv-*` semantic classes in components layer
-- ~490 utility lines remaining (layout primitives, spacing, flex)
-- 16 CSS custom properties (`--emittiv-*`) for design tokens
 - All values in fixed `px` (desktop app, OS handles DPI scaling)
 
 ### Critical Rules
@@ -66,13 +71,15 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB backend
 ### Key Files
 | Purpose | Location |
 |---------|----------|
-| CSS Restructure Plan | `docs/CSS_RESTRUCTURE_PLAN.md` |
+| DB entity types | `src-tauri/src/db/types.rs` |
+| DB operations | `src-tauri/src/db/operations.rs` |
 | Master CSS | `src/styles/app.css` |
-| Excel export commands | `src-tauri/src/commands/export.rs` |
-| Excel template generator | `src-tauri/src/excel_export.rs` |
-| DB types (serde) | `src-tauri/src/db/types.rs` |
-| ProposalDetail (export handler) | `src/lib/components/ProposalDetail.svelte` |
-| Build workflow | `.github/workflows/build-releases.yml` |
+| Excel export template | `src-tauri/src/excel_export.rs` |
+| Logging system | `src-tauri/src/agent_server.rs` (SSE endpoint) |
+| Log level commands | `src-tauri/src/commands/system.rs` |
+| Settings modal | `src/lib/components/SettingsModal.svelte` |
+| Stage codes panel | `src/lib/components/pricing/StagesPanel.svelte` |
+| Window config | `src-tauri/tauri.conf.json` |
 
 ---
-*Updated: 2026-02-16*
+*Updated: 2026-02-20*
