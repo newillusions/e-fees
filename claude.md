@@ -163,6 +163,29 @@ git commit -m "message"
 git push origin main  # To forge.mms.name/emittiv/fee-prop.git
 ```
 
+## Release Process
+**MANDATORY**: Always use `/release` via a **background haiku agent**. Never run the release pipeline interactively.
+
+```
+When user says "/release", "/release patch", "/release minor", "/release major", or "/release X.Y.Z":
+
+1. Spawn a background Task agent:
+   - subagent_type: "Bash"
+   - model: "haiku"
+   - run_in_background: true
+   - Provide the full pipeline steps from .claude/commands/release.md
+
+2. Notify user: "Release pipeline running in background. You'll be notified when complete."
+
+3. Continue working on other tasks while the release runs.
+```
+
+**Why background**: The CI build takes 15-25 minutes. Running it interactively wastes tokens polling. Haiku handles the scripted git/gh commands and polling loop at minimal cost.
+
+**When to intervene directly**: Only if the background agent reports a build failure. In that case, investigate the failure logs, fix the issue, and re-run the release as a new background agent.
+
+**Key files**: `.claude/commands/release.md` (full pipeline), `scripts/sync-version.cjs` (version sync), `.github/workflows/build-releases.yml` (CI)
+
 ## Next Steps
 
 ### Priority 1: CRUD Operations - ALL COMPLETE ✅
