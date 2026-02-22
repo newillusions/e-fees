@@ -31,10 +31,8 @@ After invoking a command, Claude will have the context loaded and you can ask qu
 
 **Example Flow:**
 ```
-You: /gitea-release
-Claude: [Loads Gitea release management context]
-You: "Create a release for v0.11.0 and upload the DMG"
-Claude: [Executes release creation using loaded context]
+You: /release
+Claude: [Runs full release pipeline: bump, tag, CI build, Forgejo publish, update.json sync]
 ```
 
 ---
@@ -56,69 +54,42 @@ Claude: [Executes release creation using loaded context]
 
 **Follow-up:**
 ```
-"Show me how to use the gitea-release command"
+"Show me how to use the release command"
 "What commands are available for testing?"
 ```
 
 ---
 
-### `/gitea-release` - Gitea Release Management
-**Purpose:** Create and manage releases on Gitea server
+### `/release` - Full Release Pipeline
+**Purpose:** Complete release workflow: version bump, tag, CI build, Forgejo publish, update manifest sync
 
 **When to Use:**
-- After building a new release version
-- Uploading release binaries (DMG, MSI, etc.)
-- Managing existing releases
-- Creating formal releases from git tags
+- Publishing a new version (patch, minor, or major)
+- Running the full build → publish → update pipeline
 
 **Syntax:**
 ```
-/gitea-release
+/release              # Patch bump (0.12.2 → 0.12.3)
+/release minor        # Minor bump (0.12.2 → 0.13.0)
+/release major        # Major bump (0.12.2 → 1.0.0)
+/release 0.15.0       # Set exact version
 ```
 
-**Follow-up Examples:**
-```
-"Create a release for v0.11.0"
-"Upload the DMG file for v0.11.0"
-"List all releases"
-"Delete release v0.10.0-beta"
-"Show me the details for v0.10.0"
-```
-
-**What It Provides:**
-- Access to Gitea MCP server (mcp-servers/gitea-mcp/)
-- Credentials loaded from .env.local
-- Tools: create_release, upload_release_asset, list_releases, get_release, delete_release, list_tags
-
-**Alternative:**
-```bash
-# Direct script usage (no slash command needed):
-./scripts/create-gitea-release.sh 0.11.0
-```
+**Pipeline Steps:**
+1. Version bump (package.json, Cargo.toml, tauri.conf.json)
+2. Commit and push to both remotes (Forgejo + GitHub)
+3. Create git tag → triggers GitHub Actions CI
+4. Monitor CI build (macOS aarch64/x64 + Windows)
+5. CI uploads artifacts to Forgejo releases
+6. Pull CI-generated update.json from Forgejo
+7. Push update.json to GitHub (Tauri updater endpoint)
+8. Verify Forgejo release assets and update endpoint
 
 **Files Referenced:**
-- `mcp-servers/gitea-mcp/index.js` - MCP server implementation
-- `mcp-servers/gitea-mcp/README.md` - Full documentation
-- `scripts/create-gitea-release.sh` - Automated script
-- `.env.local` - Credentials (GITEA_TOKEN, GITEA_SERVER, etc.)
-- `docs/development/GITEA_RELEASES.md` - Complete guide
-
-**Common Workflow:**
-```bash
-# 1. Set version
-npm run version:set 0.11.0
-
-# 2. Build release
-npm run tauri:build
-
-# 3. Create git tag
-git tag -a v0.11.0 -m "Release v0.11.0"
-git push origin v0.11.0
-
-# 4. Use slash command
-/gitea-release
-"Create release for v0.11.0 and upload all artifacts from releases/v0.11.0/"
-```
+- `scripts/sync-version.cjs` - Version sync across config files
+- `.github/workflows/build-releases.yml` - CI workflow
+- `src-tauri/tauri.conf.json` - Updater config and version
+- `update.json` - Tauri auto-update manifest
 
 ---
 
@@ -301,7 +272,8 @@ command here
 | Command | Purpose | Frequency | Token Cost |
 |---------|---------|-----------|------------|
 | `/commands` | Show this guide | As needed | 0 until used |
-| `/gitea-release` | Manage Gitea releases | Per release | 0 until used |
+| `/release` | Full release pipeline | Per release | 0 until used |
+| `/commit` | Git commit workflow | Per commit | 0 until used |
 
 ---
 
@@ -309,25 +281,25 @@ command here
 
 ### 1. Chain Commands in Conversation
 ```
-/gitea-release
+/release
 "List all releases, then create v0.11.0 if it doesn't exist"
 ```
 
 ### 2. Combine with Scripts
 ```
-/gitea-release
+/release
 "I just ran the build script, now upload the artifacts"
 ```
 
 ### 3. Ask for Clarification
 ```
-/gitea-release
+/release
 "What information do you need to create a release?"
 ```
 
 ### 4. Reference Previous Work
 ```
-/gitea-release
+/release
 "Use the same format as v0.10.0 release"
 ```
 
@@ -391,6 +363,6 @@ Open to suggestions! Common patterns that would benefit from slash commands:
 
 ---
 
-**Last Updated:** November 17, 2025
-**Available Commands:** 2 (commands, gitea-release)
-**Location:** `/Volumes/base/dev/e-fees/.claude/commands/`
+**Last Updated:** February 22, 2026
+**Available Commands:** 3 (commands, release, commit)
+**Location:** `.claude/commands/`

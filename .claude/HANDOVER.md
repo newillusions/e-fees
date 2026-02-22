@@ -9,24 +9,36 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 back
 - **Tests**: 86 Rust tests passing, 8 pre-existing svelte-check warnings
 
 ## Last Session (2026-02-20)
-**Summary**: Fixed SurrealDB v3 binary protocol deserialization failures that caused all entity pages to show empty data. Root cause: v3 SDK sends native `datetime` and `record` types that can't deserialize into `String` or `serde_json::Value`.
+**Summary**: Released v0.12.2. Fixed SurrealDB v3 deserialization (prior session), then executed full release pipeline and rewrote `/release` skill.
 
-### Changes (commits 7df9d1a, 1484fe4)
-- `src-tauri/src/db/types.rs` — TimeStamps: String → surrealdb_types::Datetime; ActivityLog.timestamp: String → Datetime; Fee.payment_schedule: PaymentSchedule → serde_json::Value (SurrealValue derive ignores #[serde(rename)])
-- `src-tauri/src/db/operations.rs` — Removed verbose diagnostic logging from entity fetch functions
-- `src-tauri/src/agent_server.rs` — TimeStamps construction: chrono::Utc::now().to_rfc3339() → Datetime::now()
-- `src-tauri/src/excel_export.rs` — Test helper: string timestamps → Datetime::default()
-- Version bumped to 0.12.2
+### Release v0.12.2
+- All CI jobs passed (macOS aarch64 + x64, Windows)
+- 8 assets on Forgejo release (DMGs, updater tarballs, MSI, NSIS installer)
+- update.json synced to GitHub for Tauri updater endpoint
+- Verified working on macOS; Windows pending user test
+
+### Release Skill Rewrite
+- `.claude/skills/release.md` — removed outdated Apache web server references
+- Now documents actual pipeline: GitHub Actions → Forgejo releases → update.json sync
+- Trigger: `/release [patch|minor|major|<exact version>]`
+
+### Backups Run
+- KB DB: 27 MB exported to Unraid Primary
+- E-Fees DB: 161 KB exported
+- Config: settings.json + active-projects.json
+- Git: fee-prop mirror cloned
+- Note: Dev DB container networking broken (10.0.23.12 unreachable), Forgejo auth needed for kb-agent/ailx git mirrors
 
 ### SurrealDB v3 Migration Notes
 - **v3 binary protocol**: Uses `SurrealValue` deserialization (not serde JSON). Native types `record` and `datetime` can't map to `serde_json::Value` or `String`.
-- **SurrealValue derive limitation**: Does NOT respect `#[serde(rename = "...")]`. PaymentScheduleEntry has `#[serde(rename = "type")] pub payment_type: String` — serde writes `type` to DB, but SurrealValue reads `payment_type` → field not found → deserialization fails.
-- **Workaround**: Use `serde_json::Value` passthrough for structs with serde renames. Only `payment_schedule` needed this.
+- **SurrealValue derive limitation**: Does NOT respect `#[serde(rename = "...")]`. Only `payment_schedule` needed `serde_json::Value` passthrough.
+- **HTTP export API (v3)**: Must use GET (not POST) and include `Content-Type: application/json` header.
 - **Crates**: `surrealdb = "3.0"`, `surrealdb-types = "3.0"`
 
 ## Next Steps (Priority Order)
-1. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
-2. **Verify export save dialog** — Clean rebuild + end-to-end test
+1. **Windows install path issue** — Updater works and DB connects, but app install path seems wrong and desktop icons keep reverting to previous version. Investigate NSIS installer config (`tauri.conf.json` → `bundle.windows.nsis`), shortcut creation, and whether `installMode: "perMachine"` causes path conflicts on update.
+2. **Multi-currency hover** — AED equivalents on hover when quoting in foreign currency
+3. **Verify export save dialog** — Clean rebuild + end-to-end test
 
 ## Key Technical Context
 
