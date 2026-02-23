@@ -988,19 +988,15 @@ export async function withLoadingState<T>(
 // ============================================================================
 
 /**
- * Type guard for SurrealDB Thing objects.
+ * Type guard for SurrealDB Thing objects (v2: {tb, id} or v3: {table, key}).
  */
-function isSurrealThingLike(id: unknown): id is { tb: unknown; id: unknown } {
-  return (
-    typeof id === 'object' &&
-    id !== null &&
-    'tb' in id &&
-    'id' in id
-  );
+function isSurrealThingLike(id: unknown): id is { tb?: unknown; id?: unknown; table?: unknown; key?: unknown } {
+  if (typeof id !== 'object' || id === null) return false;
+  return ('tb' in id && 'id' in id) || ('table' in id && 'key' in id);
 }
 
 /**
- * Validates SurrealDB ID format.
+ * Validates SurrealDB ID format (v2 and v3).
  */
 export function validateSurrealId(id: unknown): boolean {
   if (!id) return false;
@@ -1010,6 +1006,9 @@ export function validateSurrealId(id: unknown): boolean {
   }
 
   if (isSurrealThingLike(id)) {
+    // v3 format
+    if ('table' in id && 'key' in id) return !!id.table && !!id.key;
+    // v2 format
     return !!id.tb && !!id.id;
   }
 

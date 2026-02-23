@@ -9,46 +9,51 @@
 import type { SurrealThing, UnknownSurrealThing } from '../../types';
 
 /**
- * Extracts the string ID from a SurrealDB Thing object.
- * 
- * SurrealDB returns IDs in various formats:
+ * Extracts the key string from a v3 RecordIdKey enum variant or v2 id field.
+ * Handles: plain string, number, {String: "..."}, {Number: N}
+ */
+function extractKeyValue(key: unknown): string | null {
+  if (typeof key === 'string') return key;
+  if (typeof key === 'number') return String(key);
+  if (key && typeof key === 'object') {
+    if ('String' in key) return (key as { String: string }).String;
+    if ('Number' in key) return String((key as { Number: number }).Number);
+  }
+  return null;
+}
+
+/**
+ * Extracts the string ID from a SurrealDB Thing/RecordId object.
+ *
+ * Handles all SurrealDB formats:
  * - Simple string: "123"
- * - Thing object: { tb: "table", id: { String: "123" } }
- * - Thing object: { tb: "table", id: "123" }
- * 
- * @param thing - The SurrealDB Thing object or string ID
- * @returns The extracted string ID, or null if extraction fails
- * 
- * @example
- * extractSurrealId("simple_id") // Returns: "simple_id"
- * extractSurrealId({ tb: "projects", id: { String: "25_97107" } }) // Returns: "25_97107"
- * extractSurrealId({ tb: "company", id: "EMITTIV" }) // Returns: "EMITTIV"
+ * - v2 Thing: { tb: "table", id: "123" } or { tb: "table", id: { String: "123" } }
+ * - v3 RecordId: { table: "table", key: "123" } or { table: "table", key: { String: "123" } }
  */
 export function extractSurrealId(thing: UnknownSurrealThing): string | null {
   if (!thing) return null;
-  
-  // Handle simple string IDs
+
   if (typeof thing === 'string') {
     return thing;
   }
-  
-  // Handle SurrealDB Thing objects
+
   if (thing && typeof thing === 'object') {
-    // Format: { tb: "table", id: { String: "value" } }
-    if ('tb' in thing && 'id' in thing && thing.tb && thing.id) {
-      if (typeof thing.id === 'string') {
-        return thing.id;
-      } else if (thing.id && typeof thing.id === 'object' && 'String' in thing.id) {
-        return (thing.id as { String: string }).String;
-      }
+    // v3 format: { table: "table", key: ... }
+    if ('table' in thing && 'key' in thing && thing.table) {
+      return extractKeyValue(thing.key);
     }
-    
-    // Handle direct id objects: { String: "value" }
+
+    // v2 format: { tb: "table", id: ... }
+    if ('tb' in thing && 'id' in thing && thing.tb && thing.id) {
+      return extractKeyValue(thing.id);
+    }
+
+    // Direct key object: { String: "value" }
     if ('String' in thing) {
       return (thing as { String: string }).String;
     }
   }
-  
+
   return null;
 }
 
@@ -122,32 +127,38 @@ export function extractTableFromRelation(relation: string): string | null {
 }
 
 /**
- * Type guard to check if an object is a SurrealDB Thing object.
- * 
- * @param obj - Object to check
- * @returns True if the object is a SurrealDB Thing
+ * Type guard: v2 SurrealDB Thing object ({tb, id})
  */
 export function isSurrealThing(obj: UnknownSurrealThing): obj is SurrealThing {
   return Boolean(obj && typeof obj === 'object' && 'tb' in obj && typeof obj.tb === 'string' && 'id' in obj && obj.id !== undefined);
 }
 
 /**
- * Converts a SurrealDB Thing object to a human-readable string.
- * 
- * @param thing - The SurrealDB Thing object
- * @returns Human-readable string representation
- * 
- * @example
- * thingToString({ tb: "projects", id: "25_97107" }) // Returns: "projects:25_97107"
+ * Type guard: v3 SurrealDB RecordId object ({table, key})
+ */
+export function isSurrealV3RecordId(obj: UnknownSurrealThing): boolean {
+  return Boolean(obj && typeof obj === 'object' && 'table' in obj && typeof (obj as Record<string, unknown>).table === 'string' && 'key' in obj);
+}
+
+/**
+ * Converts a SurrealDB Thing/RecordId to a human-readable string.
+ * Handles v2 ({tb, id}) and v3 ({table, key}) formats.
  */
 export function thingToString(thing: UnknownSurrealThing): string {
   if (typeof thing === 'string') return thing;
-  
-  if (isSurrealThing(thing)) {
+
+  if (thing && typeof thing === 'object') {
     const id = extractSurrealId(thing);
-    return id ? `${thing.tb}:${id}` : thing.tb;
+    // v3 format
+    if ('table' in thing && thing.table) {
+      return id ? `${thing.table}:${id}` : String(thing.table);
+    }
+    // v2 format
+    if (isSurrealThing(thing)) {
+      return id ? `${thing.tb}:${id}` : thing.tb;
+    }
   }
-  
+
   return String(thing);
 }
 

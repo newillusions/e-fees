@@ -19,19 +19,27 @@ export interface ConnectionStatus {
   error_message?: string;
 }
 
-// SurrealDB Thing object type
+// SurrealDB Thing object type (v2 format: {tb, id})
 export interface SurrealThing {
   tb: string;
   id: string | { String: string };
 }
 
-// Union type for SurrealDB ID values (can be string or Thing object)
-export type SurrealId = string | SurrealThing;
+// SurrealDB v3 RecordId format: {table, key}
+export interface SurrealV3RecordId {
+  table: string;
+  key: string | { String: string } | { Number: number };
+}
+
+// Union type for SurrealDB ID values (can be string, v2 Thing, or v3 RecordId)
+export type SurrealId = string | SurrealThing | SurrealV3RecordId;
 
 // Type for unknown SurrealDB Thing objects (before parsing)
 export type UnknownSurrealThing = {
   tb?: string;
   id?: unknown;
+  table?: string;
+  key?: unknown;
   String?: string;
 } | string | null | undefined;
 

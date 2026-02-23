@@ -1,4 +1,4 @@
-import type { SurrealThing, UnknownSurrealThing, SurrealId } from '../../types';
+import type { SurrealThing, SurrealV3RecordId, UnknownSurrealThing, SurrealId } from '../../types';
 import { getVersion } from '@tauri-apps/api/app';
 
 /**
@@ -16,7 +16,7 @@ export async function getAppVersion(): Promise<string> {
 }
 
 /**
- * Type guard to check if a value is a SurrealThing object
+ * Type guard: v2 SurrealDB Thing object ({tb, id})
  */
 function isSurrealThing(value: unknown): value is SurrealThing {
   return (
@@ -29,15 +29,47 @@ function isSurrealThing(value: unknown): value is SurrealThing {
 }
 
 /**
- * Extracts the actual ID from a SurrealDB Thing object or returns the string as-is
- * @param id - The ID to extract from (can be string or SurrealThing object)
- * @returns The extracted ID as a string
+ * Type guard: v3 SurrealDB RecordId object ({table, key})
+ */
+function isSurrealV3RecordId(value: unknown): value is SurrealV3RecordId {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'table' in value &&
+    'key' in value &&
+    typeof (value as SurrealV3RecordId).table === 'string'
+  );
+}
+
+/**
+ * Extracts the key string from a v3 RecordIdKey enum variant.
+ * Handles: plain string, {String: "..."}, {Number: N}
+ */
+function extractRecordIdKey(key: unknown): string {
+  if (typeof key === 'string') return key;
+  if (typeof key === 'number') return String(key);
+  if (key && typeof key === 'object') {
+    if ('String' in key) return (key as { String: string }).String;
+    if ('Number' in key) return String((key as { Number: number }).Number);
+  }
+  return '';
+}
+
+/**
+ * Extracts the actual ID from a SurrealDB Thing/RecordId object or returns the string as-is.
+ * Handles v2 ({tb, id}) and v3 ({table, key}) formats.
  */
 export function extractId(id: SurrealId | UnknownSurrealThing): string {
   if (typeof id === 'string') {
     return id;
   }
 
+  // v3 format: {table: "projects", key: {String: "24_97109"}}
+  if (isSurrealV3RecordId(id)) {
+    return extractRecordIdKey(id.key);
+  }
+
+  // v2 format: {tb: "projects", id: "24_97109"}
   if (isSurrealThing(id)) {
     if (typeof id.id === 'string') {
       return id.id;
@@ -50,15 +82,21 @@ export function extractId(id: SurrealId | UnknownSurrealThing): string {
 }
 
 /**
- * Extracts the full ID string including table prefix (e.g., "projects:abc123")
- * @param id - The ID to extract from
- * @returns The full ID string with table prefix, or empty string if invalid
+ * Extracts the full ID string including table prefix (e.g., "projects:abc123").
+ * Handles v2 ({tb, id}) and v3 ({table, key}) formats.
  */
 export function extractFullId(id: SurrealId | UnknownSurrealThing): string {
   if (typeof id === 'string') {
     return id;
   }
 
+  // v3 format
+  if (isSurrealV3RecordId(id)) {
+    const keyPart = extractRecordIdKey(id.key);
+    return keyPart ? `${id.table}:${keyPart}` : '';
+  }
+
+  // v2 format
   if (isSurrealThing(id)) {
     const idPart = typeof id.id === 'string'
       ? id.id
@@ -70,10 +108,7 @@ export function extractFullId(id: SurrealId | UnknownSurrealThing): string {
 }
 
 /**
- * Compares two IDs, handling both string and SurrealThing formats
- * @param id1 - First ID to compare
- * @param id2 - Second ID to compare
- * @returns true if the IDs match
+ * Compares two IDs, handling string, v2 Thing, and v3 RecordId formats
  */
 export function compareIds(id1: SurrealId | UnknownSurrealThing, id2: SurrealId | UnknownSurrealThing): boolean {
   const extractedId1 = extractId(id1);
