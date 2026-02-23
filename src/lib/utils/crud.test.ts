@@ -170,6 +170,25 @@ class MockErrorApi implements CrudApi<TestEntity> {
   }
 }
 
+// Simulates Tauri IPC errors which arrive as plain strings, not Error objects
+class MockStringErrorApi implements CrudApi<TestEntity> {
+  async getAll(): Promise<TestEntity[]> {
+    throw 'Failed to load fees: connection timeout';
+  }
+
+  async create(): Promise<TestEntity> {
+    throw 'Failed to create fee proposal: duplicate key';
+  }
+
+  async update(): Promise<TestEntity> {
+    throw 'Failed to update fee proposal: parse error';
+  }
+
+  async delete(): Promise<TestEntity> {
+    throw 'Failed to delete fee proposal: referenced by project';
+  }
+}
+
 describe('Enhanced CRUD Utilities', () => {
   let mockApi: MockTestApi;
   let mockErrorApi: MockErrorApi;
@@ -225,11 +244,22 @@ describe('Enhanced CRUD Utilities', () => {
         const { store, actions } = useCrudStore(mockErrorApi);
 
         await expect(actions.load()).rejects.toThrow('Database connection failed');
-        
+
         const state = get(store);
         expect(state.loading).toBe(false);
         expect(state.error).toBe('Database connection failed');
         expect(state.items).toEqual([]);
+      });
+
+      it('should display Tauri IPC string errors instead of generic fallback', async () => {
+        const stringErrorApi = new MockStringErrorApi();
+        const { store, actions } = useCrudStore(stringErrorApi);
+
+        await expect(actions.load()).rejects.toBe('Failed to load fees: connection timeout');
+
+        const state = get(store);
+        expect(state.loading).toBe(false);
+        expect(state.error).toBe('Failed to load fees: connection timeout');
       });
 
       it('should create items successfully', async () => {

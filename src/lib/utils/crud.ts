@@ -20,6 +20,16 @@ import { logger, logApiError, type LogContext } from '../services/logger';
 import type { UnknownSurrealThing } from '../../types';
 
 /**
+ * Extract a human-readable message from an unknown error.
+ * Tauri IPC errors arrive as plain strings, not Error instances.
+ */
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
+/**
  * Type-safe helper to access a property by key on an object.
  * Returns undefined if the property doesn't exist.
  */
@@ -288,7 +298,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         
         componentLogger?.info('Successfully loaded entities', { count: items.length });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load data';
+        const errorMessage = getErrorMessage(error, 'Failed to load data');
         store.update(state => ({ 
           ...state, 
           loading: false, 
@@ -387,7 +397,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
         }
         
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create item';
+        const errorMessage = getErrorMessage(error, 'Failed to create item');
         store.update(state => ({ 
           ...state, 
           saving: false, 
@@ -494,7 +504,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
         }
         
-        const errorMessage = error instanceof Error ? error.message : 'Failed to update item';
+        const errorMessage = getErrorMessage(error, 'Failed to update item');
         store.update(state => ({ 
           ...state, 
           saving: false, 
@@ -599,7 +609,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
         }
         
-        const errorMessage = error instanceof Error ? error.message : 'Failed to delete item';
+        const errorMessage = getErrorMessage(error, 'Failed to delete item');
         store.update(state => ({ 
           ...state, 
           saving: false, 
@@ -978,7 +988,7 @@ export async function withLoadingState<T>(
     return result;
   } catch (error) {
     setLoadingState(false);
-    actions.setError(error instanceof Error ? error.message : 'An error occurred');
+    actions.setError(getErrorMessage(error, 'An error occurred'));
     throw error;
   }
 }
