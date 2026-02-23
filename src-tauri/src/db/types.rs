@@ -134,21 +134,34 @@ pub struct ContactCreate {
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Fee {
     pub id: Option<RecordId>,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub number: String,
+    #[serde(default)]
     pub rev: i32,
+    #[serde(default)]
     pub status: String,
+    #[serde(default)]
     pub issue_date: String,
+    #[serde(default)]
     pub activity: String,
+    #[serde(default)]
     pub package: String,
     pub project_id: RecordId,
     pub company_id: RecordId,
     pub contact_id: RecordId,
+    #[serde(default)]
     pub staff_name: String,
+    #[serde(default)]
     pub staff_email: String,
+    #[serde(default)]
     pub staff_phone: String,
+    #[serde(default)]
     pub staff_position: String,
+    #[serde(default)]
     pub strap_line: String,
+    #[serde(default)]
     pub revisions: Vec<Revision>,
     pub time: TimeStamps,
 
@@ -193,6 +206,7 @@ pub struct FeeCreate {
     pub staff_phone: String,
     pub staff_position: String,
     pub strap_line: String,
+    #[serde(default)]
     pub revisions: Vec<Revision>,
 
     // Pricing fields (optional)
@@ -221,6 +235,7 @@ pub struct FeeUpdate {
     pub number: String,
     pub rev: i32,
     pub status: String,
+    #[serde(default)]
     pub issue_date: String,
     pub activity: Option<String>,
     pub package: Option<String>,
@@ -232,6 +247,7 @@ pub struct FeeUpdate {
     pub staff_phone: Option<String>,
     pub staff_position: Option<String>,
     pub strap_line: Option<String>,
+    #[serde(default)]
     pub revisions: Vec<Revision>,
 
     // Pricing fields (optional)

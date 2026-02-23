@@ -5,13 +5,26 @@ use surrealdb::engine::remote::http::{Client as HttpClient, Http};
 use surrealdb::opt::auth::{Root, Namespace, Database};
 use surrealdb::{Error, Surreal};
 use log::{info, warn, error};
-use chrono::Utc;
 
 use super::types::{
     Project, NewProject, Company, CompanyCreate, Contact, ContactCreate,
-    Fee, FeeCreate, FeeUpdate, PricingUpdate,
+    Fee, FeeCreate, FeeUpdate,
 };
 use crate::commands::{CompanyUpdate, ContactUpdate, ProjectUpdate};
+
+/// Validate a record ID contains only alphanumeric chars, underscores, and hyphens.
+/// Returns Error if invalid, preventing SQL injection in table:key references.
+fn validate_record_id(id: &str, field_name: &str) -> Result<(), Error> {
+    if id.is_empty() || id.len() > 100 {
+        return Err(Error::thrown(format!("Invalid {} length", field_name)));
+    }
+    if !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        return Err(Error::thrown(format!(
+            "Invalid {} format: only alphanumeric, underscores, hyphens allowed", field_name
+        )));
+    }
+    Ok(())
+}
 
 /// Database client enum to handle different connection types.
 #[derive(Clone)]
@@ -388,30 +401,48 @@ impl DatabaseClient {
     pub async fn create_fee(&self, fee: FeeCreate) -> Result<Option<Fee>, Error> {
         let fee_id = format!("{}_{}", fee.project_id.replace("-", "_"), fee.rev);
 
+        // Validate all IDs (alphanumeric + underscores only)
+        validate_record_id(&fee_id, "fee_id")?;
+        validate_record_id(&fee.project_id.replace("-", "_"), "project_id")?;
+        validate_record_id(&fee.company_id, "company_id")?;
+        validate_record_id(&fee.contact_id, "contact_id")?;
+
+        // Build parameterized data map for string fields
+        let mut data = serde_json::Map::new();
+        data.insert("name".into(), serde_json::Value::String(fee.name));
+        data.insert("number".into(), serde_json::Value::String(fee.number));
+        data.insert("rev".into(), serde_json::json!(fee.rev));
+        data.insert("status".into(), serde_json::Value::String(fee.status));
+        data.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
+        data.insert("activity".into(), serde_json::Value::String(fee.activity));
+        data.insert("package".into(), serde_json::Value::String(fee.package));
+        data.insert("strap_line".into(), serde_json::Value::String(fee.strap_line));
+        data.insert("staff_name".into(), serde_json::Value::String(fee.staff_name));
+        data.insert("staff_email".into(), serde_json::Value::String(fee.staff_email));
+        data.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone));
+        data.insert("staff_position".into(), serde_json::Value::String(fee.staff_position));
+        data.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
+
+        let data_value = serde_json::Value::Object(data);
+
+        // IDs are validated above so safe to interpolate table:key references.
+        // String fields go through $data (parameterized, no injection risk).
+        let project_key = fee.project_id.replace("-", "_");
         let query = format!(
-            "CREATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', revisions = [], time = {{ created_at: time::now(), updated_at: time::now() }}",
-            fee_id,
-            fee.name.replace("'", "''"),
-            fee.number.replace("'", "''"),
-            fee.rev,
-            fee.project_id.replace("'", "''"),
-            fee.company_id.replace("'", "''"),
-            fee.contact_id.replace("'", "''"),
-            fee.status.replace("'", "''"),
-            fee.issue_date.replace("'", "''"),
-            fee.activity.replace("'", "''"),
-            fee.package.replace("'", "''"),
-            fee.strap_line.replace("'", "''"),
-            fee.staff_name.replace("'", "''"),
-            fee.staff_email.replace("'", "''"),
-            fee.staff_phone.replace("'", "''"),
-            fee.staff_position.replace("'", "''")
+            "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
+             UPDATE fee:{fee_id} SET project_id = projects:{project_key}, \
+             company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
+             time = {{ created_at: time::now(), updated_at: time::now() }} RETURN AFTER;",
+            fee_id = fee_id,
+            project_key = project_key,
+            company_id = fee.company_id,
+            contact_id = fee.contact_id,
         );
 
-        info!("Executing Fee creation query");
+        info!("Executing Fee creation query (parameterized)");
 
-        let mut response = self.query(&query).await?;
-        let result: Result<Vec<Fee>, _> = response.take(0);
+        let mut response = self.query_bind(&query, ("data", data_value)).await?;
+        let result: Result<Vec<Fee>, _> = response.take(1);
         match result {
             Ok(mut fees) => Ok(fees.pop()),
             Err(e) => Err(e),
@@ -421,30 +452,48 @@ impl DatabaseClient {
     pub async fn update_fee(&self, id: &str, fee: FeeUpdate) -> Result<Option<Fee>, Error> {
         info!("DatabaseClient::update_fee called with id: '{}'", id);
 
+        // Validate all IDs
+        validate_record_id(id, "fee_id")?;
+        validate_record_id(&fee.project_id.replace("-", "_"), "project_id")?;
+        validate_record_id(&fee.company_id, "company_id")?;
+        validate_record_id(&fee.contact_id, "contact_id")?;
+
+        // Build parameterized data map for string/number fields
+        let mut data = serde_json::Map::new();
+        data.insert("name".into(), serde_json::Value::String(fee.name));
+        data.insert("number".into(), serde_json::Value::String(fee.number));
+        data.insert("rev".into(), serde_json::json!(fee.rev));
+        data.insert("status".into(), serde_json::Value::String(fee.status));
+        data.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
+        data.insert("activity".into(), serde_json::Value::String(fee.activity.unwrap_or_default()));
+        data.insert("package".into(), serde_json::Value::String(fee.package.unwrap_or_default()));
+        data.insert("strap_line".into(), serde_json::Value::String(fee.strap_line.unwrap_or_default()));
+        data.insert("staff_name".into(), serde_json::Value::String(fee.staff_name.unwrap_or_default()));
+        data.insert("staff_email".into(), serde_json::Value::String(fee.staff_email.unwrap_or_default()));
+        data.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone.unwrap_or_default()));
+        data.insert("staff_position".into(), serde_json::Value::String(fee.staff_position.unwrap_or_default()));
+        data.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
+
+        let data_value = serde_json::Value::Object(data);
+
+        // IDs are validated above so safe to interpolate table:key references.
+        // String fields go through $data (parameterized, no injection risk).
+        let project_key = fee.project_id.replace("-", "_");
         let query = format!(
-            "UPDATE fee:{} SET name = '{}', number = '{}', rev = {}, project_id = projects:{}, company_id = company:{}, contact_id = contacts:{}, status = '{}', issue_date = '{}', activity = '{}', package = '{}', strap_line = '{}', staff_name = '{}', staff_email = '{}', staff_phone = '{}', staff_position = '{}', time = {{ created_at: time.created_at ?? time::now(), updated_at: time::now() }} RETURN AFTER",
-            id,
-            fee.name.replace("'", "''"),
-            fee.number.replace("'", "''"),
-            fee.rev,
-            fee.project_id.replace("'", "''"),
-            fee.company_id.replace("'", "''"),
-            fee.contact_id.replace("'", "''"),
-            fee.status.replace("'", "''"),
-            fee.issue_date.replace("'", "''"),
-            fee.activity.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.package.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.strap_line.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.staff_name.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.staff_email.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.staff_phone.as_ref().unwrap_or(&String::new()).replace("'", "''"),
-            fee.staff_position.as_ref().unwrap_or(&String::new()).replace("'", "''")
+            "UPDATE fee:{id} MERGE $data RETURN NONE; \
+             UPDATE fee:{id} SET project_id = projects:{project_key}, \
+             company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
+             time.updated_at = time::now() RETURN AFTER;",
+            id = id,
+            project_key = project_key,
+            company_id = fee.company_id,
+            contact_id = fee.contact_id,
         );
 
-        info!("Executing update query");
+        info!("Executing fee update query (parameterized)");
 
-        let mut response = self.query(&query).await?;
-        let result: Result<Vec<Fee>, _> = response.take(0);
+        let mut response = self.query_bind(&query, ("data", data_value)).await?;
+        let result: Result<Vec<Fee>, _> = response.take(1);
         match result {
             Ok(mut fees) => {
                 info!("Update query returned {} records", fees.len());
