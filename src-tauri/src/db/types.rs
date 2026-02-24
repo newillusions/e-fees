@@ -2,7 +2,104 @@
 
 use serde::{Deserialize, Serialize};
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
-use surrealdb_types::Datetime;
+use surrealdb_types::{Datetime, Value as DbValue, Number as DbNumber};
+
+// ============================================================================
+// DBVALUE ↔ JSON CONVERSION
+// ============================================================================
+//
+// SurrealDB v3 binary protocol sends native types (int, float, datetime, etc.)
+// that serde_json::Value cannot handle directly. surrealdb_types::Value (DbValue)
+// handles binary protocol natively via SurrealValue trait, BUT its Serialize
+// implementation produces tagged JSON (e.g. {"Number":{"Int":150000}}) which
+// breaks the frontend.
+//
+// Solution: Use DbValue in struct fields for binary protocol compatibility,
+// but apply custom serde (de)serialization that converts to/from plain JSON.
+
+/// Convert a surrealdb_types::Value to a plain serde_json::Value.
+pub fn dbvalue_to_json(v: &DbValue) -> serde_json::Value {
+    match v {
+        DbValue::None | DbValue::Null => serde_json::Value::Null,
+        DbValue::Bool(b) => serde_json::Value::Bool(*b),
+        DbValue::Number(n) => match n {
+            DbNumber::Int(i) => serde_json::Value::Number((*i).into()),
+            DbNumber::Float(f) => serde_json::Number::from_f64(*f)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
+            DbNumber::Decimal(d) => {
+                // Decimal → try as f64
+                let s = d.to_string();
+                s.parse::<f64>().ok()
+                    .and_then(serde_json::Number::from_f64)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::String(s))
+            }
+        },
+        DbValue::String(s) => serde_json::Value::String(s.to_string()),
+        DbValue::Array(arr) => serde_json::Value::Array(
+            arr.iter().map(dbvalue_to_json).collect()
+        ),
+        DbValue::Object(obj) => {
+            let map: serde_json::Map<String, serde_json::Value> = obj.iter()
+                .map(|(k, v)| (k.to_string(), dbvalue_to_json(v)))
+                .collect();
+            serde_json::Value::Object(map)
+        }
+        DbValue::Datetime(dt) => serde_json::Value::String(dt.to_string()),
+        DbValue::RecordId(rid) => serde_json::Value::String(record_id_string(rid)),
+        // Fallback for other types: use Debug representation
+        other => serde_json::Value::String(format!("{:?}", other)),
+    }
+}
+
+/// Convert a plain serde_json::Value to surrealdb_types::Value.
+pub fn json_to_dbvalue(v: &serde_json::Value) -> DbValue {
+    match v {
+        serde_json::Value::Null => DbValue::None,
+        serde_json::Value::Bool(b) => DbValue::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                DbValue::Number(DbNumber::Int(i))
+            } else if let Some(f) = n.as_f64() {
+                DbValue::Number(DbNumber::Float(f))
+            } else {
+                DbValue::None
+            }
+        }
+        serde_json::Value::String(s) => DbValue::String(s.clone().into()),
+        serde_json::Value::Array(arr) => DbValue::Array(
+            arr.iter().map(json_to_dbvalue).collect::<Vec<_>>().into()
+        ),
+        serde_json::Value::Object(obj) => {
+            let map: std::collections::BTreeMap<String, DbValue> = obj.iter()
+                .map(|(k, v)| (k.clone(), json_to_dbvalue(v)))
+                .collect();
+            DbValue::Object(map.into())
+        }
+    }
+}
+
+/// Serde module for Option<DbValue> fields that converts to/from plain JSON.
+/// Use with `#[serde(default, with = "opt_dbvalue_json")]` on struct fields.
+mod opt_dbvalue_json {
+    use super::{DbValue, dbvalue_to_json, json_to_dbvalue};
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(val: &Option<DbValue>, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        match val {
+            None => serializer.serialize_none(),
+            Some(v) => dbvalue_to_json(v).serialize(serializer),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DbValue>, D::Error>
+    where D: Deserializer<'de> {
+        let opt: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+        Ok(opt.map(|v| json_to_dbvalue(&v)))
+    }
+}
 
 // ============================================================================
 // RECORD ID HELPERS (v3 RecordIdKey has no Display impl)
@@ -165,36 +262,37 @@ pub struct Fee {
     pub revisions: Vec<Revision>,
     pub time: TimeStamps,
 
-    // Pricing fields — serde_json::Value passthrough for fields containing f64.
-    // SurrealValue derive's binary protocol is strict: f64 expects Number::Float
-    // but SurrealDB v3 stores integers as Number::Int (e.g., target_fee: 150000
-    // instead of 150000.0). serde_json::Value accepts any type, then
-    // Fee::pricing_typed() converts via serde which coerces int→float.
-    // payment_schedule also uses Value because PaymentScheduleEntry has
-    // #[serde(rename = "type")] which SurrealValue derive doesn't respect.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pricing: Option<serde_json::Value>,
+    // Pricing fields — use DbValue for SurrealDB v3 binary protocol compatibility.
+    // serde_json::Value CANNOT handle native SurrealDB types from binary protocol.
+    // DbValue handles binary deserialization natively via SurrealValue trait.
+    // Custom serde via opt_dbvalue_json converts to/from plain JSON for Tauri IPC.
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_dbvalue_json")]
+    pub pricing: Option<DbValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_contract_items: Option<Vec<PostContractItem>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reimbursable_costs: Option<Vec<ReimbursableCost>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_schedule: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_dbvalue_json")]
+    pub payment_schedule: Option<DbValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing_revisions: Option<Vec<PricingRevision>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_revision_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_release_number: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub import_source: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_dbvalue_json")]
+    pub import_source: Option<DbValue>,
 }
 
 impl Fee {
-    /// Convert the raw pricing JSON back to a typed PricingBreakdown.
-    /// serde_json::from_value handles int→float coercion that SurrealValue doesn't.
+    /// Convert the native DbValue pricing back to a typed PricingBreakdown.
+    /// DbValue → plain JSON (via dbvalue_to_json) → PricingBreakdown (via serde),
+    /// which handles int→float coercion automatically.
     pub fn pricing_typed(&self) -> Option<PricingBreakdown> {
-        self.pricing.as_ref().and_then(|v| serde_json::from_value(v.clone()).ok())
+        self.pricing.as_ref().and_then(|v| {
+            let json = dbvalue_to_json(v);
+            serde_json::from_value(json).ok()
+        })
     }
 }
 

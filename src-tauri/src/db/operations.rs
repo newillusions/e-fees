@@ -161,12 +161,19 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
-        // OMIT import_source: it may contain native datetime fields (imported_at)
-        // that serde_json::Value can't deserialize from SurrealDB v3 binary protocol.
+        // OMIT import_source: not needed in list view, reduces response size.
         let mut response = client.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC").await?;
-        let fees: Vec<Fee> = response.take(0)?;
-        info!("Fetched {} fees", fees.len());
-        Ok(fees)
+        let result: Result<Vec<Fee>, _> = response.take(0);
+        match result {
+            Ok(fees) => {
+                info!("Fetched {} fees", fees.len());
+                Ok(fees)
+            }
+            Err(e) => {
+                error!("Fee deserialization failed: {}. This likely means a field type mismatch between the Fee struct and PROD data.", e);
+                Err(e)
+            }
+        }
     }
 
     pub async fn get_fees_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Fee>, Error> {

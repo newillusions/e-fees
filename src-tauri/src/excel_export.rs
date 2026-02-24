@@ -682,7 +682,7 @@ mod tests {
     fn full_fee() -> Fee {
         let mut fee = minimal_fee();
         fee.name = "DELETE ME - Full Test Fee".to_string();
-        fee.pricing = Some(serde_json::to_value(PricingBreakdown {
+        fee.pricing = Some(crate::db::types::json_to_dbvalue(&serde_json::to_value(PricingBreakdown {
             config: PricingConfig {
                 target_fee: 100000.0,
                 buffer_percent: 5.0,
@@ -728,7 +728,7 @@ mod tests {
             subtotal: 110500.0,
             vat_amount: 5525.0,
             grand_total: 116025.0,
-        }).unwrap());
+        }).unwrap()));
         fee.post_contract_items = Some(vec![
             PostContractItem {
                 id: "pc1".to_string(),
@@ -857,7 +857,7 @@ mod tests {
                     });
                 }
             }
-            fee.pricing = Some(serde_json::to_value(&pricing).unwrap());
+            fee.pricing = Some(crate::db::types::json_to_dbvalue(&serde_json::to_value(&pricing).unwrap()));
         }
 
         let path = std::env::temp_dir().join("delete_me_test_template_5stages.xlsx");

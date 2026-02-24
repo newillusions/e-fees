@@ -778,5 +778,96 @@ mod tests {
             assert!(InputValidator::validate_project_name(&at_max).is_ok());
             assert!(InputValidator::validate_project_name(&over_max).is_err());
         }
+
+    // ============================================================================
+    // SURREALDB VALUE SERIALIZATION TEST
+    // ============================================================================
+
+    #[test]
+    fn test_dbvalue_serialization_format() {
+        use surrealdb_types::Value as DbValue;
+        use surrealdb_types::Number;
+
+        // Check how DbValue serializes to JSON string
+        let int_val = DbValue::Number(Number::Int(150000));
+        let json = serde_json::to_string(&int_val).unwrap();
+        println!("surrealdb_types Int serializes as: {}", json);
+
+        // Check surrealdb::types::Value
+        use surrealdb::types::Value as SdkValue;
+        let sdk_int = SdkValue::Number(Number::Int(150000));
+        let json = serde_json::to_string(&sdk_int).unwrap();
+        println!("surrealdb::types Int serializes as: {}", json);
+
+        // Check if they're the same type
+        let same: bool = std::any::TypeId::of::<DbValue>() == std::any::TypeId::of::<SdkValue>();
+        println!("Same type: {}", same);
+    }
+    }
+
+    // ============================================================================
+    // PROD INTEGRATION TEST - run manually with:
+    // cargo test test_prod_fee_deserialization -- --ignored --nocapture
+    // ============================================================================
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_prod_fee_deserialization() {
+        use surrealdb::engine::remote::ws::{Ws, Client};
+        use surrealdb::Surreal;
+        use surrealdb::opt::auth::Root;
+        use crate::db::types::Fee;
+
+        // Connect to PROD
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.21.8:8000").await
+            .expect("Failed to connect to PROD WS");
+
+        db.signin(Root {
+            username: "martin".to_string(),
+            password: "th38ret3ch".to_string(),
+        }).await.expect("Failed to sign in");
+
+        db.use_ns("emittiv").use_db("projects").await
+            .expect("Failed to set ns/db");
+
+        // Run the same query as get_fees()
+        let mut response = db.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
+            .await.expect("Query failed");
+
+        let result: Result<Vec<Fee>, _> = response.take(0);
+        match result {
+            Ok(fees) => {
+                println!("SUCCESS: Deserialized {} fees from PROD", fees.len());
+                assert!(fees.len() > 0, "Expected at least 1 fee from PROD");
+
+                // Check first fee with pricing
+                for fee in &fees {
+                    if fee.pricing.is_some() {
+                        let pricing_json = fee.pricing_typed();
+                        println!("Fee {:?}: pricing_typed() = {:?}",
+                            fee.id, pricing_json.is_some());
+
+                        // Verify serde serialization works (this is what Tauri IPC sends to frontend)
+                        let serialized = serde_json::to_string(&fee).unwrap();
+                        println!("Fee serializes to JSON OK ({} bytes)", serialized.len());
+
+                        // Verify pricing appears as plain JSON, not tagged enum
+                        if let Some(ref p) = fee.pricing {
+                            let pricing_json = crate::db::types::dbvalue_to_json(p);
+                            println!("Pricing as plain JSON: {}", serde_json::to_string(&pricing_json).unwrap());
+                            // Should NOT contain "Number" or "Int" wrapper keys
+                            let s = serde_json::to_string(&pricing_json).unwrap();
+                            assert!(!s.contains("\"Number\""), "Pricing JSON should be plain, not tagged");
+                            assert!(!s.contains("\"Int\""), "Pricing JSON should be plain, not tagged");
+                        }
+                        break;
+                    }
+                }
+                println!("ALL CHECKS PASSED");
+            }
+            Err(e) => {
+                panic!("Fee deserialization FAILED: {}", e);
+            }
+        }
     }
 }
