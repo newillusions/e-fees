@@ -1,10 +1,10 @@
 {
   "version": "0.12.8",
   "notes": "Release v0.12.8",
-  "pub_date": "2026-02-24T03:26:58Z",
+  "pub_date": "2026-02-24T03:48:46Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3BPV1RNZjYxTC9BbUVoanR0cllTcStTanY1RlVvWXUvdC9oQXNZUU5oWHl3M1RtcUlkN3dpWEYrYnhvMkt5NjhFVTQvOWl4ckVtRzBoQ2hhNlR1a3dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxOTA0OTA1CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKTHRsbmdaRk9EL3NIc1loejR3YUtEeVR1NFhZaGxqVzZ2OExvUCtDaERnYkxlR2pOZFowNzl3MGpGUVhhS1hpZ2ZESVdQZHZmQnM4ZHZUVWpYOHNNQWc9PQo=",
       "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.12.8/E-Fees_0.12.8_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
