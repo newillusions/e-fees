@@ -819,7 +819,7 @@ mod tests {
         use crate::db::types::Fee;
 
         // Connect to PROD
-        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.21.8:8000").await
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000").await
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
@@ -885,7 +885,7 @@ mod tests {
         use crate::db::types::Fee;
 
         // Connect to PROD
-        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.21.8:8000").await
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000").await
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
@@ -925,6 +925,45 @@ mod tests {
             println!("Fee rev={}, status={}, name={}", fee.rev, fee.status, fee.name);
         }
 
+        // CRITICAL: Test Tauri IPC serialization path
+        // Tauri serializes the return value to JSON. If this fails, the frontend gets an error.
+        let paginated = crate::db::types::PaginatedResponse::new(items.clone(), total as usize, 1, page_size);
+        match serde_json::to_string(&paginated) {
+            Ok(json) => {
+                println!("SUCCESS: PaginatedResponse<Fee> serialized to JSON ({} bytes)", json.len());
+                // Print first fee's JSON to verify format
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json) {
+                    if let Some(first_item) = parsed.get("items").and_then(|i| i.as_array()).and_then(|a| a.first()) {
+                        println!("First fee JSON keys: {:?}", first_item.as_object().map(|o| o.keys().collect::<Vec<_>>()));
+                        // Check the critical fields
+                        println!("  id: {:?}", first_item.get("id"));
+                        println!("  project_id: {:?}", first_item.get("project_id"));
+                        println!("  rev: {:?}", first_item.get("rev"));
+                        println!("  pricing: {:?}", first_item.get("pricing").map(|p| if p.is_null() { "null" } else { "present" }));
+                        println!("  time.created_at: {:?}", first_item.get("time").and_then(|t| t.get("created_at")));
+                    }
+                }
+            }
+            Err(e) => {
+                // This is likely the bug — serialization fails
+                println!("SERIALIZATION FAILED: {}", e);
+                // Try serializing each fee individually to find which one fails
+                for (i, fee) in items.iter().enumerate() {
+                    match serde_json::to_string(fee) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Fee #{} serialization failed: {} (name={}, rev={})", i, e, fee.name, fee.rev);
+                            // Try each field
+                            println!("  pricing is_some: {}", fee.pricing.is_some());
+                            println!("  payment_schedule is_some: {}", fee.payment_schedule.is_some());
+                            println!("  import_source is_some: {}", fee.import_source.is_some());
+                        }
+                    }
+                }
+                panic!("Tauri IPC serialization would fail: {}", e);
+            }
+        }
+
         // Also test all Projects (ProjectNumber has i64 fields)
         let mut proj_response = db.query("SELECT * FROM projects LIMIT 5").await
             .expect("Projects query failed");
@@ -935,6 +974,21 @@ mod tests {
             println!("Project: year={}, country={}, seq={}, id={}",
                 p.number.year, p.number.country, p.number.seq, p.number.id);
         }
+
+        // Test ALL fees (non-paginated) — this is the get_fees() path used by dashboard
+        let mut all_fees_response = db.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
+            .await.expect("All fees query failed");
+        let all_fees: Vec<Fee> = all_fees_response.take(0)
+            .expect("Failed to deserialize ALL fees — non-paginated path broken!");
+        println!("SUCCESS: Deserialized ALL {} fees (non-paginated)", all_fees.len());
+
+        // Verify serialization for ALL fees
+        for (i, fee) in all_fees.iter().enumerate() {
+            if let Err(e) = serde_json::to_string(fee) {
+                panic!("Fee #{} serialization failed: {} (id={:?}, rev={})", i, e, fee.id, fee.rev);
+            }
+        }
+        println!("SUCCESS: All {} fees serialize to JSON", all_fees.len());
 
         println!("ALL PAGINATED CHECKS PASSED");
     }
