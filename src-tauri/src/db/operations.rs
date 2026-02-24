@@ -248,7 +248,7 @@ impl DatabaseManager {
         let max_rev_result: Option<serde_json::Value> = response.take(0)?;
         let new_rev = max_rev_result
             .and_then(|v| v.get("max_rev").and_then(|r| r.as_i64()))
-            .map(|r| r as i32 + 1)
+            .map(|r| r + 1)
             .unwrap_or(1);
 
         // 3. Create new fee with incremented rev, copying pricing data

@@ -870,4 +870,72 @@ mod tests {
             }
         }
     }
+
+    // ============================================================================
+    // PROD PAGINATED TEST - tests the exact code path used by Proposals page
+    // cargo test test_prod_fee_paginated -- --ignored --nocapture
+    // ============================================================================
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_prod_fee_paginated() {
+        use surrealdb::engine::remote::ws::{Ws, Client};
+        use surrealdb::Surreal;
+        use surrealdb::opt::auth::Root;
+        use crate::db::types::Fee;
+
+        // Connect to PROD
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.21.8:8000").await
+            .expect("Failed to connect to PROD WS");
+
+        db.signin(Root {
+            username: "martin".to_string(),
+            password: "th38ret3ch".to_string(),
+        }).await.expect("Failed to sign in");
+
+        db.use_ns("emittiv").use_db("projects").await
+            .expect("Failed to set ns/db");
+
+        // Run the EXACT same query as get_fees_page() — this is what was failing
+        let page_size = 20;
+        let offset = 0;
+        let query = format!(
+            "SELECT count() FROM fee GROUP ALL; SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC LIMIT {} START {}",
+            page_size, offset
+        );
+        let mut response = db.query(&query).await.expect("Query failed");
+
+        // Statement 0: count
+        let count_result: Option<serde_json::Value> = response.take(0)
+            .expect("Failed to take count result");
+        let total = count_result
+            .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+            .unwrap_or(0);
+        println!("Total fee count: {}", total);
+        assert!(total > 0, "Expected at least 1 fee");
+
+        // Statement 1: paginated fees — THIS WAS THE FAILING LINE
+        let items: Vec<Fee> = response.take(1)
+            .expect("Failed to deserialize paginated fees — this was the bug!");
+        println!("SUCCESS: Deserialized {} paginated fees from PROD", items.len());
+        assert!(!items.is_empty(), "Expected paginated results");
+
+        // Verify rev field deserializes correctly
+        for fee in &items {
+            println!("Fee rev={}, status={}, name={}", fee.rev, fee.status, fee.name);
+        }
+
+        // Also test all Projects (ProjectNumber has i64 fields)
+        let mut proj_response = db.query("SELECT * FROM projects LIMIT 5").await
+            .expect("Projects query failed");
+        let projects: Vec<crate::db::types::Project> = proj_response.take(0)
+            .expect("Failed to deserialize projects");
+        println!("Deserialized {} projects", projects.len());
+        for p in &projects {
+            println!("Project: year={}, country={}, seq={}, id={}",
+                p.number.year, p.number.country, p.number.seq, p.number.id);
+        }
+
+        println!("ALL PAGINATED CHECKS PASSED");
+    }
 }

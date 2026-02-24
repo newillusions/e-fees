@@ -547,8 +547,8 @@ async fn import_proposal_from_json(
     // Parse project number (e.g., "1735" -> year=17, seq=35 -- or use as-is)
     let project_number_str = &proposal.project_number;
     let (year, seq) = if project_number_str.len() == 4 {
-        let y: i32 = project_number_str[0..2].parse().unwrap_or(26);
-        let s: i32 = project_number_str[2..4].parse().unwrap_or(1);
+        let y: i64 = project_number_str[0..2].parse().unwrap_or(26);
+        let s: i64 = project_number_str[2..4].parse().unwrap_or(1);
         (y, s)
     } else {
         (26, 1)
@@ -679,7 +679,7 @@ fn build_pricing_from_proposal(
                     name: stage.name.clone(),
                     code: if code.is_empty() { format!("S{}", i + 1) } else { code },
                     percentage: stage.percentage * 100.0,
-                    order: (i + 1) as i32,
+                    order: (i + 1) as i64,
                     is_post_contract: false,
                 });
 
@@ -708,7 +708,7 @@ fn build_pricing_from_proposal(
                 name: stage.name.clone(),
                 code,
                 percentage: stage.percentage * 100.0,
-                order: (i + 1) as i32,
+                order: (i + 1) as i64,
                 is_post_contract: false,
             });
 

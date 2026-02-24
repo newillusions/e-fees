@@ -141,9 +141,9 @@ pub struct Project {
 /// Project number structure implementing the YY-CCCNN numbering system.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct ProjectNumber {
-    pub year: i32,
-    pub country: i32,
-    pub seq: i32,
+    pub year: i64,
+    pub country: i64,
+    pub seq: i64,
     pub id: String,
 }
 
@@ -236,7 +236,7 @@ pub struct Fee {
     #[serde(default)]
     pub number: String,
     #[serde(default)]
-    pub rev: i32,
+    pub rev: i64,
     #[serde(default)]
     pub status: String,
     #[serde(default)]
@@ -277,9 +277,9 @@ pub struct Fee {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing_revisions: Option<Vec<PricingRevision>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_revision_number: Option<i32>,
+    pub current_revision_number: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_release_number: Option<i32>,
+    pub current_release_number: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none", with = "opt_dbvalue_json")]
     pub import_source: Option<DbValue>,
 }
@@ -301,7 +301,7 @@ impl Fee {
 pub struct FeeCreate {
     pub name: String,
     pub number: String,
-    pub rev: i32,
+    pub rev: i64,
     pub status: String,
     pub issue_date: String,
     pub activity: String,
@@ -329,9 +329,9 @@ pub struct FeeCreate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing_revisions: Option<Vec<PricingRevision>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_revision_number: Option<i32>,
+    pub current_revision_number: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_release_number: Option<i32>,
+    pub current_release_number: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub import_source: Option<serde_json::Value>,
 }
@@ -341,7 +341,7 @@ pub struct FeeCreate {
 pub struct FeeUpdate {
     pub name: String,
     pub number: String,
-    pub rev: i32,
+    pub rev: i64,
     pub status: String,
     #[serde(default)]
     pub issue_date: String,
@@ -370,15 +370,15 @@ pub struct FeeUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pricing_revisions: Option<Vec<PricingRevision>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_revision_number: Option<i32>,
+    pub current_revision_number: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_release_number: Option<i32>,
+    pub current_release_number: Option<i64>,
 }
 
 /// Revision entry for fee proposals.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct Revision {
-    pub revision_number: i32,
+    pub revision_number: i64,
     pub revision_date: String,
     pub author_email: String,
     pub author_name: String,
@@ -395,7 +395,7 @@ pub struct Discipline {
     pub id: String,
     pub name: String,
     pub percentage: f64,
-    pub order: i32,
+    pub order: i64,
 }
 
 /// Design stage definition.
@@ -405,7 +405,7 @@ pub struct Stage {
     pub name: String,
     pub code: String,
     pub percentage: f64,
-    pub order: i32,
+    pub order: i64,
     pub is_post_contract: bool,
 }
 
@@ -540,14 +540,14 @@ pub struct PricingUpdate {
 pub struct PricingRevision {
     pub id: String,
     pub fee_id: String,
-    pub revision_number: i32,
+    pub revision_number: i64,
     pub created_at: String,
     pub created_by: String,
     pub change_summary: String,
     pub pricing_snapshot: PricingBreakdown,
     pub is_client_release: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub release_number: Option<i32>,
+    pub release_number: Option<i64>,
 }
 
 // ============================================================================

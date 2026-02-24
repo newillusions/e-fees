@@ -100,7 +100,7 @@ pub struct FeeResponse {
     pub id: String,
     pub name: String,
     pub number: String,
-    pub rev: i32,
+    pub rev: i64,
     pub status: String,
     pub project_id: String,
     pub company_id: String,
@@ -947,9 +947,9 @@ fn parse_project_number(number_str: &str) -> Result<crate::db::types::ProjectNum
         return Err(format!("Invalid project number format: '{}'. Expected YY-CCCNN (e.g., 26-97101)", number_str));
     }
 
-    let year: i32 = parts[0].parse().map_err(|_| format!("Invalid year in project number: '{}'", parts[0]))?;
-    let country: i32 = parts[1][..3].parse().map_err(|_| format!("Invalid country code in project number: '{}'", &parts[1][..3]))?;
-    let seq: i32 = parts[1][3..].parse().map_err(|_| format!("Invalid sequence in project number: '{}'", &parts[1][3..]))?;
+    let year: i64 = parts[0].parse().map_err(|_| format!("Invalid year in project number: '{}'", parts[0]))?;
+    let country: i64 = parts[1][..3].parse().map_err(|_| format!("Invalid country code in project number: '{}'", &parts[1][..3]))?;
+    let seq: i64 = parts[1][3..].parse().map_err(|_| format!("Invalid sequence in project number: '{}'", &parts[1][3..]))?;
 
     Ok(crate::db::types::ProjectNumber {
         year,
