@@ -432,7 +432,8 @@ impl DatabaseClient {
             "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
              UPDATE fee:{fee_id} SET project_id = projects:{project_key}, \
              company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
-             time = {{ created_at: time::now(), updated_at: time::now() }} RETURN AFTER;",
+             time = {{ created_at: time::now(), updated_at: time::now() }} RETURN NONE; \
+             SELECT * OMIT import_source FROM fee:{fee_id};",
             fee_id = fee_id,
             project_key = project_key,
             company_id = fee.company_id,
@@ -442,7 +443,7 @@ impl DatabaseClient {
         info!("Executing Fee creation query (parameterized)");
 
         let mut response = self.query_bind(&query, ("data", data_value)).await?;
-        let result: Result<Vec<Fee>, _> = response.take(1);
+        let result: Result<Vec<Fee>, _> = response.take(2);
         match result {
             Ok(mut fees) => Ok(fees.pop()),
             Err(e) => Err(e),
@@ -483,7 +484,8 @@ impl DatabaseClient {
             "UPDATE fee:{id} MERGE $data RETURN NONE; \
              UPDATE fee:{id} SET project_id = projects:{project_key}, \
              company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
-             time.updated_at = time::now() RETURN AFTER;",
+             time.updated_at = time::now() RETURN NONE; \
+             SELECT * OMIT import_source FROM fee:{id};",
             id = id,
             project_key = project_key,
             company_id = fee.company_id,
@@ -493,7 +495,7 @@ impl DatabaseClient {
         info!("Executing fee update query (parameterized)");
 
         let mut response = self.query_bind(&query, ("data", data_value)).await?;
-        let result: Result<Vec<Fee>, _> = response.take(1);
+        let result: Result<Vec<Fee>, _> = response.take(2);
         match result {
             Ok(mut fees) => {
                 info!("Update query returned {} records", fees.len());
@@ -510,7 +512,17 @@ impl DatabaseClient {
     }
 
     pub async fn delete_fee(&self, id: &str) -> Result<Option<Fee>, Error> {
-        delegate_delete!(self, "fee", id)
+        // Custom delete: fetch first with OMIT, then delete.
+        // Can't use delegate_delete! because the returned Fee may contain
+        // import_source with native datetime that serde_json::Value can't handle.
+        validate_record_id(id, "fee_id")?;
+        let query = format!(
+            "SELECT * OMIT import_source FROM fee:{id}; DELETE fee:{id};",
+            id = id
+        );
+        let mut response = self.query(&query).await?;
+        let result: Vec<Fee> = response.take(0)?;
+        Ok(result.into_iter().next())
     }
 
     /// Update only the pricing-related fields of a fee.
@@ -539,14 +551,16 @@ impl DatabaseClient {
         // Two-step update: MERGE pricing data, then SET timestamp with native datetime
         // (MERGE with a JSON string for datetime fails SurrealDB schema validation)
         let query = format!(
-            "UPDATE fee:{id} MERGE $data RETURN NONE; UPDATE fee:{id} SET time.updated_at = time::now() RETURN AFTER;",
+            "UPDATE fee:{id} MERGE $data RETURN NONE; \
+             UPDATE fee:{id} SET time.updated_at = time::now() RETURN NONE; \
+             SELECT * OMIT import_source FROM fee:{id};",
             id = id
         );
 
         info!("Executing pricing update with MERGE + timestamp SET");
 
         let mut response = self.query_bind(&query, ("data", update_value)).await?;
-        let result: Result<Vec<Fee>, _> = response.take(1);
+        let result: Result<Vec<Fee>, _> = response.take(2);
         match result {
             Ok(mut fees) => {
                 info!("Pricing update returned {} records", fees.len());

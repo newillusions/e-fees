@@ -424,8 +424,9 @@ async fn list_fees_handler(
             }
         })
         .map(|f| {
-            let total_fee = f.pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-            let currency = f.pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+            let pricing = f.pricing_typed();
+            let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
+            let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
             FeeResponse {
                 id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
@@ -465,8 +466,9 @@ async fn get_fee_handler(
 
     match fee {
         Some(f) => {
-            let total_fee = f.pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-            let currency = f.pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+            let pricing = f.pricing_typed();
+            let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
+            let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
             Ok(Json(FeeResponse {
                 id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
@@ -539,8 +541,9 @@ async fn create_fee_handler(
         )
     })?;
 
-    let total_fee = created.pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-    let currency = created.pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+    let pricing = created.pricing_typed();
+    let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
+    let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
 
     Ok((
         StatusCode::CREATED,

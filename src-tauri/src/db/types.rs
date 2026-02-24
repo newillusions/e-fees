@@ -165,13 +165,15 @@ pub struct Fee {
     pub revisions: Vec<Revision>,
     pub time: TimeStamps,
 
-    // Pricing fields — typed structs for Rust-side access.
-    // payment_schedule uses serde_json::Value passthrough because PaymentScheduleEntry
-    // has #[serde(rename = "type")] which SurrealValue derive doesn't respect,
-    // causing field name mismatch on read (SurrealValue looks for "payment_type"
-    // but DB stores "type").
+    // Pricing fields — serde_json::Value passthrough for fields containing f64.
+    // SurrealValue derive's binary protocol is strict: f64 expects Number::Float
+    // but SurrealDB v3 stores integers as Number::Int (e.g., target_fee: 150000
+    // instead of 150000.0). serde_json::Value accepts any type, then
+    // Fee::pricing_typed() converts via serde which coerces int→float.
+    // payment_schedule also uses Value because PaymentScheduleEntry has
+    // #[serde(rename = "type")] which SurrealValue derive doesn't respect.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pricing: Option<PricingBreakdown>,
+    pub pricing: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_contract_items: Option<Vec<PostContractItem>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -186,6 +188,14 @@ pub struct Fee {
     pub current_release_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub import_source: Option<serde_json::Value>,
+}
+
+impl Fee {
+    /// Convert the raw pricing JSON back to a typed PricingBreakdown.
+    /// serde_json::from_value handles int→float coercion that SurrealValue doesn't.
+    pub fn pricing_typed(&self) -> Option<PricingBreakdown> {
+        self.pricing.as_ref().and_then(|v| serde_json::from_value(v.clone()).ok())
+    }
 }
 
 /// Fee creation struct.

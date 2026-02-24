@@ -161,18 +161,43 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
-        let mut response = client.query("SELECT * FROM fee ORDER BY time.created_at DESC").await?;
+        // OMIT import_source: it may contain native datetime fields (imported_at)
+        // that serde_json::Value can't deserialize from SurrealDB v3 binary protocol.
+        let mut response = client.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC").await?;
         let fees: Vec<Fee> = response.take(0)?;
         info!("Fetched {} fees", fees.len());
         Ok(fees)
     }
 
     pub async fn get_fees_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Fee>, Error> {
-        self.paginate("fee", page, page_size).await
+        // Custom pagination instead of generic paginate: OMIT import_source.
+        let client = self.get_client()?;
+        let offset = (page - 1) * page_size;
+        let query = format!(
+            "SELECT count() FROM fee GROUP ALL; SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC LIMIT {} START {}",
+            page_size, offset
+        );
+        let mut response = client.query(&query).await?;
+        let count_result: Option<serde_json::Value> = response.take(0)?;
+        let total = count_result
+            .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+            .unwrap_or(0) as usize;
+        let items: Vec<Fee> = response.take(1)?;
+        Ok(PaginatedResponse::new(items, total, page, page_size))
     }
 
     pub async fn get_fee_by_id(&self, id: &str) -> Result<Option<Fee>, Error> {
-        self.get_by_id("fee", id).await
+        // Custom query instead of generic get_by_id: OMIT import_source which may
+        // contain native datetime fields incompatible with serde_json::Value.
+        let client = self.get_client()?;
+        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+            return Err(self.invalid_request_error("Invalid record ID format"));
+        }
+        info!("Fetching fee by ID: {}", id);
+        let query = format!("SELECT * OMIT import_source FROM fee:{}", id);
+        let mut response = client.query(&query).await?;
+        let items: Vec<Fee> = response.take(0)?;
+        Ok(items.into_iter().next())
     }
 
     pub async fn create_fee(&self, fee: FeeCreate) -> Result<Fee, Error> {
@@ -237,7 +262,7 @@ impl DatabaseManager {
             staff_position: source.staff_position.clone(),
             strap_line: source.strap_line.clone(),
             revisions: vec![],
-            pricing: source.pricing.clone(),
+            pricing: source.pricing_typed(),
             post_contract_items: source.post_contract_items.clone(),
             reimbursable_costs: source.reimbursable_costs.clone(),
             payment_schedule: None,
@@ -254,7 +279,7 @@ impl DatabaseManager {
     pub async fn get_fees_for_project(&self, project_id: &str) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
         let mut result = client.query_bind(
-            "SELECT * FROM fee WHERE project_id = projects:$pid ORDER BY rev DESC",
+            "SELECT * OMIT import_source FROM fee WHERE project_id = projects:$pid ORDER BY rev DESC",
             ("pid", project_id.to_string())
         ).await?;
         let fees: Vec<Fee> = result.take(0)?;

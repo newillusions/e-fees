@@ -189,7 +189,8 @@ pub fn generate_fee_excel(fee: &Fee, output_path: &Path) -> Result<String, Strin
     // ------------------------------------------------------------------
     // PRICING SECTION (if pricing data exists)
     // ------------------------------------------------------------------
-    if let Some(ref pricing) = fee.pricing {
+    let pricing_typed = fee.pricing_typed();
+    if let Some(ref pricing) = pricing_typed {
         row = write_pricing_section(worksheet, row, pricing)?;
     } else {
         worksheet.merge_range(row, 0, row, 4, "No pricing data available", &fmt_section_header()).map_err(|e| e.to_string())?;
@@ -217,7 +218,7 @@ pub fn generate_fee_excel(fee: &Fee, output_path: &Path) -> Result<String, Strin
     // ------------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------------
-    if let Some(ref pricing) = fee.pricing {
+    if let Some(ref pricing) = pricing_typed {
         row = write_summary_section(worksheet, row, pricing)?;
     }
 
@@ -241,7 +242,7 @@ pub fn generate_fee_template(
     output_path: &Path,
     source_path: Option<&Path>,
 ) -> Result<String, String> {
-    let pricing = fee.pricing.as_ref()
+    let pricing = fee.pricing_typed()
         .ok_or_else(|| "No pricing data available for template generation".to_string())?;
 
     // 1. Open source spreadsheet (project file or embedded fallback)
@@ -259,10 +260,10 @@ pub fn generate_fee_template(
     adjust_stage_rows(sheet, stage_count);
 
     // 3. Populate header / config cells
-    populate_config(sheet, pricing, stage_count);
+    populate_config(sheet, &pricing, stage_count);
 
     // 4. Populate stage rows
-    populate_stages(sheet, pricing, &design_stages);
+    populate_stages(sheet, &pricing, &design_stages);
 
     // 5. Populate post-contract items
     if let Some(ref items) = fee.post_contract_items {
@@ -681,7 +682,7 @@ mod tests {
     fn full_fee() -> Fee {
         let mut fee = minimal_fee();
         fee.name = "DELETE ME - Full Test Fee".to_string();
-        fee.pricing = Some(PricingBreakdown {
+        fee.pricing = Some(serde_json::to_value(PricingBreakdown {
             config: PricingConfig {
                 target_fee: 100000.0,
                 buffer_percent: 5.0,
@@ -727,7 +728,7 @@ mod tests {
             subtotal: 110500.0,
             vat_amount: 5525.0,
             grand_total: 116025.0,
-        });
+        }).unwrap());
         fee.post_contract_items = Some(vec![
             PostContractItem {
                 id: "pc1".to_string(),
@@ -836,7 +837,7 @@ mod tests {
     fn test_template_with_5_stages_fallback() {
         let mut fee = full_fee();
         // Add 2 more stages to get 5 total (more than template's 4 → row insertion)
-        if let Some(ref mut pricing) = fee.pricing {
+        if let Some(mut pricing) = fee.pricing_typed() {
             pricing.stages.push(Stage {
                 id: "td".to_string(), name: "Tender".to_string(), code: "TD".to_string(),
                 percentage: 10.0, order: 4, is_post_contract: false,
@@ -856,6 +857,7 @@ mod tests {
                     });
                 }
             }
+            fee.pricing = Some(serde_json::to_value(&pricing).unwrap());
         }
 
         let path = std::env::temp_dir().join("delete_me_test_template_5stages.xlsx");
