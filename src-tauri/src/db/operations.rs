@@ -517,7 +517,7 @@ impl DatabaseManager {
             SELECT count() as count FROM company GROUP ALL;
             SELECT count() as count FROM contacts GROUP ALL;
             SELECT count() as count FROM fee GROUP ALL;
-            SELECT count() as count FROM fee WHERE status IN ['Draft', 'Sent', 'Negotiation'] GROUP ALL;
+            SELECT count() as count FROM fee WHERE status IN ['Draft', 'Active', 'Sent', 'Negotiation', 'Awarded', 'Revised'] GROUP ALL;
         "#;
 
         let extract_count = |result: Option<serde_json::Value>| -> usize {
