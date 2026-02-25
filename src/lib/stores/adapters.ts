@@ -9,12 +9,13 @@
  */
 
 import type { CrudApi } from '../utils/crud';
-import type { Project, Company, Contact, Fee, PaginatedResponse } from '../../types';
+import type { Project, Company, Contact, Fee, Venue, PaginatedResponse } from '../../types';
 import {
   getProjects,
   getCompanies,
   getContacts,
   getFees,
+  getVenues,
   createProjectWithTemplate,
   updateProject,
   deleteProject,
@@ -27,13 +28,18 @@ import {
   createFee,
   updateFee,
   deleteFee,
+  createVenue,
+  updateVenue,
+  deleteVenue,
   getProjectsPage,
   getCompaniesPage,
   getContactsPage,
   getFeesPage,
+  getVenuesPage,
   getProjectById,
   getCompanyById,
-  getContactById
+  getContactById,
+  getVenueById
 } from '../api';
 
 /**
@@ -90,6 +96,14 @@ export const feesApi: CrudApi<Fee> = {
   delete: (id) => deleteFee(id)
 };
 
+/** Venues API adapter implementing CrudApi interface */
+export const venuesApi: CrudApi<Venue> = {
+  getAll: () => getVenues(),
+  create: (data) => createVenue(data),
+  update: (id, data) => updateVenue(id, data),
+  delete: (id) => deleteVenue(id)
+};
+
 // ============================================================================
 // PAGINATION API ADAPTERS
 // ============================================================================
@@ -115,4 +129,10 @@ export const contactsPaginationApi: PaginationApi<Contact> = {
 /** Fees pagination API adapter */
 export const feesPaginationApi: PaginationApi<Fee> = {
   getPage: (page, pageSize) => getFeesPage(page, pageSize)
+};
+
+/** Venues pagination API adapter */
+export const venuesPaginationApi: PaginationApi<Venue> = {
+  getPage: (page, pageSize) => getVenuesPage(page, pageSize),
+  getById: (id) => getVenueById(id)
 };

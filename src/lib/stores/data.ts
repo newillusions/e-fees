@@ -7,7 +7,7 @@ const mockProjects: Project[] = [
     id: '1',
     name: 'Green Tower Development',
     name_short: 'Green Tower',
-    status: 'Active',
+    status: 'Design',
     area: 'Commercial',
     city: 'Dubai',
     country: 'UAE',

@@ -11,15 +11,18 @@ export type ProjectActivity =
   | 'Other';
 
 export type ProjectStatus =
-  | 'Draft'
+  | 'Lead'
   | 'RFP'
-  | 'Active'
+  | 'Submitted'
   | 'Awarded'
-  | 'Revised'
-  | 'On Hold'
+  | 'Design'
+  | 'Construction'
   | 'Completed'
   | 'Lost'
-  | 'Cancelled';
+  | 'No Response'
+  | 'Cancelled'
+  | 'On Hold'
+  | 'Superseded';
 
 export type ProjectStage = 
   | 'Concept'
@@ -31,15 +34,12 @@ export type ProjectStage =
 
 export type FeeStatus =
   | 'Draft'
-  | 'Active'
   | 'Sent'
   | 'Negotiation'
-  | 'Awarded'
-  | 'Revised'
-  | 'Completed'
-  | 'On Hold'
-  | 'Lost'
-  | 'Cancelled';
+  | 'Accepted'
+  | 'Rejected'
+  | 'No Response'
+  | 'Superseded';
 
 export type FeeStage = 
   | 'Draft'
@@ -64,6 +64,24 @@ export interface ProjectNumber {
   id: string; // computed: YY-CCCNN
 }
 
+export interface VenueLocation {
+  city: string;
+  country: string;
+  area: string;
+}
+
+export interface Venue {
+  id?: string;
+  name: string;
+  name_short?: string;
+  location?: VenueLocation;
+  tags?: string[];
+  notes?: string;
+  time?: TimeInfo;
+}
+
+export type VenueCreate = Omit<Venue, 'id' | 'time'>;
+
 export interface Revision {
   revision_number: number;
   revision_date: string; // datetime
@@ -82,6 +100,7 @@ export interface Project {
   city: string;
   country: string;
   folder?: string;
+  venue_id?: string;
   number?: ProjectNumber;
   project_number?: string;
   client_company?: string;

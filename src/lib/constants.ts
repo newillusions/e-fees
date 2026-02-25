@@ -15,15 +15,12 @@
  */
 export const PROPOSAL_STATUSES = [
   'Draft',
-  'Active',
   'Sent',
   'Negotiation',
-  'Awarded',
-  'Completed',
-  'Lost',
-  'Cancelled',
-  'On Hold',
-  'Revised'
+  'Accepted',
+  'Rejected',
+  'No Response',
+  'Superseded'
 ] as const;
 
 export type ProposalStatus = typeof PROPOSAL_STATUSES[number];
@@ -66,15 +63,18 @@ export const ACTIVE_PROPOSAL_STATUSES: ProposalStatus[] = [
  * Used in filters, dropdowns, and status badges.
  */
 export const PROJECT_STATUSES = [
-  'Draft',
+  'Lead',
   'RFP',
-  'Active',
+  'Submitted',
   'Awarded',
+  'Design',
+  'Construction',
   'Completed',
   'Lost',
+  'No Response',
   'Cancelled',
   'On Hold',
-  'Revised'
+  'Superseded'
 ] as const;
 
 export type ProjectStatus = typeof PROJECT_STATUSES[number];
@@ -97,6 +97,18 @@ export const PROJECT_STATUS_OPTIONS_TYPEAHEAD = PROJECT_STATUSES.map(status => (
   name: status
 }));
 
+/**
+ * Active project statuses (for dashboard metrics, etc.)
+ * These represent projects that are currently in progress.
+ */
+export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = [
+  'RFP',
+  'Submitted',
+  'Awarded',
+  'Design',
+  'Construction'
+];
+
 // =============================================================================
 // STATUS COLORS
 // =============================================================================
@@ -106,19 +118,23 @@ export const PROJECT_STATUS_OPTIONS_TYPEAHEAD = PROJECT_STATUSES.map(status => (
  * Returns Tailwind classes for text and background colors.
  */
 export const STATUS_COLORS: Record<string, string> = {
-  // Proposal/Project statuses
+  'Lead': 'text-gray-400 bg-gray-400/10',
   'Draft': 'text-yellow-400 bg-yellow-400/10',
+  'RFP': 'text-blue-400 bg-blue-400/10',
+  'Submitted': 'text-purple-400 bg-purple-400/10',
   'Sent': 'text-purple-400 bg-purple-400/10',
   'Negotiation': 'text-blue-400 bg-blue-400/10',
   'Awarded': 'text-green-400 bg-green-400/10',
+  'Accepted': 'text-green-400 bg-green-400/10',
+  'Design': 'text-blue-400 bg-blue-400/10',
+  'Construction': 'text-teal-400 bg-teal-400/10',
   'Completed': 'text-green-500 bg-green-500/10',
   'Lost': 'text-red-400 bg-red-400/10',
+  'Rejected': 'text-red-400 bg-red-400/10',
+  'No Response': 'text-gray-500 bg-gray-500/10',
   'Cancelled': 'text-gray-400 bg-gray-400/10',
   'On Hold': 'text-orange-400 bg-orange-400/10',
-  'Revised': 'text-cyan-400 bg-cyan-400/10',
-  // Project-specific
-  'RFP': 'text-blue-400 bg-blue-400/10',
-  'Active': 'text-blue-400 bg-blue-400/10',
+  'Superseded': 'text-cyan-400 bg-cyan-400/10',
 };
 
 /**
