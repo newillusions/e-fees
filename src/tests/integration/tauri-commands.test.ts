@@ -29,7 +29,7 @@ describe('Tauri Commands Integration', () => {
       country: 'United Arab Emirates',
       city: 'Dubai',
       client_company: 'Emittiv Engineering',
-      status: 'Active',
+      status: 'Design',
       time: {
         created_at: '2025-08-21T09:00:00Z',
         updated_at: '2025-08-21T09:00:00Z'
@@ -53,7 +53,7 @@ describe('Tauri Commands Integration', () => {
         country: 'United Arab Emirates',
         city: 'Abu Dhabi',
         client_company: 'Test Company',
-        status: 'Active' as const
+        status: 'Awarded' as const
       };
 
       const expectedProjectWithId = {
@@ -106,7 +106,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test',
-        status: 'Active' as const
+        status: 'Submitted' as const
       })).rejects.toThrow('Project number already exists');
       expect(invoke).toHaveBeenCalledWith('create_project', expect.any(Object));
     });
@@ -392,17 +392,17 @@ describe('Tauri Commands Integration', () => {
     });
 
     it('should update fee', async () => {
-      const updatedFee = { ...mockFee, status: 'Active' };
-      
+      const updatedFee = { ...mockFee, status: 'Sent' };
+
       vi.mocked(invoke).mockResolvedValueOnce(updatedFee);
 
-      const result = await ApiClient.updateFee('fee:25-97101-01', { status: 'Active' });
+      const result = await ApiClient.updateFee('fee:25-97101-01', { status: 'Sent' });
 
       // The API adds id and updated timestamp to the fee data automatically
-      expect(invoke).toHaveBeenCalledWith('update_fee', { 
-        id: 'fee:25-97101-01', 
+      expect(invoke).toHaveBeenCalledWith('update_fee', {
+        id: 'fee:25-97101-01',
         fee: expect.objectContaining({
-          status: 'Active',
+          status: 'Sent',
           id: null,
           time: expect.objectContaining({
             updated_at: expect.any(String)
@@ -537,7 +537,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test Company',
-        status: 'Active' as const
+        status: 'RFP' as const
       })).rejects.toThrow('Database connection lost');
     });
 

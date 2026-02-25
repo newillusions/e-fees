@@ -170,7 +170,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Arab Emirates',
     city: 'Dubai',
     client_company: 'Emittiv Engineering Consultancy',
-    status: 'Active',
+    status: 'Design',
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -178,10 +178,10 @@ export const TEST_PROJECTS: Project[] = [
     id: 'projects:25-96601',
     project_number: '25-96601',
     name: 'Riyadh Business Complex',
-    country: 'Saudi Arabia', 
+    country: 'Saudi Arabia',
     city: 'Riyadh',
     client_company: 'ACME Corporation',
-    status: 'Active',
+    status: 'Awarded',
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -192,7 +192,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Kingdom',
     city: 'London',
     client_company: 'Tech Solutions Ltd',
-    status: 'Draft',
+    status: 'RFP',
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -271,10 +271,10 @@ export const TEST_CONNECTION_STATUS = {
 
 // Status/Stage/Package Enums for Testing
 export const TEST_ENUMS = {
-  fee_statuses: ['Draft', 'Sent', 'Active', 'Awarded', 'Lost'],
+  fee_statuses: ['Draft', 'Sent', 'Negotiation', 'Accepted', 'Rejected', 'No Response', 'Superseded'],
   fee_stages: ['Draft', 'Prepared', 'Sent', 'Under Review', 'Negotiation', 'Awarded', 'Lost'],
   fee_packages: ['structural', 'architectural', 'mep', 'civil', 'full_package'],
-  project_statuses: ['Draft', 'Active', 'On Hold', 'Completed', 'Cancelled']
+  project_statuses: ['Lead', 'RFP', 'Submitted', 'Awarded', 'Design', 'Construction', 'Completed', 'Lost', 'No Response', 'Cancelled', 'On Hold', 'Superseded']
 };
 
 // Helper functions for test data manipulation
@@ -307,7 +307,7 @@ export const TestDataHelpers = {
     country: 'United Arab Emirates',
     city: 'Dubai',
     client_company: 'Test Company',
-    status: 'Active',
+    status: 'Design',
     time: {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

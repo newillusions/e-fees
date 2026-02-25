@@ -262,31 +262,31 @@
   // Check if proposal status is compatible with project status
   function isCompatibleProjectStatus(proposalStatus: string): boolean {
     const proposalToProjectMapping: Record<string, string> = {
-      'Draft': 'Draft',
+      'Draft': 'Lead',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
-      'Awarded': 'Awarded',
+      'Accepted': 'Awarded',
       'Completed': 'Completed',
-      'Lost': 'Lost',
+      'Rejected': 'Lost',
       'Cancelled': 'Cancelled',
       'On Hold': 'On Hold',
-      'Revised': 'Revised'
+      'Superseded': 'Superseded'
     };
     return proposalStatus in proposalToProjectMapping;
   }
-  
+
   // Get the mapped project status for a proposal status
   function getProjectStatusFromProposalStatus(proposalStatus: string): ProjectStatus {
     const proposalToProjectMapping: Record<string, ProjectStatus> = {
-      'Draft': 'Draft',
+      'Draft': 'Lead',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
-      'Awarded': 'Awarded',
+      'Accepted': 'Awarded',
       'Completed': 'Completed',
-      'Lost': 'Lost',
+      'Rejected': 'Lost',
       'Cancelled': 'Cancelled',
       'On Hold': 'On Hold',
-      'Revised': 'Revised'
+      'Superseded': 'Superseded'
     };
     return proposalToProjectMapping[proposalStatus] || (proposalStatus as ProjectStatus);
   }

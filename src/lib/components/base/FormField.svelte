@@ -131,13 +131,12 @@
   <div class={field.colSpan === 2 ? 'col-span-2' : ''}>
     <FormSelect
       label={field.label}
-      {value}
+      bind:value={formData[field.name] as string}
       options={field.options || []}
       placeholder={field.placeholder}
       required={field.required}
       disabled={field.disabled}
       {error}
-      on:change={e => setValue(e.detail)}
     />
   </div>
 {:else if field.type === 'typeahead'}
@@ -175,14 +174,13 @@
     <FormInput
       label={field.label}
       type={field.type}
-      {value}
+      bind:value={formData[field.name] as string}
       placeholder={field.placeholder}
       required={field.required}
       disabled={field.disabled}
       maxlength={field.maxlength}
       {error}
       className={field.className}
-      on:input={e => setValue(e.detail)}
     />
   </div>
 {/if}

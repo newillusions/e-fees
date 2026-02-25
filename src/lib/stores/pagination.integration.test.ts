@@ -36,7 +36,7 @@ const generateTestProject = (index: number): Project => ({
   id: `project:test_${index}`,
   name: `${TEST_PREFIX}Project ${index}`,
   name_short: `PT${index}`,
-  status: 'Draft',
+  status: 'Lead',
   city: 'Test City',
   country: 'Test Country',
   time: {

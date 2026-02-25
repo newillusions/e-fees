@@ -58,7 +58,7 @@ const mockProject: Project = {
   id: 'projects:test_project',
   name: 'Test Project',
   name_short: 'Test Proj',
-  status: 'Active',
+  status: 'Design',
   area: 'Downtown',
   city: 'Abu Dhabi',
   country: 'U.A.E.',
@@ -246,7 +246,7 @@ describe('Store Management', () => {
         const newProject = {
           name: 'New Project',
           name_short: 'New Proj',
-          status: 'Draft' as const,
+          status: 'Lead' as const,
           area: 'Marina',
           city: 'Dubai',
           country: 'U.A.E.',
@@ -278,7 +278,7 @@ describe('Store Management', () => {
         const newProject = {
           name: 'Failed Project',
           name_short: 'Failed',
-          status: 'Draft' as const,
+          status: 'Lead' as const,
           area: 'Test Area',
           city: 'Test City',
           country: 'Test Country',

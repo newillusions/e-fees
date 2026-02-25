@@ -45,7 +45,7 @@ function generateTestProject(index: number): Project {
     id: `project:${TEST_PREFIX}${index}`,
     name: `${TEST_PREFIX}Project ${index}`,
     name_short: `PT${index}`,
-    status: 'Draft',
+    status: 'Lead',
     city: 'Dubai',
     country: 'United Arab Emirates',
     number: {

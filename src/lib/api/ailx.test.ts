@@ -604,7 +604,7 @@ describe('AilxApiClient', () => {
         json: async () => {
           throw new Error('Invalid JSON');
         }
-      } as Response);
+      } as unknown as Response);
 
       await expect(client.health()).rejects.toThrow('HTTP 500');
     });

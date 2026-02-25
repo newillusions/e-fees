@@ -82,7 +82,7 @@ function generateTestProject(sequence: number): Project {
     id: `project:PAGTEST_${sequence}`,
     name: `PAGTEST_Project_${sequence}`,
     name_short: `PT${sequence}`,
-    status: 'Draft',
+    status: 'Lead',
     city: 'Dubai',
     country: 'United Arab Emirates',
     time: {

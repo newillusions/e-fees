@@ -56,7 +56,7 @@
   let formData: ProjectFormData = $state({
     name: '',
     name_short: '',
-    status: 'Draft',
+    status: 'Lead',
     area: '',
     city: '',
     country: '',
@@ -363,7 +363,7 @@
     formData = {
       name: '',
       name_short: '',
-      status: 'Draft',
+      status: 'Lead',
       area: '',
       city: '',
       country: '',

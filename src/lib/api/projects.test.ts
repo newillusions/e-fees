@@ -28,7 +28,7 @@ const mockProject: Project = {
   id: 'projects:test',
   name: 'Test Project',
   name_short: 'Test',
-  status: 'Active',
+  status: 'Design',
   area: 'Downtown',
   city: 'Dubai',
   country: 'U.A.E.',
@@ -132,7 +132,7 @@ describe('Projects API Module', () => {
       const projectData: ProjectCreate = {
         name: 'New Project',
         name_short: 'New',
-        status: 'Draft',
+        status: 'Lead',
         area: 'Area',
         city: 'City',
         country: 'Country',

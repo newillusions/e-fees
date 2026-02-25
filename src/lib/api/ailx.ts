@@ -198,12 +198,12 @@ export class AilxApiClient {
   // ============================================================================
 
   async searchProducts(params: ProductSearchParams = {}): Promise<ProductSearchResponse> {
-    const queryString = this.buildQueryString(params);
+    const queryString = this.buildQueryString(params as Record<string, unknown>);
     return this.request(`/api/products/search${queryString}`);
   }
 
   async recommendProducts(params: ProductRecommendParams = {}): Promise<ProductRecommendResponse> {
-    const queryString = this.buildQueryString(params);
+    const queryString = this.buildQueryString(params as Record<string, unknown>);
     return this.request(`/api/products/recommend${queryString}`);
   }
 
@@ -216,7 +216,7 @@ export class AilxApiClient {
   // ============================================================================
 
   async checkDuplicate(params: DuplicateCheckParams): Promise<DuplicateCheckResponse> {
-    const queryString = this.buildQueryString(params);
+    const queryString = this.buildQueryString(params as unknown as Record<string, unknown>);
     return this.request(`/api/fixtures/check-duplicate${queryString}`);
   }
 

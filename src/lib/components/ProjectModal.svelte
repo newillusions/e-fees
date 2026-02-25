@@ -51,7 +51,7 @@
     city: '',
     country: '',
     folder: '',
-    status: 'Draft'
+    status: 'Lead'
   });
   
   // Validation setup
@@ -218,7 +218,7 @@
   // Handle status change cancellation
   function handleStatusChangeCancel() {
     // Revert the status back to original
-    formData.status = (originalProject?.status as ProjectStatus) || 'Draft';
+    formData.status = (originalProject?.status as ProjectStatus) || 'Lead';
     showStatusChangeModal = false;
     pendingStatusChange = '';
   }
@@ -250,7 +250,7 @@
       city: '',
       country: '',
       folder: '',
-      status: 'Draft'
+      status: 'Lead'
     };
     formErrors = {};
     showDeleteConfirm = false;
@@ -280,7 +280,7 @@
         city: project.city || '',
         country: project.country || '',
         folder: project.folder || '',
-        status: (project.status as ProjectStatus) || 'Draft'
+        status: (project.status as ProjectStatus) || 'Lead'
       };
     }
   });
