@@ -149,10 +149,10 @@ const STATUS_FOLDERS: [&str; 4] = ["00 Inactive", "01 RFPs", "11 Current", "99 C
 /// Get the status folder name for a given project status
 fn get_folder_for_status(status: &str) -> &'static str {
     match status.to_lowercase().as_str() {
-        "draft" | "rfp" | "proposal" | "submitted" => "01 RFPs",
-        "active" | "current" | "awarded" | "ongoing" => "11 Current",
+        "lead" | "rfp" | "submitted" => "01 RFPs",
+        "awarded" | "design" | "construction" | "current" | "ongoing" => "11 Current",
         "completed" | "finished" | "delivered" => "99 Completed",
-        "cancelled" | "canceled" | "inactive" | "lost" | "on hold" => "00 Inactive",
+        "cancelled" | "canceled" | "inactive" | "lost" | "no response" | "on hold" | "superseded" => "00 Inactive",
         _ => "01 RFPs" // Default to RFPs
     }
 }
@@ -161,7 +161,7 @@ fn get_folder_for_status(status: &str) -> &'static str {
 fn get_status_from_folder(folder: &str) -> Option<&'static str> {
     match folder {
         "01 RFPs" => Some("rfp"),
-        "11 Current" => Some("active"),
+        "11 Current" => Some("awarded"),
         "99 Completed" => Some("completed"),
         "00 Inactive" => Some("cancelled"),
         _ => None
@@ -651,17 +651,24 @@ mod tests {
     fn test_get_folder_for_status() {
         assert_eq!(get_folder_for_status("rfp"), "01 RFPs");
         assert_eq!(get_folder_for_status("RFP"), "01 RFPs");
-        assert_eq!(get_folder_for_status("active"), "11 Current");
-        assert_eq!(get_folder_for_status("Active"), "11 Current");
+        assert_eq!(get_folder_for_status("lead"), "01 RFPs");
+        assert_eq!(get_folder_for_status("submitted"), "01 RFPs");
+        assert_eq!(get_folder_for_status("awarded"), "11 Current");
+        assert_eq!(get_folder_for_status("design"), "11 Current");
+        assert_eq!(get_folder_for_status("construction"), "11 Current");
         assert_eq!(get_folder_for_status("completed"), "99 Completed");
         assert_eq!(get_folder_for_status("cancelled"), "00 Inactive");
+        assert_eq!(get_folder_for_status("lost"), "00 Inactive");
+        assert_eq!(get_folder_for_status("no response"), "00 Inactive");
+        assert_eq!(get_folder_for_status("on hold"), "00 Inactive");
+        assert_eq!(get_folder_for_status("superseded"), "00 Inactive");
         assert_eq!(get_folder_for_status("unknown"), "01 RFPs");
     }
 
     #[test]
     fn test_get_status_from_folder() {
         assert_eq!(get_status_from_folder("01 RFPs"), Some("rfp"));
-        assert_eq!(get_status_from_folder("11 Current"), Some("active"));
+        assert_eq!(get_status_from_folder("11 Current"), Some("awarded"));
         assert_eq!(get_status_from_folder("99 Completed"), Some("completed"));
         assert_eq!(get_status_from_folder("00 Inactive"), Some("cancelled"));
         assert_eq!(get_status_from_folder("Unknown"), None);

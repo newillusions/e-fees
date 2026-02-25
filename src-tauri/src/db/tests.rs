@@ -538,23 +538,37 @@ mod tests {
 
         #[test]
         fn test_validate_status_valid() {
-            let allowed = &["Draft", "Active", "On Hold", "Completed", "Cancelled"];
-            assert!(InputValidator::validate_status("Draft", allowed).is_ok());
-            assert!(InputValidator::validate_status("Active", allowed).is_ok());
+            let allowed = &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"];
+            assert!(InputValidator::validate_status("Lead", allowed).is_ok());
+            assert!(InputValidator::validate_status("RFP", allowed).is_ok());
+            assert!(InputValidator::validate_status("Submitted", allowed).is_ok());
+            assert!(InputValidator::validate_status("Awarded", allowed).is_ok());
+            assert!(InputValidator::validate_status("Design", allowed).is_ok());
+            assert!(InputValidator::validate_status("Construction", allowed).is_ok());
             assert!(InputValidator::validate_status("Completed", allowed).is_ok());
+            assert!(InputValidator::validate_status("Lost", allowed).is_ok());
+            assert!(InputValidator::validate_status("No Response", allowed).is_ok());
+            assert!(InputValidator::validate_status("Cancelled", allowed).is_ok());
+            assert!(InputValidator::validate_status("On Hold", allowed).is_ok());
+            assert!(InputValidator::validate_status("Superseded", allowed).is_ok());
         }
 
         #[test]
         fn test_validate_status_invalid() {
-            let allowed = &["Draft", "Active", "On Hold", "Completed", "Cancelled"];
+            let allowed = &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"];
             assert!(InputValidator::validate_status("InvalidStatus", allowed).is_err());
             assert!(InputValidator::validate_status("", allowed).is_err());
+            // Old statuses should no longer be valid
+            assert!(InputValidator::validate_status("Active", allowed).is_err());
+            assert!(InputValidator::validate_status("Draft", allowed).is_err());
+            assert!(InputValidator::validate_status("Archived", allowed).is_err());
+            assert!(InputValidator::validate_status("Tender", allowed).is_err());
         }
 
         #[test]
         fn test_validate_status_sql_injection() {
-            let allowed = &["Draft", "Active"];
-            assert!(InputValidator::validate_status("Draft'; DROP TABLE--", allowed).is_err());
+            let allowed = &["Lead", "RFP"];
+            assert!(InputValidator::validate_status("Lead'; DROP TABLE--", allowed).is_err());
         }
 
         // ----- Text Field Validation -----
@@ -803,6 +817,58 @@ mod tests {
         let same: bool = std::any::TypeId::of::<DbValue>() == std::any::TypeId::of::<SdkValue>();
         println!("Same type: {}", same);
     }
+    }
+
+    // ============================================================================
+    // VENUE STRUCT TESTS
+    // ============================================================================
+
+    mod venue_tests {
+        use crate::db::types::{VenueLocation, VenueCreate};
+
+        #[test]
+        fn test_venue_location_defaults() {
+            let loc = VenueLocation::default();
+            assert_eq!(loc.city, "");
+            assert_eq!(loc.country, "");
+            assert_eq!(loc.area, "");
+        }
+
+        #[test]
+        fn test_venue_create_minimal() {
+            let venue = VenueCreate {
+                name: "Test Venue".to_string(),
+                name_short: String::new(),
+                location: VenueLocation::default(),
+                tags: vec![],
+                notes: String::new(),
+            };
+            assert_eq!(venue.name, "Test Venue");
+            assert!(venue.tags.is_empty());
+        }
+
+        #[test]
+        fn test_venue_create_with_location() {
+            let venue = VenueCreate {
+                name: "Dubai Mall".to_string(),
+                name_short: "DM".to_string(),
+                location: VenueLocation {
+                    city: "Dubai".to_string(),
+                    country: "UAE".to_string(),
+                    area: "Downtown".to_string(),
+                },
+                tags: vec!["retail".to_string(), "commercial".to_string()],
+                notes: "Large shopping center".to_string(),
+            };
+            assert_eq!(venue.location.city, "Dubai");
+            assert_eq!(venue.location.country, "UAE");
+            assert_eq!(venue.location.area, "Downtown");
+            assert_eq!(venue.name_short, "DM");
+            assert_eq!(venue.tags.len(), 2);
+            assert_eq!(venue.tags[0], "retail");
+            assert_eq!(venue.tags[1], "commercial");
+            assert_eq!(venue.notes, "Large shopping center");
+        }
     }
 
     // ============================================================================

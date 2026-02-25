@@ -24,7 +24,7 @@ impl DatabaseClient {
             return Err(Error::thrown(format!("Invalid project short name: {}", e)));
         }
 
-        if let Err(e) = InputValidator::validate_status(&project.status, &["Draft", "Active", "On Hold", "Completed", "Cancelled"]) {
+        if let Err(e) = InputValidator::validate_status(&project.status, &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"]) {
             return Err(Error::thrown(format!("Invalid project status: {}", e)));
         }
 

@@ -732,8 +732,8 @@ impl DatabaseManager {
 
         // Validate status against known values
         let valid_statuses = [
-            "Draft", "Active", "On Hold", "Completed", "Archived", "Cancelled",
-            "RFP", "Tender", "Awarded", "Lost"
+            "Lead", "RFP", "Submitted", "Awarded", "Design", "Construction",
+            "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"
         ];
         if !valid_statuses.contains(&new_status) {
             return Err(self.invalid_request_error(&format!("Invalid status: {}", new_status)));
