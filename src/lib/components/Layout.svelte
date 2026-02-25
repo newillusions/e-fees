@@ -76,6 +76,7 @@
     '/proposals': 'Proposals',
     '/companies': 'Companies',
     '/contacts': 'Contacts',
+    '/venues': 'Venues',
     '/dev': 'Dev Mode'
   };
 

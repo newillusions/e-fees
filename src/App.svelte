@@ -9,6 +9,7 @@
   import Proposals from './routes/Proposals.svelte';
   import Companies from './routes/Companies.svelte';
   import Contacts from './routes/Contacts.svelte';
+  import Venues from './routes/Venues.svelte';
   import ProjectDetailPage from './routes/ProjectDetailPage.svelte';
   import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
   import DevMode from './routes/DevMode.svelte';
@@ -49,6 +50,7 @@
     '/proposals/:id': ProposalDetailPage,
     '/companies': Companies,
     '/contacts': Contacts,
+    '/venues': Venues,
     '/dev': DevMode
   };
 

@@ -523,6 +523,7 @@ export {
   companiesPaginationApi,
   contactsPaginationApi,
   feesPaginationApi,
+  venuesPaginationApi,
   type PaginationApi,
 } from './stores/adapters';
 
@@ -533,6 +534,7 @@ import {
   companiesPaginationApi as _companiesPagApi,
   contactsPaginationApi as _contactsPagApi,
   feesPaginationApi as _feesPagApi,
+  venuesPaginationApi as _venuesPagApi,
 } from './stores/adapters';
 
 // ============================================================================
@@ -566,6 +568,13 @@ export const paginatedContactsStore = createPaginatedStore<Contact>(
  */
 export const paginatedFeesStore = createPaginatedStore<Fee>(
   (page, pageSize) => _feesPagApi.getPage(page, pageSize)
+);
+
+/**
+ * Paginated venues store with lazy loading support.
+ */
+export const paginatedVenuesStore = createPaginatedStore<Venue>(
+  (page, pageSize) => _venuesPagApi.getPage(page, pageSize)
 );
 
 // ============================================================================
