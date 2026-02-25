@@ -8,22 +8,24 @@
     switch (type) {
       case 'project':
         switch (status) {
-          case 'Draft':
+          case 'Lead':
+            return 'emittiv-badge emittiv-badge--gray';
           case 'RFP':
+          case 'Submitted':
             return 'emittiv-badge emittiv-badge--blue';
-          case 'Active':
-            return 'emittiv-badge emittiv-badge--green';
           case 'Awarded':
+          case 'Design':
+          case 'Construction':
             return 'emittiv-badge emittiv-badge--green';
           case 'Completed':
             return 'emittiv-badge emittiv-badge--purple';
           case 'Lost':
+          case 'No Response':
             return 'emittiv-badge emittiv-badge--red';
           case 'Cancelled':
-            return 'emittiv-badge emittiv-badge--gray';
           case 'On Hold':
-            return 'emittiv-badge emittiv-badge--yellow';
-          case 'Revised':
+            return 'emittiv-badge emittiv-badge--gray';
+          case 'Superseded':
             return 'emittiv-badge emittiv-badge--orange';
           default:
             return 'emittiv-badge emittiv-badge--gray';
@@ -32,21 +34,17 @@
       case 'proposal':
         switch (status) {
           case 'Draft':
-          case 'Cancelled':
             return 'emittiv-badge emittiv-badge--gray';
           case 'Sent':
             return 'emittiv-badge emittiv-badge--blue';
           case 'Negotiation':
             return 'emittiv-badge emittiv-badge--yellow';
-          case 'Awarded':
+          case 'Accepted':
             return 'emittiv-badge emittiv-badge--green';
-          case 'Completed':
-            return 'emittiv-badge emittiv-badge--purple';
-          case 'Lost':
+          case 'Rejected':
+          case 'No Response':
             return 'emittiv-badge emittiv-badge--red';
-          case 'On Hold':
-            return 'emittiv-badge emittiv-badge--yellow';
-          case 'Revised':
+          case 'Superseded':
             return 'emittiv-badge emittiv-badge--orange';
           default:
             return 'emittiv-badge emittiv-badge--gray';

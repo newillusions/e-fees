@@ -36,24 +36,26 @@
     : (suggestedProjectStatus ? getFolderForStatus(suggestedProjectStatus) : ''));
   const folderChangeRequired = $derived(currentFolder !== newFolder && currentFolder && newFolder);
   const affectedFees = $derived(relatedFees.filter(fee =>
-    // Filter fees that might be affected by status change
-    fee.status !== 'Completed' && fee.status !== 'Cancelled'
+    // Filter fees that might be affected by status change (exclude terminal statuses)
+    fee.status !== 'Accepted' && fee.status !== 'Rejected' && fee.status !== 'No Response' && fee.status !== 'Superseded'
   ));
 
   // Determine suggested statuses based on primary entity change
   $effect(() => {
     if (mode === 'project-primary') {
       // Project is changing, suggest fee status updates
-      if (newStatus === 'Active' || newStatus === 'Awarded') {
-        suggestedFeeStatus = 'Awarded';
+      if (newStatus === 'Awarded' || newStatus === 'Design' || newStatus === 'Construction') {
+        suggestedFeeStatus = 'Accepted';
       } else if (newStatus === 'Completed') {
-        suggestedFeeStatus = 'Completed';
+        suggestedFeeStatus = 'Accepted';
       } else if (newStatus === 'Cancelled' || newStatus === 'Lost') {
-        suggestedFeeStatus = 'Lost';
+        suggestedFeeStatus = 'Rejected';
+      } else if (newStatus === 'No Response') {
+        suggestedFeeStatus = 'No Response';
       } else if (newStatus === 'On Hold') {
-        suggestedFeeStatus = 'On Hold';
-      } else if (newStatus === 'RFP') {
-        suggestedFeeStatus = 'Sent';  // When project goes back to RFP, suggest Sent for fees
+        suggestedFeeStatus = 'Draft'; // On Hold projects -> fees go back to Draft
+      } else if (newStatus === 'RFP' || newStatus === 'Submitted') {
+        suggestedFeeStatus = 'Sent';
       } else {
         suggestedFeeStatus = '';
       }
@@ -67,18 +69,14 @@
       });
     } else {
       // Proposal is changing, suggest project status update
-      if (newStatus === 'Awarded') {
-        suggestedProjectStatus = 'Active';
-      } else if (newStatus === 'Completed') {
-        suggestedProjectStatus = 'Completed';
-      } else if (newStatus === 'Lost') {
+      if (newStatus === 'Accepted') {
+        suggestedProjectStatus = 'Awarded';
+      } else if (newStatus === 'Rejected') {
         suggestedProjectStatus = 'Lost';
-      } else if (newStatus === 'Cancelled') {
-        suggestedProjectStatus = 'Cancelled';
-      } else if (newStatus === 'On Hold') {
-        suggestedProjectStatus = 'On Hold';
+      } else if (newStatus === 'No Response') {
+        suggestedProjectStatus = 'No Response';
       } else if (newStatus === 'Sent' || newStatus === 'Negotiation') {
-        suggestedProjectStatus = 'RFP';
+        suggestedProjectStatus = 'Submitted';
       } else {
         suggestedProjectStatus = '';
       }
@@ -150,14 +148,18 @@
     if (!project?.status || !newStatus) return '';
     
     const statusChanges: Record<string, string> = {
-      'RFP->Active': 'Project awarded - moving to current projects',
-      'RFP->Completed': 'Project completed directly from RFP stage',
-      'RFP->Cancelled': 'RFP cancelled - moving to inactive',
-      'Active->Completed': 'Project completed - moving to archive',
-      'Active->Cancelled': 'Active project cancelled - moving to inactive',
-      'Active->On Hold': 'Project temporarily on hold',
-      'Completed->Active': 'Reopening completed project',
-      'Cancelled->RFP': 'Reactivating cancelled project'
+      'Lead->RFP': 'Project entering RFP stage',
+      'RFP->Submitted': 'Proposal submitted to client',
+      'Submitted->Awarded': 'Project awarded by client',
+      'Awarded->Design': 'Project entering design phase',
+      'Design->Construction': 'Project moving to construction phase',
+      'Construction->Completed': 'Project completed',
+      'Design->Completed': 'Design project completed',
+      'RFP->Lost': 'RFP lost to competition',
+      'RFP->No Response': 'No response from client',
+      'Submitted->No Response': 'No response to submission',
+      'RFP->Cancelled': 'RFP cancelled',
+      'Cancelled->Lead': 'Reactivating cancelled project',
     };
 
     const key = `${project.status}->${newStatus}`;
@@ -174,7 +176,7 @@
     }
     
     if (newStatus === 'Completed') {
-      warnings.push(`${affectedFees.length} proposal(s) should be marked as completed or invoiced`);
+      warnings.push(`${affectedFees.length} proposal(s) should be marked as accepted`);
     }
     
     if (newStatus === 'On Hold') {

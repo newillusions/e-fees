@@ -77,19 +77,23 @@ export async function validateProjectBasePath(): Promise<string> {
 
 // Status to folder mapping for UI displays
 export const statusToFolder: Record<string, string> = {
-  rfp: '01 RFPs', // Status "rfp" kept for existing data compatibility
-  proposal: '01 RFPs',
+  lead: '01 RFPs',
+  rfp: '01 RFPs',
   submitted: '01 RFPs',
-  active: '11 Current',
-  current: '11 Current',
   awarded: '11 Current',
+  design: '11 Current',
+  construction: '11 Current',
+  current: '11 Current',
   ongoing: '11 Current',
   completed: '99 Completed',
   finished: '99 Completed',
   delivered: '99 Completed',
   cancelled: '00 Inactive',
   inactive: '00 Inactive',
-  lost: '00 Inactive'
+  lost: '00 Inactive',
+  'no response': '00 Inactive',
+  'on hold': '00 Inactive',
+  superseded: '00 Inactive',
 };
 
 export const folderToStatus: Record<string, string> = {
