@@ -127,7 +127,6 @@
 
   // Save handler
   async function handleSave(formData: Record<string, unknown>) {
-    const timestamp = new Date().toISOString();
     const tagsRaw = (formData.tags as string || '').split(',').map((t: string) => t.trim()).filter(Boolean);
 
     if (mode === 'create') {
@@ -141,10 +140,6 @@
         },
         tags: tagsRaw,
         notes: formData.notes as string || '',
-        time: {
-          created_at: timestamp,
-          updated_at: timestamp
-        }
       };
       await venuesActions.create(venueData as unknown as Omit<Venue, 'id'>);
     } else if (venue) {
@@ -163,10 +158,6 @@
         },
         tags: tagsRaw,
         notes: formData.notes as string || '',
-        time: {
-          created_at: venue.time?.created_at || timestamp,
-          updated_at: timestamp
-        }
       };
       await venuesActions.update(venueId, venueData as Partial<Venue>);
     }

@@ -41,15 +41,15 @@ export type FeeStatus =
   | 'No Response'
   | 'Superseded';
 
-export type FeeStage = 
+export type FeeStage =
   | 'Draft'
   | 'Prepared'
   | 'Sent'
   | 'Under Review'
   | 'Clarification'
   | 'Negotiation'
-  | 'Awarded'
-  | 'Lost';
+  | 'Accepted'
+  | 'Rejected';
 
 // Base types
 export interface TimeInfo {

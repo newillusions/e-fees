@@ -98,7 +98,7 @@ export const statusToFolder: Record<string, string> = {
 
 export const folderToStatus: Record<string, string> = {
   '01 RFPs': 'rfp', // Folder maps to "rfp" status for compatibility
-  '11 Current': 'active',
+  '11 Current': 'awarded',
   '99 Completed': 'completed',
   '00 Inactive': 'cancelled'
 };

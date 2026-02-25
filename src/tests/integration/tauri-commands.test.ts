@@ -573,7 +573,7 @@ describe('Tauri Commands Integration', () => {
         country: 'UAE',
         city: 'Dubai',
         client_company: 'Test Company',
-        status: 'Active' as const,
+        status: 'Design' as const,
         created_at: '2025-08-21T09:00:00Z',
         updated_at: '2025-08-21T09:00:00Z'
       };
