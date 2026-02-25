@@ -88,3 +88,6 @@ pw-browsers/
 
 # Rust build artifacts
 target/
+
+# Git worktrees
+.worktrees/
