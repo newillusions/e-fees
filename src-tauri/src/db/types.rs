@@ -134,6 +134,8 @@ pub struct Project {
     pub city: String,
     pub country: String,
     pub folder: String,
+    #[serde(default)]
+    pub venue_id: Option<RecordId>,
     pub number: ProjectNumber,
     pub time: TimeStamps,
 }
@@ -165,7 +167,52 @@ pub struct NewProject {
     pub city: String,
     pub country: String,
     pub folder: String,
+    #[serde(default)]
+    pub venue_id: Option<String>,
     pub number: ProjectNumber,
+}
+
+/// Venue location information.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, Default)]
+pub struct VenueLocation {
+    #[serde(default)]
+    pub city: String,
+    #[serde(default)]
+    pub country: String,
+    #[serde(default)]
+    pub area: String,
+}
+
+/// Venue entity representing a physical place.
+/// Venues have no status — they persist forever.
+/// Whether work is active is determined by their linked engagements (projects).
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct Venue {
+    pub id: Option<RecordId>,
+    pub name: String,
+    #[serde(default)]
+    pub name_short: String,
+    #[serde(default)]
+    pub location: VenueLocation,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub notes: String,
+    pub time: TimeStamps,
+}
+
+/// Venue creation struct without auto-managed fields.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct VenueCreate {
+    pub name: String,
+    #[serde(default)]
+    pub name_short: String,
+    #[serde(default)]
+    pub location: VenueLocation,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub notes: String,
 }
 
 /// Company entity representing client organizations.

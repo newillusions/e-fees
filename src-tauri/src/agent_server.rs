@@ -364,6 +364,7 @@ async fn create_project_handler(
         city: req.city,
         country: req.country,
         folder: req.folder,
+        venue_id: None,
         number,
         time: TimeStamps {
             created_at: surrealdb_types::Datetime::now(),
