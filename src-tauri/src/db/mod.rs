@@ -21,6 +21,7 @@ pub use types::{
     Company, CompanyCreate,
     Contact, ContactCreate,
     Fee, FeeCreate, FeeUpdate, Revision, PricingUpdate,
+    Venue, VenueCreate, VenueLocation,
     PaginatedResponse, EntityCounts,
     ActivityLog, ActivityLogCreate,
     // Pricing types (used by import wizard)

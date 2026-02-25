@@ -92,6 +92,14 @@ pub use contacts::{
     create_contact, update_contact, delete_contact,
 };
 
+// Venue management
+pub mod venues;
+pub use venues::{
+    get_venues, get_venues_page, get_venue_by_id,
+    create_venue, update_venue, delete_venue,
+    get_projects_for_venue,
+};
+
 // Template and folder operations
 pub mod template_ops;
 pub use template_ops::{
