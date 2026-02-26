@@ -91,14 +91,6 @@ use commands::{
     // Import wizard commands
     import_scan_directory,
     import_execute,
-    // Venue commands
-    get_venues,
-    get_venues_page,
-    get_venue_by_id,
-    create_venue,
-    update_venue,
-    delete_venue,
-    get_projects_for_venue,
     // Excel export
     export_fee_excel,
     export_fee_template,
@@ -372,14 +364,6 @@ pub fn run() {
             // Import wizard commands
             import_scan_directory,
             import_execute,
-            // Venue commands
-            get_venues,
-            get_venues_page,
-            get_venue_by_id,
-            create_venue,
-            update_venue,
-            delete_venue,
-            get_projects_for_venue,
             // Excel export
             export_fee_excel,
             export_fee_template

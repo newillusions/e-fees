@@ -820,58 +820,6 @@ mod tests {
     }
 
     // ============================================================================
-    // VENUE STRUCT TESTS
-    // ============================================================================
-
-    mod venue_tests {
-        use crate::db::types::{VenueLocation, VenueCreate};
-
-        #[test]
-        fn test_venue_location_defaults() {
-            let loc = VenueLocation::default();
-            assert_eq!(loc.city, "");
-            assert_eq!(loc.country, "");
-            assert_eq!(loc.area, "");
-        }
-
-        #[test]
-        fn test_venue_create_minimal() {
-            let venue = VenueCreate {
-                name: "Test Venue".to_string(),
-                name_short: String::new(),
-                location: VenueLocation::default(),
-                tags: vec![],
-                notes: String::new(),
-            };
-            assert_eq!(venue.name, "Test Venue");
-            assert!(venue.tags.is_empty());
-        }
-
-        #[test]
-        fn test_venue_create_with_location() {
-            let venue = VenueCreate {
-                name: "Dubai Mall".to_string(),
-                name_short: "DM".to_string(),
-                location: VenueLocation {
-                    city: "Dubai".to_string(),
-                    country: "UAE".to_string(),
-                    area: "Downtown".to_string(),
-                },
-                tags: vec!["retail".to_string(), "commercial".to_string()],
-                notes: "Large shopping center".to_string(),
-            };
-            assert_eq!(venue.location.city, "Dubai");
-            assert_eq!(venue.location.country, "UAE");
-            assert_eq!(venue.location.area, "Downtown");
-            assert_eq!(venue.name_short, "DM");
-            assert_eq!(venue.tags.len(), 2);
-            assert_eq!(venue.tags[0], "retail");
-            assert_eq!(venue.tags[1], "commercial");
-            assert_eq!(venue.notes, "Large shopping center");
-        }
-    }
-
-    // ============================================================================
     // PROD INTEGRATION TEST - run manually with:
     // cargo test test_prod_fee_deserialization -- --ignored --nocapture
     // ============================================================================

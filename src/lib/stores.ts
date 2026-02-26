@@ -12,10 +12,9 @@ import type {
   Company,
   Contact,
   Fee,
-  Venue
 } from '../types';
 import { createEntityStore } from './utils/crud';
-import { projectsApi, companiesApi, contactsApi, feesApi, venuesApi } from './stores/adapters';
+import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
 import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
 import { ACTIVE_PROPOSAL_STATUSES, ACTIVE_PROJECT_STATUSES } from './constants';
 
@@ -97,18 +96,11 @@ export const feesStore = feesInternal.itemsStore;
 export const feesLoading = feesInternal.loadingStore;
 export const feesError = feesInternal.errorStore;
 
-// Venue store
-const venuesInternal = createSyncedEntityStore(venuesApi, 'Venue');
-export const venuesStore = venuesInternal.itemsStore;
-export const venuesLoading = venuesInternal.loadingStore;
-export const venuesError = venuesInternal.errorStore;
-
 // Internal references for actions
 const projectsActionsInternal = projectsInternal.internalActions;
 const companiesActionsInternal = companiesInternal.internalActions;
 const contactsActionsInternal = contactsInternal.internalActions;
 const feesActionsInternal = feesInternal.internalActions;
-const venuesActionsInternal = venuesInternal.internalActions;
 
 // ============================================================================
 // DERIVED STORES (COMPUTED VALUES)
@@ -167,16 +159,16 @@ export const companiesWithContactsStore = derived(
 
 // Loading state for any data operation
 export const isLoadingStore = derived(
-  [projectsLoading, companiesLoading, contactsLoading, feesLoading, venuesLoading],
-  ([projects, companies, contacts, fees, venues]) =>
-    projects || companies || contacts || fees || venues
+  [projectsLoading, companiesLoading, contactsLoading, feesLoading],
+  ([projects, companies, contacts, fees]) =>
+    projects || companies || contacts || fees
 );
 
 // Global error state
 export const globalErrorStore = derived(
-  [projectsError, companiesError, contactsError, feesError, venuesError],
-  ([projectsErr, companiesErr, contactsErr, feesErr, venuesErr]) =>
-    projectsErr || companiesErr || contactsErr || feesErr || venuesErr
+  [projectsError, companiesError, contactsError, feesError],
+  ([projectsErr, companiesErr, contactsErr, feesErr]) =>
+    projectsErr || companiesErr || contactsErr || feesErr
 );
 
 // ============================================================================
@@ -375,28 +367,6 @@ export const feesActions = {
   }
 };
 
-// Export venue actions
-export const venuesActions = {
-  async load() {
-    return await venuesActionsInternal.load();
-  },
-
-  async create(venue: Omit<Venue, 'id'>) {
-    return await venuesActionsInternal.create(venue);
-  },
-
-  async update(id: string, venueData: Partial<Venue>) {
-    return await venuesActionsInternal.update(id, venueData);
-  },
-
-  async delete(id: string) {
-    return await venuesActionsInternal.delete(id);
-  },
-
-  async refresh() {
-    return await venuesActionsInternal.refresh();
-  }
-};
 
 
 // ============================================================================
@@ -421,7 +391,6 @@ export const loadAllData = async (): Promise<void> => {
       companiesActions.load(),
       contactsActions.load(),
       feesActions.load(),
-      venuesActions.load(),
       settingsActions.load() // Load settings too
     ]);
   } finally {
@@ -434,7 +403,6 @@ export const loadProjects = (): Promise<void> => projectsActions.load();
 export const loadCompanies = (): Promise<void> => companiesActions.load();
 export const loadContacts = (): Promise<void> => contactsActions.load();
 export const loadFees = (): Promise<void> => feesActions.load();
-export const loadVenues = (): Promise<void> => venuesActions.load();
 
 // Refresh all data
 export const refreshAllData = async (): Promise<void> => {
@@ -447,7 +415,6 @@ export const clearAllData = (): void => {
   companiesActionsInternal.clear();
   contactsActionsInternal.clear();
   feesActionsInternal.clear();
-  venuesActionsInternal.clear();
 };
 
 // ============================================================================
@@ -523,7 +490,6 @@ export {
   companiesPaginationApi,
   contactsPaginationApi,
   feesPaginationApi,
-  venuesPaginationApi,
   type PaginationApi,
 } from './stores/adapters';
 
@@ -534,7 +500,6 @@ import {
   companiesPaginationApi as _companiesPagApi,
   contactsPaginationApi as _contactsPagApi,
   feesPaginationApi as _feesPagApi,
-  venuesPaginationApi as _venuesPagApi,
 } from './stores/adapters';
 
 // ============================================================================
@@ -568,13 +533,6 @@ export const paginatedContactsStore = createPaginatedStore<Contact>(
  */
 export const paginatedFeesStore = createPaginatedStore<Fee>(
   (page, pageSize) => _feesPagApi.getPage(page, pageSize)
-);
-
-/**
- * Paginated venues store with lazy loading support.
- */
-export const paginatedVenuesStore = createPaginatedStore<Venue>(
-  (page, pageSize) => _venuesPagApi.getPage(page, pageSize)
 );
 
 // ============================================================================

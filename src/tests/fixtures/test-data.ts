@@ -271,7 +271,7 @@ export const TEST_CONNECTION_STATUS = {
 
 // Status/Stage/Package Enums for Testing
 export const TEST_ENUMS = {
-  fee_statuses: ['Draft', 'Sent', 'Negotiation', 'Accepted', 'Rejected', 'No Response', 'Superseded'],
+  fee_statuses: ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Lost', 'No Response', 'Superseded'],
   fee_stages: ['Draft', 'Prepared', 'Sent', 'Under Review', 'Negotiation', 'Awarded', 'Lost'],
   fee_packages: ['structural', 'architectural', 'mep', 'civil', 'full_package'],
   project_statuses: ['Lead', 'RFP', 'Submitted', 'Awarded', 'Design', 'Construction', 'Completed', 'Lost', 'No Response', 'Cancelled', 'On Hold', 'Superseded']

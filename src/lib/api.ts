@@ -21,7 +21,6 @@ import * as filesystem from './api/filesystem';
 import * as settings from './api/settings';
 import * as system from './api/system';
 import * as reference from './api/reference';
-import * as venues from './api/venues';
 import * as activity from './api/activity';
 import * as importWizard from './api/import';
 
@@ -43,9 +42,6 @@ export type {
   Company,
   Contact,
   Fee,
-  Venue,
-  VenueCreate,
-  VenueLocation,
   ProjectCreate,
   ProjectUpdate,
   CompanyCreate,
@@ -117,15 +113,6 @@ export class ApiClient {
   static writeFeeToJson = fees.writeFeeToJson;
   static writeFeeToJsonSafe = fees.writeFeeToJsonSafe;
 
-  // Venue methods
-  static getVenues = venues.getVenues;
-  static getVenuesPage = venues.getVenuesPage;
-  static getVenueById = venues.getVenueById;
-  static createVenue = venues.createVenue;
-  static updateVenue = venues.updateVenue;
-  static deleteVenue = venues.deleteVenue;
-  static getProjectsForVenue = venues.getProjectsForVenue;
-
   // Filesystem methods
   static selectFolder = filesystem.selectFolder;
   static openFolderInExplorer = filesystem.openFolderInExplorer;
@@ -196,15 +183,6 @@ export const {
   deleteFee,
   writeFeeToJson,
   writeFeeToJsonSafe,
-
-  // Venue operations
-  getVenues,
-  createVenue,
-  updateVenue,
-  deleteVenue,
-  getVenueById,
-  getVenuesPage,
-  getProjectsForVenue,
 
   // Pagination operations
   getProjectsPage,

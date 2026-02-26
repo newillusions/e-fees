@@ -36,8 +36,8 @@ export type FeeStatus =
   | 'Draft'
   | 'Sent'
   | 'Negotiation'
-  | 'Accepted'
-  | 'Rejected'
+  | 'Awarded'
+  | 'Lost'
   | 'No Response'
   | 'Superseded';
 
@@ -48,8 +48,8 @@ export type FeeStage =
   | 'Under Review'
   | 'Clarification'
   | 'Negotiation'
-  | 'Accepted'
-  | 'Rejected';
+  | 'Awarded'
+  | 'Lost';
 
 // Base types
 export interface TimeInfo {
@@ -63,24 +63,6 @@ export interface ProjectNumber {
   seq: number; // 1-999
   id: string; // computed: YY-CCCNN
 }
-
-export interface VenueLocation {
-  city: string;
-  country: string;
-  area: string;
-}
-
-export interface Venue {
-  id?: string;
-  name: string;
-  name_short?: string;
-  location?: VenueLocation;
-  tags?: string[];
-  notes?: string;
-  time?: TimeInfo;
-}
-
-export type VenueCreate = Omit<Venue, 'id' | 'time'>;
 
 export interface Revision {
   revision_number: number;
@@ -100,7 +82,6 @@ export interface Project {
   city: string;
   country: string;
   folder?: string;
-  venue_id?: string;
   number?: ProjectNumber;
   project_number?: string;
   client_company?: string;

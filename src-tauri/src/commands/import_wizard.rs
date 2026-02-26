@@ -574,7 +574,6 @@ async fn import_proposal_from_json(
                 city: city.clone(),
                 country: country_name.clone(),
                 folder: "".to_string(),
-                venue_id: None,
                 number: crate::db::ProjectNumber {
                     year,
                     country: country_code,

@@ -265,9 +265,9 @@
       'Draft': 'Lead',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
-      'Accepted': 'Awarded',
+      'Awarded': 'Awarded',
       'Completed': 'Completed',
-      'Rejected': 'Lost',
+      'Lost': 'Lost',
       'Cancelled': 'Cancelled',
       'On Hold': 'On Hold',
       'Superseded': 'Superseded'
@@ -281,9 +281,9 @@
       'Draft': 'Lead',
       'Sent': 'RFP',
       'Negotiation': 'RFP',
-      'Accepted': 'Awarded',
+      'Awarded': 'Awarded',
       'Completed': 'Completed',
-      'Rejected': 'Lost',
+      'Lost': 'Lost',
       'Cancelled': 'Cancelled',
       'On Hold': 'On Hold',
       'Superseded': 'Superseded'

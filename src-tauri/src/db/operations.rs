@@ -13,7 +13,6 @@ use super::{
     Project, NewProject, Company, CompanyCreate,
     Contact, ContactCreate, Fee, FeeCreate, FeeUpdate, PricingUpdate,
     EntityCounts, ActivityLog, ActivityLogCreate,
-    Venue, VenueCreate,
 };
 use crate::commands::{CompanyUpdate, ProjectUpdate};
 
@@ -63,105 +62,6 @@ impl DatabaseManager {
         let client = self.get_client()?;
         client.delete_project(id).await?
             .ok_or_else(|| self.not_found_error("delete project"))
-    }
-}
-
-// ==================== Venue Operations ====================
-
-impl DatabaseManager {
-    pub async fn get_venues(&self) -> Result<Vec<Venue>, Error> {
-        let client = self.get_client()?;
-        let mut response = client.query("SELECT * FROM venue ORDER BY name ASC").await?;
-        let venues: Vec<Venue> = response.take(0)?;
-        info!("Fetched {} venues", venues.len());
-        Ok(venues)
-    }
-
-    pub async fn get_venues_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Venue>, Error> {
-        self.paginate("venue", page, page_size).await
-    }
-
-    pub async fn get_venue_by_id(&self, id: &str) -> Result<Option<Venue>, Error> {
-        self.get_by_id("venue", id).await
-    }
-
-    pub async fn create_venue(&self, venue: VenueCreate) -> Result<Venue, Error> {
-        let client = self.get_client()?;
-        info!("Creating venue: {}", venue.name);
-
-        let mut response = client.query_bind(
-            "CREATE venue CONTENT $venue;",
-            ("venue", venue),
-        ).await?;
-
-        let created: Option<Venue> = response.take(0)?;
-        created.ok_or_else(|| self.not_found_error("create venue"))
-    }
-
-    pub async fn update_venue(&self, id: &str, venue: VenueCreate) -> Result<Venue, Error> {
-        let client = self.get_client()?;
-        info!("Updating venue: {}", id);
-
-        // Validate ID format to prevent SQL injection (used in format! below)
-        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-            return Err(self.invalid_request_error("Invalid venue ID format"));
-        }
-
-        let sql = format!("UPDATE venue:`{}` MERGE $venue;", id);
-
-        let mut response = client.query_bind(
-            &sql,
-            ("venue", venue),
-        ).await?;
-
-        let updated: Option<Venue> = response.take(0)?;
-        updated.ok_or_else(|| self.not_found_error("update venue"))
-    }
-
-    pub async fn delete_venue(&self, id: &str) -> Result<Venue, Error> {
-        let client = self.get_client()?;
-        info!("Deleting venue: {}", id);
-
-        // Validate ID format to prevent SQL injection (used in format! below)
-        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-            return Err(self.invalid_request_error("Invalid venue ID format"));
-        }
-
-        // Check for linked projects first
-        let check_sql = "SELECT count() as count FROM projects WHERE venue_id = $vid GROUP ALL;";
-        let venue_ref = format!("venue:{}", id);
-        let mut check_response = client.query_bind(check_sql, ("vid", venue_ref)).await?;
-        let count_result: Option<serde_json::Value> = check_response.take(0)?;
-        let linked_count = count_result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0);
-
-        if linked_count > 0 {
-            return Err(Error::thrown(
-                format!("Cannot delete venue: {} linked project(s) exist", linked_count)
-            ));
-        }
-
-        let sql = format!("DELETE venue:`{}` RETURN BEFORE;", id);
-        let mut response = client.query(&sql).await?;
-
-        let deleted: Option<Venue> = response.take(0)?;
-        deleted.ok_or_else(|| self.not_found_error("delete venue"))
-    }
-
-    pub async fn get_projects_for_venue(&self, venue_id: &str) -> Result<Vec<Project>, Error> {
-        let client = self.get_client()?;
-
-        // Validate ID format to prevent SQL injection
-        if venue_id.is_empty() || venue_id.len() > 100 || !venue_id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-            return Err(self.invalid_request_error("Invalid venue ID format"));
-        }
-
-        let venue_ref = format!("venue:{}", venue_id);
-        let mut response = client.query_bind(
-            "SELECT * FROM projects WHERE venue_id = $vid ORDER BY time.created_at DESC;",
-            ("vid", venue_ref),
-        ).await?;
-        let projects: Vec<Project> = response.take(0)?;
-        Ok(projects)
     }
 }
 

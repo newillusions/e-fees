@@ -69,16 +69,16 @@ async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, Strin
 /// Get the folder name for a given project status.
 ///
 /// Maps project statuses to their corresponding folder names:
-/// - "01 RFPs": draft, rfp, proposal, submitted
-/// - "11 Current": active, current, awarded, ongoing
-/// - "99 Completed": completed, finished, delivered
-/// - "00 Inactive": cancelled, inactive, lost, on hold
+/// - "01 RFPs": lead, rfp, submitted
+/// - "11 Current": awarded, design, construction, practical completion
+/// - "99 Completed": completed, superseded
+/// - "00 Inactive": cancelled, lost, no response, on hold
 fn get_folder_for_status(status: &str) -> Result<&str, String> {
     match status.to_lowercase().as_str() {
-        "draft" | "rfp" | "proposal" | "submitted" => Ok("01 RFPs"),
-        "active" | "current" | "awarded" | "ongoing" => Ok("11 Current"),
-        "completed" | "finished" | "delivered" => Ok("99 Completed"),
-        "cancelled" | "inactive" | "lost" | "on hold" => Ok("00 Inactive"),
+        "lead" | "rfp" | "submitted" => Ok("01 RFPs"),
+        "awarded" | "design" | "construction" | "practical completion" => Ok("11 Current"),
+        "completed" | "superseded" => Ok("99 Completed"),
+        "cancelled" | "lost" | "no response" | "on hold" => Ok("00 Inactive"),
         _ => Err(format!("Unknown status: {}", status))
     }
 }
@@ -309,8 +309,8 @@ pub async fn move_project_folder(
                 dest_folder
             );
 
-            // If moving from RFP to Current, copy awarded project templates
-            if current_info.current_location == "01 RFPs" && dest_folder == "11 Current" {
+            // If moving to Current from any other folder, copy awarded project templates
+            if current_info.current_location != "11 Current" && dest_folder == "11 Current" {
                 match copy_awarded_templates(&app_handle, &new_path).await {
                     Ok(_) => {
                         success_message.push_str(". Awarded project templates copied successfully.");
@@ -348,9 +348,9 @@ pub async fn move_project_from_rfp(
     destination: String,
 ) -> Result<FolderOperationResult, String> {
     info!("Moving project {} from RFP to: {}", project_number, destination);
-    // Validate destination
+    // Validate destination — uses new domain model statuses
     match destination.as_str() {
-        "current" => move_project_folder(app_handle, project_number, "active".to_string()).await,
+        "current" => move_project_folder(app_handle, project_number, "awarded".to_string()).await,
         "archive" => move_project_folder(app_handle, project_number, "completed".to_string()).await,
         "inactive" => move_project_folder(app_handle, project_number, "cancelled".to_string()).await,
         _ => Err(format!("Invalid destination: {}. Use 'current', 'archive', or 'inactive'", destination))

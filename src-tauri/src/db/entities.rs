@@ -91,7 +91,7 @@ pub struct ProjectNumber {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Revision {
-    pub revision_number: i32,
+    pub revision_number: i64,
     pub revision_date: Datetime,
     pub author_email: String,
     pub author_name: String,
@@ -144,7 +144,7 @@ pub struct Fee {
     pub staff_phone: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub staff_position: Option<String>,
-    pub rev: i32, // auto-computed
+    pub rev: i64, // auto-computed
     #[serde(default)]
     pub revisions: Vec<Revision>,
     // Pricing data (stored as opaque JSON, passed through to frontend)
@@ -248,7 +248,7 @@ pub struct FeeCreate {
     pub staff_phone: Option<String>,
     pub staff_position: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rev: Option<i32>,
+    pub rev: Option<i64>,
     #[serde(default)]
     pub revisions: Vec<Revision>,
 }
@@ -269,7 +269,7 @@ pub struct FeeUpdate {
     pub staff_email: Option<String>,
     pub staff_phone: Option<String>,
     pub staff_position: Option<String>,
-    pub rev: i32,
+    pub rev: i64,
     #[serde(default)]
     pub revisions: Vec<Revision>,
 }
