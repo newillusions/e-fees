@@ -39,9 +39,9 @@
             return 'emittiv-badge emittiv-badge--blue';
           case 'Negotiation':
             return 'emittiv-badge emittiv-badge--yellow';
-          case 'Awarded':
+          case 'Accepted':
             return 'emittiv-badge emittiv-badge--green';
-          case 'Lost':
+          case 'Rejected':
           case 'No Response':
             return 'emittiv-badge emittiv-badge--red';
           case 'Superseded':

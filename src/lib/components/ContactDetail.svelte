@@ -78,9 +78,9 @@
         location="{relatedCompany?.city || 'Unknown'}, {relatedCompany?.country || 'Unknown'}"
         stats={[
           { label: 'Proposals', value: contactFees.length },
-          { label: 'Awarded', value: contactFees.filter(fee => fee.status === 'Awarded').length },
+          { label: 'Accepted', value: contactFees.filter(fee => fee.status === 'Accepted').length },
           { label: 'Pending', value: contactFees.filter(fee => fee.status === 'Sent').length },
-          { label: 'Lost', value: contactFees.filter(fee => fee.status === 'Lost').length }
+          { label: 'Rejected', value: contactFees.filter(fee => fee.status === 'Rejected').length }
         ]}
       />
     {/if}

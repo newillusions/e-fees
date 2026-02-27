@@ -36,8 +36,8 @@ export type FeeStatus =
   | 'Draft'
   | 'Sent'
   | 'Negotiation'
-  | 'Awarded'
-  | 'Lost'
+  | 'Accepted'
+  | 'Rejected'
   | 'No Response'
   | 'Superseded';
 
@@ -48,8 +48,8 @@ export type FeeStage =
   | 'Under Review'
   | 'Clarification'
   | 'Negotiation'
-  | 'Awarded'
-  | 'Lost';
+  | 'Accepted'
+  | 'Rejected';
 
 // Base types
 export interface TimeInfo {

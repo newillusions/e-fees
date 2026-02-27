@@ -264,12 +264,10 @@
     const proposalToProjectMapping: Record<string, string> = {
       'Draft': 'Lead',
       'Sent': 'RFP',
-      'Negotiation': 'RFP',
-      'Awarded': 'Awarded',
-      'Completed': 'Completed',
-      'Lost': 'Lost',
-      'Cancelled': 'Cancelled',
-      'On Hold': 'On Hold',
+      'Negotiation': 'Submitted',
+      'Accepted': 'Awarded',
+      'Rejected': 'Lost',
+      'No Response': 'No Response',
       'Superseded': 'Superseded'
     };
     return proposalStatus in proposalToProjectMapping;
@@ -280,12 +278,10 @@
     const proposalToProjectMapping: Record<string, ProjectStatus> = {
       'Draft': 'Lead',
       'Sent': 'RFP',
-      'Negotiation': 'RFP',
-      'Awarded': 'Awarded',
-      'Completed': 'Completed',
-      'Lost': 'Lost',
-      'Cancelled': 'Cancelled',
-      'On Hold': 'On Hold',
+      'Negotiation': 'Submitted',
+      'Accepted': 'Awarded',
+      'Rejected': 'Lost',
+      'No Response': 'No Response',
       'Superseded': 'Superseded'
     };
     return proposalToProjectMapping[proposalStatus] || (proposalStatus as ProjectStatus);
@@ -445,13 +441,13 @@
     await withLoadingState(async () => {
       const result = await feesActions.update(proposalId, updateData);
       
-      // After successful update, show JSON export alert
-      showJsonExportAlert = true;
-      
+      operationActions.setMessage('Proposal updated successfully');
+      closeModal();
+
       return result;
     }, operationActions, 'saving');
   }
-  
+
   // Delete proposal with loading state
   async function handleDelete() {
     const activeProposal = proposal || originalProposal;
@@ -535,8 +531,7 @@
         ? 'Proposal and project status updated successfully!' 
         : 'Proposal updated successfully!');
       
-      // After successful update, show JSON export alert
-      showJsonExportAlert = true;
+      closeModal();
       return true;
     }, operationActions, 'saving');
     
