@@ -17,8 +17,8 @@ export const PROPOSAL_STATUSES = [
   'Draft',
   'Sent',
   'Negotiation',
-  'Awarded',
-  'Lost',
+  'Accepted',
+  'Rejected',
   'No Response',
   'Superseded'
 ] as const;
@@ -125,10 +125,12 @@ export const STATUS_COLORS: Record<string, string> = {
   'Sent': 'text-purple-400 bg-purple-400/10',
   'Negotiation': 'text-blue-400 bg-blue-400/10',
   'Awarded': 'text-green-400 bg-green-400/10',
+  'Accepted': 'text-green-400 bg-green-400/10',
   'Design': 'text-blue-400 bg-blue-400/10',
   'Construction': 'text-teal-400 bg-teal-400/10',
   'Completed': 'text-green-500 bg-green-500/10',
   'Lost': 'text-red-400 bg-red-400/10',
+  'Rejected': 'text-red-400 bg-red-400/10',
   'No Response': 'text-gray-500 bg-gray-500/10',
   'Cancelled': 'text-gray-400 bg-gray-400/10',
   'On Hold': 'text-orange-400 bg-orange-400/10',

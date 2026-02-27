@@ -37,19 +37,17 @@
   const folderChangeRequired = $derived(currentFolder !== newFolder && currentFolder && newFolder);
   const affectedFees = $derived(relatedFees.filter(fee =>
     // Filter fees that might be affected by status change (exclude terminal statuses)
-    fee.status !== 'Awarded' && fee.status !== 'Lost' && fee.status !== 'No Response' && fee.status !== 'Superseded'
+    fee.status !== 'Accepted' && fee.status !== 'Rejected' && fee.status !== 'No Response' && fee.status !== 'Superseded'
   ));
 
   // Determine suggested statuses based on primary entity change
   $effect(() => {
     if (mode === 'project-primary') {
       // Project is changing, suggest fee status updates
-      if (newStatus === 'Awarded' || newStatus === 'Design' || newStatus === 'Construction') {
-        suggestedFeeStatus = 'Awarded';
-      } else if (newStatus === 'Completed') {
-        suggestedFeeStatus = 'Awarded';
+      if (newStatus === 'Awarded' || newStatus === 'Design' || newStatus === 'Construction' || newStatus === 'Completed') {
+        suggestedFeeStatus = 'Accepted';
       } else if (newStatus === 'Cancelled' || newStatus === 'Lost') {
-        suggestedFeeStatus = 'Lost';
+        suggestedFeeStatus = 'Rejected';
       } else if (newStatus === 'No Response') {
         suggestedFeeStatus = 'No Response';
       } else if (newStatus === 'On Hold') {
@@ -69,9 +67,9 @@
       });
     } else {
       // Proposal is changing, suggest project status update
-      if (newStatus === 'Awarded') {
+      if (newStatus === 'Accepted') {
         suggestedProjectStatus = 'Awarded';
-      } else if (newStatus === 'Lost') {
+      } else if (newStatus === 'Rejected') {
         suggestedProjectStatus = 'Lost';
       } else if (newStatus === 'No Response') {
         suggestedProjectStatus = 'No Response';

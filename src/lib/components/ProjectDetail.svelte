@@ -259,9 +259,9 @@
         location="{project.city}, {project.country}"
         stats={[
           { label: 'Proposals', value: projectFees.length },
-          { label: 'Awarded', value: projectFees.filter(fee => fee.status === 'Awarded').length },
+          { label: 'Accepted', value: projectFees.filter(fee => fee.status === 'Accepted').length },
           { label: 'Pending', value: projectFees.filter(fee => fee.status === 'Sent').length },
-          { label: 'Lost', value: projectFees.filter(fee => fee.status === 'Lost').length }
+          { label: 'Rejected', value: projectFees.filter(fee => fee.status === 'Rejected').length }
         ]}
       />
     {/if}
