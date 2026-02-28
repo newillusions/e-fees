@@ -295,26 +295,20 @@ export const feesActions = {
 
   async create(fee: Omit<Fee, 'id'>) {
     const result = await feesActionsInternal.create(fee);
-    // Sync to paginated store so Proposals page reflects the new item
     paginatedFeesStore.actions.addItem(result);
-    // Log activity (fire-and-forget)
     feeLogger.onCreate(result);
     return result;
   },
 
   async update(id: string, feeData: Partial<Fee>) {
-    // Get current fee for status change detection
     const currentFee = feesActionsInternal.getById(id);
     const result = await feesActionsInternal.update(id, feeData);
 
-    // Sync to paginated store so Proposals page reflects the change
     paginatedFeesStore.actions.updateItem(id, result);
 
-    // Check if this is a status change
     if (currentFee && feeData.status && currentFee.status !== feeData.status) {
       feeLogger.onStatusChange(result, currentFee.status, feeData.status);
     } else {
-      // Log general update with changed fields
       const changedFields = Object.keys(feeData);
       feeLogger.onUpdate(result, changedFields);
     }
@@ -322,13 +316,10 @@ export const feesActions = {
   },
 
   async delete(id: string) {
-    // Get fee name before deletion
     const fee = feesActionsInternal.getById(id);
     const feeName = fee?.name || fee?.number || 'Unknown Fee';
     const result = await feesActionsInternal.delete(id);
-    // Sync to paginated store so Proposals page reflects the removal
     paginatedFeesStore.actions.removeItem(id);
-    // Log activity (fire-and-forget)
     feeLogger.onDelete(id, feeName);
     return result;
   },
@@ -337,9 +328,7 @@ export const feesActions = {
     return await feesActionsInternal.refresh();
   },
 
-  // Preserved custom method for fee status updates
   async updateStatus(id: string, newStatus: string) {
-    // Get the current fee to preserve other fields
     const currentFee = feesActionsInternal.getById(id);
 
     if (!currentFee) {
@@ -348,8 +337,6 @@ export const feesActions = {
 
     const oldStatus = currentFee.status;
 
-    // Update only the status field
-    // Destructure to exclude id from update data
     const { id: _id, ...feeWithoutId } = currentFee;
     const updatedFeeData = {
       ...feeWithoutId,
@@ -362,11 +349,7 @@ export const feesActions = {
     };
 
     const result = await feesActionsInternal.update(id, updatedFeeData);
-
-    // Sync to paginated store so Proposals page reflects the change
     paginatedFeesStore.actions.updateItem(id, result);
-
-    // Log status change (fire-and-forget)
     feeLogger.onStatusChange(result, oldStatus, newStatus);
 
     return result;
