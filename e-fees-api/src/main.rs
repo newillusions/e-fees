@@ -1,8 +1,9 @@
+mod auth;
 mod config;
 
 use std::sync::Arc;
 
-use axum::{extract::State, response::Json, routing::get, Router};
+use axum::{extract::State, middleware, response::Json, routing::get, Router};
 use serde_json::{json, Value};
 use surrealdb::engine::remote::ws::Ws;
 use surrealdb::opt::auth::Database;
@@ -78,6 +79,7 @@ async fn main() {
     // Build router — .with_state() converts Router<Arc<AppState>> to Router<()>
     let app = Router::new()
         .route("/health", get(health))
+        .layer(middleware::from_fn(auth::require_api_key))
         .layer(cors)
         .with_state(state);
 
