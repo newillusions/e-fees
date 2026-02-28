@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "src-tauri",
+  "crates/e-fees-core",
+]
+resolver = "2"
