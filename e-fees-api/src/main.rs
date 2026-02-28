@@ -8,7 +8,7 @@ use std::sync::Arc;
 use axum::{extract::State, middleware, response::Json, routing::get, Router};
 use serde_json::{json, Value};
 use surrealdb::engine::remote::ws::Ws;
-use surrealdb::opt::auth::Database;
+use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
@@ -48,10 +48,8 @@ async fn main() {
         .await
         .expect("Failed to connect to SurrealDB");
 
-    // Authenticate with database-level credentials (matching existing e-fees pattern)
-    db.signin(Database {
-        namespace: config.surreal_ns.clone(),
-        database: config.surreal_db.clone(),
+    // Authenticate with root credentials (matching existing e-fees Tauri app pattern)
+    db.signin(Root {
         username: config.surreal_user.clone(),
         password: config.surreal_pass.clone(),
     })
