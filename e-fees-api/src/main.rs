@@ -1,7 +1,10 @@
 mod auth;
 mod config;
 mod error;
+mod pagination;
 mod routes;
+mod schemas;
+mod validation;
 
 use std::sync::Arc;
 
@@ -12,6 +15,8 @@ use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use config::Config;
 
@@ -19,6 +24,70 @@ use config::Config;
 pub struct AppState {
     pub db: Surreal<surrealdb::engine::remote::ws::Client>,
     pub api_key: String,
+}
+
+/// OpenAPI documentation for the e-fees API.
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "E-Fees API",
+        description = "REST API for managing fee proposals, projects, companies, and contacts.",
+        version = "0.1.0",
+        contact(name = "Emittiv", url = "https://emittiv.com"),
+    ),
+    paths(
+        health,
+        routes::stats::get_stats,
+        routes::projects::list_projects,
+        routes::projects::get_project,
+        routes::projects::create_project,
+        routes::projects::update_project,
+        routes::projects::delete_project,
+        routes::fees::list_fees,
+        routes::fees::get_fee,
+        routes::fees::create_fee,
+        routes::fees::update_fee,
+        routes::fees::delete_fee,
+        routes::companies::list_companies,
+        routes::companies::get_company,
+        routes::companies::create_company,
+        routes::companies::update_company,
+        routes::companies::delete_company,
+        routes::contacts::list_contacts,
+        routes::contacts::get_contact,
+        routes::contacts::create_contact,
+        routes::contacts::update_contact,
+        routes::contacts::delete_contact,
+    ),
+    tags(
+        (name = "Health", description = "Service health checks"),
+        (name = "Statistics", description = "Dashboard statistics"),
+        (name = "Projects", description = "Project management"),
+        (name = "Fees", description = "Fee proposal management"),
+        (name = "Companies", description = "Company management"),
+        (name = "Contacts", description = "Contact management"),
+    ),
+    security(("api_key" = [])),
+    modifiers(&SecurityAddon),
+)]
+struct ApiDoc;
+
+/// Adds API key security scheme to the OpenAPI spec.
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "api_key",
+                utoipa::openapi::security::SecurityScheme::ApiKey(
+                    utoipa::openapi::security::ApiKey::Header(
+                        utoipa::openapi::security::ApiKeyValue::new("X-API-Key"),
+                    ),
+                ),
+            );
+        }
+    }
 }
 
 #[tokio::main]
@@ -38,7 +107,6 @@ async fn main() {
     );
 
     // Connect to SurrealDB via WebSocket
-    // The existing e-fees app strips the ws:// prefix before passing to Surreal::new
     let connection_address = config
         .surreal_url
         .strip_prefix("ws://")
@@ -83,29 +151,62 @@ async fn main() {
     // Protected routes require API key authentication
     let protected = Router::new()
         .route("/stats", get(routes::stats::get_stats))
-        .route("/projects", get(routes::projects::list_projects))
-        .route("/projects/{id}", get(routes::projects::get_project))
-        .route("/fees", get(routes::fees::list_fees))
-        .route("/fees/{id}", get(routes::fees::get_fee))
-        .route("/companies", get(routes::companies::list_companies))
-        .route("/companies/{id}", get(routes::companies::get_company))
-        .route("/contacts", get(routes::contacts::list_contacts))
-        .route("/contacts/{id}", get(routes::contacts::get_contact))
+        .route(
+            "/projects",
+            get(routes::projects::list_projects).post(routes::projects::create_project),
+        )
+        .route(
+            "/projects/{id}",
+            get(routes::projects::get_project)
+                .put(routes::projects::update_project)
+                .delete(routes::projects::delete_project),
+        )
+        .route(
+            "/fees",
+            get(routes::fees::list_fees).post(routes::fees::create_fee),
+        )
+        .route(
+            "/fees/{id}",
+            get(routes::fees::get_fee)
+                .put(routes::fees::update_fee)
+                .delete(routes::fees::delete_fee),
+        )
+        .route(
+            "/companies",
+            get(routes::companies::list_companies).post(routes::companies::create_company),
+        )
+        .route(
+            "/companies/{id}",
+            get(routes::companies::get_company)
+                .put(routes::companies::update_company)
+                .delete(routes::companies::delete_company),
+        )
+        .route(
+            "/contacts",
+            get(routes::contacts::list_contacts).post(routes::contacts::create_contact),
+        )
+        .route(
+            "/contacts/{id}",
+            get(routes::contacts::get_contact)
+                .put(routes::contacts::update_contact)
+                .delete(routes::contacts::delete_contact),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_api_key,
         ));
 
-    // Build router — health is public, all other routes require auth
+    // Build router — health + docs are public, all other routes require auth
     let app = Router::new()
         .route("/health", get(health))
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .merge(protected)
         .layer(cors)
         .with_state(state);
 
     // Start server
     let addr = format!("0.0.0.0:{}", port);
-    info!("Listening on {}", addr);
+    info!("Listening on {} (docs at /docs)", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
@@ -116,10 +217,15 @@ async fn main() {
         .expect("Server error");
 }
 
-/// Health check endpoint.
-///
-/// Returns service status, name, and version.
-/// Also verifies the SurrealDB connection is alive.
+/// Health check endpoint (no auth required).
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "Health",
+    responses(
+        (status = 200, description = "Service health status", body = schemas::HealthResponse),
+    )
+)]
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
     let db_ok = state.db.health().await.is_ok();
 

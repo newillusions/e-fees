@@ -29,6 +29,7 @@ pub struct Contact {
 
 /// Contact creation struct.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ContactCreate {
     pub first_name: String,
     pub last_name: String,

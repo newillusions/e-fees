@@ -19,6 +19,15 @@ impl ApiError {
             message: format!("{} '{}' not found", entity, id),
         }
     }
+
+    /// Create a 400 Bad Request error.
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            code: "bad_request".into(),
+            message: message.into(),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {

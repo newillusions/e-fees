@@ -22,6 +22,7 @@ pub struct Project {
 
 /// Project number structure implementing the YY-CCCNN numbering system.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ProjectNumber {
     pub year: i64,
     pub country: i64,
@@ -31,6 +32,7 @@ pub struct ProjectNumber {
 
 /// Project creation struct without auto-managed fields.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct NewProject {
     pub name: String,
     pub name_short: String,

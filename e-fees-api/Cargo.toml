@@ -2,10 +2,10 @@
 name = "e-fees-api"
 version = "0.1.0"
 edition = "2021"
-description = "Read-only HTTP API for e-fees data"
+description = "HTTP API for e-fees data"
 
 [dependencies]
-e-fees-core = { path = "../crates/e-fees-core" }
+e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 surrealdb = { version = "3.0", features = ["protocol-ws", "rustls"] }
@@ -15,6 +15,8 @@ tower-http = { version = "0.6", features = ["cors"] }
 dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+utoipa = "5"
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }

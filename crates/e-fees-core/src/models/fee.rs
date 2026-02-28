@@ -123,6 +123,7 @@ impl Fee {
 
 /// Fee creation struct.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct FeeCreate {
     pub name: String,
     pub number: String,
@@ -202,6 +203,7 @@ pub struct FeeUpdate {
 
 /// Revision entry for fee proposals.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Revision {
     pub revision_number: i64,
     pub revision_date: String,
@@ -216,6 +218,7 @@ pub struct Revision {
 
 /// Discipline allocation for fee breakdown.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Discipline {
     pub id: String,
     pub name: String,
@@ -225,6 +228,7 @@ pub struct Discipline {
 
 /// Design stage definition.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Stage {
     pub id: String,
     pub name: String,
@@ -236,6 +240,7 @@ pub struct Stage {
 
 /// Pricing configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, Default)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PricingConfig {
     #[serde(default)]
     pub target_fee: f64,
@@ -255,6 +260,7 @@ pub struct PricingConfig {
 
 /// Discipline x Stage pricing cell.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PricingCell {
     pub discipline_id: String,
     pub stage_id: String,
@@ -265,6 +271,7 @@ pub struct PricingCell {
 
 /// Reimbursable cost/expense.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ReimbursableCost {
     pub id: String,
     pub description: String,
@@ -281,6 +288,7 @@ pub struct ReimbursableCost {
 
 /// Post-contract line item (different structure from design stages).
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PostContractItem {
     pub id: String,
     pub stage_id: String,
@@ -293,6 +301,7 @@ pub struct PostContractItem {
 
 /// Payment schedule entry.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PaymentScheduleEntry {
     pub id: String,
     #[serde(rename = "type")]
@@ -317,6 +326,7 @@ pub struct PaymentScheduleEntry {
 
 /// Payment tracking summary.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PaymentSchedule {
     pub entries: Vec<PaymentScheduleEntry>,
     pub total_invoiced: f64,
@@ -326,6 +336,7 @@ pub struct PaymentSchedule {
 
 /// Complete pricing breakdown.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, Default)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PricingBreakdown {
     #[serde(default)]
     pub config: PricingConfig,
@@ -362,6 +373,7 @@ pub struct PricingUpdate {
 
 /// Pricing revision tracking (append-only).
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PricingRevision {
     pub id: String,
     pub fee_id: String,

@@ -8,14 +8,23 @@ use serde_json::{json, Value};
 use e_fees_core::models::{Company, Contact, Fee, Project};
 
 use crate::error::ApiError;
+use crate::schemas;
 use crate::AppState;
 
 /// Active fee statuses — fees in these states count as "active".
 const ACTIVE_FEE_STATUSES: &[&str] = &["Draft", "Sent", "Negotiation"];
 
 /// Get entity counts for dashboard statistics.
-///
-/// Returns counts for projects, companies, contacts, total fees, and active fees.
+#[utoipa::path(
+    get,
+    path = "/stats",
+    tag = "Statistics",
+    responses(
+        (status = 200, description = "Entity counts", body = schemas::StatsResponse),
+        (status = 401, description = "Missing or invalid API key"),
+    ),
+    security(("api_key" = []))
+)]
 pub async fn get_stats(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, ApiError> {

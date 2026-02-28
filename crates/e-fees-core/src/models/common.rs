@@ -111,8 +111,11 @@ pub fn record_id_string(id: &RecordId) -> String {
 /// Timestamp structure for created_at and updated_at.
 /// Uses SurrealDB's native Datetime type for v3 binary protocol compatibility.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct TimeStamps {
+    #[cfg_attr(feature = "openapi", schema(value_type = String, example = "2026-01-15T10:30:00Z"))]
     pub created_at: Datetime,
+    #[cfg_attr(feature = "openapi", schema(value_type = String, example = "2026-02-28T14:00:00Z"))]
     pub updated_at: Datetime,
 }
 

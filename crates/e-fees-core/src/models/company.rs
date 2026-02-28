@@ -21,6 +21,7 @@ pub struct Company {
 
 /// CompanyCreate represents a new company being created.
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct CompanyCreate {
     pub name: String,
     pub name_short: String,

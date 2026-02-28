@@ -1,6 +1,6 @@
 //! Route handlers for the e-fees API.
 //!
-//! All routes are read-only (GET) and return JSON responses.
+//! Supports GET (list/detail), POST (create), PUT (update), and DELETE operations.
 
 pub mod companies;
 pub mod contacts;
