@@ -154,6 +154,7 @@ dependencies = [
  "chrono",
  "dirs",
  "dotenvy",
+ "e-fees-core",
  "fs_extra",
  "futures-core",
  "http-body-util",

@@ -35,6 +35,7 @@ async-trait = "0.1"
 regex = "1.10"
 once_cell = "1.19"
 tauri-plugin-mcp = { path = "../tauri-plugin-mcp" }
+e-fees-core = { path = "../crates/e-fees-core" }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 # Security-focused dependencies
