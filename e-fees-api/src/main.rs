@@ -18,6 +18,7 @@ use config::Config;
 /// Shared application state available to all route handlers.
 pub struct AppState {
     pub db: Surreal<surrealdb::engine::remote::ws::Client>,
+    pub api_key: String,
 }
 
 #[tokio::main]
@@ -67,8 +68,11 @@ async fn main() {
         config.surreal_url, config.surreal_ns, config.surreal_db
     );
 
-    // Build shared state
-    let state = Arc::new(AppState { db });
+    // Build shared state (API key validated at startup via Config::from_env)
+    let state = Arc::new(AppState {
+        db,
+        api_key: config.api_key,
+    });
 
     // Configure CORS
     let cors = CorsLayer::new()
@@ -76,9 +80,8 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // Build router — .with_state() converts Router<Arc<AppState>> to Router<()>
-    let app = Router::new()
-        .route("/health", get(health))
+    // Protected routes require API key authentication
+    let protected = Router::new()
         .route("/stats", get(routes::stats::get_stats))
         .route("/projects", get(routes::projects::list_projects))
         .route("/projects/{id}", get(routes::projects::get_project))
@@ -87,7 +90,16 @@ async fn main() {
         .route("/companies", get(routes::companies::list_companies))
         .route("/companies/{id}", get(routes::companies::get_company))
         .route("/contacts", get(routes::contacts::list_contacts))
-        .layer(middleware::from_fn(auth::require_api_key))
+        .route("/contacts/{id}", get(routes::contacts::get_contact))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_api_key,
+        ));
+
+    // Build router — health is public, all other routes require auth
+    let app = Router::new()
+        .route("/health", get(health))
+        .merge(protected)
         .layer(cors)
         .with_state(state);
 

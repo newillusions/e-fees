@@ -34,7 +34,7 @@ pub async fn list_fees(
 /// Get a single fee by ID.
 ///
 /// Path parameter is the record key (e.g. "abc123").
-/// The "rfp:" prefix is stripped if present.
+/// The "fee:" prefix is stripped if present.
 /// Returns 404 if not found.
 pub async fn get_fee(
     State(state): State<Arc<AppState>>,

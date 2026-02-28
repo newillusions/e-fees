@@ -6,6 +6,9 @@ WORKDIR /app
 # This avoids pulling in src-tauri and its complex dependencies (tauri, tauri-plugin-mcp, etc.).
 RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n' > Cargo.toml
 
+# Copy lockfile for deterministic builds
+COPY Cargo.lock .
+
 # Copy the shared core crate
 COPY crates/ crates/
 

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::{extract::State, Json};
+use axum::{extract::Path, extract::State, Json};
 use serde_json::{json, Value};
 
 use e_fees_core::models::{record_id_string, Contact};
@@ -26,6 +26,23 @@ pub async fn list_contacts(
         "data": data,
         "count": count
     })))
+}
+
+/// Get a single contact by ID.
+///
+/// Returns 404 if not found.
+pub async fn get_contact(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let key = id.strip_prefix("contacts:").unwrap_or(&id);
+
+    let contact: Option<Contact> = state.db.select(("contacts", key)).await?;
+
+    match contact {
+        Some(c) => Ok(Json(json!({ "data": contact_to_json(&c) }))),
+        None => Err(ApiError::not_found("Contact", &id)),
+    }
 }
 
 /// Convert a Contact to a JSON value for API response.
