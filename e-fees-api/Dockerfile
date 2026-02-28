@@ -12,8 +12,9 @@ COPY crates/ crates/
 COPY e-fees-api/ e-fees-api/
 
 # Create a dummy src-tauri to satisfy workspace member (won't be built)
-RUN mkdir -p src-tauri/src && echo 'fn main() {}' > src-tauri/src/main.rs
+# The real Cargo.toml defines both bin and lib targets
 COPY src-tauri/Cargo.toml src-tauri/Cargo.toml
+RUN mkdir -p src-tauri/src && echo 'fn main() {}' > src-tauri/src/main.rs && echo '' > src-tauri/src/lib.rs
 
 # Build release binary
 RUN cargo build --release -p e-fees-api
