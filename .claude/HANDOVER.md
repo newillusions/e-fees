@@ -1,75 +1,69 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 backend.
+Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 backend. Standalone API service deployed.
 
 - **Version**: 0.13.1 (released, all builds verified)
-- **Branch**: main (clean)
+- **Branch**: main (clean, feat/ui-testing-and-api merged)
 - **Database**: SurrealDB v3 @ ws://10.0.23.11:8000 (emittiv/projects)
 - **Tests**: 87 Rust tests passing, svelte-check 0 errors
+- **API**: e-fees-api deployed at 10.0.21.80:3200 (Docker, br0 network)
 
 ## Last Session
 **Date**: 2026-02-28
-**Summary**: Verified v0.13.1 release completed (GitHub Actions build + Forgejo release with 8 assets + update.json synced to GitHub). Cleaned up domain-model-restructure worktree and branch. Designed and planned UI testing + standalone API service.
+**Summary**: Completed full 15-task implementation plan (UI smoke tests + core library extraction + standalone API service). Deployed API to Unraid AI server. Code review found and fixed critical auth vulnerability (empty API key bypass). Merged feat/ui-testing-and-api branch to main.
 
-### Design & Planning Complete
-- **Design doc**: `docs/plans/2026-02-28-ui-testing-and-api-design.md` — Approved
-- **Implementation plan**: `docs/plans/2026-02-28-ui-testing-and-api-plan.md` — 15 tasks across 3 phases
-- **Execution method**: Subagent-driven development (chosen, not yet started)
-
-## Next Steps — Implementation Plan
-**Use `superpowers:subagent-driven-development` to execute the plan.**
-
-### Phase 1: UI Smoke Tests (Tasks 1-6) — Independent
-1. Create smoke check JS snippets (`e2e-mcp/suites/helpers/smoke-checks.ts`)
-2. Create DOM validation checks (`e2e-mcp/suites/helpers/dom-checks.ts`)
-3. Create smoke test runbook (`e2e-mcp/suites/smoke.md`)
-4. Create executable smoke test script (`e2e-mcp/suites/run-smoke.ts`)
-5. Add `/smoke-test` slash command (`.claude/commands/smoke-test.md`)
-6. Run smoke tests against v0.13.1 — validate and fix
-
-### Phase 2: Core Library Extraction (Tasks 7-9) — Independent of Phase 1
-7. Create `crates/e-fees-core/` workspace crate skeleton
-8. Extract domain models from `src-tauri/src/db/types.rs` into core
-9. Refactor Tauri app to depend on `e-fees-core` — verify 87 tests still pass
-
-### Phase 3: API Service (Tasks 10-15) — Depends on Phase 2
-10. Create `e-fees-api/` axum skeleton with health endpoint
-11. Add API key auth middleware
-12. Add read-only route handlers (projects, fees, companies, contacts, stats)
-13. Add integration tests with production safety guard
-14. Create Dockerfile
-15. Deploy to Unraid (Docker, br0 network, 10.0.21.x range, port 3200)
+### Accomplished
+- Tasks 12-15: API route handlers, integration tests, Dockerfile, deployment
+- Fixed `rfp` → `fee` table name mismatch (v0.13.0 domain restructure)
+- Fixed critical security issue: empty API key bypass via `unwrap_or_default()`
+- Rewrote auth.rs to use AppState-based key validation
+- Added missing `/contacts/{id}` endpoint
+- Added Cargo.lock to Dockerfile for deterministic builds
+- Removed unused deps (uuid, chrono) from e-fees-core
+- Full code review cycle with fixes applied
+- Merged to main, pushed to Forgejo, verified compilation
 
 ## Key Context
 | Resource | Value |
 |----------|-------|
 | Production DB | ws://10.0.23.11:8000 (ns: emittiv, db: projects) |
 | Dev DB | ws://surreal-dev.internal:8000 (10.0.23.12) |
+| API Container | 10.0.21.80:3200 (br0, e-fees-api:0.1.0) |
+| API .env | /mnt/user/appdata/e-fees-api/.env (on AI server) |
+| API Key | efees-api-2026-k8x9m4pq |
 | Installed app config | ~/Library/Application Support/com.emittiv.e-fees/.env |
-| App logs | ~/Library/Logs/com.emittiv.e-fees/E-Fees.log |
 | Forgejo release | https://forge.mms.name/emittiv/fee-prop/releases/tag/v0.13.1 |
-| Update endpoint | https://raw.githubusercontent.com/newillusions/e-fees/main/update.json |
 
-## Domain Model (Post-Restructure)
-- **Project statuses**: Lead, RFP, Submitted, Awarded, Design, Construction, Completed, Lost, No Response, Cancelled, On Hold, Superseded
-- **Fee statuses**: Draft, Sent, Negotiation, Accepted, Rejected, No Response, Superseded
-- **Venue**: Removed from app. Venue data (city, country, area) stays as fields on Project.
-- **DB migrations**: 001-003 applied to both prod and dev.
-
-## Architecture Decision: API + Shared Core
-- Desktop app keeps filesystem ops (folder creation, Nextcloud sync)
-- New `e-fees-core` Rust crate shares domain types between desktop and API
-- New `e-fees-api` standalone axum service for programmatic data access
+## Architecture
+- **Desktop app** (Tauri): Full CRUD, filesystem ops, Nextcloud sync
+- **Shared core** (`crates/e-fees-core/`): Domain types shared between desktop & API
+- **Standalone API** (`e-fees-api/`): Read-only HTTP endpoints with API key auth
 - API starts read-only, grows toward write parity
-- Standalone `.env` for API container (populated from credential system)
-- If OpenCloud replaces Nextcloud, even folder ops could migrate to API
 
-## Folder Mapping
-- `01 RFPs` → Lead, RFP, Submitted
-- `11 Current` → Awarded, Design, Construction
-- `99 Completed` → Completed, Superseded
-- `00 Inactive` → Lost, No Response, Cancelled, On Hold
+## API Endpoints (all verified working)
+- `GET /health` — Public, returns service + DB status
+- `GET /stats` — Entity counts (projects, fees, companies, contacts)
+- `GET /projects`, `/projects/{id}` — Project data
+- `GET /fees`, `/fees/{id}` — Fee proposal data
+- `GET /companies`, `/companies/{id}` — Company data
+- `GET /contacts`, `/contacts/{id}` — Contact data
+- All data endpoints require `X-API-Key` header
+
+## Deployment Notes
+- **ipvlan L2 limitation**: Unraid host cannot curl its own containers — test from external machine
+- **SSH to AI server**: Use `host: 10.0.20.11, username: root` (no alias saved)
+- **Rebuild cycle**: Push → SSH pull → `docker build` → stop/rm/run → verify (~5min)
+
+## Next Steps
+1. Run smoke tests (Task 6) — requires Tauri app running
+2. User has upcoming RFP to prepare — app needs to be fully working
+3. Consider API enhancements: pagination, write endpoints, OpenAPI docs
+
+## Domain Model
+- **Fee statuses**: Draft, Sent, Negotiation, Accepted, Rejected, No Response, Superseded
+- **Project statuses**: Lead, RFP, Submitted, Awarded, Design, Construction, Completed, Lost, No Response, Cancelled, On Hold, Superseded
+- **DB table**: `fee` (renamed from `rfp` in v0.13.0)
 
 ## Critical Rules
 1. **Screenshots**: Peekaboo MCP with `app_target: "app"` — NEVER browser tools for Tauri
@@ -80,7 +74,7 @@ Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 back
 6. **Git**: Push to Forgejo (origin) for daily work. GitHub only for tagged releases.
 7. **Releases**: ALWAYS background haiku agent. Never interactive polling.
 8. **Test DB**: Must match the installed app's DB (10.0.23.11).
-9. **Production safety**: Tests MUST refuse to run against 10.0.23.11.
+9. **Production safety**: API integration tests MUST refuse to run against 10.0.23.11.
 
 ---
 *Updated: 2026-02-28*

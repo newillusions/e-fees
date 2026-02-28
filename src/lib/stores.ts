@@ -183,21 +183,20 @@ export const projectsActions = {
 
   async create(project: Omit<Project, 'id'>) {
     const result = await projectsActionsInternal.create(project);
-    // Log activity (fire-and-forget)
+    paginatedProjectsStore.actions.addItem(result);
     projectLogger.onCreate(result);
     return result;
   },
 
   async update(id: string, projectData: Partial<Project>) {
-    // Get current project for status change detection
     const currentProject = projectsActionsInternal.getById(id);
     const result = await projectsActionsInternal.update(id, projectData);
 
-    // Check if this is a status change
+    paginatedProjectsStore.actions.updateItem(id, result);
+
     if (currentProject && projectData.status && currentProject.status !== projectData.status) {
       projectLogger.onStatusChange(result, currentProject.status, projectData.status);
     } else {
-      // Log general update with changed fields
       const changedFields = Object.keys(projectData);
       projectLogger.onUpdate(result, changedFields);
     }
@@ -205,11 +204,10 @@ export const projectsActions = {
   },
 
   async delete(id: string) {
-    // Get project name before deletion
     const project = projectsActionsInternal.getById(id);
     const projectName = project?.name || project?.project_number || 'Unknown Project';
     const result = await projectsActionsInternal.delete(id);
-    // Log activity (fire-and-forget)
+    paginatedProjectsStore.actions.removeItem(id);
     projectLogger.onDelete(id, projectName);
     return result;
   },
@@ -226,25 +224,24 @@ export const companiesActions = {
 
   async create(company: Omit<Company, 'id'>) {
     const result = await companiesActionsInternal.create(company);
-    // Log activity (fire-and-forget)
+    paginatedCompaniesStore.actions.addItem(result);
     companyLogger.onCreate(result);
     return result;
   },
 
   async update(id: string, companyData: Partial<Company>) {
     const result = await companiesActionsInternal.update(id, companyData);
-    // Log update with changed fields
+    paginatedCompaniesStore.actions.updateItem(id, result);
     const changedFields = Object.keys(companyData);
     companyLogger.onUpdate(result, changedFields);
     return result;
   },
 
   async delete(id: string) {
-    // Get company name before deletion
     const company = companiesActionsInternal.getById(id);
     const companyName = company?.name || 'Unknown Company';
     const result = await companiesActionsInternal.delete(id);
-    // Log activity (fire-and-forget)
+    paginatedCompaniesStore.actions.removeItem(id);
     companyLogger.onDelete(id, companyName);
     return result;
   },
@@ -261,27 +258,26 @@ export const contactsActions = {
 
   async create(contact: Omit<Contact, 'id'>) {
     const result = await contactsActionsInternal.create(contact);
-    // Log activity (fire-and-forget)
+    paginatedContactsStore.actions.addItem(result);
     contactLogger.onCreate(result);
     return result;
   },
 
   async update(id: string, contactData: Partial<Contact>) {
     const result = await contactsActionsInternal.update(id, contactData);
-    // Log update with changed fields
+    paginatedContactsStore.actions.updateItem(id, result);
     const changedFields = Object.keys(contactData);
     contactLogger.onUpdate(result, changedFields);
     return result;
   },
 
   async delete(id: string) {
-    // Get contact name before deletion
     const contact = contactsActionsInternal.getById(id);
     const contactName = contact?.full_name ||
       `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim() ||
       'Unknown Contact';
     const result = await contactsActionsInternal.delete(id);
-    // Log activity (fire-and-forget)
+    paginatedContactsStore.actions.removeItem(id);
     contactLogger.onDelete(id, contactName);
     return result;
   },
@@ -299,6 +295,8 @@ export const feesActions = {
 
   async create(fee: Omit<Fee, 'id'>) {
     const result = await feesActionsInternal.create(fee);
+    // Sync to paginated store so Proposals page reflects the new item
+    paginatedFeesStore.actions.addItem(result);
     // Log activity (fire-and-forget)
     feeLogger.onCreate(result);
     return result;
@@ -308,6 +306,9 @@ export const feesActions = {
     // Get current fee for status change detection
     const currentFee = feesActionsInternal.getById(id);
     const result = await feesActionsInternal.update(id, feeData);
+
+    // Sync to paginated store so Proposals page reflects the change
+    paginatedFeesStore.actions.updateItem(id, result);
 
     // Check if this is a status change
     if (currentFee && feeData.status && currentFee.status !== feeData.status) {
@@ -325,6 +326,8 @@ export const feesActions = {
     const fee = feesActionsInternal.getById(id);
     const feeName = fee?.name || fee?.number || 'Unknown Fee';
     const result = await feesActionsInternal.delete(id);
+    // Sync to paginated store so Proposals page reflects the removal
+    paginatedFeesStore.actions.removeItem(id);
     // Log activity (fire-and-forget)
     feeLogger.onDelete(id, feeName);
     return result;
@@ -359,6 +362,9 @@ export const feesActions = {
     };
 
     const result = await feesActionsInternal.update(id, updatedFeeData);
+
+    // Sync to paginated store so Proposals page reflects the change
+    paginatedFeesStore.actions.updateItem(id, result);
 
     // Log status change (fire-and-forget)
     feeLogger.onStatusChange(result, oldStatus, newStatus);

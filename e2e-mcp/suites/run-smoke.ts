@@ -4,6 +4,10 @@
  * This module exports all smoke test checks as executable JavaScript/TypeScript strings.
  * Each check is a self-executing async IIFE that returns structured test results.
  *
+ * NOTE: Tauri MCP's execute_js does not resolve async IIFE promises (returns {}).
+ * When executing via Tauri MCP, store the result in window.__SMOKE_RESULT and
+ * read it back with a second execute_js call.
+ *
  * EXECUTION ORDER:
  * 1. Safety check MUST run first — aborts all testing if production database detected
  * 2. Infrastructure checks (db_connection, data_loaded, counts)
@@ -17,7 +21,7 @@
 
 export const CHECKS = {
   safety: `(async () => {
-    const dbInfo = await window.__TAURI__.invoke('get_db_info');
+    const dbInfo = await window.__TAURI_INTERNALS__.invoke('get_db_info');
     const url = dbInfo?.url || dbInfo?.endpoint || '';
     const isProd = url.includes('10.0.23.11');
     if (isProd) return { check: 'safety', pass: false, ABORT: true, error: 'PRODUCTION DATABASE - STOP ALL TESTING' };
@@ -25,22 +29,22 @@ export const CHECKS = {
   })()`,
 
   db_connection: `(async () => {
-    const status = await window.__TAURI__.invoke('get_connection_status');
-    const info = await window.__TAURI__.invoke('get_db_info');
+    const status = await window.__TAURI_INTERNALS__.invoke('get_connection_status');
+    const info = await window.__TAURI_INTERNALS__.invoke('get_db_info');
     return { check: 'db_connection', pass: !!status, details: { status, info } };
   })()`,
 
   data_loaded: `(async () => {
-    const p = await window.__TAURI__.invoke('get_projects');
-    const c = await window.__TAURI__.invoke('get_companies');
-    const f = await window.__TAURI__.invoke('get_fees');
-    const co = await window.__TAURI__.invoke('get_contacts');
+    const p = await window.__TAURI_INTERNALS__.invoke('get_projects');
+    const c = await window.__TAURI_INTERNALS__.invoke('get_companies');
+    const f = await window.__TAURI_INTERNALS__.invoke('get_fees');
+    const co = await window.__TAURI_INTERNALS__.invoke('get_contacts');
     const counts = { projects: p.length, companies: c.length, fees: f.length, contacts: co.length };
     return { check: 'data_loaded', pass: p.length > 0 && c.length > 0, details: counts };
   })()`,
 
   project_statuses: `(async () => {
-    const p = await window.__TAURI__.invoke('get_projects');
+    const p = await window.__TAURI_INTERNALS__.invoke('get_projects');
     const statuses = [...new Set(p.map(x => x.status))].sort();
     const valid = ['Lead','RFP','Submitted','Awarded','Design','Construction','Completed','Lost','No Response','Cancelled','On Hold','Superseded'];
     const invalid = statuses.filter(s => !valid.includes(s));
@@ -48,7 +52,7 @@ export const CHECKS = {
   })()`,
 
   fee_statuses: `(async () => {
-    const f = await window.__TAURI__.invoke('get_fees');
+    const f = await window.__TAURI_INTERNALS__.invoke('get_fees');
     const statuses = [...new Set(f.map(x => x.status))].sort();
     const valid = ['Draft','Sent','Negotiation','Accepted','Rejected','No Response','Superseded'];
     const invalid = statuses.filter(s => !valid.includes(s));
@@ -56,7 +60,7 @@ export const CHECKS = {
   })()`,
 
   entity_counts: `(async () => {
-    const stats = await window.__TAURI__.invoke('get_stats');
+    const stats = await window.__TAURI_INTERNALS__.invoke('get_stats');
     return { check: 'entity_counts', pass: stats != null, details: stats };
   })()`,
 
@@ -71,30 +75,30 @@ export const CHECKS = {
   navigate_projects: `(async () => {
     window.location.hash = '#/projects';
     await new Promise(r => setTimeout(r, 1500));
-    const rows = document.querySelectorAll('tr, [class*="row"], [class*="project-item"]');
-    const filters = document.querySelectorAll('select, [class*="filter"]');
-    return { check: 'navigate_projects', pass: rows.length > 1, details: { rows: rows.length, filters: filters.length } };
+    const items = document.querySelectorAll('.list-card');
+    const filters = document.querySelectorAll('.emittiv-filter-select, .emittiv-search-input');
+    return { check: 'navigate_projects', pass: items.length > 1, details: { items: items.length, filters: filters.length } };
   })()`,
 
   navigate_proposals: `(async () => {
     window.location.hash = '#/proposals';
     await new Promise(r => setTimeout(r, 1500));
-    const rows = document.querySelectorAll('tr, [class*="row"], [class*="fee-item"]');
-    return { check: 'navigate_proposals', pass: rows.length > 1, details: { rows: rows.length } };
+    const items = document.querySelectorAll('.list-card');
+    return { check: 'navigate_proposals', pass: items.length > 1, details: { items: items.length } };
   })()`,
 
   navigate_companies: `(async () => {
     window.location.hash = '#/companies';
     await new Promise(r => setTimeout(r, 1500));
-    const rows = document.querySelectorAll('tr, [class*="row"], [class*="company-item"]');
-    return { check: 'navigate_companies', pass: rows.length > 1, details: { rows: rows.length } };
+    const items = document.querySelectorAll('.list-card');
+    return { check: 'navigate_companies', pass: items.length > 1, details: { items: items.length } };
   })()`,
 
   navigate_contacts: `(async () => {
     window.location.hash = '#/contacts';
     await new Promise(r => setTimeout(r, 1500));
-    const rows = document.querySelectorAll('tr, [class*="row"], [class*="contact-item"]');
-    return { check: 'navigate_contacts', pass: rows.length > 1, details: { rows: rows.length } };
+    const items = document.querySelectorAll('.list-card');
+    return { check: 'navigate_contacts', pass: items.length > 1, details: { items: items.length } };
   })()`,
 };
 
