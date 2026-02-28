@@ -2,19 +2,15 @@ FROM rust:1.85-slim AS builder
 
 WORKDIR /app
 
-# Copy workspace-level files
-COPY Cargo.toml Cargo.lock ./
+# Create a minimal workspace with only the crates needed for the API build.
+# This avoids pulling in src-tauri and its complex dependencies (tauri, tauri-plugin-mcp, etc.).
+RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n' > Cargo.toml
 
 # Copy the shared core crate
 COPY crates/ crates/
 
 # Copy the API crate
 COPY e-fees-api/ e-fees-api/
-
-# Create a dummy src-tauri to satisfy workspace member (won't be built)
-# The real Cargo.toml defines both bin and lib targets
-COPY src-tauri/Cargo.toml src-tauri/Cargo.toml
-RUN mkdir -p src-tauri/src && echo 'fn main() {}' > src-tauri/src/main.rs && echo '' > src-tauri/src/lib.rs
 
 # Build release binary
 RUN cargo build --release -p e-fees-api
