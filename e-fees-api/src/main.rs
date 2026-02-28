@@ -1,5 +1,7 @@
 mod auth;
 mod config;
+mod error;
+mod routes;
 
 use std::sync::Arc;
 
@@ -79,6 +81,14 @@ async fn main() {
     // Build router — .with_state() converts Router<Arc<AppState>> to Router<()>
     let app = Router::new()
         .route("/health", get(health))
+        .route("/stats", get(routes::stats::get_stats))
+        .route("/projects", get(routes::projects::list_projects))
+        .route("/projects/{id}", get(routes::projects::get_project))
+        .route("/fees", get(routes::fees::list_fees))
+        .route("/fees/{id}", get(routes::fees::get_fee))
+        .route("/companies", get(routes::companies::list_companies))
+        .route("/companies/{id}", get(routes::companies::get_company))
+        .route("/contacts", get(routes::contacts::list_contacts))
         .layer(middleware::from_fn(auth::require_api_key))
         .layer(cors)
         .with_state(state);
