@@ -1,7 +1,7 @@
 //! Fee route handlers.
 //!
-//! The SurrealDB table is named "rfp" (not "fee").
-//! Path parameters may include the "rfp:" prefix which is stripped.
+//! The SurrealDB table is named "fee" (renamed from "rfp" in v0.13.0).
+//! Path parameters may include the "fee:" prefix which is stripped.
 
 use std::sync::Arc;
 
@@ -20,7 +20,7 @@ use crate::AppState;
 pub async fn list_fees(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, ApiError> {
-    let fees: Vec<Fee> = state.db.select("rfp").await?;
+    let fees: Vec<Fee> = state.db.select("fee").await?;
     let count = fees.len();
 
     let data: Vec<Value> = fees.iter().map(fee_to_summary_json).collect();
@@ -40,10 +40,10 @@ pub async fn get_fee(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
-    // Strip "rfp:" prefix if present
-    let key = id.strip_prefix("rfp:").unwrap_or(&id);
+    // Strip "fee:" prefix if present
+    let key = id.strip_prefix("fee:").unwrap_or(&id);
 
-    let fee: Option<Fee> = state.db.select(("rfp", key)).await?;
+    let fee: Option<Fee> = state.db.select(("fee", key)).await?;
 
     match fee {
         Some(f) => Ok(Json(json!({ "data": fee_to_detail_json(&f) }))),

@@ -22,7 +22,7 @@ pub async fn get_stats(
     let projects: Vec<Project> = state.db.select("projects").await?;
     let companies: Vec<Company> = state.db.select("company").await?;
     let contacts: Vec<Contact> = state.db.select("contacts").await?;
-    let fees: Vec<Fee> = state.db.select("rfp").await?;
+    let fees: Vec<Fee> = state.db.select("fee").await?;
 
     let active_fees = fees
         .iter()
