@@ -16,7 +16,7 @@ COPY e-fees-api/ e-fees-api/
 RUN cargo build --release -p e-fees-api
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/e-fees-api /usr/local/bin/
