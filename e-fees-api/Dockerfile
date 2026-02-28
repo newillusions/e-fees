@@ -15,6 +15,9 @@ COPY crates/ crates/
 # Copy the API crate
 COPY e-fees-api/ e-fees-api/
 
+# Install curl (needed by utoipa-swagger-ui build script to download Swagger UI assets)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Build release binary
 RUN cargo build --release -p e-fees-api
 
