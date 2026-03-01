@@ -23,6 +23,7 @@
   import type { Fee, Project, Company, Contact, UnknownSurrealThing } from '../../types';
   import type { PricingBreakdown } from '../../types/database';
   import FeePricingModal from './pricing/FeePricingModal.svelte';
+  import CurrencyAmount from './CurrencyAmount.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -1143,7 +1144,7 @@
         <div class="flex items-center justify-between">
           <p class="text-emittiv-light text-sm">
             {#if proposal?.pricing}
-              Pricing configured: {proposal.pricing.config?.currency || 'AED'} {(proposal.pricing.grand_total || 0).toLocaleString()}
+              Pricing configured: <CurrencyAmount amount={proposal.pricing.grand_total || 0} config={proposal.pricing.config} />
             {:else}
               No pricing configured yet
             {/if}
