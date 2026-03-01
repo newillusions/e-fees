@@ -3,11 +3,14 @@
   import CompanyModal from '$lib/components/CompanyModal.svelte';
   import CompanyDetail from '$lib/components/CompanyDetail.svelte';
   import CompanyCard from '$lib/components/CompanyCard.svelte';
+  import BulkActionBar from '$lib/components/BulkActionBar.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedCompaniesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   import { createCompanyFilterConfig } from '$lib/utils/search';
+  import { extractIdFromRelation } from '$lib/utils/surrealdb';
+  import { batchDeleteEntities } from '$lib/api/batch';
   import { onMount } from 'svelte';
   import type { Company } from '../types';
 
@@ -17,6 +20,34 @@
     country: '',
     city: ''
   });
+
+  // Bulk selection state
+  let selectedIds: Set<string> = $state(new Set());
+  let selectMode = $state(false);
+
+  function toggleSelect(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    selectedIds = next;
+    if (next.size === 0) selectMode = false;
+  }
+
+  function clearSelection() {
+    selectedIds = new Set();
+    selectMode = false;
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selectedIds];
+    try {
+      await batchDeleteEntities('companies', ids);
+      clearSelection();
+      paginatedCompaniesStore.actions.refresh();
+      companiesActions.load();
+    } catch (e) {
+      console.error('Bulk delete failed:', e);
+    }
+  }
 
   // Scroll container ref for infinite scroll
   let scrollContainer: HTMLDivElement | null = $state(null);
@@ -173,6 +204,16 @@
       />
     </div>
     <button
+      class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'} flex-shrink-0"
+      onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+      aria-label="Toggle selection mode"
+      title="Multi-select"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    </button>
+    <button
       class="emittiv-fab flex-shrink-0"
       onclick={handleAddCompany}
       aria-label="Add new company"
@@ -249,6 +290,14 @@
       </button>
     </div>
   {:else}
+    <!-- Bulk Action Bar -->
+    <BulkActionBar
+      selectedCount={selectedIds.size}
+      entityType="companies"
+      on:delete={handleBulkDelete}
+      on:clear={clearSelection}
+    />
+
     <!-- Scrollable container for infinite scroll -->
     <div
       bind:this={scrollContainer}
@@ -257,8 +306,11 @@
       {#each filteredCompanies as company}
         <CompanyCard
           {company}
+          selectable={selectMode}
+          selected={selectedIds.has(extractIdFromRelation(company.id || ''))}
           on:edit={(e) => handleEditCompany(e.detail)}
           on:view={(e) => handleViewCompany(e.detail)}
+          on:select={() => toggleSelect(extractIdFromRelation(company.id || ''))}
         />
       {/each}
 

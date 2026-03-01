@@ -202,6 +202,27 @@ impl DatabaseClient {
         }
     }
 
+    /// Execute a parameterized query with multiple named bindings.
+    /// Each map entry becomes a `$key` parameter in the query.
+    pub async fn query_bind_map(&self, query: &str, bindings: serde_json::Map<String, serde_json::Value>) -> Result<surrealdb::IndexedResults, Error> {
+        match self {
+            DatabaseClient::Http(client) => {
+                let mut q = client.query(query);
+                for (key, value) in bindings {
+                    q = q.bind((key, value));
+                }
+                q.await
+            },
+            DatabaseClient::WebSocket(client) => {
+                let mut q = client.query(query);
+                for (key, value) in bindings {
+                    q = q.bind((key, value));
+                }
+                q.await
+            },
+        }
+    }
+
     // ==================== Project Operations ====================
 
     pub async fn create_project(&self, project: Project) -> Result<Option<Project>, Error> {
@@ -425,24 +446,30 @@ impl DatabaseClient {
 
         let data_value = serde_json::Value::Object(data);
 
-        // IDs are validated above so safe to interpolate table:key references.
+        // Record-id fields use type::record() with parameterized bindings.
         // String fields go through $data (parameterized, no injection risk).
+        // fee_id and project_key are validated above so safe to interpolate in record keys.
         let project_key = fee.project_id.replace("-", "_");
         let query = format!(
             "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
-             UPDATE fee:{fee_id} SET project_id = projects:{project_key}, \
-             company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
+             UPDATE fee:{fee_id} SET \
+             project_id = type::record('projects', $project_key), \
+             company_id = type::record('company', $company_id), \
+             contact_id = type::record('contacts', $contact_id), \
              time = {{ created_at: time::now(), updated_at: time::now() }} RETURN NONE; \
              SELECT * OMIT import_source FROM fee:{fee_id};",
             fee_id = fee_id,
-            project_key = project_key,
-            company_id = fee.company_id,
-            contact_id = fee.contact_id,
         );
+
+        let mut bindings = serde_json::Map::new();
+        bindings.insert("data".into(), data_value);
+        bindings.insert("project_key".into(), serde_json::Value::String(project_key));
+        bindings.insert("company_id".into(), serde_json::Value::String(fee.company_id));
+        bindings.insert("contact_id".into(), serde_json::Value::String(fee.contact_id));
 
         info!("Executing Fee creation query (parameterized)");
 
-        let mut response = self.query_bind(&query, ("data", data_value)).await?;
+        let mut response = self.query_bind_map(&query, bindings).await?;
         let result: Result<Vec<Fee>, _> = response.take(2);
         match result {
             Ok(mut fees) => Ok(fees.pop()),
@@ -477,24 +504,29 @@ impl DatabaseClient {
 
         let data_value = serde_json::Value::Object(data);
 
-        // IDs are validated above so safe to interpolate table:key references.
+        // Record-id fields use type::record() with parameterized bindings.
         // String fields go through $data (parameterized, no injection risk).
         let project_key = fee.project_id.replace("-", "_");
         let query = format!(
             "UPDATE fee:{id} MERGE $data RETURN NONE; \
-             UPDATE fee:{id} SET project_id = projects:{project_key}, \
-             company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
+             UPDATE fee:{id} SET \
+             project_id = type::record('projects', $project_key), \
+             company_id = type::record('company', $company_id), \
+             contact_id = type::record('contacts', $contact_id), \
              time.updated_at = time::now() RETURN NONE; \
              SELECT * OMIT import_source FROM fee:{id};",
             id = id,
-            project_key = project_key,
-            company_id = fee.company_id,
-            contact_id = fee.contact_id,
         );
+
+        let mut bindings = serde_json::Map::new();
+        bindings.insert("data".into(), data_value);
+        bindings.insert("project_key".into(), serde_json::Value::String(project_key));
+        bindings.insert("company_id".into(), serde_json::Value::String(fee.company_id));
+        bindings.insert("contact_id".into(), serde_json::Value::String(fee.contact_id));
 
         info!("Executing fee update query (parameterized)");
 
-        let mut response = self.query_bind(&query, ("data", data_value)).await?;
+        let mut response = self.query_bind_map(&query, bindings).await?;
         let result: Result<Vec<Fee>, _> = response.take(2);
         match result {
             Ok(mut fees) => {
@@ -570,6 +602,61 @@ impl DatabaseClient {
                 error!("Failed to parse pricing update response: {}", e);
                 Err(e)
             },
+        }
+    }
+
+    // ==================== Batch Operations ====================
+
+    /// Delete multiple records from a table by their IDs.
+    /// Table name is validated against an allowlist. IDs are parameterized.
+    pub async fn batch_delete(&self, table: &str, ids: &[String]) -> Result<Vec<serde_json::Value>, Error> {
+        Self::validate_table_name(table)?;
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let omit_clause = if table == "fee" { " OMIT import_source" } else { "" };
+        let query = format!(
+            "SELECT *{omit_clause} FROM {table} WHERE meta::id(id) IN $ids; \
+             DELETE FROM {table} WHERE meta::id(id) IN $ids;",
+            table = table,
+            omit_clause = omit_clause,
+        );
+
+        let ids_value = serde_json::to_value(ids).unwrap_or(serde_json::json!([]));
+        let mut response = self.query_bind(&query, ("ids", ids_value)).await?;
+        let result: Vec<serde_json::Value> = response.take(0)?;
+        Ok(result)
+    }
+
+    /// Update the status field of multiple records in a table.
+    /// Table name is validated against an allowlist. Status is parameterized.
+    pub async fn batch_update_status(&self, table: &str, ids: &[String], status: &str) -> Result<usize, Error> {
+        Self::validate_table_name(table)?;
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let query = format!(
+            "UPDATE {table} SET status = $status, time.updated_at = time::now() \
+             WHERE meta::id(id) IN $ids RETURN AFTER",
+            table = table,
+        );
+
+        let mut bindings = serde_json::Map::new();
+        bindings.insert("status".into(), serde_json::Value::String(status.to_string()));
+        bindings.insert("ids".into(), serde_json::to_value(ids).unwrap_or(serde_json::json!([])));
+
+        let mut response = self.query_bind_map(&query, bindings).await?;
+        let result: Vec<serde_json::Value> = response.take(0)?;
+        Ok(result.len())
+    }
+
+    /// Validate table name against allowlist to prevent injection.
+    fn validate_table_name(table: &str) -> Result<(), Error> {
+        match table {
+            "projects" | "company" | "contacts" | "fee" => Ok(()),
+            _ => Err(Error::thrown(format!("Invalid table name: {}", table))),
         }
     }
 

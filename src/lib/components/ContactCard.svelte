@@ -6,10 +6,12 @@
 
   const dispatch = createEventDispatcher();
 
-  let { contact, clickable = true, companyName = '' }: {
+  let { contact, clickable = true, companyName = '', selectable = false, selected = false }: {
     contact: Contact;
     clickable?: boolean;
     companyName?: string;
+    selectable?: boolean;
+    selected?: boolean;
   } = $props();
 
   function handleCardClick() {
@@ -29,7 +31,7 @@
   }
 </script>
 
-<BaseListCard {clickable} on:click={handleCardClick}>
+<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3

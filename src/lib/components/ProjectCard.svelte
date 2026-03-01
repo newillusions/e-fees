@@ -7,11 +7,13 @@
   
   const dispatch = createEventDispatcher();
   
-  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined }: {
+  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false }: {
     project: Project;
     clickable?: boolean;
     showFolderLink?: boolean;
     onFolderClick?: ((project: Project) => void) | undefined;
+    selectable?: boolean;
+    selected?: boolean;
   } = $props();
   
   function handleCardClick() {
@@ -38,7 +40,7 @@
   }
 </script>
 
-<BaseListCard {clickable} on:click={handleCardClick}>
+<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3 class="emittiv-card-title">

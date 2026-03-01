@@ -102,6 +102,9 @@ export {
   getAllCities
 } from './reference';
 
+// Batch operations
+export { batchDeleteEntities, batchUpdateStatus } from './batch';
+
 // Activity log operations
 export { createActivityLog, getActivityLogs } from './activity';
 

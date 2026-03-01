@@ -154,3 +154,7 @@ pub use system::{
 // Excel export
 pub mod export;
 pub use export::{export_fee_excel, export_fee_template};
+
+// Batch operations (multi-select)
+pub mod batch_ops;
+pub use batch_ops::{batch_delete_entities, batch_update_status};

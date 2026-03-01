@@ -738,4 +738,16 @@ impl DatabaseManager {
 
         Ok(results)
     }
+
+    // ==================== Batch Operations ====================
+
+    pub async fn batch_delete(&self, table: &str, ids: &[String]) -> Result<Vec<serde_json::Value>, Error> {
+        let client = self.get_client()?;
+        client.batch_delete(table, ids).await
+    }
+
+    pub async fn batch_update_status(&self, table: &str, ids: &[String], status: &str) -> Result<usize, Error> {
+        let client = self.get_client()?;
+        client.batch_update_status(table, ids, status).await
+    }
 }

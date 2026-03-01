@@ -2492,4 +2492,57 @@ html {
     height: 24px;
   }
 
+  /* --- Bulk Action Bar --- */
+  .emittiv-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-splash);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+
+  .emittiv-bulk-bar__count {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--emittiv-splash);
+    white-space: nowrap;
+  }
+
+  .emittiv-bulk-bar__select {
+    height: 28px;
+    padding: 4px 24px 4px 8px;
+    font-size: 12px;
+    background-color: var(--emittiv-black);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 4px center;
+    background-repeat: no-repeat;
+    background-size: 14px 10px;
+  }
+
+  .emittiv-bulk-bar__select:hover {
+    border-color: var(--emittiv-light);
+  }
+
+  /* --- Checkbox --- */
+  .emittiv-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--emittiv-splash);
+    cursor: pointer;
+  }
+
+  /* --- Card Selected State --- */
+  .emittiv-card--selected {
+    border-color: var(--emittiv-splash) !important;
+    background-color: rgba(255, 153, 0, 0.05) !important;
+  }
+
 } /* end @layer utilities */

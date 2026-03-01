@@ -9,13 +9,17 @@
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import ProjectCard from '$lib/components/ProjectCard.svelte';
   import ProjectDetail from '$lib/components/ProjectDetail.svelte';
+  import BulkActionBar from '$lib/components/BulkActionBar.svelte';
   import { paginatedProjectsStore } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
+  import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
-import { getFolderForStatus } from '$lib/api/folderManagement';
+  import { getFolderForStatus } from '$lib/api/folderManagement';
   import { createProjectFilterConfig } from '$lib/utils/search';
+  import { extractIdFromRelation } from '$lib/utils/surrealdb';
+  import { PROJECT_STATUSES } from '$lib/constants';
   import type { Project } from '../types';
   import { onMount, onDestroy } from 'svelte';
 
@@ -33,6 +37,44 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
     country: '',
     city: ''
   });
+
+  // Bulk selection state
+  let selectedIds: Set<string> = $state(new Set());
+  let selectMode = $state(false);
+
+  function toggleSelect(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    selectedIds = next;
+    if (next.size === 0) selectMode = false;
+  }
+
+  function clearSelection() {
+    selectedIds = new Set();
+    selectMode = false;
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selectedIds];
+    try {
+      await batchDeleteEntities('projects', ids);
+      clearSelection();
+      paginatedProjectsStore.actions.refresh();
+    } catch (e) {
+      console.error('Bulk delete failed:', e);
+    }
+  }
+
+  async function handleBulkStatusChange(event: CustomEvent<string>) {
+    const ids = [...selectedIds];
+    try {
+      await batchUpdateStatus('projects', ids, event.detail);
+      clearSelection();
+      paginatedProjectsStore.actions.refresh();
+    } catch (e) {
+      console.error('Bulk status change failed:', e);
+    }
+  }
 
   // Scroll container ref for infinite scroll
   let scrollContainer: HTMLDivElement | null = $state(null);
@@ -237,6 +279,16 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
       />
     </div>
     <button
+      class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'} flex-shrink-0"
+      onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+      aria-label="Toggle selection mode"
+      title="Multi-select"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    </button>
+    <button
       class="emittiv-fab flex-shrink-0"
       onclick={handleNewProject}
       aria-label="Add new project"
@@ -324,6 +376,16 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
       </button>
     </div>
   {:else}
+    <!-- Bulk Action Bar -->
+    <BulkActionBar
+      selectedCount={selectedIds.size}
+      entityType="projects"
+      statuses={[...PROJECT_STATUSES]}
+      on:delete={handleBulkDelete}
+      on:status-change={handleBulkStatusChange}
+      on:clear={clearSelection}
+    />
+
     <!-- Scrollable container for infinite scroll -->
     <div
       bind:this={scrollContainer}
@@ -332,9 +394,12 @@ import { getFolderForStatus } from '$lib/api/folderManagement';
       {#each filteredProjects as project}
         <ProjectCard
           {project}
+          selectable={selectMode}
+          selected={selectedIds.has(extractIdFromRelation(project.id || ''))}
           onFolderClick={openProjectFolder}
           on:edit={(e) => handleEditProject(e.detail)}
           on:view={(e) => handleViewProject(e.detail)}
+          on:select={() => toggleSelect(extractIdFromRelation(project.id || ''))}
         />
       {/each}
 

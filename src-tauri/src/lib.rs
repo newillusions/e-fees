@@ -94,6 +94,9 @@ use commands::{
     // Excel export
     export_fee_excel,
     export_fee_template,
+    // Batch operations
+    batch_delete_entities,
+    batch_update_status,
 };
 
 /// Load database configuration from the settings system.
@@ -366,7 +369,10 @@ pub fn run() {
             import_execute,
             // Excel export
             export_fee_excel,
-            export_fee_template
+            export_fee_template,
+            // Batch operations
+            batch_delete_entities,
+            batch_update_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

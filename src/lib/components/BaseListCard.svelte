@@ -4,10 +4,12 @@
   const dispatch = createEventDispatcher();
 
   // Props for flexible card configuration
-  let { clickable = true, href = '', customClass = '' }: {
+  let { clickable = true, href = '', customClass = '', selectable = false, selected = false }: {
     clickable?: boolean;
     href?: string;
     customClass?: string;
+    selectable?: boolean;
+    selected?: boolean;
   } = $props();
 
   // Mouse event handlers - now using CSS classes for consistent hover effects
@@ -31,6 +33,11 @@
       handleClick();
     }
   }
+
+  function handleCheckbox(event: Event) {
+    event.stopPropagation();
+    dispatch('select', !selected);
+  }
 </script>
 
 {#if href}
@@ -41,6 +48,17 @@
     on:mouseleave={handleMouseLeave}
   >
     <div class="flex items-start justify-between gap-3">
+      {#if selectable}
+        <div class="flex items-center flex-shrink-0 pt-0.5">
+          <input
+            type="checkbox"
+            checked={selected}
+            on:click={handleCheckbox}
+            class="emittiv-checkbox"
+          />
+        </div>
+      {/if}
+
       <!-- Main content area -->
       <div class="flex-1 min-w-0">
         <!-- Title slot -->
@@ -84,7 +102,7 @@
   </a>
 {:else}
   <div
-    class="group list-card px-4 py-3 {clickable ? 'cursor-pointer' : ''} {customClass}"
+    class="group list-card px-4 py-3 {clickable ? 'cursor-pointer' : ''} {selected ? 'emittiv-card--selected' : ''} {customClass}"
     on:click={handleClick}
     on:keydown={handleKeydown}
     on:mouseenter={handleMouseEnter}
@@ -93,6 +111,17 @@
     tabindex={clickable ? 0 : null}
   >
     <div class="flex items-start justify-between gap-3">
+      {#if selectable}
+        <div class="flex items-center flex-shrink-0 pt-0.5">
+          <input
+            type="checkbox"
+            checked={selected}
+            on:click={handleCheckbox}
+            class="emittiv-checkbox"
+          />
+        </div>
+      {/if}
+
       <!-- Main content area -->
       <div class="flex-1 min-w-0">
         <!-- Title slot -->
