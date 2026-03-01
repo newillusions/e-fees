@@ -84,44 +84,71 @@ pub async fn create_fee(
     require_non_empty(&body.name, "name")?;
     validate_status(&body.status, FEE_STATUSES, "fee")?;
 
-    // Build data map for string/value fields (parameterized for safety)
-    let data = json!({
-        "name": body.name,
-        "number": body.number,
-        "rev": body.rev,
-        "status": body.status,
-        "issue_date": body.issue_date,
-        "activity": body.activity,
-        "package": body.package,
-        "staff_name": body.staff_name,
-        "staff_email": body.staff_email,
-        "staff_phone": body.staff_phone,
-        "staff_position": body.staff_position,
-        "strap_line": body.strap_line,
-        "revisions": body.revisions,
-        "pricing": body.pricing,
-        "post_contract_items": body.post_contract_items,
-        "reimbursable_costs": body.reimbursable_costs,
-    });
-
-    // Record ID references and timestamps must be set via SurrealQL
+    // Record ID references must be present at CREATE time (fee table requires them).
+    // Use type::record() for record-id fields, parameterized SET for all others.
+    // IMPORTANT: Optional fields (pricing, post_contract_items, reimbursable_costs)
+    // must NOT be set to null — SurrealDB v3 rejects NULL for option<T>. Only
+    // include them in the SET clause when they have values.
     let project_key = body.project_id.replace('-', "_");
     let fee_id = format!("{}_{}", project_key, body.rev);
 
+    // Build optional field SET clauses only when present
+    let mut optional_sets = String::new();
+    if body.pricing.is_some() {
+        optional_sets.push_str(", pricing = $pricing");
+    }
+    if body.post_contract_items.is_some() {
+        optional_sets.push_str(", post_contract_items = $post_contract_items");
+    }
+    if body.reimbursable_costs.is_some() {
+        optional_sets.push_str(", reimbursable_costs = $reimbursable_costs");
+    }
+
     let query = format!(
-        "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
-         UPDATE fee:{fee_id} SET project_id = projects:{project_key}, \
-         company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
-         time = {{ created_at: time::now(), updated_at: time::now() }} RETURN NONE; \
-         SELECT * FROM fee:{fee_id};",
+        "CREATE fee:{fee_id} SET \
+         name = $name, number = $number, status = $status, \
+         issue_date = $issue_date, activity = $activity, package = $package, \
+         staff_name = $staff_name, staff_email = $staff_email, \
+         staff_phone = $staff_phone, staff_position = $staff_position, \
+         strap_line = $strap_line, revisions = $revisions{optional_sets}, \
+         project_id = type::record('projects', '{project_key}'), \
+         company_id = type::record('company', $company_id), \
+         contact_id = type::record('contacts', $contact_id), \
+         time = {{ created_at: time::now(), updated_at: time::now() }};",
         fee_id = fee_id,
         project_key = project_key,
-        company_id = body.company_id,
-        contact_id = body.contact_id,
+        optional_sets = optional_sets,
     );
 
-    let mut response = state.db.query(&query).bind(("data", data)).await?;
-    let created: Option<Fee> = response.take(2)?;
+    let mut qb = state.db.query(&query)
+        .bind(("name", body.name))
+        .bind(("number", body.number))
+        .bind(("status", body.status))
+        .bind(("issue_date", body.issue_date))
+        .bind(("activity", body.activity))
+        .bind(("package", body.package))
+        .bind(("staff_name", body.staff_name))
+        .bind(("staff_email", body.staff_email))
+        .bind(("staff_phone", body.staff_phone))
+        .bind(("staff_position", body.staff_position))
+        .bind(("strap_line", body.strap_line))
+        .bind(("revisions", body.revisions))
+        .bind(("company_id", body.company_id))
+        .bind(("contact_id", body.contact_id));
+
+    // Only bind optional fields when present (avoid binding null → SurrealDB v3 NULL rejection)
+    if let Some(pricing) = body.pricing {
+        qb = qb.bind(("pricing", json!(pricing)));
+    }
+    if let Some(pci) = body.post_contract_items {
+        qb = qb.bind(("post_contract_items", json!(pci)));
+    }
+    if let Some(rc) = body.reimbursable_costs {
+        qb = qb.bind(("reimbursable_costs", json!(rc)));
+    }
+
+    let mut response = qb.await?;
+    let created: Option<Fee> = response.take(0)?;
 
     match created {
         Some(f) => Ok(Json(json!({ "data": fee_to_detail_json(&f) }))),
