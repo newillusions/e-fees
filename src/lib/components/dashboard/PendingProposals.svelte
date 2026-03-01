@@ -4,6 +4,7 @@
   import Card from '$lib/components/Card.svelte';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
+  import CurrencyAmount from '$lib/components/CurrencyAmount.svelte';
   import type { UnknownSurrealThing, Fee } from '../../../types';
 
   let { isLoading = false }: {
@@ -19,15 +20,6 @@
   function getCompanyName(companyId: UnknownSurrealThing): string {
     const company = findEntityById($companiesStore, companyId);
     return getEntityDisplayName(company) || 'Unknown Company';
-  }
-
-  function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   }
 
   function getDaysAgo(date: string): number {
@@ -103,6 +95,15 @@
                 <span class="company-name">{getCompanyName(fee.company_id)}</span>
               </div>
             </div>
+
+            {#if fee.pricing?.grand_total}
+              <div class="proposal-amount">
+                <CurrencyAmount
+                  amount={fee.pricing.grand_total}
+                  config={fee.pricing.config}
+                />
+              </div>
+            {/if}
 
             <div class="proposal-timing">
               <div
@@ -385,6 +386,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .proposal-amount {
+    font-weight: 600;
+    color: var(--emittiv-splash);
+    font-size: 12px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
   }
 
   .proposal-timing {
