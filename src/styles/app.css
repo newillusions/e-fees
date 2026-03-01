@@ -2546,3 +2546,34 @@ html {
   }
 
 } /* end @layer utilities */
+
+/* Currency Tooltip — CSS-only hover tooltip for multi-currency display */
+.emittiv-currency-tooltip {
+  position: relative;
+  cursor: default;
+  border-bottom: 1px dotted var(--emittiv-dark);
+}
+
+.emittiv-currency-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: var(--emittiv-black);
+  border: 1px solid var(--emittiv-dark);
+  border-radius: 4px;
+  color: var(--emittiv-lighter);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+}
+
+.emittiv-currency-tooltip:hover::after {
+  opacity: 1;
+}
