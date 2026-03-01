@@ -82,7 +82,23 @@ pub async fn create_contact(
     require_non_empty(&body.first_name, "first_name")?;
     require_non_empty(&body.last_name, "last_name")?;
 
-    let created: Option<Contact> = state.db.create("contacts").content(body).await?;
+    let full_name = format!("{} {}", body.first_name, body.last_name);
+
+    let mut response = state
+        .db
+        .query("CREATE contacts SET first_name = $first_name, last_name = $last_name, \
+                full_name = $full_name, email = $email, phone = $phone, position = $position, \
+                company = type::record('company', $company), \
+                time = { created_at: time::now(), updated_at: time::now() }")
+        .bind(("first_name", body.first_name))
+        .bind(("last_name", body.last_name))
+        .bind(("full_name", full_name))
+        .bind(("email", body.email))
+        .bind(("phone", body.phone))
+        .bind(("position", body.position))
+        .bind(("company", body.company))
+        .await?;
+    let created: Option<Contact> = response.take(0)?;
 
     match created {
         Some(c) => Ok(Json(json!({ "data": contact_to_json(&c) }))),
@@ -111,7 +127,14 @@ pub async fn update_contact(
     let key = id.strip_prefix("contacts:").unwrap_or(&id);
     validate_id(key)?;
 
-    let updated: Option<Contact> = state.db.update(("contacts", key)).merge(body).await?;
+    let query = format!(
+        "UPDATE contacts:{key} MERGE $data RETURN NONE; \
+         UPDATE contacts:{key} SET time.updated_at = time::now() RETURN NONE; \
+         SELECT * FROM contacts:{key};",
+        key = key
+    );
+    let mut response = state.db.query(&query).bind(("data", body)).await?;
+    let updated: Option<Contact> = response.take(2)?;
 
     match updated {
         Some(c) => Ok(Json(json!({ "data": contact_to_json(&c) }))),

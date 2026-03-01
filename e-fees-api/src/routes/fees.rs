@@ -84,7 +84,44 @@ pub async fn create_fee(
     require_non_empty(&body.name, "name")?;
     validate_status(&body.status, FEE_STATUSES, "fee")?;
 
-    let created: Option<Fee> = state.db.create("fee").content(body).await?;
+    // Build data map for string/value fields (parameterized for safety)
+    let data = json!({
+        "name": body.name,
+        "number": body.number,
+        "rev": body.rev,
+        "status": body.status,
+        "issue_date": body.issue_date,
+        "activity": body.activity,
+        "package": body.package,
+        "staff_name": body.staff_name,
+        "staff_email": body.staff_email,
+        "staff_phone": body.staff_phone,
+        "staff_position": body.staff_position,
+        "strap_line": body.strap_line,
+        "revisions": body.revisions,
+        "pricing": body.pricing,
+        "post_contract_items": body.post_contract_items,
+        "reimbursable_costs": body.reimbursable_costs,
+    });
+
+    // Record ID references and timestamps must be set via SurrealQL
+    let project_key = body.project_id.replace('-', "_");
+    let fee_id = format!("{}_{}", project_key, body.rev);
+
+    let query = format!(
+        "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
+         UPDATE fee:{fee_id} SET project_id = projects:{project_key}, \
+         company_id = company:{company_id}, contact_id = contacts:{contact_id}, \
+         time = {{ created_at: time::now(), updated_at: time::now() }} RETURN NONE; \
+         SELECT * FROM fee:{fee_id};",
+        fee_id = fee_id,
+        project_key = project_key,
+        company_id = body.company_id,
+        contact_id = body.contact_id,
+    );
+
+    let mut response = state.db.query(&query).bind(("data", data)).await?;
+    let created: Option<Fee> = response.take(2)?;
 
     match created {
         Some(f) => Ok(Json(json!({ "data": fee_to_detail_json(&f) }))),
@@ -117,7 +154,14 @@ pub async fn update_fee(
         validate_status(status, FEE_STATUSES, "fee")?;
     }
 
-    let updated: Option<Fee> = state.db.update(("fee", key)).merge(body).await?;
+    let query = format!(
+        "UPDATE fee:{key} MERGE $data RETURN NONE; \
+         UPDATE fee:{key} SET time.updated_at = time::now() RETURN NONE; \
+         SELECT * FROM fee:{key};",
+        key = key
+    );
+    let mut response = state.db.query(&query).bind(("data", body)).await?;
+    let updated: Option<Fee> = response.take(2)?;
 
     match updated {
         Some(f) => Ok(Json(json!({ "data": fee_to_detail_json(&f) }))),

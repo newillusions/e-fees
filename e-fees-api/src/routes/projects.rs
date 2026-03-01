@@ -82,11 +82,31 @@ pub async fn create_project(
 
     let record_key = body.number.id.replace('-', "_");
 
-    let created: Option<Project> = state
+    let query = format!(
+        "CREATE projects:{key} SET name = $name, name_short = $name_short, \
+         status = $status, area = $area, city = $city, country = $country, \
+         folder = $folder, number = $number, \
+         time = {{ created_at: time::now(), updated_at: time::now() }}",
+        key = record_key
+    );
+    let mut response = state
         .db
-        .create(("projects", &*record_key))
-        .content(body)
+        .query(&query)
+        .bind(("name", body.name))
+        .bind(("name_short", body.name_short))
+        .bind(("status", body.status))
+        .bind(("area", body.area))
+        .bind(("city", body.city))
+        .bind(("country", body.country))
+        .bind(("folder", body.folder))
+        .bind(("number", serde_json::json!({
+            "year": body.number.year,
+            "country": body.number.country,
+            "seq": body.number.seq,
+            "id": body.number.id,
+        })))
         .await?;
+    let created: Option<Project> = response.take(0)?;
 
     match created {
         Some(p) => Ok(Json(json!({ "data": project_to_json(&p) }))),
@@ -118,7 +138,14 @@ pub async fn update_project(
         validate_status(status, PROJECT_STATUSES, "project")?;
     }
 
-    let updated: Option<Project> = state.db.update(("projects", &*id)).merge(body).await?;
+    let query = format!(
+        "UPDATE projects:{id} MERGE $data RETURN NONE; \
+         UPDATE projects:{id} SET time.updated_at = time::now() RETURN NONE; \
+         SELECT * FROM projects:{id};",
+        id = id
+    );
+    let mut response = state.db.query(&query).bind(("data", body)).await?;
+    let updated: Option<Project> = response.take(2)?;
 
     match updated {
         Some(p) => Ok(Json(json!({ "data": project_to_json(&p) }))),

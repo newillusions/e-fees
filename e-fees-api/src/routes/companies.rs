@@ -79,7 +79,18 @@ pub async fn create_company(
 ) -> Result<Json<Value>, ApiError> {
     require_non_empty(&body.name, "name")?;
 
-    let created: Option<Company> = state.db.create("company").content(body).await?;
+    let mut response = state
+        .db
+        .query("CREATE company SET name = $name, name_short = $name_short, abbreviation = $abbreviation, city = $city, country = $country, reg_no = $reg_no, tax_no = $tax_no, time = { created_at: time::now(), updated_at: time::now() }")
+        .bind(("name", body.name))
+        .bind(("name_short", body.name_short))
+        .bind(("abbreviation", body.abbreviation))
+        .bind(("city", body.city))
+        .bind(("country", body.country))
+        .bind(("reg_no", body.reg_no))
+        .bind(("tax_no", body.tax_no))
+        .await?;
+    let created: Option<Company> = response.take(0)?;
 
     match created {
         Some(c) => Ok(Json(json!({ "data": company_to_json(&c) }))),
@@ -107,7 +118,14 @@ pub async fn update_company(
 ) -> Result<Json<Value>, ApiError> {
     validate_id(&id)?;
 
-    let updated: Option<Company> = state.db.update(("company", &*id)).merge(body).await?;
+    let query = format!(
+        "UPDATE company:{id} MERGE $data RETURN NONE; \
+         UPDATE company:{id} SET time.updated_at = time::now() RETURN NONE; \
+         SELECT * FROM company:{id};",
+        id = id
+    );
+    let mut response = state.db.query(&query).bind(("data", body)).await?;
+    let updated: Option<Company> = response.take(2)?;
 
     match updated {
         Some(c) => Ok(Json(json!({ "data": company_to_json(&c) }))),
