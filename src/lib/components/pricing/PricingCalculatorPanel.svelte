@@ -10,6 +10,7 @@
   import { formatCurrency, formatNumber, formatPercent, roundToIncrement } from '$lib/utils/format';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
+  import CurrencyAmount from '../CurrencyAmount.svelte';
   import PanelCard from '../PanelCard.svelte';
   import {
     exchangeRatesStore,
@@ -412,7 +413,7 @@
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--quoted">
         <label class="emittiv-label">Calculated Fee</label>
-        <span class="emittiv-calc-quoted">{formatCurrency(config.quoted_fee, config.currency)}</span>
+        <span class="emittiv-calc-quoted"><CurrencyAmount amount={config.quoted_fee} config={config} /></span>
       </div>
     </div>
 
@@ -616,7 +617,7 @@
     </div>
 
     <!-- Converted Total Row (shown when exchange rate is active) -->
-    {#if convertedTotal !== undefined && config.client_currency}
+    {#if convertedTotal !== undefined && config.client_currency && (config.quote_currency ?? config.currency) !== config.client_currency}
       <div class="emittiv-calc-row mt-1">
         <div class="emittiv-calc-field emittiv-calc-field--quoted" style="margin-left: auto;">
           <label class="emittiv-label">Converted Total</label>

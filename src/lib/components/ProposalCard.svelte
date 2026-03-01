@@ -4,6 +4,7 @@
   import ActionButton from './ActionButton.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import type { Fee } from '../../types';
+  import CurrencyAmount from './CurrencyAmount.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -74,6 +75,14 @@
   <!-- Extra - Full width body section with all metadata -->
   <svelte:fragment slot="extra">
     <div class="space-y-1">
+      {#if proposal.pricing?.grand_total}
+        <div class="text-emittiv-splash font-bold text-sm">
+          <CurrencyAmount
+            amount={proposal.pricing.grand_total}
+            config={proposal.pricing.config}
+          />
+        </div>
+      {/if}
       {#if proposal.package}
         <div class="text-sm text-emittiv-light">
           Package: {proposal.package}
