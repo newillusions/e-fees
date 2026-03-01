@@ -26,27 +26,27 @@
 
   // Determine what to display based on level and quoting direction
   const showConverted = $derived(level === 'summary' && isQuotingInClient && convertedAmount !== undefined);
-  const displayAmount = $derived(showConverted ? convertedAmount! : amount);
-  const displayCurrency = $derived(showConverted ? clientCurrency! : currency);
+  const displayAmount = $derived(showConverted && convertedAmount !== undefined ? convertedAmount : amount);
+  const displayCurrency = $derived(showConverted && clientCurrency ? clientCurrency : currency);
 
   // Tooltip: show the "other" currency
   const hasTooltip = $derived(
     !!clientCurrency && clientCurrency !== currency && convertedAmount !== undefined
   );
-  const tooltipText = $derived(() => {
-    if (!hasTooltip || !config?.exchange_rate) return '';
+  const tooltipText = $derived.by(() => {
+    if (!hasTooltip || !config?.exchange_rate || !clientCurrency || convertedAmount === undefined) return '';
     if (showConverted) {
       // Showing client currency — tooltip shows base
       return `${formatCurrency(amount, currency)} @ ${config.exchange_rate} ${clientCurrency}/${currency}`;
     } else {
       // Showing base currency — tooltip shows client equivalent
-      return `${formatCurrency(convertedAmount!, clientCurrency!)} @ ${config.exchange_rate} ${clientCurrency}/${currency}`;
+      return `${formatCurrency(convertedAmount, clientCurrency)} @ ${config.exchange_rate} ${clientCurrency}/${currency}`;
     }
   });
 </script>
 
 {#if hasTooltip}
-  <span class="emittiv-currency-tooltip" data-tooltip={tooltipText()}>
+  <span class="emittiv-currency-tooltip" data-tooltip={tooltipText}>
     {formatCurrency(displayAmount, displayCurrency)}
   </span>
 {:else}
