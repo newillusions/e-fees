@@ -242,11 +242,9 @@ When user says "/release", "/release patch", "/release minor", "/release major",
 - **[RELEASE_PROCESS.md](./RELEASE_PROCESS.md)** - Step-by-step guide for publishing releases
 - **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)** - Comprehensive list of issues and workarounds
 
-## Critical Scalability Issues (See SitRep for details)
+## Remaining Scalability Issues (See SitRep for details)
 1. **Database Mutex Bottleneck** - `src-tauri/src/db/mod.rs` - Only 1 concurrent DB operation
-2. **No Pagination** - `src/lib/stores.ts:318` - Memory exhaustion risk with large datasets
-3. **N+1 Query Problem** - `src/lib/stores.ts:165-173` - Client-side joins with O(n*m) complexity
-4. **Large Files** - `api.ts` (1,962 lines), `db/mod.rs` (1,500+ lines) need splitting
+2. **N+1 Query Problem** - `src/lib/stores.ts:165-173` - Client-side joins with O(n*m) complexity
 
 ## Development Notes
 

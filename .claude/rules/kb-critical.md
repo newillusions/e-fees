@@ -2,7 +2,7 @@
 # KB Project Critical Rules
 
 *Auto-generated for E-Fees*
-*Last updated: 2026-02-15*
+*Last updated: 2026-03-02*
 
 ---
 
@@ -12,17 +12,7 @@
 
 CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with massive inline class strings. Extract repeated patterns into components or CSS classes. Use existing emittiv-* classes. Use semantic text sizes (text-xs, text-xxs) not arbitrary values.
 
-*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 147*
-
----
-
-## E Fees Db Migration Complete
-
-**Priority:** 9 | **Type:** config
-
-E-Fees SurrealDB migration completed (2026-02-13): All configuration files updated from old IP 10.0....
-
-*Source: observation:xcwj43gc64jzpj93b6rp | Scope: project | Access count: 28*
+*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 277*
 
 ---
 
@@ -46,34 +36,74 @@ CRITICAL: E-Fees is a Tauri desktop app - Playwright/browser testing DOES NOT WO
 
 ---
 
+## E Fees Ui Testing And Api Design
+
+**Priority:** 9 | **Type:** decision
+
+DESIGN APPROVED (2026-02-28): Two workstreams for E-Fees. (1) UI smoke tests via Tauri MCP tools — 10 checks covering DB, data, statuses, routes. (2) Standalone REST API with full CRUD, pagination, OpenAPI docs.
+
+*Source: observation:t21ywvrr4rsuin7bwun5 | Scope: unscoped (e-fees related) | Access count: 14*
+
+---
+
+## Surrealdb V3 Math Max Empty Array
+
+**Priority:** 9 | **Type:** problem
+
+CRITICAL BUG: SurrealDB v3 math::max([]) returns -Infinity (float type), NOT null/NONE. This breaks deserialization of option<i64> fields. Fix: IF array::len(arr) > 0 THEN math::max(arr) ELSE 0 END.
+
+*Source: observation:a91ginzo7ly8hdgljzrd | Scope: auto [surrealdb] | Access count: 51*
+
+---
+
+## Surrealdb V3 Surrealvalue F64 Strictness
+
+**Priority:** 9 | **Type:** pattern
+
+CRITICAL PATTERN: SurrealDB v3 SurrealValue derive for f64 fields REJECTS Number::Int values. Always use Number::Float or cast to f64.
+
+*Source: observation:a055mx2sbu80jbpp9khs | Scope: auto [surrealdb, rust, tauri] | Access count: 59*
+
+---
+
+## Surrealdb V3 Parameterized Matches Bug
+
+**Priority:** 9 | **Type:** problem
+
+CONFIRMED BUG (2026-02-23): SurrealDB v3.0.0 WebSocket SDK parameterized values fail with MATCHES clause in BM25 mode. Use vector search or raw HTTP API instead.
+
+*Source: observation:keasjstmcvvjc3mzgfh7 | Scope: auto [surrealdb] | Access count: 61*
+
+---
+
+## Surrealdb V3.0 Bm25 Scoring Bug
+
+**Priority:** 9 | **Type:** problem
+
+CONFIRMED BUG: SurrealDB v3.0.0 search::score() returns 0.0 for ALL queries. Use vector search mode instead.
+
+*Source: observation:6j1gpqvnjuctbulbtzf7 | Scope: auto [surrealdb] | Access count: 91*
+
+---
+
 ## Acting As Parameter Test (SurrealDB Pattern)
 
 **Priority:** 9 | **Type:** pattern
 
-CRITICAL SurrealDB PATTERN: option<T> fields accept NONE (absent) but REJECT NULL. In SurrealDB, NUL...
+CRITICAL SurrealDB PATTERN: option<T> fields accept NONE (absent) but REJECT NULL. In SurrealDB, NULL != NONE. Use NONE for optional fields.
 
-*Source: observation:x3jaqd4tpktm876nme6h | Scope: auto (surrealdb) | Access count: 48*
-
----
-
-## Claude Code Token Efficiency
-
-**Priority:** 10 | **Type:** pattern
-
-CRITICAL RULE: All Claude Code instances MUST maximize token usage efficiency and minimize costs. When spawning sub-agents (Task tool), ALWAYS use model="haiku" for straightforward tasks.
-
-*Source: observation:3uq1ed30fi5tb0qiswq1 | Scope: global | Access count: 153*
+*Source: observation:x3jaqd4tpktm876nme6h | Scope: auto [surrealdb] | Access count: 48*
 
 ---
 
-## Process Management Safety
+## E Fees Db Migration Complete
 
-**Priority:** 10 | **Type:** pattern
+**Priority:** 9 | **Type:** config
 
-CRITICAL RULE: NEVER use pkill, killall, or broad pattern-matching kill commands without EXPLICIT user permission. Always ask first, use specific PIDs.
+E-Fees SurrealDB migration completed (2026-02-13): All configuration files updated from old IP 10.0.21.8 to new 10.0.23.11.
 
-*Source: observation:yz1x62rdud27ejx4q83f | Scope: global | Access count: 162*
+*Source: observation:xcwj43gc64jzpj93b6rp | Scope: unscoped (e-fees related) | Access count: 28*
 
 ---
 
-*Total: 7 project rules (3 project-scoped, 1 auto-matched, 2 global, 1 unscoped e-fees-related)*
+*Total: 10 project rules (3 project-scoped, 5 auto-matched, 2 unscoped e-fees-related)*
