@@ -2438,6 +2438,79 @@ html {
     border-color: var(--emittiv-splash);
   }
 
+  /* --- Status Chips — multi-select toggle row --- */
+  .emittiv-status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .emittiv-status-chip {
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 400;
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--emittiv-light);
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .emittiv-status-chip:hover {
+    border-color: var(--emittiv-lighter);
+    color: var(--emittiv-white);
+  }
+
+  .emittiv-status-chip--active {
+    background-color: var(--emittiv-splash);
+    border-color: var(--emittiv-splash);
+    color: var(--emittiv-black);
+    font-weight: 600;
+  }
+
+  .emittiv-status-chip--active:hover {
+    background-color: #ea580c;
+    border-color: #ea580c;
+  }
+
+  /* --- Date Range Filter --- */
+  .emittiv-date-range {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .emittiv-date-input {
+    padding: 5px 8px;
+    background-color: var(--emittiv-darker);
+    border: 1px solid var(--emittiv-dark);
+    border-radius: 4px;
+    color: var(--emittiv-white);
+    font-size: 12px;
+    font-family: 'Montserrat', sans-serif;
+    transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    color-scheme: dark;
+  }
+
+  .emittiv-date-input:hover {
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-date-input:focus {
+    outline: none;
+    border-color: var(--emittiv-splash);
+  }
+
+  .emittiv-date-range__sep {
+    color: var(--emittiv-dark);
+    font-size: 12px;
+    user-select: none;
+  }
+
   /* --- FAB (Floating Action Button) --- */
   .emittiv-fab {
     width: 48px;

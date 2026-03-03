@@ -15,7 +15,10 @@
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
   import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
+  import StatusChips from '$lib/components/StatusChips.svelte';
+  import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import type { AdvancedFilters } from '$lib/utils/filters';
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import { createProjectFilterConfig } from '$lib/utils/search';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
@@ -33,10 +36,14 @@
   // Filter states
   let searchQuery = $state('');
   let filters = $state({
-    status: '',
     country: '',
     city: ''
   });
+
+  // Advanced filter states
+  let statusSelected: Set<string> = $state(new Set());
+  let dateFrom = $state('');
+  let dateTo = $state('');
 
   // Bulk selection state
   let selectedIds: Set<string> = $state(new Set());
@@ -123,19 +130,26 @@
   // Filter configuration for projects - uses unified search module
   const filterConfig = (() => {
     const baseConfig = createProjectFilterConfig();
-    // Add filter fields for dropdowns
     return {
       ...baseConfig,
       filterFields: {
         status: (project: Project) => project.status,
         country: (project: Project) => project.country,
         city: (project: Project) => project.city
-      }
+      },
+      dateFieldExtractor: (project: Project) => project.time?.updated_at || '',
+      dateFieldFormat: 'iso' as const,
     };
   })();
 
+  // Build advanced filters from state
+  const advanced: AdvancedFilters = $derived({
+    statusSet: statusSelected,
+    dateRange: { from: dateFrom, to: dateTo }
+  });
+
   // Reactive filtered projects using optimized filter function
-  const filteredProjects = $derived(createFilterFunction(projects, searchQuery, filters, filterConfig));
+  const filteredProjects = $derived(createFilterFunction(projects, searchQuery, filters, filterConfig, advanced));
   
 
   
@@ -174,6 +188,9 @@
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
+    statusSelected = new Set();
+    dateFrom = '';
+    dateTo = '';
   }
   
   // Load projects and settings on mount
@@ -189,10 +206,9 @@
   
   
   // Check if any filters are active
-  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
   
-  // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues(projects, (project) => project.status));
+  // Get unique values for dropdown filters
   const uniqueCountries = $derived(getUniqueFieldValues(projects, (project) => project.country));
   const uniqueCities = $derived(getUniqueFieldValues(projects, (project) => project.city));
   
@@ -301,20 +317,9 @@
   
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
-    <!-- Status Filter -->
-    <select 
-      bind:value={filters.status} 
-      class="emittiv-filter-select"
-    >
-      <option value="">All Status</option>
-      {#each uniqueStatuses as status}
-        <option value={status}>{status}</option>
-      {/each}
-    </select>
-    
     <!-- Country Filter -->
-    <select 
-      bind:value={filters.country} 
+    <select
+      bind:value={filters.country}
       class="emittiv-filter-select"
     >
       <option value="">All Countries</option>
@@ -322,10 +327,10 @@
         <option value={country}>{country}</option>
       {/each}
     </select>
-    
+
     <!-- City Filter -->
-    <select 
-      bind:value={filters.city} 
+    <select
+      bind:value={filters.city}
       class="emittiv-filter-select"
     >
       <option value="">All Cities</option>
@@ -333,18 +338,14 @@
         <option value={city}>{city}</option>
       {/each}
     </select>
+
+    <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
   </div>
 
-<style>
-  /* Custom styles for native select dropdowns */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.25rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    appearance: none;
-  }
-</style>
+  <!-- Status Chips -->
+  <div class="mb-4">
+    <StatusChips statuses={PROJECT_STATUSES} bind:selected={statusSelected} />
+  </div>
   
 
   {#if isLoading && projects.length === 0}

@@ -10,7 +10,9 @@
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import type { AdvancedFilters } from '$lib/utils/filters';
   import { createContactFilterConfig } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
@@ -24,6 +26,10 @@
     country: '',
     position: ''
   });
+
+  // Advanced filter states
+  let dateFrom = $state('');
+  let dateTo = $state('');
 
   // Bulk selection state
   let selectedIds: Set<string> = $state(new Set());
@@ -106,10 +112,22 @@
 
   // Filter configuration for contacts - uses unified search module
   // This enables searching by company code (e.g., "ptg") and company name
-  const filterConfig = $derived(createContactFilterConfig({ companyLookup }));
+  const filterConfig = $derived((() => {
+    const baseConfig = createContactFilterConfig({ companyLookup });
+    return {
+      ...baseConfig,
+      dateFieldExtractor: (contact: Contact) => contact.time?.updated_at || '',
+      dateFieldFormat: 'iso' as const,
+    };
+  })());
+
+  // Build advanced filters from state
+  const advanced: AdvancedFilters = $derived({
+    dateRange: { from: dateFrom, to: dateTo }
+  });
 
   // Reactive filtered contacts using optimized filter function
-  const filteredContacts = $derived(createFilterFunction(contacts, searchQuery, filters, filterConfig));
+  const filteredContacts = $derived(createFilterFunction(contacts, searchQuery, filters, filterConfig, advanced));
 
   // Get unique values for filters using optimized functions
   const uniqueCompanies = $derived(getUniqueFieldValues(contacts, (contact) =>
@@ -171,10 +189,12 @@
 
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
+    dateFrom = '';
+    dateTo = '';
   }
 
   // Check if any filters are active
-  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
 
   // Load contacts and companies on mount
   onMount(() => {
@@ -243,8 +263,8 @@
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Company Filter -->
-    <select 
-      bind:value={filters.company} 
+    <select
+      bind:value={filters.company}
       class="emittiv-filter-select"
     >
       <option value="">All Companies</option>
@@ -252,10 +272,10 @@
         <option value={company}>{company}</option>
       {/each}
     </select>
-    
+
     <!-- Country Filter -->
-    <select 
-      bind:value={filters.country} 
+    <select
+      bind:value={filters.country}
       class="emittiv-filter-select"
     >
       <option value="">All Countries</option>
@@ -263,10 +283,10 @@
         <option value={country}>{country}</option>
       {/each}
     </select>
-    
+
     <!-- Position Filter -->
-    <select 
-      bind:value={filters.position} 
+    <select
+      bind:value={filters.position}
       class="emittiv-filter-select"
     >
       <option value="">All Positions</option>
@@ -274,18 +294,9 @@
         <option value={position}>{position}</option>
       {/each}
     </select>
-  </div>
 
-<style>
-  /* Custom styles for native select dropdowns */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.25rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    appearance: none;
-  }
-</style>
+    <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
+  </div>
   
   
   {#if isLoading && contacts.length === 0}

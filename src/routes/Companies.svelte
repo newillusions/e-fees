@@ -7,7 +7,9 @@
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
   import { paginatedCompaniesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
+  import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import type { AdvancedFilters } from '$lib/utils/filters';
   import { createCompanyFilterConfig } from '$lib/utils/search';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { batchDeleteEntities } from '$lib/api/batch';
@@ -20,6 +22,10 @@
     country: '',
     city: ''
   });
+
+  // Advanced filter states
+  let dateFrom = $state('');
+  let dateTo = $state('');
 
   // Bulk selection state
   let selectedIds: Set<string> = $state(new Set());
@@ -95,18 +101,24 @@
   // Filter configuration for companies - uses unified search module
   const filterConfig = (() => {
     const baseConfig = createCompanyFilterConfig();
-    // Add filter fields for dropdowns
     return {
       ...baseConfig,
       filterFields: {
         country: (company: Company) => company.country,
         city: (company: Company) => company.city
-      }
+      },
+      dateFieldExtractor: (company: Company) => company.time?.updated_at || '',
+      dateFieldFormat: 'iso' as const,
     };
   })();
 
+  // Build advanced filters from state
+  const advanced: AdvancedFilters = $derived({
+    dateRange: { from: dateFrom, to: dateTo }
+  });
+
   // Reactive filtered companies using optimized filter function
-  const filteredCompanies = $derived(createFilterFunction(companies, searchQuery, filters, filterConfig));
+  const filteredCompanies = $derived(createFilterFunction(companies, searchQuery, filters, filterConfig, advanced));
 
   // Get unique values for filters using optimized functions
   const uniqueCountries = $derived(getUniqueFieldValues(companies, (company) => company.country).filter(Boolean));
@@ -157,8 +169,10 @@
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
+    dateFrom = '';
+    dateTo = '';
   }
-  
+
   // Load companies on mount
   onMount(() => {
     // Check store state directly to avoid race condition with $effect subscription
@@ -169,7 +183,7 @@
   });
 
   // Check if any filters are active
-  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
 </script>
 
 <div class="p-8">
@@ -227,8 +241,8 @@
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Country Filter -->
-    <select 
-      bind:value={filters.country} 
+    <select
+      bind:value={filters.country}
       class="emittiv-filter-select"
     >
       <option value="">All Countries</option>
@@ -236,10 +250,10 @@
         <option value={country}>{country}</option>
       {/each}
     </select>
-    
+
     <!-- City Filter -->
-    <select 
-      bind:value={filters.city} 
+    <select
+      bind:value={filters.city}
       class="emittiv-filter-select"
     >
       <option value="">All Cities</option>
@@ -247,18 +261,9 @@
         <option value={city}>{city}</option>
       {/each}
     </select>
-  </div>
 
-<style>
-  /* Custom styles for native select dropdowns */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.25rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    appearance: none;
-  }
-</style>
+    <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
+  </div>
   
   
   {#if isLoading && companies.length === 0}

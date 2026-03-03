@@ -9,7 +9,10 @@
   import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
   import { get } from 'svelte/store';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
+  import StatusChips from '$lib/components/StatusChips.svelte';
+  import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import type { AdvancedFilters } from '$lib/utils/filters';
   import { createFeeFilterConfig, createProjectLookup } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { extractId } from '$lib/utils';
@@ -31,9 +34,15 @@
   let searchQuery = $state('');
   let showAllRevisions = $state(false);
   let filters = $state({
-    status: '',
-    staff: ''
+    staff: '',
+    company: '',
+    project: ''
   });
+
+  // Advanced filter states
+  let statusSelected: Set<string> = $state(new Set());
+  let dateFrom = $state('');
+  let dateTo = $state('');
 
   // Bulk selection state
   let selectedIds: Set<string> = $state(new Set());
@@ -128,13 +137,19 @@
   // This enables searching by company code (e.g., "ptg") and project name
   const filterConfig = $derived((() => {
     const baseConfig = createFeeFilterConfig({ companyLookup, projectLookup });
-    // Add filter fields for dropdowns
     return {
       ...baseConfig,
       filterFields: {
         status: (proposal: Fee) => proposal.status,
-        staff: (proposal: Fee) => proposal.staff_name || ''
-      }
+        staff: (proposal: Fee) => proposal.staff_name || '',
+        company: (proposal: Fee) => companyLookup.getCompanyName(proposal.company_id),
+        project: (proposal: Fee) => {
+          const id = extractId(proposal.project_id);
+          return projectLookup.get(id)?.name || '';
+        }
+      },
+      dateFieldExtractor: (proposal: Fee) => proposal.issue_date || '',
+      dateFieldFormat: 'yymmdd' as const,
     };
   })());
 
@@ -154,8 +169,14 @@
   // Apply revision filter first, then search/status filters
   const revisionFilteredFees = $derived(showAllRevisions ? fees : filterToLatestRevisions(fees));
 
+  // Build advanced filters from state
+  const advanced: AdvancedFilters = $derived({
+    statusSet: statusSelected,
+    dateRange: { from: dateFrom, to: dateTo }
+  });
+
   // Reactive filtered proposals using optimized filter function
-  const filteredProposals = $derived(createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig));
+  const filteredProposals = $derived(createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig, advanced));
 
   // Count projects with multiple revisions
   const multiRevisionCount = $derived(() => {
@@ -171,9 +192,13 @@
     return count;
   });
 
-  // Get unique values for filters using optimized functions
-  const uniqueStatuses = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.status).filter(Boolean));
+  // Get unique values for dropdown filters
   const uniqueStaff = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.staff_name || '').filter(Boolean));
+  const uniqueCompanies = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => companyLookup.getCompanyName(proposal.company_id)).filter(name => name !== 'N/A'));
+  const uniqueProjects = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => {
+    const id = extractId(proposal.project_id);
+    return projectLookup.get(id)?.name || '';
+  }).filter(Boolean));
 
   // Count proposals per status for styling (bold for non-empty)
   // Uses single-pass O(n) instead of O(n*statuses)
@@ -230,6 +255,9 @@
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
+    statusSelected = new Set();
+    dateFrom = '';
+    dateTo = '';
   }
   
   // Load proposals on mount
@@ -246,7 +274,7 @@
   });
   
   // Check if any filters are active
-  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
+  const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
   
   // O(1) lookup functions using pre-computed Maps (replaces O(n) .find() calls)
   function getProjectName(projectRef: UnknownSurrealThing): string {
@@ -338,22 +366,31 @@
   
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
-    <!-- Status Filter -->
+    <!-- Company Filter -->
     <select
-      bind:value={filters.status}
-      class="status-filter emittiv-filter-select"
+      bind:value={filters.company}
+      class="emittiv-filter-select"
     >
-      <option value="">All Status</option>
-      {#each PROPOSAL_STATUSES as status}
-        <option value={status} class:has-items={statusCounts[status] > 0}>
-          {status}{statusCounts[status] > 0 ? ` (${statusCounts[status]})` : ''}
-        </option>
+      <option value="">All Companies</option>
+      {#each uniqueCompanies as company}
+        <option value={company}>{company}</option>
       {/each}
     </select>
-    
+
+    <!-- Project Filter -->
+    <select
+      bind:value={filters.project}
+      class="emittiv-filter-select"
+    >
+      <option value="">All Projects</option>
+      {#each uniqueProjects as project}
+        <option value={project}>{project}</option>
+      {/each}
+    </select>
+
     <!-- Staff Filter -->
-    <select 
-      bind:value={filters.staff} 
+    <select
+      bind:value={filters.staff}
       class="emittiv-filter-select"
     >
       <option value="">All Staff</option>
@@ -361,6 +398,8 @@
         <option value={staff}>{staff}</option>
       {/each}
     </select>
+
+    <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
 
     <!-- Revisions Toggle -->
     {#if multiRevisionCount() > 0}
@@ -377,26 +416,12 @@
     {/if}
   </div>
 
+  <!-- Status Chips -->
+  <div class="mb-4">
+    <StatusChips statuses={PROPOSAL_STATUSES} bind:selected={statusSelected} counts={statusCounts} />
+  </div>
+
 <style>
-  /* Custom styles for native select dropdowns */
-  select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.25rem center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    appearance: none;
-  }
-
-  /* Style options with items as bold (browser support varies) */
-  select option.has-items {
-    font-weight: 600;
-  }
-
-  select option:not(.has-items) {
-    font-weight: 400;
-    color: #999;
-  }
-
   .import-btn {
     display: flex;
     align-items: center;

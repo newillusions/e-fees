@@ -11,8 +11,12 @@ import {
   getUniqueFieldValues,
   hasActiveFilters,
   clearAllFilters,
+  clearAdvancedFilters,
   getFilterCounts,
-  type FilterConfig
+  extractYearMonth,
+  type FilterConfig,
+  type AdvancedFilters,
+  type DateRange
 } from './filters';
 
 // Test entity interface
@@ -467,5 +471,232 @@ describe('Integration: Contact Search by Company Code', () => {
     const ptdubaiFiltered = createFilterFunction(mockContacts, 'ptdubai', {}, realWorldConfig);
     expect(ptdubaiFiltered.length).toBe(1);
     expect(ptdubaiFiltered[0].company).toBe('company:PTDUBAI');
+  });
+});
+
+// =============================================================================
+// Advanced Filtering Tests
+// =============================================================================
+
+// Test entity with status and date fields
+interface TestProject {
+  id: string;
+  name: string;
+  status: string;
+  time?: {
+    updated_at?: string;
+    created_at?: string;
+  };
+}
+
+const mockProjects: TestProject[] = [
+  { id: 'p1', name: 'Museum', status: 'Lead', time: { updated_at: '2025-06-15T10:00:00Z' } },
+  { id: 'p2', name: 'Hotel', status: 'RFP', time: { updated_at: '2025-08-20T10:00:00Z' } },
+  { id: 'p3', name: 'Office Tower', status: 'Submitted', time: { updated_at: '2026-01-05T10:00:00Z' } },
+  { id: 'p4', name: 'Villa', status: 'Awarded', time: { updated_at: '2026-03-10T10:00:00Z' } },
+  { id: 'p5', name: 'Warehouse', status: 'Lost', time: { updated_at: '2025-11-22T10:00:00Z' } },
+];
+
+const projectFilterConfig: FilterConfig<TestProject> = {
+  searchFields: ['name'],
+  filterFields: {
+    status: (p) => p.status,
+  },
+  dateFieldExtractor: (p) => p.time?.updated_at || '',
+  dateFieldFormat: 'iso',
+};
+
+describe('Advanced Filtering: Multi-select Status', () => {
+  it('should pass all items when statusSet is empty', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set() };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(5);
+  });
+
+  it('should pass all items when statusSet is undefined', () => {
+    const advanced: AdvancedFilters = {};
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(5);
+  });
+
+  it('should filter to a single selected status', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(['Lead']) };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].name).toBe('Museum');
+  });
+
+  it('should filter to multiple selected statuses', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(['Lead', 'RFP', 'Submitted']) };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(3);
+    expect(filtered.map(p => p.status)).toEqual(expect.arrayContaining(['Lead', 'RFP', 'Submitted']));
+  });
+
+  it('should return empty when no items match selected status', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(['Design']) };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(0);
+  });
+
+  it('should combine with text search', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(['Lead', 'RFP']) };
+    const filtered = createFilterFunction(mockProjects, 'hotel', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].name).toBe('Hotel');
+  });
+});
+
+describe('Advanced Filtering: Date Range (ISO)', () => {
+  it('should pass all items when date range is empty', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '', to: '' } };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(5);
+  });
+
+  it('should filter with from only', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '2026-01', to: '' } };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(2);
+    expect(filtered.map(p => p.name)).toEqual(expect.arrayContaining(['Office Tower', 'Villa']));
+  });
+
+  it('should filter with to only', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '', to: '2025-08' } };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(2);
+    expect(filtered.map(p => p.name)).toEqual(expect.arrayContaining(['Museum', 'Hotel']));
+  });
+
+  it('should filter with both from and to', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '2025-08', to: '2026-01' } };
+    const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
+    expect(filtered.length).toBe(3);
+    expect(filtered.map(p => p.name)).toEqual(expect.arrayContaining(['Hotel', 'Warehouse', 'Office Tower']));
+  });
+
+  it('should exclude items with no date', () => {
+    const itemsWithNoDate: TestProject[] = [
+      ...mockProjects,
+      { id: 'p6', name: 'No Date', status: 'Lead' },
+    ];
+    const advanced: AdvancedFilters = { dateRange: { from: '2025-01', to: '' } };
+    const filtered = createFilterFunction(itemsWithNoDate, '', {}, projectFilterConfig, advanced);
+    expect(filtered.every(p => p.name !== 'No Date')).toBe(true);
+  });
+});
+
+// Test YYMMDD format (used by fee issue_date)
+interface TestFee {
+  id: string;
+  name: string;
+  status: string;
+  issue_date: string;
+}
+
+const mockFees: TestFee[] = [
+  { id: 'f1', name: 'Fee A', status: 'Draft', issue_date: '250601' },
+  { id: 'f2', name: 'Fee B', status: 'Sent', issue_date: '250820' },
+  { id: 'f3', name: 'Fee C', status: 'Accepted', issue_date: '260105' },
+  { id: 'f4', name: 'Fee D', status: 'Draft', issue_date: '260310' },
+];
+
+const feeFilterConfig: FilterConfig<TestFee> = {
+  searchFields: ['name'],
+  filterFields: {
+    status: (f) => f.status,
+  },
+  dateFieldExtractor: (f) => f.issue_date,
+  dateFieldFormat: 'yymmdd',
+};
+
+describe('Advanced Filtering: Date Range (YYMMDD)', () => {
+  it('should parse YYMMDD format correctly', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '2025-08', to: '2026-01' } };
+    const filtered = createFilterFunction(mockFees, '', {}, feeFilterConfig, advanced);
+    expect(filtered.length).toBe(2);
+    expect(filtered.map(f => f.name)).toEqual(expect.arrayContaining(['Fee B', 'Fee C']));
+  });
+
+  it('should combine multi-select status with date range', () => {
+    const advanced: AdvancedFilters = {
+      statusSet: new Set(['Draft']),
+      dateRange: { from: '2026-01', to: '' }
+    };
+    const filtered = createFilterFunction(mockFees, '', {}, feeFilterConfig, advanced);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].name).toBe('Fee D');
+  });
+});
+
+describe('extractYearMonth', () => {
+  it('should extract from ISO date', () => {
+    expect(extractYearMonth('2026-03-15T10:00:00Z', 'iso')).toBe('2026-03');
+  });
+
+  it('should extract from ISO date-only', () => {
+    expect(extractYearMonth('2026-03-15', 'iso')).toBe('2026-03');
+  });
+
+  it('should extract from YYMMDD', () => {
+    expect(extractYearMonth('260301', 'yymmdd')).toBe('2026-03');
+  });
+
+  it('should handle January YYMMDD', () => {
+    expect(extractYearMonth('250115', 'yymmdd')).toBe('2025-01');
+  });
+
+  it('should handle December YYMMDD', () => {
+    expect(extractYearMonth('251201', 'yymmdd')).toBe('2025-12');
+  });
+
+  it('should return empty for empty input', () => {
+    expect(extractYearMonth('', 'iso')).toBe('');
+    expect(extractYearMonth('', 'yymmdd')).toBe('');
+  });
+
+  it('should return empty for too-short YYMMDD', () => {
+    expect(extractYearMonth('2603', 'yymmdd')).toBe('');
+  });
+
+  it('should return empty for invalid month in YYMMDD', () => {
+    expect(extractYearMonth('261301', 'yymmdd')).toBe('');
+    expect(extractYearMonth('260001', 'yymmdd')).toBe('');
+  });
+});
+
+describe('hasActiveFilters with advanced', () => {
+  it('should return true when statusSet has items', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(['Draft']) };
+    expect(hasActiveFilters({}, '', advanced)).toBe(true);
+  });
+
+  it('should return false when statusSet is empty', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set() };
+    expect(hasActiveFilters({}, '', advanced)).toBe(false);
+  });
+
+  it('should return true when dateRange from is set', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '2025-06', to: '' } };
+    expect(hasActiveFilters({}, '', advanced)).toBe(true);
+  });
+
+  it('should return true when dateRange to is set', () => {
+    const advanced: AdvancedFilters = { dateRange: { from: '', to: '2026-01' } };
+    expect(hasActiveFilters({}, '', advanced)).toBe(true);
+  });
+
+  it('should return false when advanced is all empty', () => {
+    const advanced: AdvancedFilters = { statusSet: new Set(), dateRange: { from: '', to: '' } };
+    expect(hasActiveFilters({}, '', advanced)).toBe(false);
+  });
+});
+
+describe('clearAdvancedFilters', () => {
+  it('should return empty statusSet and dateRange', () => {
+    const cleared = clearAdvancedFilters();
+    expect(cleared.statusSet?.size).toBe(0);
+    expect(cleared.dateRange?.from).toBe('');
+    expect(cleared.dateRange?.to).toBe('');
   });
 });
