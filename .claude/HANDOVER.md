@@ -1,78 +1,67 @@
 # E-Fees Project Handover
 
 ## Current Status
-Fee Proposal Management desktop app (Tauri v2 + Svelte 5) with SurrealDB v3 backend. Standalone API with full CRUD, pagination, and OpenAPI docs deployed.
+v0.13.4 + 4 unreleased commits. Advanced filtering, test fixes, API enhancements deployed.
 
-- **Version**: 0.13.2 (released)
-- **Branch**: main (clean)
-- **Database**: SurrealDB v3 @ ws://10.0.23.11:8000 (emittiv/projects)
-- **Tests**: 87 Rust tests + 47 API integration tests passing
-- **API**: e-fees-api v0.2.7 deployed at 10.0.21.80:3200 (Docker, br0 network)
+- **Version**: 0.13.4 (released 2026-03-02) + 4 unreleased commits
+- **Branch**: main
+- **Database**: SurrealDB @ ws://10.0.21.8:8000 (emittiv/projects)
+- **Tests**: 633/633 passing (frontend), 62/62 passing (API integration)
+- **API**: e-fees-api v0.3.1 deployed at 10.0.21.80:3200 (Docker, br0 network)
 
 ## Last Session
-**Date**: 2026-03-02
-**Summary**: Hardened desktop app fee create/update with parameterized `type::record()` bindings. Implemented full bulk operations feature (multi-select, batch delete, batch status change) across all 4 entity pages. Confirmed detail views, DB mutex, and N+1 queries were already resolved.
+**Date**: 2026-03-04
+**Summary**: Committed API enhancements (status filtering, auto-numbering, multi-key auth), fixed all 44 modal test failures, redeployed API to Docker, visually verified advanced filtering across all 4 pages.
 
 ### Accomplished
-- Hardened `client.rs` fee create/update: replaced string interpolation with `type::record('table', $param)` parameterized bindings
-- Added `query_bind_map()` helper for multiple named bindings on SurrealDB queries
-- Implemented batch operations backend: `batch_delete()`, `batch_update_status()`, `validate_table_name()` in `DatabaseClient`
-- Forwarded batch ops through `DatabaseManager` (`operations.rs`)
-- Created Tauri commands: `batch_delete_entities`, `batch_update_status` (`commands/batch_ops.rs`)
-- Built `BulkActionBar.svelte`: selection count, status change dropdown, delete with confirmation, clear
-- Updated `BaseListCard.svelte` with `selectable`/`selected` props and checkbox
-- Updated all 4 card components (ProjectCard, ProposalCard, CompanyCard, ContactCard) with selection passthrough
-- Added select mode toggle + bulk action bar to all 4 list pages (Projects, Proposals, Companies, Contacts)
-- Created `src/lib/api/batch.ts` API module with table name mapping
-- Projects and Proposals get status change + delete; Companies and Contacts get delete only
-- Added CSS: `.emittiv-bulk-bar`, `.emittiv-checkbox`, `.emittiv-card--selected`
-- Confirmed: detail views (already built), DB mutex (already RwLock), N+1 queries (already O(1) Maps) — no work needed
-- Cleaned up HANDOVER.md, CLAUDE.md, MEMORY.md to remove stale items
+- `feat(api)`: Status filtering on projects/companies/contacts, auto-numbering endpoint (`/projects/next-number`), multi-API-key auth
+- `fix(tests)`: Resolved 44 modal test failures — CrudModal synchronous formData init + Svelte 5 `untrack()` in `$effect`, updated test selectors for current CSS classes
+- `fix(api)`: Fuzzy country lookup (strips dots: "UAE" matches "U.A.E.")
+- API redeployed v0.3.1 — all 62 integration tests passing on deployed container
+- Visual verification: advanced filtering confirmed working on Projects, Companies, Contacts, Proposals pages
+- Commits: `3b397da`, `22f95bf`, `2b03be3`
+
+### Key Fix: CrudModal Svelte 5 Binding
+Root cause: `formData` started as `$state({})`, `$effect` filled it after first render. Tests mounting with `isOpen=true` triggered `bind:value={undefined}` errors.
+Fix: (1) Initialize `formData` synchronously with `$state(initializeFormData())`, (2) Wrap `resetForm()`/`loadEntityData()` in `untrack()` to prevent reactive loop from `fields` prop dependency.
 
 ## Key Context
 | Resource | Value |
 |----------|-------|
-| Production DB | ws://10.0.23.11:8000 (ns: emittiv, db: projects) |
+| Production DB | ws://10.0.21.8:8000 (ns: emittiv, db: projects) |
 | Dev DB | ws://surreal-dev.internal:8000 (10.0.23.12) |
-| API Container | 10.0.21.80:3200 (br0, e-fees-api:v0.2.7) |
+| API Container | 10.0.21.80:3200 (br0, e-fees-api:v0.3.1) |
 | API .env | /mnt/user/appdata/e-fees-api/.env (on AI server) |
-| API Key | efees-api-2026-k8x9m4pq |
+| API source on server | /mnt/user/appdata/e-fees-api/source/ |
 | Installed app config | ~/Library/Application Support/com.emittiv.e-fees/.env |
 | Forgejo repo | forge.mms.name/emittiv/fee-prop |
+| Wiki page | slug: "e-fees" (fully updated 2026-03-02) |
 
 ## Architecture
-- **Desktop app** (Tauri): Full CRUD, filesystem ops, Nextcloud sync
+- **Desktop app** (Tauri): Full CRUD, filesystem ops, multi-currency display
 - **Shared core** (`crates/e-fees-core/`): Domain types shared between desktop & API
-- **Standalone API** (`e-fees-api/`): Full CRUD HTTP endpoints with API key auth, pagination, OpenAPI/Swagger docs
+- **Standalone API** (`e-fees-api/`): Full CRUD HTTP endpoints with multi-key auth, pagination, status filtering, auto-numbering, OpenAPI/Swagger docs
 - API deployed as Docker container on Unraid AI server (br0 network, ipvlan L2)
 
-## API Endpoints (all verified working, 47/47 tests passing)
-- `GET /health` — Public, returns service + DB status
-- `GET /stats` — Entity counts
-- `GET /projects`, `POST /projects`, `GET/PUT/DELETE /projects/{id}`
-- `GET /fees`, `POST /fees`, `GET/PUT/DELETE /fees/{id}`
-- `GET /companies`, `POST /companies`, `GET/PUT/DELETE /companies/{id}`
-- `GET /contacts`, `POST /contacts`, `GET/PUT/DELETE /contacts/{id}`
-- `GET /docs` — Swagger UI (OpenAPI)
-- All data endpoints require `X-API-Key` header
-- List endpoints support `?page=1&page_size=50` pagination
-
 ## Next Steps
-1. Multi-currency quoting completion (partially implemented, exchange rate service done)
-2. InDesign export functionality
+1. InDesign export functionality
+2. Test multi-currency with real data (set client_currency + exchange_rate on a fee)
+3. Consider a release to bundle recent work (filtering, test fixes, bulk ops)
 
 ## Critical Rules
-1. **Screenshots**: Peekaboo MCP with `app_target: "app"` — NEVER browser tools for Tauri
-2. **Dev command**: `npm run tauri:dev` (not `npm run dev`)
-3. **CSS**: Semantic `.emittiv-*` classes, NOT utility strings > 50 chars
-4. **Fixed px values**: Desktop app with OS-level scaling, never use rem
-5. **Process safety**: NEVER pkill without permission
-6. **Git**: Push to Forgejo (origin) for daily work. GitHub only for tagged releases.
-7. **Releases**: ALWAYS background haiku agent. Never interactive polling.
-8. **Test DB**: Must match the installed app's DB (10.0.23.11).
-9. **Production safety**: API integration tests MUST refuse to run against 10.0.23.11.
-10. **SurrealDB v3 NULL**: Never bind `json!(None)` — omit optional fields from SET clause entirely.
-11. **Fee issue_date**: YYYYMM format (6-digit numeric string per DB ASSERT), not ISO date.
+1. **SUPERPOWERS SKILLS MANDATORY**: Invoke relevant skill BEFORE any work. No exceptions.
+2. **TDD NON-NEGOTIABLE**: Write failing tests FIRST, then implement. Always.
+3. **Screenshots**: Peekaboo MCP with `app_target: "app"` — NEVER browser tools for Tauri
+4. **Dev command**: `npm run tauri:dev` (not `npm run dev`)
+5. **CSS**: Semantic `.emittiv-*` classes, NOT utility strings > 50 chars
+6. **Fixed px values**: Desktop app with OS-level scaling, never use rem
+7. **Process safety**: NEVER pkill without permission
+8. **Git**: Push to Forgejo (origin) for daily work. GitHub only for tagged releases.
+9. **Releases**: ALWAYS background haiku agent. Never interactive polling.
+10. **Test DB**: Must match the installed app's DB.
+11. **SurrealDB v3 NULL**: Never bind `json!(None)` — omit optional fields from SET clause entirely.
+12. **Fee issue_date**: YYYYMM format (6-digit numeric string per DB ASSERT), not ISO date.
+13. **API redeploy**: Pull on AI server (`/mnt/user/appdata/e-fees-api/source/`), docker build, stop/rm/run with same env.
 
 ---
-*Updated: 2026-03-02*
+*Updated: 2026-03-04*
