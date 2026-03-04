@@ -206,8 +206,16 @@ async fn lookup_dial_code(db: &Surreal<Client>, country_name: &str) -> Result<u1
         return Err(ApiError::bad_request("Invalid country name"));
     }
 
+    // Try exact match first, then fuzzy match stripping dots/periods
+    // (handles "UAE" matching "U.A.E.", "KSA" matching "K.S.A.")
     let mut response = db
-        .query("SELECT dial_code FROM country WHERE name = $name LIMIT 1")
+        .query(
+            "SELECT dial_code FROM country \
+             WHERE name = $name \
+             OR string::lowercase(string::replace(name, '.', '')) \
+                = string::lowercase(string::replace($name, '.', '')) \
+             LIMIT 1",
+        )
         .bind(("name", country_name.to_string()))
         .await?;
     let results: Vec<serde_json::Value> = response.take(0)?;
