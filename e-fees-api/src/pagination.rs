@@ -35,6 +35,14 @@ impl PaginationParams {
     }
 }
 
+/// Optional WHERE clause with parameterized bindings for filtered queries.
+pub struct FilterClause {
+    /// SurrealQL WHERE clause fragment, e.g. "status = $filter_status"
+    pub clause: String,
+    /// Parameterized bind values (name, value) pairs.
+    pub binds: Vec<(String, serde_json::Value)>,
+}
+
 /// Execute a paginated query against a SurrealDB table.
 ///
 /// Runs two statements in a single query:
@@ -50,16 +58,46 @@ pub async fn db_paginate<T>(
 where
     T: serde::de::DeserializeOwned + surrealdb::types::SurrealValue,
 {
-    let page = params.page();
-    let page_size = params.page_size();
+    db_paginate_filtered(db, table, params.page(), params.page_size(), None).await
+}
+
+/// Execute a paginated + optionally filtered query against a SurrealDB table.
+///
+/// When `filter` is provided, injects a WHERE clause into both the count and data queries.
+/// All user values go through `$param` bindings (never string interpolation).
+pub async fn db_paginate_filtered<T>(
+    db: &Surreal<Client>,
+    table: &str,
+    page: u64,
+    page_size: u64,
+    filter: Option<FilterClause>,
+) -> Result<(Vec<T>, u64), ApiError>
+where
+    T: serde::de::DeserializeOwned + surrealdb::types::SurrealValue,
+{
+    let page = page.max(1);
+    let page_size = page_size.clamp(1, MAX_PAGE_SIZE);
     let offset = (page - 1) * page_size;
 
+    let where_clause = filter
+        .as_ref()
+        .map(|f| format!(" WHERE {}", f.clause))
+        .unwrap_or_default();
+
     let query = format!(
-        "SELECT count() FROM {} GROUP ALL; SELECT * FROM {} ORDER BY time.created_at DESC LIMIT {} START {}",
-        table, table, page_size, offset
+        "SELECT count() FROM {table}{where_clause} GROUP ALL; \
+         SELECT * FROM {table}{where_clause} ORDER BY time.created_at DESC LIMIT {page_size} START {offset}",
     );
 
-    let mut response = db.query(&query).await?;
+    let mut builder = db.query(&query);
+
+    if let Some(ref f) = filter {
+        for (name, value) in &f.binds {
+            builder = builder.bind((name.clone(), value.clone()));
+        }
+    }
+
+    let mut response = builder.await?;
 
     // Statement 0: count
     let count_result: Option<serde_json::Value> = response.take(0)?;
@@ -73,10 +111,10 @@ where
     Ok((items, total))
 }
 
-/// Build a paginated JSON response envelope.
-pub fn paginated_json(data: Vec<Value>, total: u64, params: &Query<PaginationParams>) -> Value {
-    let page = params.page();
-    let page_size = params.page_size();
+/// Build a paginated JSON response envelope from raw page/page_size values.
+pub fn paginated_json_raw(data: Vec<Value>, total: u64, page: u64, page_size: u64) -> Value {
+    let page = page.max(1);
+    let page_size = page_size.clamp(1, MAX_PAGE_SIZE);
     let total_pages = if total == 0 {
         0
     } else {
@@ -90,4 +128,9 @@ pub fn paginated_json(data: Vec<Value>, total: u64, params: &Query<PaginationPar
         "page_size": page_size,
         "total_pages": total_pages
     })
+}
+
+/// Build a paginated JSON response envelope.
+pub fn paginated_json(data: Vec<Value>, total: u64, params: &Query<PaginationParams>) -> Value {
+    paginated_json_raw(data, total, params.page(), params.page_size())
 }

@@ -3,22 +3,34 @@
 use std::sync::Arc;
 
 use axum::{extract::Path, extract::Query, extract::State, Json};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use e_fees_core::models::{record_id_string, Contact, ContactCreate};
 
 use crate::error::ApiError;
-use crate::pagination::{db_paginate, paginated_json, PaginationParams};
+use crate::pagination::{db_paginate_filtered, paginated_json_raw, FilterClause};
 use crate::schemas;
 use crate::validation::{require_non_empty, validate_id};
 use crate::AppState;
 
-/// List contacts with pagination.
+/// Combined query parameters for contact listing (pagination + filters).
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct ContactListParams {
+    /// Page number (1-indexed, default: 1).
+    pub page: Option<u64>,
+    /// Items per page (default: 50, max: 100).
+    pub page_size: Option<u64>,
+    /// Filter by company record key (e.g. "acme_corp"). Strips "company:" prefix if present.
+    pub company: Option<String>,
+}
+
+/// List contacts with pagination and optional company filter.
 #[utoipa::path(
     get,
     path = "/contacts",
     tag = "Contacts",
-    params(PaginationParams),
+    params(ContactListParams),
     responses(
         (status = 200, description = "Paginated list of contacts", body = schemas::PaginatedResponse<schemas::ContactResponse>),
         (status = 401, description = "Missing or invalid API key"),
@@ -27,14 +39,27 @@ use crate::AppState;
 )]
 pub async fn list_contacts(
     State(state): State<Arc<AppState>>,
-    params: Query<PaginationParams>,
+    params: Query<ContactListParams>,
 ) -> Result<Json<Value>, ApiError> {
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(50);
+
+    let filter = if let Some(ref company) = params.company {
+        let key = company.strip_prefix("company:").unwrap_or(company);
+        Some(FilterClause {
+            clause: "company = type::record('company', $filter_company)".into(),
+            binds: vec![("filter_company".into(), json!(key))],
+        })
+    } else {
+        None
+    };
+
     let (contacts, total): (Vec<Contact>, u64) =
-        db_paginate(&state.db, "contacts", &params).await?;
+        db_paginate_filtered(&state.db, "contacts", page, page_size, filter).await?;
 
     let data: Vec<Value> = contacts.iter().map(contact_to_json).collect();
 
-    Ok(Json(paginated_json(data, total, &params)))
+    Ok(Json(paginated_json_raw(data, total, page, page_size)))
 }
 
 /// Get a single contact by ID.

@@ -6,6 +6,7 @@ mod routes;
 mod schemas;
 mod validation;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::{extract::State, middleware, response::Json, routing::get, Router};
@@ -23,7 +24,7 @@ use config::Config;
 /// Shared application state available to all route handlers.
 pub struct AppState {
     pub db: Surreal<surrealdb::engine::remote::ws::Client>,
-    pub api_key: String,
+    pub api_keys: HashSet<String>,
 }
 
 /// OpenAPI documentation for the e-fees API.
@@ -39,6 +40,7 @@ pub struct AppState {
         health,
         routes::stats::get_stats,
         routes::projects::list_projects,
+        routes::projects::get_next_number,
         routes::projects::get_project,
         routes::projects::create_project,
         routes::projects::update_project,
@@ -136,10 +138,10 @@ async fn main() {
         config.surreal_url, config.surreal_ns, config.surreal_db
     );
 
-    // Build shared state (API key validated at startup via Config::from_env)
+    // Build shared state (API keys validated at startup via Config::from_env)
     let state = Arc::new(AppState {
         db,
-        api_key: config.api_key,
+        api_keys: config.api_keys.into_iter().collect(),
     });
 
     // Configure CORS
@@ -154,6 +156,10 @@ async fn main() {
         .route(
             "/projects",
             get(routes::projects::list_projects).post(routes::projects::create_project),
+        )
+        .route(
+            "/projects/next-number",
+            get(routes::projects::get_next_number),
         )
         .route(
             "/projects/{id}",

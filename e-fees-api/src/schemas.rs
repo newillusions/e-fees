@@ -131,3 +131,12 @@ pub struct ContactResponse {
     pub position: Option<String>,
     pub company_id: Option<String>,
 }
+
+/// Next available project number preview.
+#[derive(Serialize, ToSchema)]
+pub struct NextNumberResponse {
+    pub number: String,
+    pub year: u8,
+    pub country_code: u16,
+    pub seq: u8,
+}

@@ -3,22 +3,34 @@
 use std::sync::Arc;
 
 use axum::{extract::Path, extract::Query, extract::State, Json};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use e_fees_core::models::{record_id_string, Company, CompanyCreate};
 
 use crate::error::ApiError;
-use crate::pagination::{db_paginate, paginated_json, PaginationParams};
+use crate::pagination::{db_paginate_filtered, paginated_json_raw, FilterClause};
 use crate::schemas;
 use crate::validation::{require_non_empty, validate_id};
 use crate::AppState;
 
-/// List companies with pagination.
+/// Combined query parameters for company listing (pagination + filters).
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct CompanyListParams {
+    /// Page number (1-indexed, default: 1).
+    pub page: Option<u64>,
+    /// Items per page (default: 50, max: 100).
+    pub page_size: Option<u64>,
+    /// Filter by company name (case-insensitive substring match).
+    pub name: Option<String>,
+}
+
+/// List companies with pagination and optional name filter.
 #[utoipa::path(
     get,
     path = "/companies",
     tag = "Companies",
-    params(PaginationParams),
+    params(CompanyListParams),
     responses(
         (status = 200, description = "Paginated list of companies", body = schemas::PaginatedResponse<schemas::CompanyResponse>),
         (status = 401, description = "Missing or invalid API key"),
@@ -27,14 +39,26 @@ use crate::AppState;
 )]
 pub async fn list_companies(
     State(state): State<Arc<AppState>>,
-    params: Query<PaginationParams>,
+    params: Query<CompanyListParams>,
 ) -> Result<Json<Value>, ApiError> {
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(50);
+
+    let filter = if let Some(ref name) = params.name {
+        Some(FilterClause {
+            clause: "string::lowercase(name) CONTAINS string::lowercase($filter_name)".into(),
+            binds: vec![("filter_name".into(), json!(name))],
+        })
+    } else {
+        None
+    };
+
     let (companies, total): (Vec<Company>, u64) =
-        db_paginate(&state.db, "company", &params).await?;
+        db_paginate_filtered(&state.db, "company", page, page_size, filter).await?;
 
     let data: Vec<Value> = companies.iter().map(company_to_json).collect();
 
-    Ok(Json(paginated_json(data, total, &params)))
+    Ok(Json(paginated_json_raw(data, total, page, page_size)))
 }
 
 /// Get a single company by ID.

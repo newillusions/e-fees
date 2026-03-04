@@ -9,10 +9,10 @@ use axum::{
 
 use crate::AppState;
 
-/// Middleware that validates the `X-API-Key` header against the configured API key.
+/// Middleware that validates the `X-API-Key` header against configured API keys.
 ///
-/// Reads the API key from shared application state (validated at startup).
-/// All endpoints require a valid API key.
+/// Checks the header value against a set of valid keys (supports multiple keys
+/// for multi-service access). All endpoints require a valid API key.
 ///
 /// # Returns
 /// - `Ok(Response)` if the API key is valid
@@ -22,9 +22,8 @@ pub async fn require_api_key(
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // Validate X-API-Key header against startup-validated key
     match request.headers().get("X-API-Key") {
-        Some(key) if key.to_str().unwrap_or("") == state.api_key => {
+        Some(key) if state.api_keys.contains(key.to_str().unwrap_or("")) => {
             Ok(next.run(request).await)
         }
         _ => Err(StatusCode::UNAUTHORIZED),

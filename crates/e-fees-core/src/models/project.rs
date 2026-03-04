@@ -43,3 +43,21 @@ pub struct NewProject {
     pub folder: String,
     pub number: ProjectNumber,
 }
+
+/// API-specific project creation struct that supports optional auto-numbering.
+/// When `number` is omitted, the API auto-assigns the next available number
+/// based on the `country` field and the current year.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+pub struct NewProjectApi {
+    pub name: String,
+    pub name_short: String,
+    pub status: String,
+    pub area: String,
+    pub city: String,
+    /// Country name (e.g. "UAE", "Saudi Arabia"). Used for number auto-assignment.
+    pub country: String,
+    pub folder: String,
+    /// Project number. If omitted, auto-assigned from country dial code + next sequence.
+    pub number: Option<ProjectNumber>,
+}

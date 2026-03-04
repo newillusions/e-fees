@@ -144,7 +144,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.13.3"
+version = "0.13.4"
 dependencies = [
  "argon2",
  "async-stream",
@@ -1667,6 +1667,7 @@ name = "e-fees-api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
  "dotenvy",
  "e-fees-core",
  "reqwest 0.12.28",

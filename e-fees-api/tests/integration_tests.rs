@@ -1380,3 +1380,436 @@ async fn test_contact_response_fields() {
         assert!(first["last_name"].is_string(), "contact missing 'last_name'");
     }
 }
+
+// ===========================================================================
+// Phase 1: Multiple API Keys
+// ===========================================================================
+
+#[tokio::test]
+async fn test_auth_invalid_key_rejected() {
+    verify_not_production();
+
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("X-API-Key", "definitely-not-a-valid-key".parse().unwrap());
+    let client = Client::builder().default_headers(headers).build().unwrap();
+
+    let resp = client
+        .get(format!("{}/projects", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn test_auth_empty_key_rejected() {
+    verify_not_production();
+
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("X-API-Key", "".parse().unwrap());
+    let client = Client::builder().default_headers(headers).build().unwrap();
+
+    let resp = client
+        .get(format!("{}/projects", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn test_auth_valid_key_accepted() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects?page_size=1", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 200);
+}
+
+// ===========================================================================
+// Phase 2: Filter Parameters
+// ===========================================================================
+
+#[tokio::test]
+async fn test_projects_filter_by_status() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects?status=Lead", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+
+    // All returned projects must have status "Lead"
+    if let Some(arr) = body["data"].as_array() {
+        for project in arr {
+            assert_eq!(project["status"], "Lead", "filter returned wrong status");
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_projects_filter_invalid_status_400() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects?status=Bogus", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 400);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["message"].as_str().unwrap().contains("Invalid"));
+}
+
+#[tokio::test]
+async fn test_projects_no_filter_unchanged() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["data"].is_array());
+    assert!(body["total"].is_u64());
+    assert!(body["page"].is_u64());
+}
+
+#[tokio::test]
+async fn test_companies_filter_by_name() {
+    verify_not_production();
+
+    let client = authed_client();
+
+    // Create a company to search for
+    let create_body = serde_json::json!({
+        "name": "DELETE ME - Filter Test Co",
+        "name_short": "DELETE ME - FTC",
+        "abbreviation": "DMFTC",
+        "city": "Dubai",
+        "country": "UAE",
+        "reg_no": null,
+        "tax_no": null
+    });
+
+    let resp = client
+        .post(format!("{}/companies", base_url()))
+        .json(&create_body)
+        .send()
+        .await
+        .expect("Failed to create company");
+    assert_eq!(resp.status(), 200);
+    let created: serde_json::Value = resp.json().await.unwrap();
+    let company_id = created["data"]["id"].as_str().unwrap().to_string();
+    let key = company_id.strip_prefix("company:").unwrap();
+
+    // Search with case-insensitive substring
+    let resp = client
+        .get(format!("{}/companies?name=filter+test", base_url()))
+        .send()
+        .await
+        .expect("Failed to filter companies");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let matches = body["data"].as_array().unwrap();
+    assert!(
+        matches.iter().any(|c| c["name"].as_str().unwrap().contains("Filter Test")),
+        "filter should find the created company"
+    );
+
+    // Cleanup
+    client
+        .delete(format!("{}/companies/{}", base_url(), key))
+        .send()
+        .await
+        .expect("Failed to cleanup");
+}
+
+#[tokio::test]
+async fn test_contacts_filter_by_company() {
+    verify_not_production();
+
+    let client = authed_client();
+
+    // Create a company, then a contact linked to it
+    let company_body = serde_json::json!({
+        "name": "DELETE ME - Contact Filter Co",
+        "name_short": "DELETE ME - CFC",
+        "abbreviation": "DMCFC",
+        "city": "Dubai",
+        "country": "UAE",
+        "reg_no": null,
+        "tax_no": null
+    });
+
+    let resp = client
+        .post(format!("{}/companies", base_url()))
+        .json(&company_body)
+        .send()
+        .await
+        .expect("Failed to create company");
+    assert_eq!(resp.status(), 200);
+    let company_created: serde_json::Value = resp.json().await.unwrap();
+    let company_full_id = company_created["data"]["id"].as_str().unwrap().to_string();
+    let company_key = company_full_id.strip_prefix("company:").unwrap().to_string();
+
+    // Create contact linked to that company
+    let contact_body = serde_json::json!({
+        "first_name": "DELETE ME",
+        "last_name": "Contact Filter Test",
+        "email": "delete-me-filter@example.com",
+        "phone": "+971500000001",
+        "position": "Test",
+        "company": &company_key
+    });
+
+    let resp = client
+        .post(format!("{}/contacts", base_url()))
+        .json(&contact_body)
+        .send()
+        .await
+        .expect("Failed to create contact");
+    assert_eq!(resp.status(), 200);
+    let contact_created: serde_json::Value = resp.json().await.unwrap();
+    let contact_full_id = contact_created["data"]["id"].as_str().unwrap().to_string();
+    let contact_key = contact_full_id.strip_prefix("contacts:").unwrap_or(&contact_full_id).to_string();
+
+    // Filter contacts by company key
+    let resp = client
+        .get(format!("{}/contacts?company={}", base_url(), company_key))
+        .send()
+        .await
+        .expect("Failed to filter contacts");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let matches = body["data"].as_array().unwrap();
+    assert!(
+        matches.iter().any(|c| c["company_id"].as_str().unwrap_or("").contains(&company_key)),
+        "filter should return contacts for that company"
+    );
+
+    // Cleanup
+    client.delete(format!("{}/contacts/{}", base_url(), contact_key)).send().await.ok();
+    client.delete(format!("{}/companies/{}", base_url(), company_key)).send().await.ok();
+}
+
+#[tokio::test]
+async fn test_filter_with_pagination() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects?status=Lead&page=1&page_size=5", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["data"].is_array());
+    assert_eq!(body["page"], 1);
+    assert_eq!(body["page_size"], 5);
+}
+
+#[tokio::test]
+async fn test_empty_filter_result() {
+    verify_not_production();
+
+    let client = authed_client();
+    // "Superseded" is a valid status but likely has 0 results
+    let resp = client
+        .get(format!("{}/projects?status=Superseded&page=999", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(body["data"].as_array().unwrap().len(), 0);
+}
+
+// ===========================================================================
+// Phase 3: Project Number Auto-Assignment
+// ===========================================================================
+
+#[tokio::test]
+async fn test_next_number_uae() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/next-number?country=UAE", base_url()))
+        .send()
+        .await
+        .expect("Failed to get next number");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+
+    let number = body["number"].as_str().unwrap();
+    // Format: YY-CCCNN  e.g. "26-97105"
+    assert!(number.len() >= 7, "number too short: {}", number);
+    assert!(number.contains("-"), "number missing dash: {}", number);
+    assert!(number.contains("971"), "UAE number must contain 971: {}", number);
+
+    assert!(body["year"].is_u64());
+    assert_eq!(body["country_code"], 971);
+    assert!(body["seq"].is_u64());
+}
+
+#[tokio::test]
+async fn test_next_number_invalid_country_400() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/next-number?country=Narnia", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 400);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["message"].as_str().unwrap().contains("not found"));
+}
+
+#[tokio::test]
+async fn test_create_project_auto_number() {
+    verify_not_production();
+
+    let client = authed_client();
+
+    // Create project WITHOUT number — should be auto-assigned
+    let create_body = serde_json::json!({
+        "name": "DELETE ME - Auto Number Test",
+        "name_short": "DELETE ME - ANT",
+        "status": "Lead",
+        "area": "0",
+        "city": "Dubai",
+        "country": "UAE",
+        "folder": ""
+    });
+
+    // First, get next-number to know what ID will be created
+    let next_resp = client
+        .get(format!("{}/projects/next-number?country=UAE", base_url()))
+        .send()
+        .await
+        .expect("Failed to get next number");
+    let next_body: serde_json::Value = next_resp.json().await.unwrap();
+    let expected_number = next_body["number"].as_str().unwrap().to_string();
+    let expected_key = expected_number.replace('-', "_");
+
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&create_body)
+        .send()
+        .await
+        .expect("Failed to create project");
+
+    assert_eq!(resp.status(), 200, "auto-number create failed: {:?}", resp.text().await);
+
+    // Verify the project was created with the expected auto-number
+    let resp = client
+        .get(format!("{}/projects/{}", base_url(), expected_key))
+        .send()
+        .await
+        .expect("Failed to get created project");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let number = body["data"]["number"].as_str().unwrap();
+    assert!(number.contains("971"), "auto-number should use UAE dial code 971");
+    assert!(number.contains("-"), "auto-number should have YY-CCCNN format");
+    assert_eq!(number, expected_number);
+
+    // Cleanup
+    client.delete(format!("{}/projects/{}", base_url(), expected_key)).send().await.ok();
+}
+
+#[tokio::test]
+async fn test_create_project_explicit_number_backward_compat() {
+    verify_not_production();
+
+    let client = authed_client();
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    let seq = (ts % 900 + 100) as i64;
+    let project_id_str = format!("26-971{}", seq);
+    let expected_key = project_id_str.replace('-', "_");
+
+    let create_body = serde_json::json!({
+        "name": "DELETE ME - Explicit Number Test",
+        "name_short": "DELETE ME - ENT",
+        "status": "Lead",
+        "area": "0",
+        "city": "Dubai",
+        "country": "UAE",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": seq, "id": project_id_str }
+    });
+
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&create_body)
+        .send()
+        .await
+        .expect("Failed to create project");
+
+    assert_eq!(resp.status(), 200, "explicit number create failed: {:?}", resp.text().await);
+
+    // Verify the project exists at the expected key
+    let resp = client
+        .get(format!("{}/projects/{}", base_url(), expected_key))
+        .send()
+        .await
+        .expect("Failed to get project");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(body["data"]["number"], project_id_str);
+
+    // Cleanup
+    client.delete(format!("{}/projects/{}", base_url(), expected_key)).send().await.ok();
+}
+
+#[tokio::test]
+async fn test_next_number_with_explicit_year() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/next-number?country=UAE&year=25", base_url()))
+        .send()
+        .await
+        .expect("Failed to get next number");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(body["year"], 25);
+    let number = body["number"].as_str().unwrap();
+    assert!(number.starts_with("25-"), "number should start with year 25: {}", number);
+}
