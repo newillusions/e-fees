@@ -5,7 +5,7 @@
   Supports any entity type with configurable fields and validation.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, untrack } from 'svelte';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { validateForm, hasValidationErrors, type ValidationRule } from '$lib/utils/validation';
   import BaseModal from '../BaseModal.svelte';
@@ -41,12 +41,9 @@
   // Operation state management
   const { store: operationState, actions: operationActions } = useOperationState();
 
-  // Form state - internal form data for editing
-  let formData: FormDataType = $state({});
-  let formErrors: Partial<Record<string, string>> = $state({});
-  let showDeleteConfirm = $state(false);
-
-  // Initialize form data structure based on field configurations
+  // Initialize form data structure based on field configurations.
+  // Defined before formData so it can be used for synchronous initialization,
+  // preventing bind:value={undefined} errors when isOpen starts as true.
   function initializeFormData(): FormDataType {
     const initialData: FormDataType = {};
 
@@ -63,6 +60,12 @@
     fields.forEach(field => processField(field, initialData));
     return initialData;
   }
+
+  // Form state - initialized synchronously from fields to avoid Svelte 5
+  // bind:value={undefined} errors when component mounts with isOpen=true
+  let formData: FormDataType = $state(initializeFormData());
+  let formErrors: Partial<Record<string, string>> = $state({});
+  let showDeleteConfirm = $state(false);
 
   // Reset form to initial state
   function resetForm() {
@@ -140,16 +143,17 @@
     dispatch('close');
   }
 
-  // Reactive statements
+  // Reactive statements — untrack inner calls to avoid tracking `fields` prop
+  // (fields is read inside resetForm/loadEntityData via initializeFormData)
   $effect(() => {
     if (isOpen) {
       if (mode === 'edit' && entity) {
-        loadEntityData();
+        untrack(() => loadEntityData());
       } else {
-        resetForm();
+        untrack(() => resetForm());
       }
     } else {
-      resetForm();
+      untrack(() => resetForm());
     }
   });
 </script>

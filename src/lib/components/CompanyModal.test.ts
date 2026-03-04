@@ -313,8 +313,8 @@ describe('CompanyModal Component', () => {
       const createButton = screen.getByRole('button', { name: 'Create' });
       expect(createButton).toBeDisabled();
 
-      // Loading spinner should be present (div with animate-spin)
-      const spinner = createButton.querySelector('.animate-spin');
+      // Loading spinner should be present
+      const spinner = createButton.querySelector('.emittiv-spinner-sm');
       expect(spinner).toBeInTheDocument();
     });
   });

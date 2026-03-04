@@ -72,15 +72,15 @@ describe('BaseModal Component', () => {
       title: 'Test Modal'
     });
 
-    // Get the backdrop specifically (it's the div with fixed inset-0 classes)
+    // Get the backdrop (div with emittiv-backdrop class)
     const overlays = screen.getAllByRole('button', { name: /close modal/i });
-    const backdrop = overlays.find(el => el.tagName === 'DIV' && el.classList.contains('fixed'));
+    const backdrop = overlays.find(el => el.tagName === 'DIV' && el.classList.contains('emittiv-backdrop'));
 
     await user.click(backdrop!);
 
     // Test that backdrop exists and is clickable
     expect(backdrop).toBeInTheDocument();
-    expect(backdrop).toHaveClass('fixed', 'inset-0', 'bg-black');
+    expect(backdrop).toHaveClass('emittiv-backdrop');
   });
 
   it('should not close when clicking inside modal content', async () => {
@@ -154,8 +154,8 @@ describe('BaseModal Component', () => {
       customClass: 'custom-modal-class'
     });
 
-    // Custom class should be applied to backdrop (the div with fixed inset-0)
-    const backdrop = container.querySelector('.fixed.inset-0.bg-black');
+    // Custom class should be applied to backdrop
+    const backdrop = container.querySelector('.emittiv-backdrop');
     expect(backdrop).toHaveClass('custom-modal-class');
   });
 
