@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.13.4"
+version = "0.13.5"
 description = "e-fees - Fee Proposal Management System"
 authors = ["you"]
 license = ""
