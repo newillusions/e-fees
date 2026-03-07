@@ -52,3 +52,33 @@ pub struct UpdateClause {
     pub tags: Option<Vec<String>>,
     pub is_default: Option<bool>,
 }
+
+// ── Proposal Corpus models ──────────────────────────────────────────
+
+/// A proposal corpus document as stored in SurrealDB.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct ProposalCorpus {
+    pub id: RecordId,
+    pub filename: String,
+    pub project_number: Option<String>,
+    pub project_name: Option<String>,
+    pub extracted_text: String,
+    pub sections: Option<surrealdb_types::Value>,
+    pub metadata: Option<surrealdb_types::Value>,
+    pub embedding: Option<Vec<f64>>,
+    pub created_at: Datetime,
+}
+
+/// Payload for single PDF ingestion.
+#[derive(Debug, Deserialize)]
+pub struct IngestRequest {
+    pub file_path: String,
+    /// Optional project name override (otherwise parsed from filename).
+    pub project_name: Option<String>,
+}
+
+/// Payload for batch ingestion from a directory.
+#[derive(Debug, Deserialize)]
+pub struct IngestBatchRequest {
+    pub directory: String,
+}

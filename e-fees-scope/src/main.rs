@@ -8,7 +8,7 @@ mod schemas;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use axum::{extract::State, middleware, response::Json, routing::get, Router};
+use axum::{extract::State, middleware, response::Json, routing::{get, post}, Router};
 use serde_json::{json, Value};
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
@@ -45,10 +45,16 @@ pub struct AppState {
         routes::clauses::update_clause,
         routes::clauses::delete_clause,
         routes::clauses::list_categories,
+        routes::corpus::list_corpus,
+        routes::corpus::ingest,
+        routes::corpus::ingest_batch,
+        routes::corpus::search_corpus,
+        routes::corpus::get_corpus_doc,
     ),
     tags(
         (name = "Health", description = "Service health"),
         (name = "Clauses", description = "Clause library CRUD"),
+        (name = "Corpus", description = "Proposal corpus / knowledge base"),
     ),
     security(("api_key" = [])),
     modifiers(&SecurityAddon),
@@ -131,6 +137,13 @@ async fn main() {
                 .put(routes::clauses::update_clause)
                 .delete(routes::clauses::delete_clause),
         )
+        .route(
+            "/corpus",
+            get(routes::corpus::list_corpus).post(routes::corpus::ingest),
+        )
+        .route("/corpus/ingest-batch", post(routes::corpus::ingest_batch))
+        .route("/corpus/search", get(routes::corpus::search_corpus))
+        .route("/corpus/{id}", get(routes::corpus::get_corpus_doc))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_api_key,

@@ -21,6 +21,7 @@ utoipa = "5"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 reqwest = { version = "0.12", features = ["json"] }
 uuid = { version = "1", features = ["v4"] }
+regex = "1"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
