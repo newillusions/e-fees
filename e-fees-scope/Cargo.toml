@@ -9,6 +9,7 @@ e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 surrealdb = { version = "3.0", features = ["protocol-ws", "rustls"] }
+surrealdb-types = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tower-http = { version = "0.6", features = ["cors"] }
