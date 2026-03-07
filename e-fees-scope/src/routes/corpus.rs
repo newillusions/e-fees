@@ -1,4 +1,8 @@
 //! Proposal corpus ingestion and search route handlers.
+//!
+//! Supports two extraction methods:
+//! - **vision** (default): PDF → PNG (Stirling) → Qwen3.5 vision → Qwen3.5 text verification
+//! - **docling**: PDF → Docling-Serve text extraction (simpler layouts)
 
 use std::path::Path as FsPath;
 use std::sync::Arc;
@@ -11,7 +15,7 @@ use tracing::{info, warn};
 use e_fees_core::models::{dbvalue_to_json, record_key_string};
 
 use crate::error::ApiError;
-use crate::models::{IngestBatchRequest, IngestRequest, ProposalCorpus};
+use crate::models::{ExtractionMethod, IngestBatchRequest, IngestRequest, ProposalCorpus};
 use crate::AppState;
 
 /// Regex pattern for project numbers like "25-97101".
@@ -70,8 +74,10 @@ fn corpus_to_summary(doc: &ProposalCorpus) -> Value {
     obj
 }
 
+// ── Extraction pipelines ────────────────────────────────────────────
+
 /// Call Docling-Serve to extract text from a PDF file.
-async fn extract_text_from_pdf(
+async fn extract_via_docling(
     http: &reqwest::Client,
     docling_url: &str,
     file_path: &str,
@@ -104,7 +110,6 @@ async fn extract_text_from_pdf(
         .await
         .map_err(|e| format!("Failed to parse Docling response: {}", e))?;
 
-    // Docling response typically has document.text or output.text — try common paths
     if let Some(text) = body
         .pointer("/document/text")
         .or_else(|| body.pointer("/output/text"))
@@ -113,11 +118,260 @@ async fn extract_text_from_pdf(
     {
         Ok(text.to_string())
     } else {
-        // Fallback: return the full response as a string so we can debug
         Err(format!(
             "Could not extract text from Docling response. Keys: {:?}",
             body.as_object().map(|o| o.keys().collect::<Vec<_>>())
         ))
+    }
+}
+
+/// Step 1: Convert PDF to PNG images via Stirling PDF.
+/// Returns a Vec of PNG image bytes (one per page).
+async fn pdf_to_pngs(
+    http: &reqwest::Client,
+    stirling_url: &str,
+    pdf_bytes: &[u8],
+    filename: &str,
+) -> Result<Vec<Vec<u8>>, String> {
+    let url = format!("{}/api/v1/convert/pdf/img", stirling_url);
+
+    let form = reqwest::multipart::Form::new()
+        .part(
+            "fileInput",
+            reqwest::multipart::Part::bytes(pdf_bytes.to_vec())
+                .file_name(filename.to_string())
+                .mime_str("application/pdf")
+                .unwrap(),
+        )
+        .text("imageFormat", "png")
+        .text("singleOrMultiple", "multiple")
+        .text("dpi", "200");
+
+    let res = http
+        .post(&url)
+        .multipart(form)
+        .timeout(std::time::Duration::from_secs(120))
+        .send()
+        .await
+        .map_err(|e| format!("Stirling request failed: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let body = res.text().await.unwrap_or_default();
+        return Err(format!(
+            "Stirling returned HTTP {}: {}",
+            status,
+            body.chars().take(500).collect::<String>()
+        ));
+    }
+
+    // Stirling returns a ZIP file containing PNG images
+    let zip_bytes = res
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read Stirling response: {}", e))?;
+
+    let cursor = std::io::Cursor::new(zip_bytes.as_ref());
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+
+    let mut pages: Vec<(String, Vec<u8>)> = Vec::new();
+    for i in 0..archive.len() {
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| format!("Failed to read ZIP entry {}: {}", i, e))?;
+        if file.name().ends_with(".png") {
+            let mut buf = Vec::new();
+            std::io::Read::read_to_end(&mut file, &mut buf)
+                .map_err(|e| format!("Failed to read PNG from ZIP: {}", e))?;
+            pages.push((file.name().to_string(), buf));
+        }
+    }
+
+    // Sort by filename to maintain page order
+    pages.sort_by(|a, b| a.0.cmp(&b.0));
+
+    if pages.is_empty() {
+        return Err("Stirling returned no PNG pages".to_string());
+    }
+
+    Ok(pages.into_iter().map(|(_, bytes)| bytes).collect())
+}
+
+/// Step 2: Send a PNG image to Qwen3.5 vision to extract text.
+async fn vision_extract_page(
+    http: &reqwest::Client,
+    ollama_url: &str,
+    model: &str,
+    png_bytes: &[u8],
+    page_num: usize,
+) -> Result<String, String> {
+    use base64::Engine;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(png_bytes);
+
+    let body = json!({
+        "model": model,
+        "prompt": format!(
+            "Extract ALL text from this fee proposal page (page {}). \
+             Preserve the structure: headings, numbered lists, tables, bullet points. \
+             Output the text exactly as written — do not summarize or paraphrase. \
+             For tables, use markdown table format. \
+             For multi-column layouts, process left column first, then right column.",
+            page_num
+        ),
+        "images": [b64],
+        "stream": false,
+        "think": false,
+        "options": {
+            "temperature": 0.1
+        }
+    });
+
+    let res = http
+        .post(format!("{}/api/generate", ollama_url))
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(180))
+        .send()
+        .await
+        .map_err(|e| format!("Ollama vision request failed for page {}: {}", page_num, e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+        return Err(format!(
+            "Ollama vision returned HTTP {} for page {}: {}",
+            status, page_num, text
+        ));
+    }
+
+    let result: Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama vision response: {}", e))?;
+
+    result["response"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("Ollama vision response missing 'response' for page {}", page_num))
+}
+
+/// Step 3: Verification pass — send extracted text through text-only LLM
+/// to clean up OCR artifacts and verify completeness.
+async fn verify_extraction(
+    http: &reqwest::Client,
+    ollama_url: &str,
+    model: &str,
+    raw_text: &str,
+    filename: &str,
+) -> Result<String, String> {
+    let body = json!({
+        "model": model,
+        "prompt": format!(
+            "Below is text extracted from a fee proposal PDF '{}' using vision OCR. \
+             Clean up any OCR artifacts, fix obvious typos, and ensure the text reads naturally. \
+             Preserve ALL content, structure, numbering, tables, and formatting. \
+             Do NOT summarize, remove, or add content. Only fix extraction errors.\n\n\
+             --- EXTRACTED TEXT ---\n{}\n--- END ---\n\n\
+             Output the cleaned text:",
+            filename, raw_text
+        ),
+        "system": "You are a document processing assistant. Your job is to clean up OCR-extracted text \
+                    while preserving every detail. Fix garbled characters, broken words, and formatting \
+                    issues. Never remove or summarize content.",
+        "stream": false,
+        "think": false,
+        "options": {
+            "temperature": 0.1
+        }
+    });
+
+    let res = http
+        .post(format!("{}/api/generate", ollama_url))
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(180))
+        .send()
+        .await
+        .map_err(|e| format!("Ollama verification request failed: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+        return Err(format!("Ollama verification returned HTTP {}: {}", status, text));
+    }
+
+    let result: Value = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama verification response: {}", e))?;
+
+    result["response"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Ollama verification response missing 'response' field".to_string())
+}
+
+/// Multi-pass vision extraction pipeline:
+/// PDF → PNG (Stirling) → Qwen3.5 vision per page → Qwen3.5 text verification
+async fn extract_via_vision(
+    http: &reqwest::Client,
+    stirling_url: &str,
+    ollama_url: &str,
+    model: &str,
+    file_path: &str,
+) -> Result<String, String> {
+    let filename = FsPath::new(file_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "document.pdf".to_string());
+
+    // Read the PDF file
+    let pdf_bytes = std::fs::read(file_path)
+        .map_err(|e| format!("Failed to read PDF file '{}': {}", file_path, e))?;
+
+    info!("Vision pipeline: converting {} to PNG pages via Stirling", filename);
+
+    // Step 1: PDF → PNGs via Stirling
+    let pages = pdf_to_pngs(http, stirling_url, &pdf_bytes, &filename).await?;
+    info!("Vision pipeline: {} pages extracted from {}", pages.len(), filename);
+
+    // Step 2: Vision extraction per page
+    let mut page_texts = Vec::with_capacity(pages.len());
+    for (i, png_bytes) in pages.iter().enumerate() {
+        let page_num = i + 1;
+        info!("Vision pipeline: extracting page {}/{} of {}", page_num, pages.len(), filename);
+        let text = vision_extract_page(http, ollama_url, model, png_bytes, page_num).await?;
+        page_texts.push(text);
+    }
+
+    let combined = page_texts.join("\n\n---\n\n");
+
+    // Step 3: Verification pass
+    info!("Vision pipeline: running verification pass on {}", filename);
+    let verified = verify_extraction(http, ollama_url, model, &combined, &filename).await?;
+
+    Ok(verified)
+}
+
+/// Extract text from a PDF using the specified method.
+async fn extract_text_from_pdf(
+    state: &AppState,
+    file_path: &str,
+    method: &ExtractionMethod,
+) -> Result<String, String> {
+    match method {
+        ExtractionMethod::Docling => {
+            extract_via_docling(&state.http, &state.docling_url, file_path).await
+        }
+        ExtractionMethod::Vision => {
+            extract_via_vision(
+                &state.http,
+                &state.stirling_url,
+                &state.ollama_url,
+                &state.ollama_model,
+                file_path,
+            )
+            .await
+        }
     }
 }
 
@@ -126,6 +380,7 @@ async fn do_ingest(
     state: &AppState,
     file_path: &str,
     project_name_override: Option<&str>,
+    method: &ExtractionMethod,
 ) -> Result<Value, ApiError> {
     let filename = FsPath::new(file_path)
         .file_name()
@@ -134,10 +389,10 @@ async fn do_ingest(
 
     let project_number = extract_project_number(&filename);
 
-    let extracted_text = extract_text_from_pdf(&state.http, &state.docling_url, file_path)
+    let extracted_text = extract_text_from_pdf(state, file_path, method)
         .await
         .map_err(|e| {
-            warn!("Docling extraction failed for {}: {}", file_path, e);
+            warn!("Extraction failed for {}: {}", file_path, e);
             ApiError::service_unavailable(format!("PDF extraction failed: {}", e))
         })?;
 
@@ -146,6 +401,11 @@ async fn do_ingest(
             "Extracted text is empty — PDF may be image-only or corrupted",
         ));
     }
+
+    let method_name = match method {
+        ExtractionMethod::Docling => "docling",
+        ExtractionMethod::Vision => "vision",
+    };
 
     let project_name = project_name_override.map(|s| s.to_string());
 
@@ -162,6 +422,7 @@ async fn do_ingest(
         "CREATE proposal_corpus SET \
          filename = $filename, \
          extracted_text = $extracted_text, \
+         metadata = {{ extraction_method: $method }}, \
          created_at = time::now(){optional_sets};"
     );
 
@@ -169,7 +430,8 @@ async fn do_ingest(
         .db
         .query(&query)
         .bind(("filename", filename.clone()))
-        .bind(("extracted_text", extracted_text));
+        .bind(("extracted_text", extracted_text))
+        .bind(("method", method_name));
 
     if let Some(ref pn) = project_number {
         q = q.bind(("project_number", pn.clone()));
@@ -183,7 +445,7 @@ async fn do_ingest(
 
     match docs.into_iter().next() {
         Some(doc) => {
-            info!("Ingested corpus document: {}", filename);
+            info!("Ingested corpus document: {} (method: {})", filename, method_name);
             Ok(corpus_to_json(&doc))
         }
         None => Err(ApiError::internal(
@@ -203,7 +465,7 @@ async fn do_ingest(
     responses(
         (status = 201, description = "Document ingested"),
         (status = 400, description = "Validation error"),
-        (status = 503, description = "Docling-Serve unavailable"),
+        (status = 503, description = "Extraction service unavailable"),
     ),
     security(("api_key" = []))
 )]
@@ -215,7 +477,7 @@ pub async fn ingest(
         return Err(ApiError::bad_request("file_path must not be empty"));
     }
 
-    let doc = do_ingest(&state, &body.file_path, body.project_name.as_deref()).await?;
+    let doc = do_ingest(&state, &body.file_path, body.project_name.as_deref(), &body.method).await?;
 
     Ok(Json(json!({ "data": doc })))
 }
@@ -274,7 +536,7 @@ pub async fn ingest_batch(
     let mut errors: Vec<Value> = Vec::new();
 
     for path in &pdf_paths {
-        match do_ingest(&state, path, None).await {
+        match do_ingest(&state, path, None, &body.method).await {
             Ok(_) => succeeded += 1,
             Err(e) => {
                 errors.push(json!({

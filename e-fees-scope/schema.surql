@@ -48,7 +48,8 @@ DEFINE FIELD project_number ON proposal_corpus TYPE option<string>;
 DEFINE FIELD project_name   ON proposal_corpus TYPE option<string>;
 DEFINE FIELD extracted_text ON proposal_corpus TYPE string;
 DEFINE FIELD sections       ON proposal_corpus TYPE option<array>;
-DEFINE FIELD metadata       ON proposal_corpus TYPE option<object>;
+DEFINE FIELD metadata                    ON proposal_corpus TYPE option<object>;
+DEFINE FIELD metadata.extraction_method  ON proposal_corpus TYPE option<string>;
 DEFINE FIELD embedding      ON proposal_corpus TYPE option<array<float>>;
 DEFINE FIELD created_at     ON proposal_corpus TYPE datetime DEFAULT time::now();
 

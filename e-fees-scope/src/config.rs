@@ -11,6 +11,7 @@ pub struct Config {
     pub ollama_url: String,
     pub ollama_model: String,
     pub docling_url: String,
+    pub stirling_url: String,
     pub corpus_path: Option<String>,
 }
 
@@ -43,6 +44,8 @@ impl Config {
             ollama_model: env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen3:4b".into()),
             docling_url: env::var("DOCLING_URL")
                 .unwrap_or_else(|_| "http://10.0.21.42:5001".into()),
+            stirling_url: env::var("STIRLING_URL")
+                .unwrap_or_else(|_| "http://10.0.21.41:8080".into()),
             corpus_path: env::var("CORPUS_PATH").ok(),
         }
     }

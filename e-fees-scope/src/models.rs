@@ -69,18 +69,35 @@ pub struct ProposalCorpus {
     pub created_at: Datetime,
 }
 
+/// Extraction method for PDF ingestion.
+#[derive(Debug, Deserialize, Clone, Default, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ExtractionMethod {
+    /// Docling-Serve for text extraction (good for simple layouts).
+    Docling,
+    /// Multi-pass: Stirling PDF→PNG, Qwen3.5 vision, then text verification.
+    #[default]
+    Vision,
+}
+
 /// Payload for single PDF ingestion.
 #[derive(Debug, Deserialize)]
 pub struct IngestRequest {
     pub file_path: String,
     /// Optional project name override (otherwise parsed from filename).
     pub project_name: Option<String>,
+    /// Extraction method (default: "vision" for multi-pass pipeline).
+    #[serde(default)]
+    pub method: ExtractionMethod,
 }
 
 /// Payload for batch ingestion from a directory.
 #[derive(Debug, Deserialize)]
 pub struct IngestBatchRequest {
     pub directory: String,
+    /// Extraction method (default: "vision" for multi-pass pipeline).
+    #[serde(default)]
+    pub method: ExtractionMethod,
 }
 
 // ── Scope Assembly models ─────────────────────────────────────────────

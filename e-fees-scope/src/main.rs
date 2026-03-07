@@ -27,6 +27,7 @@ pub struct AppState {
     pub ollama_url: String,
     pub ollama_model: String,
     pub docling_url: String,
+    pub stirling_url: String,
     pub http: reqwest::Client,
 }
 
@@ -127,6 +128,7 @@ async fn main() {
         ollama_url: config.ollama_url,
         ollama_model: config.ollama_model,
         docling_url: config.docling_url,
+        stirling_url: config.stirling_url,
         http: reqwest::Client::new(),
     });
 
