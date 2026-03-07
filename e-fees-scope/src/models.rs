@@ -82,3 +82,34 @@ pub struct IngestRequest {
 pub struct IngestBatchRequest {
     pub directory: String,
 }
+
+// ── Scope Assembly models ─────────────────────────────────────────────
+
+/// A scope assembly record as stored in SurrealDB.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct ScopeAssembly {
+    pub id: RecordId,
+    pub fee_id: RecordId,
+    pub clauses: surrealdb_types::Value,
+    pub generated_text: String,
+    pub numbering: Option<surrealdb_types::Value>,
+    pub llm_model: Option<String>,
+    pub llm_polished: bool,
+    pub created_at: Datetime,
+    pub updated_at: Datetime,
+}
+
+/// Payload for generating a scope assembly.
+#[derive(Debug, Deserialize)]
+pub struct GenerateScopeRequest {
+    pub fee_id: String,
+    #[serde(default)]
+    pub polish: bool,
+}
+
+/// Payload for manually updating a scope assembly.
+#[derive(Debug, Deserialize)]
+pub struct UpdateScopeRequest {
+    pub generated_text: Option<String>,
+    pub clauses: Option<serde_json::Value>,
+}

@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod llm;
 mod models;
 mod routes;
 mod schemas;
@@ -50,11 +51,17 @@ pub struct AppState {
         routes::corpus::ingest_batch,
         routes::corpus::search_corpus,
         routes::corpus::get_corpus_doc,
+        routes::scope::generate_scope,
+        routes::scope::get_scope,
+        routes::scope::update_scope,
+        routes::scope::regenerate_scope,
+        routes::scope::export_scope,
     ),
     tags(
         (name = "Health", description = "Service health"),
         (name = "Clauses", description = "Clause library CRUD"),
         (name = "Corpus", description = "Proposal corpus / knowledge base"),
+        (name = "Scope", description = "Scope generation and assembly"),
     ),
     security(("api_key" = [])),
     modifiers(&SecurityAddon),
@@ -144,6 +151,19 @@ async fn main() {
         .route("/corpus/ingest-batch", post(routes::corpus::ingest_batch))
         .route("/corpus/search", get(routes::corpus::search_corpus))
         .route("/corpus/{id}", get(routes::corpus::get_corpus_doc))
+        .route("/scope/generate", post(routes::scope::generate_scope))
+        .route(
+            "/scope/{fee_id}",
+            get(routes::scope::get_scope).put(routes::scope::update_scope),
+        )
+        .route(
+            "/scope/{fee_id}/regenerate",
+            post(routes::scope::regenerate_scope),
+        )
+        .route(
+            "/scope/{fee_id}/export",
+            get(routes::scope::export_scope),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_api_key,
