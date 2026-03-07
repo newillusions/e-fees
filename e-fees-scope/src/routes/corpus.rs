@@ -268,16 +268,22 @@ async fn verify_extraction(
         "model": model,
         "prompt": format!(
             "Below is text extracted from a fee proposal PDF '{}' using vision OCR. \
-             Clean up any OCR artifacts, fix obvious typos, and ensure the text reads naturally. \
-             Preserve ALL content, structure, numbering, tables, and formatting. \
-             Do NOT summarize, remove, or add content. Only fix extraction errors.\n\n\
+             The text is divided into pages marked with [PAGE N] headers.\n\n\
+             STRICT RULES:\n\
+             1. Keep ALL [PAGE N] markers exactly as they appear.\n\
+             2. NEVER reorder, move, or rearrange any content between pages.\n\
+             3. Process each page independently — only fix OCR artifacts within that page.\n\
+             4. Fix garbled characters, broken words, and obvious OCR typos.\n\
+             5. Preserve ALL content, structure, numbering, tables, and formatting.\n\
+             6. Do NOT summarize, remove, merge, or add content.\n\
+             7. Do NOT reorganize sections across page boundaries.\n\n\
              --- EXTRACTED TEXT ---\n{}\n--- END ---\n\n\
-             Output the cleaned text:",
+             Output the cleaned text with all [PAGE N] markers preserved in original order:",
             filename, raw_text
         ),
-        "system": "You are a document processing assistant. Your job is to clean up OCR-extracted text \
-                    while preserving every detail. Fix garbled characters, broken words, and formatting \
-                    issues. Never remove or summarize content.",
+        "system": "You are a document processing assistant. Fix OCR artifacts while preserving \
+                    EXACT page order. The [PAGE N] markers define strict boundaries — never move \
+                    content across page boundaries or reorder pages. Process each page in isolation.",
         "stream": false,
         "think": false,
         "options": {
@@ -343,7 +349,13 @@ async fn extract_via_vision(
         page_texts.push(text);
     }
 
-    let combined = page_texts.join("\n\n---\n\n");
+    // Add explicit page markers so the verification pass cannot reorder content
+    let combined: String = page_texts
+        .iter()
+        .enumerate()
+        .map(|(i, text)| format!("[PAGE {}]\n{}", i + 1, text))
+        .collect::<Vec<_>>()
+        .join("\n\n---\n\n");
 
     // Step 3: Verification pass
     info!("Vision pipeline: running verification pass on {}", filename);
@@ -386,6 +398,25 @@ async fn do_ingest(
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| file_path.to_string());
+
+    // Deduplication: check if this filename has already been ingested
+    let mut dup_res = state
+        .db
+        .query("SELECT count() AS total FROM proposal_corpus WHERE filename = $filename GROUP ALL")
+        .bind(("filename", filename.clone()))
+        .await?;
+    let counts: Vec<Value> = dup_res.take(0)?;
+    let already_exists = counts
+        .first()
+        .and_then(|v| v["total"].as_i64())
+        .unwrap_or(0)
+        > 0;
+    if already_exists {
+        return Err(ApiError::conflict(format!(
+            "Document '{}' already exists in corpus. Delete it first to re-ingest.",
+            filename
+        )));
+    }
 
     let project_number = extract_project_number(&filename);
 
@@ -559,6 +590,211 @@ pub async fn ingest_batch(
         "succeeded": succeeded,
         "failed": failed,
         "errors": errors
+    })))
+}
+
+/// Extract standard clauses from the corpus using LLM analysis.
+///
+/// Analyzes all (or filtered) corpus documents to identify recurring sections
+/// and creates clause library entries from them.
+#[utoipa::path(
+    post,
+    path = "/corpus/extract-clauses",
+    tag = "Corpus",
+    request_body = Value,
+    responses(
+        (status = 200, description = "Clauses extracted and created"),
+        (status = 400, description = "No corpus documents found"),
+        (status = 503, description = "Ollama unavailable"),
+    ),
+    security(("api_key" = []))
+)]
+pub async fn extract_clauses(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    // Optional filter by project_number
+    let filter = body
+        .get("project_number")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let (query, needs_bind) = if filter.is_empty() {
+        ("SELECT * FROM proposal_corpus ORDER BY created_at DESC LIMIT 10".to_string(), false)
+    } else {
+        ("SELECT * FROM proposal_corpus WHERE project_number = $pn ORDER BY created_at DESC LIMIT 10".to_string(), true)
+    };
+
+    let mut q = state.db.query(&query);
+    if needs_bind {
+        q = q.bind(("pn", filter.to_string()));
+    }
+
+    let mut response = q.await?;
+    let docs: Vec<ProposalCorpus> = response.take(0)?;
+
+    if docs.is_empty() {
+        return Err(ApiError::bad_request(
+            "No corpus documents found to extract clauses from",
+        ));
+    }
+
+    // Combine extracted texts (truncated per doc to fit context window)
+    let corpus_sample: String = docs
+        .iter()
+        .take(5)
+        .map(|d| {
+            let text = if d.extracted_text.len() > 4000 {
+                format!("{}...", &d.extracted_text[..4000])
+            } else {
+                d.extracted_text.clone()
+            };
+            format!("--- {} ---\n{}", d.filename, text)
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    // Ask LLM to identify standard clause sections
+    let prompt = format!(
+        "Analyze these fee proposal documents and identify the STANDARD RECURRING SECTIONS \
+         that appear across proposals. For each section, extract:\n\
+         1. category — the broad grouping (e.g., \"Services\", \"Commercial\", \"Legal\", \"Administrative\")\n\
+         2. title — the section heading as it appears\n\
+         3. body — the standard/template text for that section\n\n\
+         Output ONLY valid JSON — an array of objects with fields: category, title, body.\n\
+         Focus on sections that would be REUSABLE as template clauses.\n\
+         Exclude project-specific details (dates, amounts, names).\n\
+         Keep body text as the generalised template version.\n\n\
+         Documents:\n{}\n\n\
+         JSON output:",
+        corpus_sample
+    );
+
+    let llm_body = json!({
+        "model": &state.ollama_model,
+        "prompt": prompt,
+        "system": "You are a document analysis assistant. Extract reusable clause templates \
+                    from fee proposals. Output ONLY valid JSON arrays. No markdown, no explanation.",
+        "stream": false,
+        "think": false,
+        "options": { "temperature": 0.2 }
+    });
+
+    let res = state
+        .http
+        .post(format!("{}/api/generate", state.ollama_url))
+        .json(&llm_body)
+        .timeout(std::time::Duration::from_secs(180))
+        .send()
+        .await
+        .map_err(|e| ApiError::service_unavailable(format!("Ollama error: {}", e)))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+        return Err(ApiError::service_unavailable(format!(
+            "Ollama returned {}: {}",
+            status, text
+        )));
+    }
+
+    let result: Value = res
+        .json()
+        .await
+        .map_err(|e| ApiError::internal(format!("Failed to parse Ollama response: {}", e)))?;
+
+    let raw_response = result["response"]
+        .as_str()
+        .ok_or_else(|| ApiError::internal("Ollama response missing 'response' field"))?;
+
+    // Try to parse the JSON array from the LLM response
+    // Strip markdown code fences if present
+    let cleaned = raw_response
+        .trim()
+        .trim_start_matches("```json")
+        .trim_start_matches("```")
+        .trim_end_matches("```")
+        .trim();
+
+    let clauses_array: Vec<Value> = serde_json::from_str(cleaned).map_err(|e| {
+        ApiError::internal(format!(
+            "Failed to parse LLM clause output as JSON: {}. Raw: {}",
+            e,
+            &cleaned[..cleaned.len().min(500)]
+        ))
+    })?;
+
+    // Insert each clause into the clause library
+    let mut created = 0usize;
+    let mut skipped = 0usize;
+
+    for (i, clause) in clauses_array.iter().enumerate() {
+        let category = clause["category"].as_str().unwrap_or("Uncategorized");
+        let title = clause["title"].as_str().unwrap_or("");
+        let body_text = clause["body"].as_str().unwrap_or("");
+
+        if title.is_empty() || body_text.is_empty() {
+            skipped += 1;
+            continue;
+        }
+
+        // Check for duplicate title within same category
+        let mut dup_res = state
+            .db
+            .query(
+                "SELECT count() AS total FROM clause WHERE category = $cat AND title = $title AND status = 'active' GROUP ALL",
+            )
+            .bind(("cat", category.to_string()))
+            .bind(("title", title.to_string()))
+            .await?;
+        let dup_counts: Vec<Value> = dup_res.take(0)?;
+        let clause_exists = dup_counts
+            .first()
+            .and_then(|v| v["total"].as_i64())
+            .unwrap_or(0)
+            > 0;
+        if clause_exists {
+            skipped += 1;
+            continue;
+        }
+
+        let sort_order = (i as i64 + 1) * 10;
+        state
+            .db
+            .query(
+                "CREATE clause SET \
+                 category = $category, \
+                 title = $title, \
+                 body = $body_text, \
+                 sort_order = $sort_order, \
+                 is_default = true, \
+                 status = 'active', \
+                 version = 1, \
+                 tags = ['auto-extracted'], \
+                 created_at = time::now(), \
+                 updated_at = time::now();",
+            )
+            .bind(("category", category.to_string()))
+            .bind(("title", title.to_string()))
+            .bind(("body_text", body_text.to_string()))
+            .bind(("sort_order", sort_order))
+            .await?;
+
+        created += 1;
+    }
+
+    info!(
+        "Clause extraction: {} created, {} skipped (empty or duplicate) from {} corpus docs",
+        created,
+        skipped,
+        docs.len()
+    );
+
+    Ok(Json(json!({
+        "created": created,
+        "skipped": skipped,
+        "total_analysed": docs.len(),
+        "llm_model": &state.ollama_model
     })))
 }
 

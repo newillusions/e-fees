@@ -32,6 +32,14 @@ impl ApiError {
         }
     }
 
+    pub fn conflict(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            code: "conflict".into(),
+            message: message.into(),
+        }
+    }
+
     pub fn service_unavailable(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::SERVICE_UNAVAILABLE,

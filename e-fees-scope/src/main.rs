@@ -52,6 +52,7 @@ pub struct AppState {
         routes::corpus::ingest_batch,
         routes::corpus::search_corpus,
         routes::corpus::get_corpus_doc,
+        routes::corpus::extract_clauses,
         routes::scope::generate_scope,
         routes::scope::get_scope,
         routes::scope::update_scope,
@@ -157,6 +158,7 @@ async fn main() {
             get(routes::corpus::list_corpus).post(routes::corpus::ingest),
         )
         .route("/corpus/ingest-batch", post(routes::corpus::ingest_batch))
+        .route("/corpus/extract-clauses", post(routes::corpus::extract_clauses))
         .route("/corpus/search", get(routes::corpus::search_corpus))
         .route("/corpus/{id}", get(routes::corpus::get_corpus_doc))
         .route("/scope/generate", post(routes::scope::generate_scope))

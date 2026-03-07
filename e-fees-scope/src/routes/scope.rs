@@ -91,6 +91,69 @@ fn auto_number_clauses(clauses: &[Clause]) -> (Value, String, Value) {
     (json!(sections), raw_text, numbering_map)
 }
 
+/// Fetch relevant corpus examples for a fee's project.
+///
+/// Looks up the fee's project_number, then finds corpus documents
+/// with matching project numbers. Falls back to recent documents if none match.
+/// Returns up to 3 truncated scope text samples.
+async fn fetch_corpus_examples(
+    db: &surrealdb::Surreal<surrealdb::engine::remote::ws::Client>,
+    fee_key: &str,
+) -> Vec<String> {
+    // Try to get project_number from the fee's linked project
+    let query = format!(
+        "SELECT project_id.number AS pn FROM fee:{fee_key};"
+    );
+    let mut res = match db.query(&query).await {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+    let rows: Vec<Value> = res.take(0).unwrap_or_default();
+    let project_number = rows
+        .first()
+        .and_then(|r| r["pn"].as_str())
+        .unwrap_or("");
+
+    // Find corpus docs — prefer same project, fall back to recent
+    let corpus_query = if project_number.is_empty() {
+        "SELECT extracted_text, filename FROM proposal_corpus \
+         ORDER BY created_at DESC LIMIT 3"
+            .to_string()
+    } else {
+        // Get the country-year prefix (e.g., "24-971" from "24-97106")
+        let prefix = if project_number.len() >= 6 {
+            &project_number[..6]
+        } else {
+            project_number
+        };
+        format!(
+            "SELECT extracted_text, filename FROM proposal_corpus \
+             WHERE string::startsWith(project_number, '{prefix}') \
+             ORDER BY created_at DESC LIMIT 3"
+        )
+    };
+
+    let mut res = match db.query(&corpus_query).await {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+    let docs: Vec<Value> = res.take(0).unwrap_or_default();
+
+    docs.iter()
+        .filter_map(|d| {
+            let text = d["extracted_text"].as_str()?;
+            let filename = d["filename"].as_str().unwrap_or("unknown");
+            // Truncate to ~3000 chars to fit LLM context
+            let sample = if text.len() > 3000 {
+                format!("{}...", &text[..3000])
+            } else {
+                text.to_string()
+            };
+            Some(format!("[From {}]\n{}", filename, sample))
+        })
+        .collect()
+}
+
 /// Generate scope assembly from clause library for a fee.
 #[utoipa::path(
     post,
@@ -136,15 +199,18 @@ pub async fn generate_scope(
     // 3. Auto-number by category
     let (sections_json, raw_text, numbering_map) = auto_number_clauses(&clauses);
 
-    // 4. Optionally polish with LLM
+    // 4. Optionally polish with LLM (using corpus examples if available)
     let (generated_text, llm_polished, llm_model) = if body.polish {
+        // Fetch similar proposal texts from corpus for context
+        let corpus_examples = fetch_corpus_examples(&state.db, fee_key).await;
+
         let polished = llm::polish_scope(
             &state.http,
             &state.ollama_url,
             &state.ollama_model,
             &fee,
             &raw_text,
-            &[], // no corpus examples for now
+            &corpus_examples,
         )
         .await?;
         (polished, true, Some(state.ollama_model.clone()))
@@ -326,14 +392,16 @@ pub async fn regenerate_scope(
     let fee: Option<Value> = res.take(0)?;
     let fee = fee.unwrap_or(json!({}));
 
-    // Re-polish
+    // Fetch corpus examples and re-polish
+    let corpus_examples = fetch_corpus_examples(&state.db, fee_key).await;
+
     let polished = llm::polish_scope(
         &state.http,
         &state.ollama_url,
         &state.ollama_model,
         &fee,
         &assembly.generated_text,
-        &[],
+        &corpus_examples,
     )
     .await?;
 
