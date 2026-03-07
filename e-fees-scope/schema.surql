@@ -28,9 +28,10 @@ DEFINE INDEX idx_clause_status   ON clause FIELDS status;
 DEFINE TABLE scope_assembly SCHEMAFULL;
 
 DEFINE FIELD fee_id         ON scope_assembly TYPE record<fee>;
-DEFINE FIELD clauses        ON scope_assembly TYPE array;
+DEFINE FIELD clauses        ON scope_assembly TYPE array<object> FLEXIBLE;
+DEFINE FIELD clauses.*      ON scope_assembly TYPE object FLEXIBLE;
 DEFINE FIELD generated_text ON scope_assembly TYPE string;
-DEFINE FIELD numbering      ON scope_assembly TYPE option<object>;
+DEFINE FIELD numbering      ON scope_assembly TYPE option<object> FLEXIBLE;
 DEFINE FIELD llm_model      ON scope_assembly TYPE option<string>;
 DEFINE FIELD llm_polished   ON scope_assembly TYPE bool DEFAULT false;
 DEFINE FIELD created_at     ON scope_assembly TYPE datetime DEFAULT time::now();

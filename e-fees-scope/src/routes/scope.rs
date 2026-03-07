@@ -101,9 +101,7 @@ async fn fetch_corpus_examples(
     fee_key: &str,
 ) -> Vec<String> {
     // Try to get project_number from the fee's linked project
-    let query = format!(
-        "SELECT project_id.number AS pn FROM fee:{fee_key};"
-    );
+    let query = format!("SELECT project_id.number.id AS pn OMIT id FROM fee:`{}`;", fee_key);
     let mut res = match db.query(&query).await {
         Ok(r) => r,
         Err(_) => return Vec::new(),
@@ -115,27 +113,30 @@ async fn fetch_corpus_examples(
         .unwrap_or("");
 
     // Find corpus docs — prefer same project, fall back to recent
-    let corpus_query = if project_number.is_empty() {
-        "SELECT extracted_text, filename FROM proposal_corpus \
-         ORDER BY created_at DESC LIMIT 3"
-            .to_string()
+    // Get the country-year prefix (e.g., "24-971" from "24-97106")
+    let prefix = if project_number.len() >= 6 {
+        &project_number[..6]
     } else {
-        // Get the country-year prefix (e.g., "24-971" from "24-97106")
-        let prefix = if project_number.len() >= 6 {
-            &project_number[..6]
-        } else {
-            project_number
-        };
-        format!(
-            "SELECT extracted_text, filename FROM proposal_corpus \
-             WHERE string::startsWith(project_number, '{prefix}') \
-             ORDER BY created_at DESC LIMIT 3"
-        )
+        project_number
     };
 
-    let mut res = match db.query(&corpus_query).await {
-        Ok(r) => r,
-        Err(_) => return Vec::new(),
+    let mut res = if project_number.is_empty() {
+        match db
+            .query("SELECT extracted_text, filename FROM proposal_corpus ORDER BY created_at DESC LIMIT 3")
+            .await
+        {
+            Ok(r) => r,
+            Err(_) => return Vec::new(),
+        }
+    } else {
+        match db
+            .query("SELECT extracted_text, filename FROM proposal_corpus WHERE string::startsWith(project_number, $prefix) ORDER BY created_at DESC LIMIT 3")
+            .bind(("prefix", prefix.to_string()))
+            .await
+        {
+            Ok(r) => r,
+            Err(_) => return Vec::new(),
+        }
     };
     let docs: Vec<Value> = res.take(0).unwrap_or_default();
 
@@ -177,11 +178,23 @@ pub async fn generate_scope(
         return Err(ApiError::bad_request("fee_id must not be empty"));
     }
 
-    // 1. Fetch fee for project context
-    let query = format!("SELECT * FROM fee:{}", fee_key);
+    // 1. Fetch fee for project context (OMIT id because SurrealDB v3 WebSocket SDK
+    //    can't deserialize record types to serde_json::Value; traverse record links inline)
+    let query = format!(
+        "SELECT activity, number, issue_date, status, \
+         project_id.name AS project_name, project_id.number.id AS project_number, \
+         project_id.city AS city, project_id.country AS country, \
+         company_id.name AS company_name, \
+         contact_id.full_name AS contact_name \
+         OMIT id FROM fee:`{}`",
+        fee_key
+    );
     let mut res = state.db.query(&query).await?;
-    let fee: Option<Value> = res.take(0)?;
-    let fee = fee.ok_or_else(|| ApiError::not_found("Fee", fee_key))?;
+    let rows: Vec<Value> = res.take(0)?;
+    let fee = rows
+        .into_iter()
+        .next()
+        .ok_or_else(|| ApiError::not_found("Fee", fee_key))?;
 
     // 2. Fetch active clauses ordered by sort_order, category
     let mut res = state
@@ -240,9 +253,9 @@ pub async fn generate_scope(
         .db
         .query(&upsert_query)
         .bind(("fee_key", fee_key.to_string()))
-        .bind(("clauses", sections_json.to_string()))
+        .bind(("clauses", sections_json))
         .bind(("generated_text", generated_text.clone()))
-        .bind(("numbering", numbering_map.to_string()))
+        .bind(("numbering", numbering_map))
         .bind(("llm_polished", llm_polished));
 
     if let Some(ref model) = llm_model {
@@ -386,11 +399,19 @@ pub async fn regenerate_scope(
         .next()
         .ok_or_else(|| ApiError::not_found("Scope assembly for fee", &fee_id))?;
 
-    // Fetch fee for project context
-    let query = format!("SELECT * FROM fee:{}", fee_key);
+    // Fetch fee for project context (OMIT id — record types break serde_json::Value)
+    let query = format!(
+        "SELECT activity, number, issue_date, status, \
+         project_id.name AS project_name, project_id.number.id AS project_number, \
+         project_id.city AS city, project_id.country AS country, \
+         company_id.name AS company_name, \
+         contact_id.full_name AS contact_name \
+         OMIT id FROM fee:`{}`",
+        fee_key
+    );
     let mut res = state.db.query(&query).await?;
-    let fee: Option<Value> = res.take(0)?;
-    let fee = fee.unwrap_or(json!({}));
+    let rows: Vec<Value> = res.take(0)?;
+    let fee = rows.into_iter().next().unwrap_or(json!({}));
 
     // Fetch corpus examples and re-polish
     let corpus_examples = fetch_corpus_examples(&state.db, fee_key).await;
