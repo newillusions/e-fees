@@ -94,7 +94,13 @@ async fn main() {
     let port = config.port;
 
     info!("Connecting to SurrealDB at {}", config.surreal_url);
-    let db = Surreal::new::<Ws>(&config.surreal_url)
+    let connection_address = config
+        .surreal_url
+        .strip_prefix("ws://")
+        .or_else(|| config.surreal_url.strip_prefix("wss://"))
+        .unwrap_or(&config.surreal_url);
+
+    let db = Surreal::new::<Ws>(connection_address)
         .await
         .expect("Failed to connect to SurrealDB");
 
