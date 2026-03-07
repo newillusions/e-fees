@@ -3,5 +3,6 @@ members = [
   "src-tauri",
   "crates/e-fees-core",
   "e-fees-api",
+  "e-fees-scope",
 ]
 resolver = "2"

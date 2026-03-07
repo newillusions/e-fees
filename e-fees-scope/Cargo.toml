@@ -1,0 +1,28 @@
+[package]
+name = "e-fees-scope"
+version = "0.1.0"
+edition = "2021"
+description = "Scope/deliverables service for e-fees"
+
+[dependencies]
+e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+surrealdb = { version = "3.0", features = ["protocol-ws", "rustls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.6", features = ["cors"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+chrono = "0.4"
+utoipa = "5"
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+reqwest = { version = "0.12", features = ["json"] }
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0"
+urlencoding = "2"

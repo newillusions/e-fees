@@ -144,7 +144,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.13.4"
+version = "0.13.5"
 dependencies = [
  "argon2",
  "async-stream",
@@ -1691,6 +1691,28 @@ dependencies = [
  "surrealdb",
  "surrealdb-types",
  "utoipa",
+]
+
+[[package]]
+name = "e-fees-scope"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "dotenvy",
+ "e-fees-core",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "surrealdb",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "urlencoding",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid",
 ]
 
 [[package]]
