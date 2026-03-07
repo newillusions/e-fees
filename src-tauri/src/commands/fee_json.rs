@@ -94,7 +94,7 @@ pub fn build_fee_json(
     json!({
         "01 Document Name": fee.name.clone(),
         "02 Document Number": fee.number.clone(),
-        "03 Document Release": fee.rev.to_string(),
+        "03 Document Release": format!("{:02}", fee.rev),
         "04 Document Issue Date": issue_date,
         "06 Project Name": project.name.clone(),
         "07 Project Activity": fee.activity.clone(),
@@ -110,6 +110,10 @@ pub fn build_fee_json(
         "27 Contact Position": contact.position.clone().unwrap_or_default(),
         "28 Contact Phone": contact.phone.clone().unwrap_or_default(),
         "29 Contact Email": contact.email.clone().unwrap_or_default(),
+        "91 Staff Name": fee.staff_name.clone(),
+        "92 Staff Position": fee.staff_position.clone(),
+        "93 Staff Phone": fee.staff_phone.clone(),
+        "94 Staff Email": fee.staff_email.clone(),
         "99 Strap Line": fee.strap_line.clone()
     })
 }
