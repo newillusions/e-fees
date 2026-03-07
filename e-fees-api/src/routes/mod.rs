@@ -5,5 +5,6 @@
 pub mod companies;
 pub mod contacts;
 pub mod fees;
+pub mod folders;
 pub mod projects;
 pub mod stats;

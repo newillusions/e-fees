@@ -28,6 +28,15 @@ impl ApiError {
             message: message.into(),
         }
     }
+
+    /// Create a 503 Service Unavailable error (for folder creation / SSH failures).
+    pub fn service_unavailable(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            code: "folder_creation_failed".into(),
+            message: message.into(),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {

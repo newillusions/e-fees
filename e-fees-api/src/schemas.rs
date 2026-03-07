@@ -140,3 +140,12 @@ pub struct NextNumberResponse {
     pub country_code: u16,
     pub seq: u8,
 }
+
+/// Folder creation success response.
+#[derive(Serialize, ToSchema)]
+pub struct FolderCreatedResponse {
+    pub status: String,
+    pub project: String,
+    pub name: String,
+    pub path: String,
+}

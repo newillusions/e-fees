@@ -1813,3 +1813,80 @@ async fn test_next_number_with_explicit_year() {
     let number = body["number"].as_str().unwrap();
     assert!(number.starts_with("25-"), "number should start with year 25: {}", number);
 }
+
+// ---------------------------------------------------------------------------
+// Folder creation endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_create_folder_requires_auth() {
+    verify_not_production();
+
+    let client = Client::new();
+    let resp = client
+        .post(format!("{}/projects/26_97101/folder", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn test_create_folder_nonexistent_project() {
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .post(format!("{}/projects/99_00099/folder", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 404);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(body["error"], "not_found");
+}
+
+#[tokio::test]
+async fn test_create_folder_returns_expected_fields() {
+    verify_not_production();
+
+    let client = authed_client();
+
+    // Use first existing project (avoids SurrealDB v3 write issues in test)
+    let list_resp = client
+        .get(format!("{}/projects?page_size=1", base_url()))
+        .send()
+        .await
+        .expect("Failed to list projects");
+    assert_eq!(list_resp.status(), 200);
+    let list: serde_json::Value = list_resp.json().await.unwrap();
+    let projects = list["data"].as_array().expect("data should be array");
+    assert!(!projects.is_empty(), "Need at least one project in DB for this test");
+
+    let project_id = projects[0]["id"].as_str().unwrap();
+    let key = project_id.strip_prefix("projects:").unwrap();
+
+    // Try to create folder — may fail with 503 if SSH not configured, that's OK
+    let resp = client
+        .post(format!("{}/projects/{}/folder", base_url(), key))
+        .send()
+        .await
+        .expect("Failed to send folder request");
+
+    let status = resp.status().as_u16();
+    let body: serde_json::Value = resp.json().await.unwrap();
+
+    if status == 200 {
+        // Full success — SSH worked
+        assert_eq!(body["status"], "created");
+        assert!(body["project"].as_str().is_some(), "should have project number");
+        assert!(body["path"].as_str().is_some(), "should have path");
+    } else if status == 503 {
+        // SSH not available in test env — acceptable
+        assert_eq!(body["error"], "folder_creation_failed");
+    } else {
+        panic!("Unexpected status {}: {:?}", status, body);
+    }
+}

@@ -25,6 +25,7 @@ use config::Config;
 pub struct AppState {
     pub db: Surreal<surrealdb::engine::remote::ws::Client>,
     pub api_keys: HashSet<String>,
+    pub folder_config: Option<config::FolderConfig>,
 }
 
 /// OpenAPI documentation for the e-fees API.
@@ -60,6 +61,7 @@ pub struct AppState {
         routes::contacts::create_contact,
         routes::contacts::update_contact,
         routes::contacts::delete_contact,
+        routes::folders::create_folder,
     ),
     tags(
         (name = "Health", description = "Service health checks"),
@@ -138,10 +140,17 @@ async fn main() {
         config.surreal_url, config.surreal_ns, config.surreal_db
     );
 
+    if config.folder_config.is_some() {
+        info!("Folder creation enabled (NC_SSH_HOST configured)");
+    } else {
+        info!("Folder creation disabled (NC_SSH_HOST not set)");
+    }
+
     // Build shared state (API keys validated at startup via Config::from_env)
     let state = Arc::new(AppState {
         db,
         api_keys: config.api_keys.into_iter().collect(),
+        folder_config: config.folder_config,
     });
 
     // Configure CORS
@@ -166,6 +175,10 @@ async fn main() {
             get(routes::projects::get_project)
                 .put(routes::projects::update_project)
                 .delete(routes::projects::delete_project),
+        )
+        .route(
+            "/projects/{id}/folder",
+            axum::routing::post(routes::folders::create_folder),
         )
         .route(
             "/fees",
