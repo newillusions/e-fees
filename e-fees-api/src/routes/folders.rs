@@ -59,18 +59,20 @@ pub async fn create_folder(
 
     let folder_path = format!("01 Projects/01 RFPs/{} {}/", number, name);
 
-    // SSH to Primary and run the folder creation script
+    // SSH to Primary and run the folder creation script.
+    // Must send as a single quoted command string — SSH splits bare args on spaces.
     let user_host = format!("{}@{}", folder_config.ssh_user, folder_config.ssh_host);
+    let remote_cmd = format!(
+        "bash '{}' '{}' '{}'",
+        folder_config.script_path, number, name
+    );
     let output = Command::new("ssh")
         .args([
             "-i", &folder_config.ssh_key,
             "-o", "StrictHostKeyChecking=no",
             "-o", "ConnectTimeout=10",
             &user_host,
-            "bash",
-            &folder_config.script_path,
-            &number,
-            name,
+            &remote_cmd,
         ])
         .output()
         .await
