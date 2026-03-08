@@ -58,12 +58,15 @@ pub struct AppState {
         routes::scope::update_scope,
         routes::scope::regenerate_scope,
         routes::scope::export_scope,
+        routes::stages::list_stages,
+        routes::stages::update_stage,
     ),
     tags(
         (name = "Health", description = "Service health"),
         (name = "Clauses", description = "Clause library CRUD"),
         (name = "Corpus", description = "Proposal corpus / knowledge base"),
         (name = "Scope", description = "Scope generation and assembly"),
+        (name = "Stages", description = "Stage configuration"),
     ),
     security(("api_key" = [])),
     modifiers(&SecurityAddon),
@@ -173,6 +176,11 @@ async fn main() {
         .route(
             "/scope/{fee_id}/export",
             get(routes::scope::export_scope),
+        )
+        .route("/stages", get(routes::stages::list_stages))
+        .route(
+            "/stages/{canonical_name}",
+            axum::routing::put(routes::stages::update_stage),
         )
         .layer(middleware::from_fn_with_state(
             state.clone(),
