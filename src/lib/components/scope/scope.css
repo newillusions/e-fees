@@ -1,0 +1,248 @@
+/* =============================================================================
+ * Scope Builder — Component CSS
+ * Fixed px values for desktop app (OS handles DPI scaling)
+ * ========================================================================== */
+
+/* Layout ------------------------------------------------------------------ */
+
+.emittiv-scope-builder {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 16px;
+}
+
+.emittiv-scope-content {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.emittiv-scope-stages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emittiv-scope-library {
+  width: 320px;
+  min-width: 280px;
+  overflow-y: auto;
+  border-left: 1px solid var(--emittiv-dark);
+  padding-left: 16px;
+}
+
+/* Toolbar ----------------------------------------------------------------- */
+
+.emittiv-scope-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--emittiv-dark);
+}
+
+/* Stage Sections ---------------------------------------------------------- */
+
+.emittiv-stage-section {
+  background: var(--emittiv-darker);
+  border-radius: 6px;
+  border: 1px solid var(--emittiv-dark);
+}
+
+.emittiv-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.emittiv-stage-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px 6px 0 0;
+}
+
+.emittiv-stage-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--emittiv-white);
+  flex: 1;
+}
+
+.emittiv-stage-count {
+  font-size: 11px;
+  color: var(--emittiv-light);
+  background: var(--emittiv-dark);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.emittiv-stage-body {
+  padding: 8px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Deliverable Cards ------------------------------------------------------- */
+
+.emittiv-deliverable-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--emittiv-black);
+  border: 1px solid var(--emittiv-dark);
+  border-radius: 4px;
+  cursor: grab;
+  transition: all 0.15s ease;
+  font-size: 12px;
+  color: var(--emittiv-lighter);
+}
+
+.emittiv-deliverable-card:hover {
+  border-color: var(--emittiv-splash);
+}
+
+.emittiv-deliverable-card.dragging {
+  opacity: 0.5;
+}
+
+.emittiv-deliverable-card .layer-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.emittiv-deliverable-card .layer-badge.generic {
+  background: var(--emittiv-dark);
+  color: var(--emittiv-lighter);
+}
+
+.emittiv-deliverable-card .layer-badge.discipline {
+  background: rgba(255, 153, 0, 0.2);
+  color: var(--emittiv-splash);
+}
+
+.emittiv-deliverable-card .layer-badge.conditional {
+  background: rgba(100, 149, 237, 0.2);
+  color: cornflowerblue;
+}
+
+/* Library Panel ----------------------------------------------------------- */
+
+.emittiv-library-search {
+  margin-bottom: 12px;
+}
+
+.emittiv-library-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--emittiv-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 0 4px;
+}
+
+.emittiv-library-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--emittiv-light);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.emittiv-library-item:hover {
+  background: var(--emittiv-darker);
+  color: var(--emittiv-lighter);
+}
+
+.emittiv-library-item .add-btn {
+  opacity: 0;
+  font-size: 14px;
+  color: var(--emittiv-splash);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.emittiv-library-item:hover .add-btn {
+  opacity: 1;
+}
+
+/* Drop Zone --------------------------------------------------------------- */
+
+.emittiv-drop-zone {
+  border: 2px dashed var(--emittiv-dark);
+  border-radius: 4px;
+  padding: 16px;
+  text-align: center;
+  color: var(--emittiv-light);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.emittiv-drop-zone.active {
+  border-color: var(--emittiv-splash);
+  background: rgba(255, 153, 0, 0.05);
+}
+
+/* Detail Modal ------------------------------------------------------------ */
+
+.emittiv-deliverable-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.emittiv-deliverable-detail {
+  background: var(--emittiv-darker);
+  border-radius: 8px;
+  border: 1px solid var(--emittiv-dark);
+  width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.emittiv-deliverable-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--emittiv-dark);
+}
+
+.emittiv-deliverable-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.emittiv-deliverable-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-top: 1px solid var(--emittiv-dark);
+}
