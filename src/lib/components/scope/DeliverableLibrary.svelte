@@ -1,14 +1,15 @@
 <script lang="ts">
   import './scope.css';
+  import type { Deliverable } from '$lib/types/scope';
 
   let {
     allDeliverables = [],
     activeIds = new Set(),
     onAdd,
   }: {
-    allDeliverables: any[];
+    allDeliverables: Deliverable[];
     activeIds: Set<string>;
-    onAdd?: (d: any, targetStage?: string) => void;
+    onAdd?: (d: Deliverable, targetStage?: string) => void;
   } = $props();
 
   let searchQuery = $state('');
@@ -33,7 +34,7 @@
   });
 
   let groupedByStage = $derived.by(() => {
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, Deliverable[]> = {};
     for (const d of filteredDeliverables) {
       const stage = d.stage || 'unassigned';
       if (!groups[stage]) groups[stage] = [];
@@ -43,14 +44,14 @@
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   });
 
-  function handleDragStart(e: DragEvent, deliverable: any) {
+  function handleDragStart(e: DragEvent, deliverable: Deliverable) {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', JSON.stringify(deliverable));
       e.dataTransfer.effectAllowed = 'copy';
     }
   }
 
-  function layerLabel(d: any): string {
+  function layerLabel(d: Deliverable): string {
     if (d.layer === 'generic') return 'G';
     if (d.layer === 'discipline') return d.discipline?.[0]?.toUpperCase() || 'D';
     if (d.layer === 'conditional') return 'C';

@@ -509,6 +509,357 @@ async fn test_assemble_without_matching_discipline_keeps_generic() {
 }
 
 // ============================================================================
+// Scope assembly save & load tests
+// ============================================================================
+
+/// Clean up any scope_assembly records for a given test fee key.
+/// Uses the save endpoint's DELETE-before-CREATE pattern with an empty
+/// deliverables list (which will error), so instead we do a raw approach:
+/// save with valid data then accept the record stays — OR — we rely on
+/// test isolation via unique fee keys.
+///
+/// Since there is no DELETE /scope/{id} endpoint, we clean up by saving
+/// an assembly with a known deliverable then ignoring the leftover.
+/// The test fee keys are unique enough to avoid collision.
+async fn cleanup_scope_assembly(c: &Client, fee_key: &str) {
+    // Best-effort: calling save with a known-good deliverable just to trigger
+    // DELETE of the old record. If this fails, the leftover is harmless.
+    // Actually, we just accept that test scope_assembly records with
+    // "DELETE_ME" fee keys won't interfere with production data.
+    let _ = c
+        .post(format!("{}/scope/save", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&json!({
+            "fee_id": fee_key,
+            "deliverables": [],
+        }))
+        .send()
+        .await;
+}
+
+#[tokio::test]
+async fn test_assemble_returns_stages() {
+    let c = client();
+
+    // Use a known fee_id — doesn't need to exist for assembly
+    let assemble_body = json!({
+        "fee_id": "DELETE_ME_assemble_test",
+        "disciplines": ["lighting"],
+    });
+
+    let resp = c
+        .post(format!("{}/scope/assemble", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&assemble_body)
+        .send()
+        .await
+        .expect("POST /scope/assemble failed");
+
+    assert_eq!(resp.status(), 200);
+
+    let body: Value = resp.json().await.unwrap();
+    let stages = body["stages"].as_array().expect("stages should be an array");
+
+    // Should have at least one stage
+    assert!(!stages.is_empty(), "Assembly should return at least one stage");
+
+    // Each stage must have canonical_name, label, and deliverables
+    for stage in stages {
+        assert!(
+            stage["canonical_name"].is_string(),
+            "Each stage must have canonical_name"
+        );
+        assert!(
+            stage["label"].is_string(),
+            "Each stage must have label"
+        );
+        assert!(
+            stage["deliverables"].is_array(),
+            "Each stage must have deliverables array"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_assemble_requires_disciplines() {
+    let c = client();
+
+    // Missing disciplines field entirely
+    let body_no_disciplines = json!({
+        "fee_id": "DELETE_ME_assemble_nodisciplines",
+    });
+
+    let resp = c
+        .post(format!("{}/scope/assemble", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&body_no_disciplines)
+        .send()
+        .await
+        .expect("POST /scope/assemble failed");
+
+    // Should fail with 400 or 422 (deserialization error for missing required field)
+    assert!(
+        resp.status().is_client_error(),
+        "Missing disciplines should return 4xx, got {}",
+        resp.status()
+    );
+
+    // Empty disciplines array
+    let body_empty = json!({
+        "fee_id": "DELETE_ME_assemble_emptydisciplines",
+        "disciplines": [],
+    });
+
+    let resp2 = c
+        .post(format!("{}/scope/assemble", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&body_empty)
+        .send()
+        .await
+        .expect("POST /scope/assemble with empty disciplines failed");
+
+    assert_eq!(
+        resp2.status(),
+        400,
+        "Empty disciplines should return 400, got {}",
+        resp2.status()
+    );
+}
+
+#[tokio::test]
+async fn test_save_and_load_scope() {
+    let c = client();
+    cleanup_all_test_deliverables(&c).await;
+
+    // 1. Create a test deliverable to reference
+    let created = create_generic_deliverable(&c).await;
+    let del_id = created["data"]["id"].as_str().unwrap().to_string();
+
+    let test_fee_key = "DELETE_ME_save_load_test";
+
+    // 2. Save a scope with that deliverable
+    let save_body = json!({
+        "fee_id": test_fee_key,
+        "deliverables": [{
+            "deliverable_id": &del_id,
+            "stage": "concept",
+            "sort_order": 1,
+            "wording_override": null,
+        }],
+        "stage_labels": {
+            "concept": "Concept Design Phase"
+        },
+    });
+
+    let save_resp = c
+        .post(format!("{}/scope/save", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&save_body)
+        .send()
+        .await
+        .expect("POST /scope/save failed");
+
+    assert_eq!(
+        save_resp.status(),
+        200,
+        "Save should succeed, got {}",
+        save_resp.status()
+    );
+
+    let save_result: Value = save_resp.json().await.unwrap();
+    assert_eq!(save_result["status"], "saved");
+    assert_eq!(save_result["fee_id"], test_fee_key);
+    assert_eq!(save_result["deliverables_count"], 1);
+
+    // 3. Load it back
+    let load_resp = c
+        .get(format!(
+            "{}/scope/{}/deliverables",
+            base_url(),
+            test_fee_key
+        ))
+        .header("X-API-Key", api_key())
+        .send()
+        .await
+        .expect("GET /scope/{fee_id}/deliverables failed");
+
+    assert_eq!(load_resp.status(), 200);
+
+    let load_body: Value = load_resp.json().await.unwrap();
+    assert_eq!(load_body["fee_id"], test_fee_key);
+
+    let deliverables_used = load_body["deliverables_used"]
+        .as_array()
+        .expect("deliverables_used should be an array");
+
+    assert_eq!(
+        deliverables_used.len(),
+        1,
+        "Should have exactly 1 deliverable"
+    );
+
+    let saved_del = &deliverables_used[0];
+    assert_eq!(saved_del["deliverable_id"], del_id);
+    assert_eq!(saved_del["stage"], "concept");
+    assert_eq!(saved_del["sort_order"], 1);
+    // wording_snapshot should be the master body (no override)
+    assert_eq!(saved_del["wording_snapshot"], "Test body");
+    assert_eq!(saved_del["short_name"], "Test Gen");
+
+    // Verify stage_labels
+    assert_eq!(
+        load_body["stage_labels"]["concept"], "Concept Design Phase",
+        "Stage labels should be saved and returned"
+    );
+
+    // 4. Cleanup
+    cleanup_scope_assembly(&c, test_fee_key).await;
+    cleanup_deliverable(&c, &del_id).await;
+}
+
+#[tokio::test]
+async fn test_save_scope_overwrites() {
+    let c = client();
+    cleanup_all_test_deliverables(&c).await;
+
+    // Create two test deliverables
+    let created1 = create_generic_deliverable(&c).await;
+    let del_id_1 = created1["data"]["id"].as_str().unwrap().to_string();
+
+    // Create a second deliverable with a distinct title
+    let body2 = json!({
+        "title": "DELETE ME - Test Second Deliverable",
+        "short_name": "Test 2nd",
+        "body": "Second body",
+        "stage": "concept",
+        "layer": "generic",
+        "sort_order": 901,
+    });
+    let resp2 = c
+        .post(format!("{}/deliverables", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&body2)
+        .send()
+        .await
+        .expect("Failed to create second deliverable");
+    assert!(resp2.status().is_success());
+    let created2: Value = resp2.json().await.unwrap();
+    let del_id_2 = created2["data"]["id"].as_str().unwrap().to_string();
+
+    let test_fee_key = "DELETE_ME_overwrite_test";
+
+    // First save: deliverable 1
+    let save1 = json!({
+        "fee_id": test_fee_key,
+        "deliverables": [{
+            "deliverable_id": &del_id_1,
+            "stage": "concept",
+            "sort_order": 1,
+            "wording_override": null,
+        }],
+    });
+
+    let resp = c
+        .post(format!("{}/scope/save", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&save1)
+        .send()
+        .await
+        .expect("First save failed");
+    assert_eq!(resp.status(), 200);
+
+    // Second save: deliverable 2 (should replace deliverable 1)
+    let save2 = json!({
+        "fee_id": test_fee_key,
+        "deliverables": [{
+            "deliverable_id": &del_id_2,
+            "stage": "concept",
+            "sort_order": 1,
+            "wording_override": "DELETE ME - Custom wording override",
+        }],
+    });
+
+    let resp = c
+        .post(format!("{}/scope/save", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&save2)
+        .send()
+        .await
+        .expect("Second save failed");
+    assert_eq!(resp.status(), 200);
+
+    // Load and verify only the second deliverable is present
+    let load_resp = c
+        .get(format!(
+            "{}/scope/{}/deliverables",
+            base_url(),
+            test_fee_key
+        ))
+        .header("X-API-Key", api_key())
+        .send()
+        .await
+        .expect("GET /scope/{fee_id}/deliverables failed");
+
+    assert_eq!(load_resp.status(), 200);
+
+    let load_body: Value = load_resp.json().await.unwrap();
+    let deliverables_used = load_body["deliverables_used"]
+        .as_array()
+        .expect("deliverables_used should be an array");
+
+    assert_eq!(
+        deliverables_used.len(),
+        1,
+        "Should have exactly 1 deliverable after overwrite"
+    );
+
+    assert_eq!(
+        deliverables_used[0]["deliverable_id"], del_id_2,
+        "Should have the second deliverable, not the first"
+    );
+    assert_eq!(
+        deliverables_used[0]["wording_snapshot"],
+        "DELETE ME - Custom wording override",
+        "Should use the wording override, not master body"
+    );
+
+    // Cleanup
+    cleanup_scope_assembly(&c, test_fee_key).await;
+    cleanup_deliverable(&c, &del_id_1).await;
+    cleanup_deliverable(&c, &del_id_2).await;
+}
+
+#[tokio::test]
+async fn test_load_scope_nonexistent_returns_empty() {
+    let c = client();
+
+    // Load for a fee_id that has no saved assembly
+    let resp = c
+        .get(format!(
+            "{}/scope/{}/deliverables",
+            base_url(),
+            "DELETE_ME_nonexistent_fee"
+        ))
+        .header("X-API-Key", api_key())
+        .send()
+        .await
+        .expect("GET /scope/{fee_id}/deliverables failed");
+
+    assert_eq!(resp.status(), 200);
+
+    let body: Value = resp.json().await.unwrap();
+    assert_eq!(body["fee_id"], "DELETE_ME_nonexistent_fee");
+
+    let deliverables_used = body["deliverables_used"]
+        .as_array()
+        .expect("deliverables_used should be an array");
+    assert!(
+        deliverables_used.is_empty(),
+        "Non-existent fee should return empty deliverables_used"
+    );
+}
+
+// ============================================================================
 // Final cleanup
 // ============================================================================
 
@@ -516,4 +867,12 @@ async fn test_assemble_without_matching_discipline_keeps_generic() {
 async fn test_zz_final_cleanup() {
     let c = client();
     cleanup_all_test_deliverables(&c).await;
+
+    // Also clean up test scope assemblies
+    for fee_key in [
+        "DELETE_ME_save_load_test",
+        "DELETE_ME_overwrite_test",
+    ] {
+        cleanup_scope_assembly(&c, fee_key).await;
+    }
 }

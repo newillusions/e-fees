@@ -284,32 +284,56 @@ pub async fn save_scope_builder(
         optional_sets.push_str(", manual_items = $manual_items");
     }
 
-    // Upsert scope_assembly
-    let upsert_query = format!(
-        "DELETE scope_assembly WHERE fee_id = type::record('fee', $fee_key); \
-         CREATE scope_assembly SET \
+    let deliverables_json: Value = json!(deliverables_used);
+
+    // Execute DELETE + CREATE as separate queries to isolate errors.
+    // Multi-statement queries with the WebSocket SDK silently drop CREATE errors.
+    state
+        .db
+        .query("DELETE scope_assembly WHERE fee_id = type::record('fee', $fee_key)")
+        .bind(("fee_key", fee_key.to_string()))
+        .await?;
+
+    let create_query = format!(
+        "CREATE scope_assembly SET \
          fee_id = type::record('fee', $fee_key), \
          deliverables_used = $deliverables_used, \
+         clauses = [], \
+         generated_text = '', \
+         llm_polished = false, \
          updated_at = time::now(), \
          created_at = time::now(){optional_sets};"
     );
 
-    let deliverables_json: Value = json!(deliverables_used);
-
-    let mut q = state
+    let mut create_q = state
         .db
-        .query(&upsert_query)
+        .query(&create_query)
         .bind(("fee_key", fee_key.to_string()))
         .bind(("deliverables_used", deliverables_json));
 
     if let Some(ref labels) = body.stage_labels {
-        q = q.bind(("stage_labels", json!(labels)));
+        create_q = create_q.bind(("stage_labels", json!(labels)));
     }
     if let Some(ref manual) = body.manual_items {
-        q = q.bind(("manual_items", json!(manual)));
+        create_q = create_q.bind(("manual_items", json!(manual)));
     }
 
-    q.await?;
+    let create_response = create_q.await?;
+    // .check() validates the statement succeeded without deserializing datetime fields
+    create_response.check().map_err(|e| {
+        tracing::error!(
+            "save_scope_builder: CREATE failed for fee_key={}: {}",
+            fee_key,
+            e
+        );
+        ApiError::internal(&format!("Failed to save scope assembly: {}", e))
+    })?;
+
+    tracing::info!(
+        "save_scope_builder: saved {} deliverables for fee_key={}",
+        body.deliverables.len(),
+        fee_key
+    );
 
     // Stamp usage_history on each deliverable used
     for entry in &body.deliverables {
@@ -362,7 +386,7 @@ pub async fn get_scope_deliverables(
     let mut res = state
         .db
         .query(
-            "SELECT * FROM scope_assembly WHERE fee_id = type::record('fee', $fee_key) LIMIT 1",
+            "SELECT deliverables_used, stage_labels, manual_items FROM scope_assembly WHERE fee_id = type::record('fee', $fee_key) LIMIT 1",
         )
         .bind(("fee_key", fee_key.to_string()))
         .await?;

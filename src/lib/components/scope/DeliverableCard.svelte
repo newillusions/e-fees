@@ -1,5 +1,6 @@
 <script lang="ts">
   import './scope.css';
+  import type { Deliverable } from '$lib/types/scope';
 
   let {
     deliverable,
@@ -7,9 +8,9 @@
     onExpand,
     isDragging = false,
   }: {
-    deliverable: any;
-    onRemove?: (d: any) => void;
-    onExpand?: (d: any) => void;
+    deliverable: Deliverable;
+    onRemove?: (d: Deliverable) => void;
+    onExpand?: (d: Deliverable) => void;
     isDragging?: boolean;
   } = $props();
 

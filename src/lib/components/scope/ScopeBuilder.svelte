@@ -6,6 +6,12 @@
     assembleDeliverables,
     saveScopeBuilder,
   } from '$lib/api/scope';
+  import type {
+    StageConfig,
+    Deliverable,
+    StageDisplay,
+    ScopeDeliverableEntry,
+  } from '$lib/types/scope';
   import StageSection from './StageSection.svelte';
   import DeliverableLibrary from './DeliverableLibrary.svelte';
   import DeliverableDetail from './DeliverableDetail.svelte';
@@ -19,10 +25,10 @@
   let feeId = $derived(params.id || '');
 
   // Data state
-  let stages: any[] = $state([]);
-  let activeByStage: Record<string, any[]> = $state({});
-  let libraryDeliverables: any[] = $state([]);
-  let selectedDeliverable: any | null = $state(null);
+  let stages: StageConfig[] = $state([]);
+  let activeByStage: Record<string, Deliverable[]> = $state({});
+  let libraryDeliverables: Deliverable[] = $state([]);
+  let selectedDeliverable: Deliverable | null = $state(null);
 
   // UI state
   let loading = $state(true);
@@ -71,8 +77,8 @@
         getDeliverables(),
       ]);
 
-      stages = stagesResp.data || stagesResp;
-      libraryDeliverables = deliverablesResp.data || deliverablesResp;
+      stages = stagesResp.data;
+      libraryDeliverables = deliverablesResp.data;
 
       // Assemble initial deliverables for this fee
       await runAssemble();
@@ -90,13 +96,11 @@
         fee_id: feeId,
         disciplines: ['lighting'],
       });
-      const byStage: Record<string, any[]> = {};
+      const byStage: Record<string, Deliverable[]> = {};
 
-      const assemblyData = result.data || result;
-      const stageList = assemblyData.stages || assemblyData;
-      if (Array.isArray(stageList)) {
-        for (const s of stageList) {
-          byStage[s.canonical_name || s.stage] = s.deliverables || [];
+      if (result.stages) {
+        for (const s of result.stages) {
+          byStage[s.canonical_name] = s.deliverables || [];
         }
       }
 
@@ -113,7 +117,7 @@
     saveMessage = null;
 
     try {
-      const deliverables: any[] = [];
+      const deliverables: ScopeDeliverableEntry[] = [];
       for (const [stageName, items] of Object.entries(activeByStage)) {
         for (const [idx, d] of items.entries()) {
           deliverables.push({
@@ -159,7 +163,7 @@
     }
   }
 
-  function handleRemove(deliverable: any) {
+  function handleRemove(deliverable: Deliverable) {
     const updated = { ...activeByStage };
     for (const [stage, items] of Object.entries(updated)) {
       updated[stage] = items.filter((d) => d.id !== deliverable.id);
@@ -167,7 +171,7 @@
     activeByStage = updated;
   }
 
-  function handleExpand(deliverable: any) {
+  function handleExpand(deliverable: Deliverable) {
     selectedDeliverable = deliverable;
   }
 
@@ -175,7 +179,7 @@
     selectedDeliverable = null;
   }
 
-  function handleDetailSave(updated: any) {
+  function handleDetailSave(updated: Deliverable) {
     // Update the deliverable in the active set
     const newByStage = { ...activeByStage };
     for (const [stage, items] of Object.entries(newByStage)) {
@@ -189,11 +193,11 @@
     selectedDeliverable = null;
   }
 
-  function handleReorder(stage: any, reordered: any[]) {
+  function handleReorder(stage: StageDisplay, reordered: Deliverable[]) {
     activeByStage = { ...activeByStage, [stage.canonical_name]: reordered };
   }
 
-  function handleDropFromLibrary(stage: any, deliverable: any) {
+  function handleDropFromLibrary(stage: StageDisplay, deliverable: Deliverable) {
     // Add to this stage if not already active
     if (activeIds.has(deliverable.id)) return;
 
@@ -204,7 +208,7 @@
     };
   }
 
-  function handleAddFromLibrary(deliverable: any, _targetStage?: string) {
+  function handleAddFromLibrary(deliverable: Deliverable, _targetStage?: string) {
     // Add to the deliverable's native stage, or the first available stage
     const targetStage =
       _targetStage || deliverable.stage || stageConfigs[0]?.canonical_name;

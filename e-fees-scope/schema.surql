@@ -102,7 +102,7 @@ DEFINE INDEX idx_deliverable_status ON deliverable FIELDS status;
 -- Extend scope_assembly for deliverable tracking
 -- ============================================================
 DEFINE FIELD deliverables_used   ON scope_assembly TYPE option<array<object>> FLEXIBLE;
-DEFINE FIELD deliverables_used.* ON scope_assembly TYPE object FLEXIBLE;
+DEFINE FIELD deliverables_used.* ON scope_assembly TYPE object FLEXIBLE;  -- FLEXIBLE required for nested fields
 DEFINE FIELD stage_labels        ON scope_assembly TYPE option<object> FLEXIBLE;
 DEFINE FIELD manual_items        ON scope_assembly TYPE option<array<object>> FLEXIBLE;
-DEFINE FIELD manual_items.*      ON scope_assembly TYPE object FLEXIBLE;
+DEFINE FIELD manual_items.*      ON scope_assembly TYPE object FLEXIBLE;  -- FLEXIBLE required for nested fields

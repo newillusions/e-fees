@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { StageDisplay, Deliverable } from '$lib/types/scope';
   import DeliverableCard from './DeliverableCard.svelte';
 
   let {
@@ -9,12 +10,12 @@
     onReorder,
     onDropFromLibrary,
   }: {
-    stage: { canonical_name: string; label: string; sort_order: number };
-    deliverables: any[];
-    onRemove?: (d: any) => void;
-    onExpand?: (d: any) => void;
-    onReorder?: (stage: any, reordered: any[]) => void;
-    onDropFromLibrary?: (stage: any, d: any) => void;
+    stage: StageDisplay;
+    deliverables: Deliverable[];
+    onRemove?: (d: Deliverable) => void;
+    onExpand?: (d: Deliverable) => void;
+    onReorder?: (stage: StageDisplay, reordered: Deliverable[]) => void;
+    onDropFromLibrary?: (stage: StageDisplay, d: Deliverable) => void;
   } = $props();
 
   let collapsed = $state(false);

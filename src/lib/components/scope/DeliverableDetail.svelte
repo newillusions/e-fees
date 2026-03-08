@@ -1,5 +1,6 @@
 <script lang="ts">
   import './scope.css';
+  import type { Deliverable } from '$lib/types/scope';
 
   let {
     deliverable,
@@ -8,11 +9,11 @@
     onDuplicate,
     onSaveAsNew,
   }: {
-    deliverable: any;
+    deliverable: Deliverable;
     onClose: () => void;
-    onSave?: (d: any) => void;
-    onDuplicate?: (d: any) => void;
-    onSaveAsNew?: (d: any) => void;
+    onSave?: (d: Deliverable) => void;
+    onDuplicate?: (d: Deliverable) => void;
+    onSaveAsNew?: (d: Deliverable) => void;
   } = $props();
 
   let editBody = $state(deliverable?.body || '');
