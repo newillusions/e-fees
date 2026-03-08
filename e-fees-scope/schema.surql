@@ -69,3 +69,40 @@ DEFINE FIELD intro_text     ON stage_config TYPE option<string>;
 DEFINE FIELD status         ON stage_config TYPE string DEFAULT "active";
 
 DEFINE INDEX idx_stage_canonical ON stage_config FIELDS canonical_name UNIQUE;
+
+-- ============================================================
+-- Deliverable library (atomic deliverable items)
+-- ============================================================
+DEFINE TABLE deliverable SCHEMAFULL;
+
+DEFINE FIELD title            ON deliverable TYPE string;
+DEFINE FIELD short_name       ON deliverable TYPE string;
+DEFINE FIELD body             ON deliverable TYPE string;
+DEFINE FIELD stage            ON deliverable TYPE string;
+DEFINE FIELD layer            ON deliverable TYPE string
+    ASSERT $value IN ['generic', 'discipline', 'conditional'];
+DEFINE FIELD discipline       ON deliverable TYPE option<string>;
+DEFINE FIELD condition        ON deliverable TYPE option<object> FLEXIBLE;
+DEFINE FIELD replaces         ON deliverable TYPE option<record<deliverable>>;
+DEFINE FIELD sort_order       ON deliverable TYPE int;
+DEFINE FIELD source_proposals ON deliverable TYPE option<array<string>>;
+DEFINE FIELD usage_history    ON deliverable TYPE option<array<object>> FLEXIBLE;
+DEFINE FIELD usage_history.*  ON deliverable TYPE object FLEXIBLE;
+DEFINE FIELD tags             ON deliverable TYPE option<array<string>>;
+DEFINE FIELD status           ON deliverable TYPE string DEFAULT "active";
+DEFINE FIELD version          ON deliverable TYPE int DEFAULT 1;
+DEFINE FIELD created_at       ON deliverable TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at       ON deliverable TYPE datetime DEFAULT time::now();
+
+DEFINE INDEX idx_deliverable_stage  ON deliverable FIELDS stage;
+DEFINE INDEX idx_deliverable_layer  ON deliverable FIELDS layer;
+DEFINE INDEX idx_deliverable_status ON deliverable FIELDS status;
+
+-- ============================================================
+-- Extend scope_assembly for deliverable tracking
+-- ============================================================
+DEFINE FIELD deliverables_used   ON scope_assembly TYPE option<array<object>> FLEXIBLE;
+DEFINE FIELD deliverables_used.* ON scope_assembly TYPE object FLEXIBLE;
+DEFINE FIELD stage_labels        ON scope_assembly TYPE option<object> FLEXIBLE;
+DEFINE FIELD manual_items        ON scope_assembly TYPE option<array<object>> FLEXIBLE;
+DEFINE FIELD manual_items.*      ON scope_assembly TYPE object FLEXIBLE;
