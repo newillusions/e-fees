@@ -51,6 +51,10 @@
     "peekaboo": {
       "command": "npx",
       "args": ["-y", "@steipete/peekaboo-mcp"]
+    },
+    "indesign": {
+      "command": "node",
+      "args": ["/Volumes/base/dev/indesign-uxp-server/src/index.js"]
     }
   }
 }
