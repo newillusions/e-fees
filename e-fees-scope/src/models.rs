@@ -130,3 +130,134 @@ pub struct UpdateScopeRequest {
     pub generated_text: Option<String>,
     pub clauses: Option<serde_json::Value>,
 }
+
+// ── Stage Config models ──────────────────────────────────────────
+
+/// A stage configuration record as stored in SurrealDB.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct StageConfig {
+    pub id: RecordId,
+    pub canonical_name: String,
+    pub default_label: String,
+    pub aliases: Option<Vec<String>>,
+    pub sort_order: i64,
+    pub intro_text: Option<String>,
+    pub status: String,
+}
+
+/// Payload for updating a stage config.
+#[derive(Debug, Deserialize)]
+pub struct UpdateStageConfig {
+    pub default_label: Option<String>,
+    pub aliases: Option<Vec<String>>,
+    pub sort_order: Option<i64>,
+    pub intro_text: Option<String>,
+}
+
+// ── Deliverable models ───────────────────────────────────────────
+
+/// A deliverable record as stored in SurrealDB.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct Deliverable {
+    pub id: RecordId,
+    pub title: String,
+    pub short_name: String,
+    pub body: String,
+    pub stage: String,
+    pub layer: String,
+    pub discipline: Option<String>,
+    pub condition: Option<surrealdb_types::Value>,
+    pub replaces: Option<RecordId>,
+    pub sort_order: i64,
+    pub source_proposals: Option<Vec<String>>,
+    pub usage_history: Option<surrealdb_types::Value>,
+    pub tags: Option<Vec<String>>,
+    pub status: String,
+    pub version: i64,
+    pub created_at: Datetime,
+    pub updated_at: Datetime,
+}
+
+/// Payload for creating a new deliverable.
+#[derive(Debug, Deserialize)]
+pub struct NewDeliverable {
+    pub title: String,
+    pub short_name: String,
+    pub body: String,
+    pub stage: String,
+    pub layer: String,
+    pub discipline: Option<String>,
+    pub condition: Option<serde_json::Value>,
+    pub replaces: Option<String>,
+    pub sort_order: i64,
+    pub source_proposals: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+}
+
+/// Payload for updating an existing deliverable (all fields optional).
+#[derive(Debug, Deserialize)]
+pub struct UpdateDeliverable {
+    pub title: Option<String>,
+    pub short_name: Option<String>,
+    pub body: Option<String>,
+    pub stage: Option<String>,
+    pub layer: Option<String>,
+    pub discipline: Option<String>,
+    pub condition: Option<serde_json::Value>,
+    pub replaces: Option<String>,
+    pub sort_order: Option<i64>,
+    pub source_proposals: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+}
+
+/// Request to assemble deliverables for a fee.
+#[derive(Debug, Deserialize)]
+pub struct AssembleRequest {
+    pub fee_id: String,
+    /// Disciplines to include (e.g., ["lighting", "av"]).
+    pub disciplines: Vec<String>,
+    /// Project attributes for conditional matching (e.g., {"tool": "revit"}).
+    pub conditions: Option<serde_json::Value>,
+    /// Stages to include (canonical names). If empty, includes all active stages.
+    pub stages: Option<Vec<String>>,
+    /// Stage label overrides (e.g., {"schematic": "50% DD"}).
+    pub stage_labels: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Whether to run LLM polish on the assembled text.
+    #[serde(default)]
+    pub polish: bool,
+}
+
+/// Request to save the scope builder state.
+#[derive(Debug, Deserialize)]
+pub struct SaveScopeBuilderRequest {
+    pub fee_id: String,
+    /// Array of deliverable references with optional wording overrides.
+    pub deliverables: Vec<ScopeDeliverableEntry>,
+    /// Custom one-off items not from the library.
+    pub manual_items: Option<Vec<ManualDeliverableEntry>>,
+    /// Stage label overrides for this proposal.
+    pub stage_labels: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Whether to run LLM polish.
+    #[serde(default)]
+    pub polish: bool,
+}
+
+/// A deliverable entry in a saved scope assembly.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ScopeDeliverableEntry {
+    pub deliverable_id: String,
+    pub stage: String,
+    pub sort_order: i64,
+    /// If set, this overrides the master wording for this proposal only.
+    pub wording_override: Option<String>,
+}
+
+/// A manually added deliverable (not from library).
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ManualDeliverableEntry {
+    pub title: String,
+    pub short_name: String,
+    pub body: String,
+    pub stage: String,
+    pub sort_order: i64,
+}
