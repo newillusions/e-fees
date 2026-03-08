@@ -55,3 +55,17 @@ DEFINE FIELD embedding      ON proposal_corpus TYPE option<array<float>>;
 DEFINE FIELD created_at     ON proposal_corpus TYPE datetime DEFAULT time::now();
 
 DEFINE INDEX idx_corpus_project ON proposal_corpus FIELDS project_number;
+
+-- ============================================================
+-- Stage configuration (canonical stages with aliases)
+-- ============================================================
+DEFINE TABLE stage_config SCHEMAFULL;
+
+DEFINE FIELD canonical_name ON stage_config TYPE string;
+DEFINE FIELD default_label  ON stage_config TYPE string;
+DEFINE FIELD aliases        ON stage_config TYPE option<array<string>>;
+DEFINE FIELD sort_order     ON stage_config TYPE int;
+DEFINE FIELD intro_text     ON stage_config TYPE option<string>;
+DEFINE FIELD status         ON stage_config TYPE string DEFAULT "active";
+
+DEFINE INDEX idx_stage_canonical ON stage_config FIELDS canonical_name UNIQUE;
