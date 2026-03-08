@@ -66,9 +66,13 @@ pub struct AppState {
         routes::deliverables::update_deliverable,
         routes::deliverables::delete_deliverable,
         routes::deliverables::deliverable_analytics,
+        routes::assembly::assemble_deliverables,
+        routes::assembly::save_scope_builder,
+        routes::assembly::get_scope_deliverables,
     ),
     tags(
         (name = "Health", description = "Service health"),
+        (name = "Assembly", description = "Deliverable assembly and scope builder"),
         (name = "Clauses", description = "Clause library CRUD"),
         (name = "Corpus", description = "Proposal corpus / knowledge base"),
         (name = "Deliverables", description = "Deliverable library CRUD"),
@@ -183,6 +187,18 @@ async fn main() {
         .route(
             "/scope/{fee_id}/export",
             get(routes::scope::export_scope),
+        )
+        .route(
+            "/scope/assemble",
+            post(routes::assembly::assemble_deliverables),
+        )
+        .route(
+            "/scope/save",
+            post(routes::assembly::save_scope_builder),
+        )
+        .route(
+            "/scope/{fee_id}/deliverables",
+            get(routes::assembly::get_scope_deliverables),
         )
         .route("/stages", get(routes::stages::list_stages))
         .route(

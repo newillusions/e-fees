@@ -28,7 +28,7 @@ pub struct DeliverableListParams {
 }
 
 /// Convert a Deliverable (SurrealDB native types) to a plain JSON Value.
-fn deliverable_to_json(d: &Deliverable) -> Value {
+pub fn deliverable_to_json(d: &Deliverable) -> Value {
     let mut obj = json!({
         "id": record_key_string(&d.id.key),
         "title": d.title,
