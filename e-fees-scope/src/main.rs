@@ -60,11 +60,18 @@ pub struct AppState {
         routes::scope::export_scope,
         routes::stages::list_stages,
         routes::stages::update_stage,
+        routes::deliverables::list_deliverables,
+        routes::deliverables::get_deliverable,
+        routes::deliverables::create_deliverable,
+        routes::deliverables::update_deliverable,
+        routes::deliverables::delete_deliverable,
+        routes::deliverables::deliverable_analytics,
     ),
     tags(
         (name = "Health", description = "Service health"),
         (name = "Clauses", description = "Clause library CRUD"),
         (name = "Corpus", description = "Proposal corpus / knowledge base"),
+        (name = "Deliverables", description = "Deliverable library CRUD"),
         (name = "Scope", description = "Scope generation and assembly"),
         (name = "Stages", description = "Stage configuration"),
     ),
@@ -181,6 +188,20 @@ async fn main() {
         .route(
             "/stages/{canonical_name}",
             axum::routing::put(routes::stages::update_stage),
+        )
+        .route(
+            "/deliverables",
+            get(routes::deliverables::list_deliverables).post(routes::deliverables::create_deliverable),
+        )
+        .route(
+            "/deliverables/analytics",
+            get(routes::deliverables::deliverable_analytics),
+        )
+        .route(
+            "/deliverables/{id}",
+            get(routes::deliverables::get_deliverable)
+                .put(routes::deliverables::update_deliverable)
+                .delete(routes::deliverables::delete_deliverable),
         )
         .layer(middleware::from_fn_with_state(
             state.clone(),
