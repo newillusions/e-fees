@@ -12,6 +12,7 @@
   import ProjectDetailPage from './routes/ProjectDetailPage.svelte';
   import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
   import DevMode from './routes/DevMode.svelte';
+  import ScopeBuilderPage from './routes/ScopeBuilderPage.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { refreshExchangeRates } from '$lib/stores/exchangeRates';
@@ -49,6 +50,7 @@
     '/proposals/:id': ProposalDetailPage,
     '/companies': Companies,
     '/contacts': Contacts,
+    '/scope/:id': ScopeBuilderPage,
     '/dev': DevMode
   };
 
