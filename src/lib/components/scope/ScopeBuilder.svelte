@@ -66,13 +66,14 @@
 
     try {
       // Fetch stages and all deliverables in parallel
-      const [stagesData, allDeliverables] = await Promise.all([
+      // API returns { data: [...], total: N } wrapper
+      const [stagesResp, deliverablesResp] = await Promise.all([
         getStages(),
         getDeliverables(),
       ]);
 
-      stages = stagesData;
-      libraryDeliverables = allDeliverables;
+      stages = stagesResp.data || stagesResp;
+      libraryDeliverables = deliverablesResp.data || deliverablesResp;
 
       // Assemble initial deliverables for this fee
       await runAssemble();
@@ -86,12 +87,17 @@
 
   async function runAssemble() {
     try {
-      const result = await assembleDeliverables({ fee_id: feeId });
+      const result = await assembleDeliverables({
+        fee_id: feeId,
+        disciplines: ['lighting'],
+      });
       const byStage: Record<string, any[]> = {};
 
-      if (result.stages && Array.isArray(result.stages)) {
-        for (const s of result.stages) {
-          byStage[s.stage] = s.deliverables || [];
+      const assemblyData = result.data || result;
+      const stageList = assemblyData.stages || assemblyData;
+      if (Array.isArray(stageList)) {
+        for (const s of stageList) {
+          byStage[s.canonical_name || s.stage] = s.deliverables || [];
         }
       }
 
@@ -108,14 +114,14 @@
     saveMessage = null;
 
     try {
-      const deliverablesUsed: any[] = [];
+      const deliverables: any[] = [];
       for (const [stageName, items] of Object.entries(activeByStage)) {
-        for (const d of items) {
-          deliverablesUsed.push({
+        for (const [idx, d] of items.entries()) {
+          deliverables.push({
             deliverable_id: d.id,
             stage: stageName,
-            short_name: d.short_name,
-            wording_snapshot: d.body || '',
+            sort_order: idx + 1,
+            wording_override: null,
           });
         }
       }
@@ -128,7 +134,7 @@
 
       await saveScopeBuilder({
         fee_id: feeId,
-        deliverables_used: deliverablesUsed,
+        deliverables,
         stage_labels: stageLabels,
       });
 

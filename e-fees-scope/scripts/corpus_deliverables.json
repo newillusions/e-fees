@@ -1,0 +1,3089 @@
+{
+  "summary": {
+    "total_documents": 51,
+    "total_raw_items": 1585,
+    "total_clusters": 207,
+    "stages": {
+      "concept": 43,
+      "detailed": 30,
+      "handover": 22,
+      "ifc": 25,
+      "ift": 28,
+      "post_contract": 14,
+      "preliminaries": 6,
+      "schematic": 39
+    }
+  },
+  "clusters_by_stage": {
+    "preliminaries": [
+      {
+        "canonical": "Initial review of site and project information",
+        "count": 34,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97102-FP-02.pdf",
+          "25-97105-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "25-97104-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-96606-FP-02.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Review of site and project information",
+          "Review of site and project information",
+          "Review of site and project information",
+          "Review of site and project information",
+          "Review of site and project information"
+        ]
+      },
+      {
+        "canonical": "Assistance in defining project aspirations",
+        "count": 33,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97102-FP-02.pdf",
+          "25-97105-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "25-97104-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance in project planning and brief development as appropriate",
+        "count": 33,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97102-FP-02.pdf",
+          "25-97105-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "25-97104-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review of existing/approved Schematic Design information and plans for site wide systems",
+        "count": 2,
+        "sources": [
+          "e-24-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Review of existing/approved Concept Design reports for Show Systems"
+        ]
+      },
+      {
+        "canonical": "Review of existing/approved budgets and preliminary pricing documents to assist with value engineering and design adjustments",
+        "count": 1,
+        "sources": [
+          "e-24-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Site Inspection[s]",
+        "count": 1,
+        "sources": [
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "concept": [
+      {
+        "canonical": "Attend design workshops / Design Team meetings / mock-ups",
+        "count": 36,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97105-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "25-97104-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-96601-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings"
+        ]
+      },
+      {
+        "canonical": "Produce presentation materials to convey the overall design intention as required",
+        "count": 32,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Produce presentation materials to convey the overall design intention",
+          "Produce presentation materials to convey the overall design intention",
+          "Produce presentation materials to convey the overall design intention",
+          "Produce presentation materials to convey the overall design intention",
+          "Produce presentation materials to convey the overall design intention"
+        ]
+      },
+      {
+        "canonical": "Provide recommendations on package requirements [such as lux levels, uniformities, resolution, sound levels, reverberation times and intelligibility as required]",
+        "count": 32,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Provide recommendations on package requirements [such as lux levels, uniformities, resolution, sound levels, and intelligibility as required]",
+          "Provide recommendations on package requirements [such as sound levels, and intelligibility as required]",
+          "Provide recommendations on package requirements [such as lux levels, uniformities, resolution, sound levels, and intelligibility as required]",
+          "Provide recommendations on package requirements [such as lux levels, uniformities, resolution, sound levels, and intelligibility as required]",
+          "Provide recommendations on package requirements [such as lux levels, uniformities, etc. as required]"
+        ]
+      },
+      {
+        "canonical": "Briefing and presentation meetings with the Client",
+        "count": 31,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Undertake research to establish current / future trends and establish design baselines",
+        "count": 31,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carrying out conceptual design studies",
+        "count": 30,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "High level Package Master Plans",
+        "count": 30,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance in defining project aspirations",
+        "count": 6,
+        "sources": [
+          "e-23-96603-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance in project planning and brief development as appropriate",
+        "count": 6,
+        "sources": [
+          "e-23-96603-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare preliminary package equipment schedule",
+        "count": 6,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "e-23-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package power requirements",
+          "Prepare final package equipment schedule",
+          "Prepare final package power requirements"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary package scene information [as required]",
+        "count": 6,
+        "sources": [
+          "e-23-97107-FP-01.pdf",
+          "e-23-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary 3D package calculations [as required]",
+          "Prepare preliminary package layouts",
+          "Prepare preliminary package scene information",
+          "Prepare preliminary package power requirements",
+          "Prepare preliminary package layouts"
+        ]
+      },
+      {
+        "canonical": "Review of site and project information",
+        "count": 6,
+        "sources": [
+          "e-23-96603-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Identify integration points with other systems as required",
+        "count": 5,
+        "sources": [
+          "25-97104-FP-01.pdf",
+          "25-97105-FP-01.pdf",
+          "e-23-96601-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": [
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary logical control channel schedule",
+        "count": 5,
+        "sources": [
+          "e-23-97107-FP-01.pdf",
+          "e-23-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package equipment schedule",
+          "Prepare preliminary package control intent"
+        ]
+      },
+      {
+        "canonical": "Prepare final 3D package calculations",
+        "count": 4,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare lighting calculations",
+          "Prepare lighting calculations"
+        ]
+      },
+      {
+        "canonical": "Assist others with the coordination of the package design",
+        "count": 3,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare final package details where applicable for incorporation into Architect's details",
+        "count": 3,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "24-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare detail drawings where applicable for incorporation into Architect's details",
+          "Prepare detail drawings where applicable for incorporation into Architect's details"
+        ]
+      },
+      {
+        "canonical": "Prepare lighting control schematic drawings",
+        "count": 3,
+        "sources": [
+          "25-97104-FP-01.pdf",
+          "24-97105-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare layout and elevation drawings"
+        ]
+      },
+      {
+        "canonical": "Provide recommendations to the Client based on previous experiences and local knowledge.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and analyse submittals based on technical compliance, company experience, project understanding, and other factors as required.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and checking of proposed substitute devices, as selected by others, for compliance with specification.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assist others in checking that the package schemes are within the approved budgets",
+        "count": 2,
+        "sources": [
+          "e-23-97107-FP-01.pdf",
+          "e-23-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out preliminary development of package specific 2D layouts based on supplied files",
+        "count": 2,
+        "sources": [
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": [
+          "Carry out preliminary development of package design"
+        ]
+      },
+      {
+        "canonical": "Prepare equipment schedules and specifications",
+        "count": 2,
+        "sources": [
+          "25-97104-FP-01.pdf",
+          "24-97105-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare power requirements",
+        "count": 2,
+        "sources": [
+          "25-97104-FP-01.pdf",
+          "24-97105-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out conceptual design studies and modelling [as required] for alternative display systems",
+        "count": 1,
+        "sources": [
+          "24-96605-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out further development of package design",
+        "count": 1,
+        "sources": [
+          "e-23-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out studies for alternative control systems",
+        "count": 1,
+        "sources": [
+          "24-96605-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Content recommendations specific to the technology proposed and the venue specifications",
+        "count": 1,
+        "sources": [
+          "e-23-97105-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Establish preliminary presents in the control system to be updated on site.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Identify locations of lighting control panels, centralised workstation and connectivity requirements. Identify Lighting control UI and integrations with AV systems and AV UI.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Identify the lighting control systems specified for each area and suggest appropriate technologies where not specified, and advise suitability for the application and analysis of building wide lighting control system integrations.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Identify where lighting zones and control groups have been specified and highlight relevant areas where these have not been specified.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "In conjunction with the Client and Creative Team, develop a programming schedule defining the requirements and desired outcomes for each space.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "In conjunction with the Control System Contractor, develop and review lighting control documentation including Fixture IDs, Patch Sheets, and control connection diagrams.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Pre-patching of control software",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare and present initial report.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare layout and elevation drawings",
+        "count": 1,
+        "sources": [
+          "24-97105-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare scoring matrix comparing submitted package tenders.",
+        "count": 1,
+        "sources": [
+          "e-22-97114-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Program preliminary and place-holder scenes and sequences [where possible] to be updated on site.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review all lighting designs (drawings, specifications, reports) within the Wynn resort building, external areas and Island 3 infrastructure and identify any additional information required.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Undertake review of existing control system",
+        "count": 1,
+        "sources": [
+          "24-96605-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Undertake reviews and modelling [as required] to evaluate the existing design",
+        "count": 1,
+        "sources": [
+          "24-96605-FP-01.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "schematic": [
+      {
+        "canonical": "Prepare preliminary package equipment schedule",
+        "count": 144,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package scene information",
+          "Prepare preliminary package power requirements",
+          "Prepare preliminary package layouts"
+        ]
+      },
+      {
+        "canonical": "Attend design workshops / Design Team meetings / mock-ups",
+        "count": 40,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "24-97107-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary package power requirements",
+        "count": 38,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare package power requirements",
+          "Prepare final package power requirements",
+          "Prepare preliminary package layouts",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package layouts"
+        ]
+      },
+      {
+        "canonical": "Identify integration points with other systems as required",
+        "count": 36,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required"
+        ]
+      },
+      {
+        "canonical": "Carry out preliminary development of package design",
+        "count": 31,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Carry out further development of package design",
+          "Carry out further development of package design.",
+          "Carry out further development of package design",
+          "Carry out further development of package design",
+          "Carry out further development of package design"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary logical control channel schedule",
+        "count": 31,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package equipment schedule",
+          "Prepare preliminary package control intent"
+        ]
+      },
+      {
+        "canonical": "Assist others in checking that the package schemes are within the approved budgets",
+        "count": 30,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare preliminary 3D package calculations as appropriate",
+        "count": 23,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-97109-FP-02.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-23-97108-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary 3D package calculations [as required]",
+          "Prepare preliminary package layouts",
+          "Prepare preliminary package scene information",
+          "Prepare preliminary package power requirements",
+          "Prepare preliminary 3D package calculations [as required]"
+        ]
+      },
+      {
+        "canonical": "Carry out preliminary development of package specific 3D layouts based on linked files to LOD 200 standards",
+        "count": 21,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-97109-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf"
+        ],
+        "variants": [
+          "Carry out further development of package specific 3D layouts based on linked files to LOD 300 standards",
+          "Carry out preliminary development of package specific 2D layouts based on linked files",
+          "Carry out development of package specific 2D layouts based on linked files",
+          "Carry out development of package specific 2D layouts based on linked files"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary 3D package calculations [as required]",
+        "count": 16,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "25-97106-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare final 3D package calculations",
+          "Prepare package layouts",
+          "Prepare 3D package calculations [as required]",
+          "Prepare 3D package calculations [as required]"
+        ]
+      },
+      {
+        "canonical": "Provide support to Contractor and Client for procurement pathways.",
+        "count": 6,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": [
+          "Provide support to Contractor and Client to minimise lead times.",
+          "Provide support to Contractor and Client to minimise lead times.",
+          "Provide support to Contractor and Client to minimise lead times."
+        ]
+      },
+      {
+        "canonical": "Assist others with the coordination of the package design",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare final 3D package calculations",
+        "count": 5,
+        "sources": [
+          "25-97101-FP-02.pdf",
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare package layouts",
+          "Prepare final package layouts"
+        ]
+      },
+      {
+        "canonical": "Prepare final package details where applicable for incorporation into Architect's details",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Briefing and presentation meetings with the Client",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carrying out conceptual design studies",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "High level Package Master Plans",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Produce presentation materials to convey the overall design intention",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide recommendations on package requirements [such as lux levels, uniformities, resolution, sound levels, and intelligibility as required]",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Undertake research to establish current / future trends and establish design baselines",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Attend regular meetings with Contractors and Client to ensure ongoing progress and development of the system.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide support to Contractor to develop installation programmes and timelines.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification and schedule of devices, accessories and associated equipment.",
+        "count": 2,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification for the operational requirements of the control system and control schedule.",
+        "count": 2,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final system calculations and compliance with relevant Building Regulations.",
+        "count": 2,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Following approval provide documents for final tender and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design.",
+        "count": 2,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Identify and recommend appropriate acoustic treatments as required",
+        "count": 2,
+        "sources": [
+          "e-23-97109-FP-02.pdf",
+          "e-23-97108-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The above information will allow detailed costing by others – the Project's Cost Estimator / Quantity Surveyor / Tendering Contractor / other.",
+        "count": 2,
+        "sources": [
+          "25-97105-FP-01.pdf",
+          "25-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Confirm all preliminary programming scenes are operating as intended.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop a site wide lighting control strategy documents detailing requirements for each system and recommend options for centralised monitoring and control of area specific lighting control systems including automated control and manual override.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop matrix showing interfaces and interdependencies between lighting control system, and update as additional lighting designs become available",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop sitewide maps showing the limits of each lighting control system and interfaces / overlaps with the adjacent lighting systems, and update as additional lighting designs become available",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Flash out and validate the installed lighting system to ensure all connected devices are responding as expected. Any issues or errors are to be addressed by the Lighting Contractors.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide an high level acoustic review and recommendations for integration by architectural design teams",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide guidance to the design team / contractor where the lighting control system has not been defined within the project design.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Support the design teams in development of lighting scenes and obtaining client approval.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Update existing and new scenes to suit site conditions.",
+        "count": 1,
+        "sources": [
+          "e-24-97104-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Update initial report to include any new information and above noted deliverables and make recommendations as noted, and present.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Where areas are under design development, advise lighting designers of similar fitting used in other areas for procurement gains and reduced attic stock.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "detailed": [
+      {
+        "canonical": "Prepare final package layouts - by Client",
+        "count": 46,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare final 3D package calculations",
+          "Prepare final package layouts",
+          "Prepare final 3D package calculations",
+          "Prepare final package power requirements"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary package equipment schedule [indicative devices]",
+        "count": 38,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package equipment schedule",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package scene information",
+          "Prepare preliminary package power requirements"
+        ]
+      },
+      {
+        "canonical": "Attend design workshops / Design Team meetings / mock-ups",
+        "count": 33,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "24-97107-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings",
+          "Attend design workshops / Design Team meetings"
+        ]
+      },
+      {
+        "canonical": "Identify integration points with other systems as required",
+        "count": 33,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "24-97107-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required",
+          "Specify integration points with other systems as required"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary package power requirements",
+        "count": 30,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare indicative package power requirements",
+          "Prepare final package power requirements",
+          "Prepare final package power requirements",
+          "Prepare final package power requirements",
+          "Prepare final package power requirements"
+        ]
+      },
+      {
+        "canonical": "Assist others with the coordination of the package design",
+        "count": 28,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare package detail sketches where applicable for incorporation into Architect's details",
+        "count": 28,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "24-97111-FP-01.pdf",
+          "e-23-97108-FP-02.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Prepare final package details where applicable for incorporation into Architect's details",
+          "Prepare final package details where applicable for incorporation into Architect's details",
+          "Prepare final package details where applicable for incorporation into Architect's details",
+          "Prepare final package details where applicable for incorporation into Architect's details",
+          "Prepare final package details where applicable for incorporation into Architect's details"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary 3D package calculations [as required - Lighting Only]",
+        "count": 21,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96605-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-23-97108-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-22-97115-FP-02.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "e-23-96604-FP-01.pdf",
+          "e-23-97110-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary 3D package calculations [as required]",
+          "Prepare preliminary package layouts",
+          "Prepare preliminary package scene information",
+          "Prepare preliminary package power requirements",
+          "Prepare preliminary 3D package calculations [as required]"
+        ]
+      },
+      {
+        "canonical": "Carry out further development of package specific 3D layouts based on linked files to LOD 200-300 standards [TBC]",
+        "count": 20,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "25-96601-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Carry out preliminary development of package specific 3D layouts based on linked files to LOD 200 standards",
+          "Carry out preliminary development of package specific 3D layouts based on linked files to LOD 200 standards",
+          "Carry out further development of package specific 3D layouts based on linked files to LOD 300 standards",
+          "Carry out further development of package specific 3D layouts based on linked files to LOD 300 standards",
+          "Carry out further development of package specific 3D layouts based on linked files to LOD 300 standards"
+        ]
+      },
+      {
+        "canonical": "Prepare preliminary logical control channel schedule",
+        "count": 9,
+        "sources": [
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare preliminary package detail sketches",
+          "Prepare preliminary package equipment schedule",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package control intent",
+          "Prepare preliminary package control intent"
+        ]
+      },
+      {
+        "canonical": "Assist others in checking that the package schemes are within the approved budgets",
+        "count": 5,
+        "sources": [
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out further development of package design",
+        "count": 5,
+        "sources": [
+          "e-22-97115-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification and schedule of devices, accessories and associated equipment.",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification for the operational requirements of the control system and control schedule.",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final system calculations and compliance with relevant Building Regulations.",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Following approval provide documents for final tender and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design.",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The above information will allow detailed costing by others – the Project's Cost Estimator / Quantity Surveyor / Tendering Contractor / other.",
+        "count": 5,
+        "sources": [
+          "24-97109-FP-01.pdf",
+          "22-97113-FP-02.pdf",
+          "25-97106-FP-02.pdf",
+          "25-97101-FP-02.pdf",
+          "e-23-97107-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Attend workshop / meetings with Contractor to clarify questions from the system engineering team prior to commencement.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Ongoing resolution of design queries.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide recommendations to Client in order to resolve coordination issues as required.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review Contractors production information.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Clearly outlined and detailed system control programming specification for operations of the venue",
+        "count": 1,
+        "sources": [
+          "e-23-97105-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop sitewide lighting control commissioning plan and lead testing with support of areas lighting control contractors.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Incorporate comments and adjustments from other design team members",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare and present final report.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare initial system connection drawings",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare interim reports on testing and commissioning progress.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and comment on lighting control commissioning documentation.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review new lighting information and updated report and supporting documents as appropriate.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Verify commission on site including zones and control group activation and lighting control functionality for each lighting control system.",
+        "count": 1,
+        "sources": [
+          "25-97102-FP-02.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "ift": [
+      {
+        "canonical": "Following approval provide documents for final tender and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design.",
+        "count": 22,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-96602-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "25-97108-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final system calculations and compliance with relevant Building Regulations.",
+        "count": 17,
+        "sources": [
+          "25-97108-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "23-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification and schedule of devices, accessories and associated equipment.",
+        "count": 15,
+        "sources": [
+          "25-97108-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification for the operational requirements of the control system and control schedule.",
+        "count": 15,
+        "sources": [
+          "25-97108-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The above information will allow detailed costing by others – the Project's Cost Estimator / Quantity Surveyor / Tendering Contractor / other.",
+        "count": 15,
+        "sources": [
+          "25-97108-FP-01.pdf",
+          "e-23-96602-FP-01.pdf",
+          "e-23-96603-FP-01.pdf",
+          "24-97112-FP-01.pdf",
+          "24-96605-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97113-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-24-96601-FP-01.pdf",
+          "25-97109-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "24-96603-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "24-97107-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "The above information will allow detailed costing by others – the Project’s Cost Estimator / Quantity Surveyor / Tendering Contractor / other."
+        ]
+      },
+      {
+        "canonical": "Prepare revised package equipment schedule",
+        "count": 13,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-23-96607-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare final package equipment schedule",
+          "Prepare final package power requirements",
+          "Prepare final package equipment schedule",
+          "Prepare final package power requirements"
+        ]
+      },
+      {
+        "canonical": "Prepare final 3D package calculations",
+        "count": 9,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": [
+          "Prepare final package layouts",
+          "Prepare final package layouts",
+          "Prepare final package layouts",
+          "Prepare final package layouts"
+        ]
+      },
+      {
+        "canonical": "Prepare scoring matrix comparing submitted package tenders.",
+        "count": 8,
+        "sources": [
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and analyse of submittals based on technical compliance, company experience and other factors as required.",
+        "count": 8,
+        "sources": [
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and checking of proposed substitute devices, as selected by others, for compliance with specification.",
+        "count": 8,
+        "sources": [
+          "e-23-97102-EL-FP-01.pdf",
+          "25-97107-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-23-97105-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-23-97107-FP-01.pdf",
+          "24-97106-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assist others with the coordination of the package design",
+        "count": 5,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Attend design workshops / Design Team meetings / mock-ups",
+        "count": 5,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare final package details where applicable for incorporation into Architect's details",
+        "count": 5,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Specify integration points with other systems as required",
+        "count": 5,
+        "sources": [
+          "e-22-96601-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-24-97102-FP-01.pdf",
+          "e-22-97111-FP-01.pdf",
+          "25-97103-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Carry out further development of package specific 3D layouts based on linked files to LOD 300 standards",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "e-22-96601-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final review of package installation.",
+        "count": 4,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Resolution of site queries.",
+        "count": 4,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": [
+          "Resolution of site queries"
+        ]
+      },
+      {
+        "canonical": "Attend meetings with the Installation and Design Teams as considered necessary by the Design Team (the number of site meetings will be quantified).",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Attend site inspections as agreed to review the progress and workmanship of the Contractor on site.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide feedback to the Client following site inspections.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision and verification of on site equipment testing and inspections",
+        "count": 2,
+        "sources": [
+          "25-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Supervision and verification of on site commissioning activities."
+        ]
+      },
+      {
+        "canonical": "Attending on site meetings and inspections as required",
+        "count": 1,
+        "sources": [
+          "25-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare Cut Sheets for selected products",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Resolving technical questions that may arise on site",
+        "count": 1,
+        "sources": [
+          "25-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review Contractors production information",
+        "count": 1,
+        "sources": [
+          "e-23-97111-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Revised IFT documentation pack addressing any questions or issues that arise after design works.",
+        "count": 1,
+        "sources": [
+          "22-97113-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision of on site preparation and installation of technical systems.",
+        "count": 1,
+        "sources": [
+          "25-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+        "count": 1,
+        "sources": [
+          "e-23-97111-FP-02.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "ifc": [
+      {
+        "canonical": "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and any union agreements.",
+        "count": 8,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "24-97106-FP-01.pdf",
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": [
+          "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+          "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+          "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+          "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+          "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements."
+        ]
+      },
+      {
+        "canonical": "Contract meetings with the Construction and Design Team as considered necessary by the design team (the number of site meetings will be quantified).",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Contract meetings with the Construction and Design Team as considered necessary by the design team [the number of site meetings will be quantified]."
+        ]
+      },
+      {
+        "canonical": "Final review of package installation.",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Oversee the programming of installed control equipment where applicable.",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Resolution of site queries.",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Resolution of site queries",
+          "Resolution of site queries",
+          "Resolution of site queries",
+          "Resolution of site queries"
+        ]
+      },
+      {
+        "canonical": "Review Contractors production information [Shop Drawings reviews.]",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "24-97110-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Review Contractors production information",
+          "Review Contractors production information",
+          "Review Contractors production information",
+          "Review Contractors production information"
+        ]
+      },
+      {
+        "canonical": "Review and analysis of submittals based on technical compliance, company experience and other factors as required.",
+        "count": 5,
+        "sources": [
+          "22-97113-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf"
+        ],
+        "variants": [
+          "Review and analyse of submittals based on technical compliance, company experience and other factors as required.",
+          "Review and analyse of submittals based on technical compliance, company experience and other factors as required."
+        ]
+      },
+      {
+        "canonical": "Review and checking of proposed substitute devices, as selected by others, for compliance with specification.",
+        "count": 5,
+        "sources": [
+          "22-97113-FP-02.pdf",
+          "e-23-96607-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-24-97102-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision of focusing / aiming of adjustable device.",
+        "count": 5,
+        "sources": [
+          "e-23-97102-AA-FP-01.pdf",
+          "e-23-97102-EL-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf",
+          "24-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Prepare scoring matrix comparing submitted package tenders.",
+        "count": 4,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "24-97108-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "22-97113-FP-02.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Confirm addressing and grouping structures are appropriate for intended use.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Confirm control system is operational and ready for programming.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Coordinate addressing of fixtures with Programmers to streamline the works.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Direct aiming and focussing of adjustable devices.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Following approval of the previous stage provide documents for final construction and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design.",
+        "count": 3,
+        "sources": [
+          "e-24-97102-FP-01.pdf",
+          "24-97111-FP-01.pdf",
+          "e-22-96601-FP-01.pdf"
+        ],
+        "variants": [
+          "Following approval provide documents for final tender and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design.",
+          "Following approval provide documents for final tender and assistance in co-ordinating system design with architectural, electrical, structural and mechanical design."
+        ]
+      },
+      {
+        "canonical": "Review and provide feedback on commissioning procedures developed by the Contractor.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Witness functionality and grouping tests to confirm the system is ready for programming.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and comment on device selection and Material Submittals developed by the Awarded Contractor to ensure compliance with the Design Intent and Client Requirements.",
+        "count": 2,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Review and comment on production and installation drawings developed by the Awarded Contractor to ensure compliance with the Design Intent and Client Requirements."
+        ]
+      },
+      {
+        "canonical": "Assist others with the final coordination of the package design",
+        "count": 1,
+        "sources": [
+          "24-97112-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification and schedule of devices, accessories and associated equipment.",
+        "count": 1,
+        "sources": [
+          "e-22-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final specification for the operational requirements of the control system and control schedule.",
+        "count": 1,
+        "sources": [
+          "e-22-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final system calculations and compliance with relevant Building Regulations.",
+        "count": 1,
+        "sources": [
+          "e-22-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Initial reviews and comments on Shop Drawings developed by the awarded contractor.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The above information will allow detailed costing by others – the Project's Cost Estimator / Quantity Surveyor / Tendering Contractor / other.",
+        "count": 1,
+        "sources": [
+          "e-22-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Update final BoQs and specifications",
+        "count": 1,
+        "sources": [
+          "24-97112-FP-01.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "post_contract": [
+      {
+        "canonical": "Oversee the programming of installed control equipment where applicable.",
+        "count": 6,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": [
+          "Supervise the programming of installed control equipment.",
+          "Supervise the programming of installed control equipment.",
+          "Undertake the programming of installed control equipment."
+        ]
+      },
+      {
+        "canonical": "Assistance in checking completion / making good of any defects noted in our system report and any other relevant reports.",
+        "count": 4,
+        "sources": [
+          "24-97106-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance with producing the package defects report to responsible areas.",
+        "count": 4,
+        "sources": [
+          "24-97106-FP-01.pdf",
+          "e-23-97111-FP-02.pdf",
+          "e-23-97101-FP-01.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Contract meetings with the Construction and Design Team as considered necessary by the design team (the number of site meetings will be quantified).",
+        "count": 4,
+        "sources": [
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Final review of package installation.",
+        "count": 4,
+        "sources": [
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Ongoing reviews of Contractor production information.",
+        "count": 4,
+        "sources": [
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Review Contractors production information",
+          "Review Contractors production information",
+          "Review Contractors production information"
+        ]
+      },
+      {
+        "canonical": "Resolution of site queries.",
+        "count": 4,
+        "sources": [
+          "e-23-96607-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": [
+          "Resolution of site queries",
+          "Resolution of site queries",
+          "Resolution of site queries"
+        ]
+      },
+      {
+        "canonical": "Establish connectivity with site wide control devices.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision of focusing / aiming of adjustable device.",
+        "count": 3,
+        "sources": [
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The Package Contractor shall supply personnel to perform this work in compliance with the local legislation and union agreements.",
+        "count": 3,
+        "sources": [
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop initial scene information",
+        "count": 2,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Provide regular reports and updates to the Client on site progress and potential delays.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and maintain contractor programmes and time lines.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision and witnessing of pre-commissioning works.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      }
+    ],
+    "handover": [
+      {
+        "canonical": "Assistance in checking completion / making good of any defects noted in our system report and any other relevant reports.",
+        "count": 4,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf",
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance with producing the package defects report to responsible areas.",
+        "count": 4,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf",
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": [
+          "Assistance with producing the package defects report for relevant areas.",
+          "Assistance with producing the package defects report for relevant areas."
+        ]
+      },
+      {
+        "canonical": "Assistance with providing advice on any defects reported by the contract administrator during the defects liability period up to a maximum of 12 months from practical completion.",
+        "count": 4,
+        "sources": [
+          "24-97106-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Conduct operational reviews and assessments as appropriate.",
+        "count": 4,
+        "sources": [
+          "24-97106-FP-01.pdf",
+          "e-23-97101-FP-01.pdf",
+          "25-97103-FP-02.pdf",
+          "e-yy-cccnn-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Assistance in defining and developing training session[s] for operations staff to explain the functionality of the Lighting Control Systems.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": [
+          "Develop training session[s] for operations staff to explain the functionality of the Lighting Control Systems."
+        ]
+      },
+      {
+        "canonical": "Conduct some \"Hands On\" training with selected operations staff to familiarise them with required actions.",
+        "count": 3,
+        "sources": [
+          "e-24-97101-FP-02.pdf",
+          "e-22-97114-FP-01.pdf",
+          "e-24-97101-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Supervision of focusing / aiming of adjustable devices.",
+        "count": 2,
+        "sources": [
+          "25-96601-FP-01.pdf",
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": [
+          "Supervision of focusing / aiming of adjustable device."
+        ]
+      },
+      {
+        "canonical": "Any additional training required shall be coordinated with the Client and Awarded Contractor.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Attend site inspections to review the functionality of the installed systems.",
+        "count": 1,
+        "sources": [
+          "e-22-97114-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Create an exported video file of each show for Client approval.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop and deliver a training program for the Client's operational staff.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Develop and program an agreed number of shows [currently specified as 20] in conjunction with the Client's requirements.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Each show is anticipated to be between 3-5min long.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Install and validate each show program on site.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Oversee the programming of installed control equipment where applicable.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Review and witness training and handover sessions provided to the Client by the awarded contractor.",
+        "count": 1,
+        "sources": [
+          "e-23-96607-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Specific Equipment training is to be provided by the Awarded Contractor and reviewed / supervised by the Consultant.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Specific Song selection shall be in conjunction with the Client",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "The Client is responsible for any Licensing and Approvals required for song usage",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "This training is currently envisaged to require 3 days on site, though this will be reviewed as the system design is further developed.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Undertake programming of relevant installed control equipment in conjunction with the Show Designer[s].",
+        "count": 1,
+        "sources": [
+          "25-96601-FP-01.pdf"
+        ],
+        "variants": []
+      },
+      {
+        "canonical": "Update and adjust programming on site as required.",
+        "count": 1,
+        "sources": [
+          "23-97106-FP-01.pdf"
+        ],
+        "variants": []
+      }
+    ]
+  }
+}
