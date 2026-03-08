@@ -10,7 +10,7 @@ DEFINE FIELD category    ON clause TYPE string;
 DEFINE FIELD subcategory ON clause TYPE option<string>;
 DEFINE FIELD title       ON clause TYPE string;
 DEFINE FIELD body        ON clause TYPE string;
-DEFINE FIELD conditions  ON clause TYPE option<object>;
+DEFINE FIELD conditions  ON clause TYPE option<object> FLEXIBLE;
 DEFINE FIELD sort_order  ON clause TYPE int;
 DEFINE FIELD tags        ON clause TYPE option<array<string>>;
 DEFINE FIELD is_default  ON clause TYPE bool DEFAULT true;

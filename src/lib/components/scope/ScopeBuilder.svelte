@@ -1,6 +1,5 @@
 <script lang="ts">
   import './scope.css';
-  import { onMount } from 'svelte';
   import {
     getStages,
     getDeliverables,
@@ -32,7 +31,7 @@
   let saveMessage: string | null = $state(null);
 
   // Derived: set of active IDs for library filtering
-  let activeIds = $derived(() => {
+  let activeIds = $derived.by(() => {
     const ids = new Set<string>();
     for (const items of Object.values(activeByStage)) {
       for (const d of items) {
@@ -196,7 +195,7 @@
 
   function handleDropFromLibrary(stage: any, deliverable: any) {
     // Add to this stage if not already active
-    if (activeIds().has(deliverable.id)) return;
+    if (activeIds.has(deliverable.id)) return;
 
     const current = activeByStage[stage.canonical_name] || [];
     activeByStage = {
@@ -210,7 +209,7 @@
     const targetStage =
       _targetStage || deliverable.stage || stageConfigs[0]?.canonical_name;
     if (!targetStage) return;
-    if (activeIds().has(deliverable.id)) return;
+    if (activeIds.has(deliverable.id)) return;
 
     const current = activeByStage[targetStage] || [];
     activeByStage = {
@@ -219,8 +218,8 @@
     };
   }
 
-  onMount(() => {
-    loadData();
+  $effect(() => {
+    if (feeId) loadData();
   });
 </script>
 
@@ -291,7 +290,7 @@
       <!-- Library (right panel) -->
       <DeliverableLibrary
         allDeliverables={libraryDeliverables}
-        activeIds={activeIds()}
+        activeIds={activeIds}
         onAdd={handleAddFromLibrary}
       />
     </div>

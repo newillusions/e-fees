@@ -17,7 +17,7 @@
     allDeliverables.filter((d) => !activeIds.has(d.id))
   );
 
-  let filteredDeliverables = $derived(() => {
+  let filteredDeliverables = $derived.by(() => {
     if (!searchQuery.trim()) return availableDeliverables;
 
     const q = searchQuery.toLowerCase();
@@ -32,10 +32,9 @@
     });
   });
 
-  let groupedByStage = $derived(() => {
-    const items = filteredDeliverables();
+  let groupedByStage = $derived.by(() => {
     const groups: Record<string, any[]> = {};
-    for (const d of items) {
+    for (const d of filteredDeliverables) {
       const stage = d.stage || 'unassigned';
       if (!groups[stage]) groups[stage] = [];
       groups[stage].push(d);
@@ -69,7 +68,7 @@
     />
   </div>
 
-  {#each groupedByStage() as [stageName, items] (stageName)}
+  {#each groupedByStage as [stageName, items] (stageName)}
     <div class="emittiv-library-group-title">{stageName}</div>
     {#each items as deliverable (deliverable.id)}
       <div
@@ -94,7 +93,7 @@
     {/each}
   {/each}
 
-  {#if groupedByStage().length === 0}
+  {#if groupedByStage.length === 0}
     <p style="font-size: 12px; color: var(--emittiv-light); text-align: center; padding: 24px 0;">
       {searchQuery ? 'No matching deliverables' : 'All deliverables are in use'}
     </p>
