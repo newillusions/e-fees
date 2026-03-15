@@ -38,9 +38,7 @@ impl Serialize for GetDomError {
 impl From<TauriError> for GetDomError {
     fn from(err: TauriError) -> Self {
         // Basic differentiation, could be more sophisticated if TauriError variants allow
-        match err {
-            _ => GetDomError::JavaScriptError(err.to_string()), // Default to JS error as eval is involved
-        }
+        GetDomError::JavaScriptError(err.to_string())
     }
 }
 

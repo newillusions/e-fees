@@ -122,7 +122,7 @@ function validateField<T>(
  */
 export const ValidationPatterns = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^[\+]?[1-9][\d]{0,15}$/,
+  phone: /^[+]?[1-9][\d]{0,15}$/,
   url: /^https?:\/\/.+/,
   alphanumeric: /^[a-zA-Z0-9]+$/,
   numeric: /^\d+$/,

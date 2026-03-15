@@ -15,6 +15,7 @@
   import StageSection from './StageSection.svelte';
   import DeliverableLibrary from './DeliverableLibrary.svelte';
   import DeliverableDetail from './DeliverableDetail.svelte';
+  import { SvelteSet } from 'svelte/reactivity';
 
   let {
     params = {},
@@ -38,7 +39,7 @@
 
   // Derived: set of active IDs for library filtering
   let activeIds = $derived.by(() => {
-    const ids = new Set<string>();
+    const ids = new SvelteSet<string>();
     for (const items of Object.values(activeByStage)) {
       for (const d of items) {
         ids.add(d.id);

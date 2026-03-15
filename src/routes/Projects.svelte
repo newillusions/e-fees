@@ -25,6 +25,7 @@
   import { PROJECT_STATUSES } from '$lib/constants';
   import type { Project } from '../types';
   import { onMount, onDestroy } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
 
   // Modal states
   let showProjectModal = $state(false);
@@ -41,23 +42,23 @@
   });
 
   // Advanced filter states
-  let statusSelected: Set<string> = $state(new Set());
+  let statusSelected: Set<string> = new SvelteSet();
   let dateFrom = $state('');
   let dateTo = $state('');
 
   // Bulk selection state
-  let selectedIds: Set<string> = $state(new Set());
+  let selectedIds: Set<string> = new SvelteSet();
   let selectMode = $state(false);
 
   function toggleSelect(id: string) {
-    const next = new Set(selectedIds);
+    const next = new SvelteSet(selectedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
 
   function clearSelection() {
-    selectedIds = new Set();
+    selectedIds = new SvelteSet();
     selectMode = false;
   }
 

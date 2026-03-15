@@ -215,7 +215,7 @@
         on:click={startScan}
         disabled={isScanning || !basePath}
         class="bg-emittiv-splash text-emittiv-black transition-smooth"
-        style="padding: 6px 16px; font-size: 12px; height: 32px; border-radius: 4px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
+        style="padding: 6px 16px; font-size: 12px; height: 32px; border-radius: 4px; border: none; display: inline-flex; align-items: center; gap: 6px;"
         style:opacity={isScanning || !basePath ? '0.5' : '1'}
         style:cursor={isScanning || !basePath ? 'not-allowed' : 'pointer'}
       >

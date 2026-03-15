@@ -370,7 +370,7 @@
     if (!proposal) return;
     try {
       const feeId = extractId(proposal.id);
-      const safeNumber = proposal.number.replace(/[\/\\:*?"<>|]/g, '-');
+      const safeNumber = proposal.number.replace(/[/\\:*?"<>|]/g, '-');
       const defaultName = `${safeNumber}-${String(proposal.rev).padStart(2, '0')} Pricing.xlsx`;
 
       const savePath = await save({

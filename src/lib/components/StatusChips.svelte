@@ -14,10 +14,12 @@
     counts?: Record<string, number>;
   }
 
+  import { SvelteSet } from 'svelte/reactivity';
+
   let { statuses, selected = $bindable(), counts }: Props = $props();
 
   function toggle(status: string) {
-    const next = new Set(selected);
+    const next = new SvelteSet(selected);
     if (next.has(status)) {
       next.delete(status);
     } else {

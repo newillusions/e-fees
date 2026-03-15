@@ -166,7 +166,7 @@ impl<R: Runtime> SocketServer<R> {
                     .map_err(|e| {
                         info!("[TAURI_MCP] Error creating IPC socket listener: {}", e);
                         if e.kind() == std::io::ErrorKind::AddrInUse {
-                            Error::Io(format!("Socket address already in use. If the socket file exists, it may be a stale socket. Try removing it manually."))
+                            Error::Io("Socket address already in use. If the socket file exists, it may be a stale socket. Try removing it manually.".to_string())
                         } else {
                             Error::Io(format!("Failed to create local socket: {}", e))
                         }
@@ -312,7 +312,7 @@ impl<R: Runtime> SocketServer<R> {
                             }
 
                             match tcp_listener.accept() {
-                                Ok((mut stream, addr)) => {
+                                Ok((stream, addr)) => {
                                     info!("[TAURI_MCP] Accepted new TCP connection from: {}", addr);
                                     
                                     // Set the stream back to blocking mode for normal I/O operations

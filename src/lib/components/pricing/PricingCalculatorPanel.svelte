@@ -20,6 +20,7 @@
     type CurrencyCode
   } from '$lib/stores/exchangeRates';
   import { getRate } from '$lib/services/exchangeRates';
+  import { SvelteMap } from 'svelte/reactivity';
 
   interface Props {
     config: PricingConfig;
@@ -176,10 +177,10 @@
 
     // Only set override if value actually differs from calculated rounded value
     if (Math.round(value) !== Math.round(calculatedRounded)) {
-      stageTotalOverrides = new Map(stageTotalOverrides).set(stageId, value);
+      stageTotalOverrides = new SvelteMap(stageTotalOverrides).set(stageId, value);
     } else {
       // Clear any existing override if value matches calculated
-      const newMap = new Map(stageTotalOverrides);
+      const newMap = new SvelteMap(stageTotalOverrides);
       newMap.delete(stageId);
       stageTotalOverrides = newMap;
     }
@@ -187,7 +188,7 @@
 
   // Clear stage total override
   function clearStageTotalOverride(stageId: string) {
-    const newMap = new Map(stageTotalOverrides);
+    const newMap = new SvelteMap(stageTotalOverrides);
     newMap.delete(stageId);
     stageTotalOverrides = newMap;
   }

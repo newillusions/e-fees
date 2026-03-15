@@ -10,6 +10,7 @@
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import { SvelteSet } from 'svelte/reactivity';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
   import type { AdvancedFilters } from '$lib/utils/filters';
@@ -32,18 +33,18 @@
   let dateTo = $state('');
 
   // Bulk selection state
-  let selectedIds: Set<string> = $state(new Set());
+  let selectedIds: Set<string> = new SvelteSet();
   let selectMode = $state(false);
 
   function toggleSelect(id: string) {
-    const next = new Set(selectedIds);
+    const next = new SvelteSet(selectedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
 
   function clearSelection() {
-    selectedIds = new Set();
+    selectedIds = new SvelteSet();
     selectMode = false;
   }
 

@@ -69,7 +69,7 @@ pub fn json_to_dbvalue(v: &serde_json::Value) -> DbValue {
                 DbValue::None
             }
         }
-        serde_json::Value::String(s) => DbValue::String(s.clone().into()),
+        serde_json::Value::String(s) => DbValue::String(s.clone()),
         serde_json::Value::Array(arr) => DbValue::Array(
             arr.iter()
                 .map(json_to_dbvalue)

@@ -21,6 +21,7 @@
   import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
+  import { SvelteSet, SvelteMap } from 'svelte/reactivity';
   import type { Fee, UnknownSurrealThing } from '../types';
 
   // Modal states
@@ -40,23 +41,23 @@
   });
 
   // Advanced filter states
-  let statusSelected: Set<string> = $state(new Set());
+  let statusSelected: Set<string> = new SvelteSet();
   let dateFrom = $state('');
   let dateTo = $state('');
 
   // Bulk selection state
-  let selectedIds: Set<string> = $state(new Set());
+  let selectedIds: Set<string> = new SvelteSet();
   let selectMode = $state(false);
 
   function toggleSelect(id: string) {
-    const next = new Set(selectedIds);
+    const next = new SvelteSet(selectedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
 
   function clearSelection() {
-    selectedIds = new Set();
+    selectedIds = new SvelteSet();
     selectMode = false;
   }
 
@@ -155,7 +156,7 @@
 
   // Filter to latest revision per project when toggle is off
   function filterToLatestRevisions(fees: Fee[]): Fee[] {
-    const latestByProject = new Map<string, Fee>();
+    const latestByProject = new SvelteMap<string, Fee>();
     for (const fee of fees) {
       const pid = extractId(fee.project_id);
       const existing = latestByProject.get(pid);
@@ -180,7 +181,7 @@
 
   // Count projects with multiple revisions
   const multiRevisionCount = $derived(() => {
-    const revCounts = new Map<string, number>();
+    const revCounts = new SvelteMap<string, number>();
     for (const fee of fees) {
       const pid = extractId(fee.project_id);
       revCounts.set(pid, (revCounts.get(pid) ?? 0) + 1);
