@@ -5,14 +5,14 @@
 
 /* Emittiv CSS Custom Properties */
 :root {
-  /* Colors */
-  --emittiv-black: #000;
-  --emittiv-darker: #333;
-  --emittiv-dark: #666;
-  --emittiv-light: #999;
-  --emittiv-lighter: #ccc;
-  --emittiv-white: #fff;
-  --emittiv-splash: #f90;
+  /* Colors — Mocha tinting at base/surface level only; borders/text stay neutral */
+  --emittiv-black: #11111b;   /* Mocha Crust — deepest background */
+  --emittiv-darker: #1e1e2e;  /* Mocha Base — card/panel backgrounds */
+  --emittiv-dark: #666;       /* neutral — borders, dividers */
+  --emittiv-light: #999;      /* neutral — muted text, icons */
+  --emittiv-lighter: #ccc;    /* neutral — secondary text */
+  --emittiv-white: #fff;      /* neutral — primary text */
+  --emittiv-splash: #ff9900;  /* Emittiv brand orange — unchanged */
   
   /* Typography */
   --font-heading: 'Ubuntu', system-ui, sans-serif;
@@ -36,10 +36,11 @@
   --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 10px 25px rgba(255, 153, 0, 0.1);
   
-  /* Gradients */
-  --gradient-main: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(51, 51, 51, 0.85));
-  --gradient-content: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(51, 51, 51, 0.3));
-  --gradient-sidebar: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
+  /* Gradients — Catppuccin Mocha surface ramp */
+  --gradient-main: linear-gradient(160deg, #11111b 0%, #181825 55%, #1e1e2e 100%);  /* Crust → Mantle → Base */
+  --gradient-header: linear-gradient(90deg, #11111b 0%, #1e1e2e 100%);              /* Crust → Base, horizontal */
+  --gradient-content: linear-gradient(180deg, rgba(30, 30, 46, 0.5), rgba(17, 17, 27, 0.5)); /* Base → Crust translucent */
+  --gradient-sidebar: #181825;                                                     /* Mocha Mantle (solid) */
   --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
 }
 
@@ -121,13 +122,14 @@
     border-right: 1px solid var(--emittiv-darker);
   }
   
+  .glass-header {
+    background: var(--gradient-header);
+  }
+
   .glass-content {
     background: var(--gradient-content);
   }
-  
-}
 
-@layer components {
   /* Emittiv Design Patterns */
   .emittiv-card {
     background-color: var(--emittiv-darker);
@@ -270,14 +272,18 @@
   }
   
   /* Hover effects */
-  .hover-lift:hover {
-    transform: translateY(-2px);
+  .hover-lift {
     transition: var(--transition-smooth);
   }
-  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-glow {
+    transition: var(--transition-smooth);
+  }
   .hover-glow:hover {
     box-shadow: var(--shadow-glow);
-    transition: var(--transition-smooth);
   }
 
   /* List card specific styling - maintains original dark background */

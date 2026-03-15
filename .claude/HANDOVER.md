@@ -1,41 +1,54 @@
 # E-Fees Project Handover
 
 ## Current Status
-v0.13.6 released. Clause library refined to 20 clauses aligned with InDesign template. Assumptions review documented as ongoing topic.
+v0.13.8 released. SurrealDB SDK pinned to v3.0.4 matching production DB. All containers rebuilt and deployed.
 
-- **Version**: 0.13.6 (released 2026-03-09)
+- **Version**: 0.13.8 (released 2026-03-15)
 - **Branch**: main
-- **Database**: SurrealDB @ ws://10.0.23.11:8000 (emittiv/projects)
-- **Tests**: 633/633 passing (frontend), 62/62 passing (API integration), 24/24 passing (scope)
-- **API**: e-fees-api v0.3.1 deployed at 10.0.21.80:3200
-- **Scope**: e-fees-scope v0.2.3 deployed at 10.0.21.81:3201
+- **Database**: SurrealDB v3.0.4 @ ws://10.0.23.11:8000 (emittiv/projects)
+- **Tests**: 87/87 Rust, 633/633 frontend, 0 TS errors
+- **API**: e-fees-api:v0.4.2 deployed at 10.0.21.80:3200
+- **Scope**: e-fees-scope:v0.2.4 deployed at 10.0.21.81:3201
 
 ## Last Session
-**Date**: 2026-03-13
-**Summary**: Built the `/sendit` ship-it skill — full autonomous release pipeline running as a background agent with timed CI checkins, code review subagent, and post-publish verification.
+**Date**: 2026-03-15
+**Summary**: Investigated SurrealDB v3.0.4 upgrade on production DB (10.0.23.11). Pinned all Rust SDK deps from unpinned "3.0" (resolving 3.0.1) to 3.0.4. Removed unused surrealdb.js. Rebuilt and redeployed API + Scope containers. Released v0.13.8.
 
 ### Accomplished
-- Created `.claude/skills/sendit/SKILL.md` — arg parsing, background agent spawn instructions
-- Created `.claude/skills/sendit/references/agent-prompt.md` — 12-step pipeline (pre-flight → commit → full code review → version bump → push → tag → CI poll loop → update.json sync → Forgejo release verify → KB observation → report)
-- Code review step spawns a sonnet subagent checking bugs, security, structure, red-team concerns — BLOCK verdict halts the pipeline before the tag is pushed
-- CI poll loop logs timed checkins every 60s with job-level status, 40min timeout
-- Dry-run test passed: all pre-flight checks green, version detection correct, DRY-RUN steps printed cleanly
+- **SurrealDB SDK pinned to 3.0.4** across 4 Cargo.toml files (e-fees-core, src-tauri, e-fees-api, e-fees-scope)
+- **Cargo.lock updated**: surrealdb 3.0.1→3.0.4, surrealdb-core 3.0.1→3.0.4, surrealdb-types 3.0.1→3.0.4
+- **Removed unused `surrealdb.js`** (v1.0.0) from package.json — frontend uses Tauri IPC only
+- **API container rebuilt** (e-fees-api:v0.4.2) and deployed to 10.0.21.80
+- **Scope container rebuilt** (e-fees-scope:v0.2.4) and deployed to 10.0.21.81
+- **v0.13.8 released**: macOS aarch64 + x64, Windows — 8 assets on Forgejo, update.json synced to GitHub
+- **KB offline diagnosed**: "KB_VERSION: offline (missing credentials)" is from stale MCP server process, not a code issue. Plugin v3.64.0 is current. Fix: restart Claude Code session.
+- **v3.0.0→3.0.4 changelog researched**: search::score() fixed, MATCHES still broken, math::max([]) still -Infinity
+- **Full codebase scan**: no search::score(), math::max(), or MATCHES usage — no code changes needed
+- **Implementation plan**: `docs/superpowers/plans/2026-03-15-surrealdb-v304-upgrade.md`
+
+### SurrealDB v3.0.4 Key Changes (from 3.0.0)
+- `search::score()` now returns real BM25 scores (was 0.0)
+- `RecordIdKeyType::Object` serialization fixed
+- `SurrealValue::from_value` compatibility for all JSON variants
+- Records not existing return `None` (was confusing error)
+- `UPSERT SET` with `IF` expressions evaluates correctly
+- **Still broken**: parameterized MATCHES (keep `escapeSurrealSearch()`), `math::max([])` returns -Infinity
 
 ## Key Context
 | Resource | Value |
 |----------|-------|
-| Production DB | ws://10.0.23.11:8000 (ns: emittiv, db: projects) |
+| Production DB | ws://10.0.23.11:8000 v3.0.4 (ns: emittiv, db: projects) |
+| KB DB | ws://10.0.21.15:8000 v3.0.0 (ns: kb, db: knowledge) |
 | Dev DB | ws://surreal-dev.internal:8000 (10.0.23.12) |
-| API Container | 10.0.21.80:3200 (br0, e-fees-api:v0.3.1) |
-| Scope Container | 10.0.21.81:3201 (br0, e-fees-scope:v0.2.3) |
+| API Container | 10.0.21.80:3200 (br0, e-fees-api:v0.4.2) |
+| Scope Container | 10.0.21.81:3201 (br0, e-fees-scope:v0.2.4) |
 | Scope API Key | efees-scope-2026-s7k2m9xp |
 | Forgejo repo | forge.mms.name/emittiv/fee-prop |
 | InDesign MCP repo | /Volumes/base/dev/indesign-uxp-server |
 | NC project create script | /mnt/user/appdata/scripts/nc-project-create.sh (on Primary 10.0.20.12) |
 | Wiki page | slug: "e-fees" |
-| Scope schema | e-fees-scope/schema.surql |
-| Corpus PDFs | /mnt/user/appdata/e-fees-scope/rfps/ (51 files on AI server) |
-| Template markdown | /tmp/template-full.md (converted from InDesign PDF) |
+| Design review tracking | `docs/plans/2026-03-13-design-review.md` |
+| Colour swatch page | DevMode → Design System section |
 
 ## Architecture
 - **Desktop app** (Tauri): Full CRUD, filesystem ops, multi-currency display
@@ -46,13 +59,18 @@ v0.13.6 released. Clause library refined to 20 clauses aligned with InDesign tem
 - **Nextcloud sync**: Group folder on Primary, syncs to Windows clients
 
 ## Next Steps
-1. **Assumptions clause refinement** — ongoing review, cross-reference candidates against existing clauses to find genuine gaps (`docs/plans/assumptions-review.md`)
-2. **Automate InDesign text variable population** via MCP — set all 21 variables from fee record
-3. **Automate InDesign table population** — map PricingBreakdown to 5 pricing tables
-4. **Scope text insertion** into InDesign — pipe scope service output to InDesign text frames
-5. **Expose folder creation via API** — API on AI server SSH to Primary to run nc-project-create.sh
-6. **Stablecoin research** — e-dirham vs USDT, counterfeiting concerns (deferred to separate session)
-8. **Scope service networking** — unreachable from AI server host despite container running (works from Mac)
+1. **Colour token approvals** — DevMode colour swatch page shows proposed Mocha accent mappings for stat icons, status badges, error/warning/success. User needs to review and approve before tokens are defined. See `docs/plans/2026-03-13-design-review.md` → "Design System: Color Test Page"
+2. **Design review fixes** — 40+ findings in `docs/plans/2026-03-13-design-review.md`. High priority: Dashboard "Active Fees"→"Active Proposals", 6× `alert()` calls, ARIA issues on FormInput/TypeaheadSelect/BaseModal, FirstRunSetup copy
+3. **Assumptions clause refinement** — ongoing review (`docs/plans/assumptions-review.md`)
+4. **Automate InDesign text variable population** via MCP — set all 21 variables from fee record
+5. **Automate InDesign table population** — map PricingBreakdown to 5 pricing tables
+6. **Scope text insertion** into InDesign — pipe scope service output to InDesign text frames
+7. **Expose folder creation via API** — AI server SSH to Primary, run nc-project-create.sh
+
+## Colour System State
+- **Approved and live**: Mocha surface tokens (`--emittiv-black` Crust, `--emittiv-darker` Base, gradients use Mantle)
+- **Pending approval**: Mocha accent colours for semantic roles (stat icons, status badges, states) — swatches in DevMode, do NOT tokenise until user approves individual mappings
+- **Rule**: Never invent or tokenise colours autonomously. Always get user approval via swatch page first.
 
 ## Critical Rules
 1. **SUPERPOWERS SKILLS MANDATORY**: Invoke relevant skill BEFORE any work. No exceptions.
@@ -68,14 +86,7 @@ v0.13.6 released. Clause library refined to 20 clauses aligned with InDesign tem
 11. **Scope fee queries**: OMIT id, backtick-quote keys, bind Value not String, use FLEXIBLE for nested objects.
 12. **Scope integration tests**: Run with `--test-threads=1` (shared DB state).
 13. **API/Scope redeploy**: rsync to AI server, docker build, stop/rm/run with same env.
-
-## Key Learnings This Session
-- **Business terminology**: emittiv is a specialist sub-consultant to LDCs — "Construction Supervision" not "Construction Administration". Approving variations is outside scope (architect/LDC role).
-- **Template structure**: Design Phase Notes, Post Contract Phase Notes, and Assumptions are three completely separate sections (not one conflated section).
-- **Basis of Appointment hierarchy**: H1 heading with Limitation of Liability and Next Steps as H3/H4 subsections — not separate clauses.
-- **Landscape lighting**: Often in scope — NOT safe to default-exclude in assumptions.
-- **Revit/BIM**: Often part of scope when agreed during bidding — NOT safe to default-exclude.
-- **Assumptions are sparse**: Only 9 bullets across 51 historical proposals — confirms they're project-specific and often skipped.
+14. **SurrealDB SDK**: Pinned to 3.0.4 in all 4 Cargo.toml files. Production DB is v3.0.4.
 
 ---
-*Updated: 2026-03-13*
+*Updated: 2026-03-15*

@@ -42,9 +42,11 @@
     isSearchOpen = false;
   }
 
+  // Platform detection (evaluated once, not per keystroke)
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
   // Keyboard shortcuts handler
   function handleKeydown(event: KeyboardEvent) {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const modKey = isMac ? event.metaKey : event.ctrlKey;
 
     // Cmd/Ctrl + K = Open Search (standard spotlight convention)
@@ -127,8 +129,8 @@
   <main class="flex-1 flex flex-col overflow-hidden">
     <!-- Header -->
     <header
-      class="h-20 px-8 flex-shrink-0 glass-content border-b flex items-center"
-      style="border-color: rgba(255, 255, 255, 0.1);"
+      class="h-20 px-8 flex-shrink-0 glass-header border-b flex items-center"
+      style="border-color: rgba(255, 255, 255, 0.06);"
     >
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center space-x-2">
