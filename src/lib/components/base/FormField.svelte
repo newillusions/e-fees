@@ -10,6 +10,7 @@
   import FormSelect from '../FormSelect.svelte';
   import TypeaheadSelect from '../TypeaheadSelect.svelte';
   import type { FormFieldConfig, FieldChangeEvent } from './types';
+  import { logger } from '$lib/services/logger';
 
   const dispatch = createEventDispatcher<{ fieldChange: FieldChangeEvent }>();
 
@@ -46,7 +47,7 @@
       try {
         options = await field.onSearch(searchInput);
       } catch (error) {
-        console.warn(`Failed to search for ${field.name}:`, error);
+        logger.warn(`Failed to search for ${field.name}`);
         options = [];
       }
     } else {

@@ -11,6 +11,7 @@
     DEFAULT_PRICING_CONFIG
   } from '../../../types/database';
   import { updateFeePricing, type PricingUpdate } from '$lib/api/fees';
+  import { logApiError } from '$lib/services/logger';
   import BaseModal from '../BaseModal.svelte';
   import Button from '../Button.svelte';
   import PricingCalculatorPanel from './PricingCalculatorPanel.svelte';
@@ -196,7 +197,7 @@
         closeModal();
       }, 1000);
     } catch (err) {
-      console.error('Failed to save pricing:', err);
+      logApiError('save pricing', err as Error);
       error = `Failed to save pricing: ${err}`;
     } finally {
       saving = false;

@@ -11,6 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { searchCountries, getCitySuggestions } from '$lib/api';
   import CrudModal from './base/CrudModal.svelte';
+  import { logger } from '$lib/services/logger';
   import type { Company, CompanyCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
@@ -73,7 +74,7 @@
                 dial_code: country.dial_code
               }));
             } catch (error) {
-              console.warn('Failed to search countries:', error);
+              logger.warn('Failed to search countries');
               return [];
             }
           }

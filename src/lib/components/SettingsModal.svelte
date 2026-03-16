@@ -5,6 +5,7 @@
   import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
   import { loadAllData } from '$lib/stores';
   import FolderSyncModal from './FolderSyncModal.svelte';
+  import { logger, logApiError } from '$lib/services/logger';
 
   // Folder sync modal state
   let showFolderSyncModal = $state(false);
@@ -84,7 +85,7 @@
     try {
       await invoke('set_log_level', { level: settings.log_level || 'info' });
     } catch (e) {
-      console.error('Failed to set log level:', e);
+      logApiError('set log level', e as Error);
     }
   }
   
@@ -124,7 +125,7 @@
 
         saveMessage = 'Settings saved and applied successfully! Database connection updated.';
       } catch (reloadError) {
-        console.warn('Database reload failed:', reloadError);
+        logger.warn('Database reload failed');
         saveMessage = 'Settings saved but database reload failed. You may need to restart the app.';
       }
 
@@ -164,7 +165,7 @@
         settings.project_folder_path = folderPath;
       }
     } catch (error) {
-      console.error('Failed to select folder:', error);
+      logApiError('select folder', error as Error);
     }
   }
 

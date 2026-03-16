@@ -11,6 +11,7 @@
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
   import WarningModal from './WarningModal.svelte';
+  import { logger, logApiError } from '$lib/services/logger';
   import type { Fee, Project, Company, Contact } from '../../types';
 
   const dispatch = createEventDispatcher();
@@ -89,7 +90,7 @@
       const projectId = extractId(proposal.project_id);
       projectRevisions = await getFeesForProject(projectId);
     } catch (error) {
-      console.error('Failed to load revisions:', error);
+      logApiError('load revisions', error as Error);
       projectRevisions = [];
     } finally {
       loadingRevisions = false;
@@ -106,7 +107,7 @@
   // Project creation workflow with existence check
   async function handleCreateProject() {
     if (!proposal || !relatedProject) {
-      console.error('Cannot create project: missing proposal or related project data');
+      logger.error('Cannot create project: missing proposal or related project data');
       return;
     }
     
@@ -119,7 +120,7 @@
       const projectNumber = rawProjectNumber.replace(/[⟨⟩]/g, '');
       
       if (!projectNumber || !projectName) {
-        console.error('Cannot create project: missing project number or name');
+        logger.error('Cannot create project: missing project number or name');
         warningModal = {
           isOpen: true,
           title: 'Missing Information',
@@ -182,7 +183,7 @@
                     onCancel: null
                   };
                 } catch (error) {
-                  console.error('Failed to overwrite JSON file:', error);
+                  logApiError('overwrite JSON file', error as Error);
                   warningModal = {
                     isOpen: true,
                     title: 'Error',
@@ -233,7 +234,7 @@
       }
       
     } catch (error) {
-      console.error('Failed to create/update project:', error);
+      logApiError('create/update project', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Error',
@@ -249,7 +250,7 @@
   // JSON export with safety checks
   async function handleExportToJson() {
     if (!proposal) {
-      console.error('Cannot export: no proposal data');
+      logger.error('Cannot export: no proposal data');
       return;
     }
 
@@ -290,7 +291,7 @@
       }
 
     } catch (error) {
-      console.error('Failed to export JSON:', error);
+      logApiError('export JSON', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Export Failed',
@@ -321,7 +322,7 @@
       // Reload revisions list
       loadRevisions();
     } catch (error) {
-      console.error('Failed to create revision:', error);
+      logApiError('create revision', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Error',
@@ -352,7 +353,7 @@
         onCancel: null
       };
     } catch (error) {
-      console.error('Failed to export pricing:', error);
+      logApiError('export pricing', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Export Failed',
@@ -392,7 +393,7 @@
         onCancel: null
       };
     } catch (error) {
-      console.error('Failed to export template:', error);
+      logApiError('export template', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Export Failed',

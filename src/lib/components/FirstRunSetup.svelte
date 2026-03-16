@@ -3,6 +3,7 @@
   import { connectionStore } from '../stores';
   import { checkDbConnection, saveSettings, getSettings } from '../api';
   import { fade, slide } from 'svelte/transition';
+  import { logApiError } from '$lib/services/logger';
 
   const dispatch = createEventDispatcher();
 
@@ -129,7 +130,7 @@
       // Reload the page to apply new settings
       window.location.reload();
     } catch (error) {
-      console.error('Failed to save configuration:', error);
+      logApiError('save configuration', error as Error);
     } finally {
       isSaving = false;
     }

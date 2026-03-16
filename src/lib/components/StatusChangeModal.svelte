@@ -4,6 +4,7 @@
   import Button from './Button.svelte';
   import { moveProjectFolder, getFolderForStatus, getStatusForFolder, type FolderOperationResult } from '$lib/api/folderManagement';
   import { extractId } from '$lib/utils';
+  import { logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
   
   const dispatch = createEventDispatcher();
@@ -136,7 +137,7 @@
       }
       
     } catch (error) {
-      console.error('Status change failed:', error);
+      logApiError('status change', error as Error);
     } finally {
       isProcessing = false;
     }
