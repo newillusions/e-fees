@@ -27,6 +27,8 @@ RUN apt-get update && apt-get install -y ca-certificates openssh-client && rm -r
 
 COPY --from=builder /app/target/release/e-fees-api /usr/local/bin/
 
+WORKDIR /data
+
 EXPOSE 3200
 
 CMD ["e-fees-api"]

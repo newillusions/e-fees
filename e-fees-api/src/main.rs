@@ -96,8 +96,10 @@ impl utoipa::Modify for SecurityAddon {
 
 #[tokio::main]
 async fn main() {
-    // Load .env file (silently ignore if missing)
-    let _ = dotenvy::dotenv();
+    // Load .env file — try /data/.env (Docker WORKDIR) then current dir (local dev)
+    if dotenvy::from_path("/data/.env").is_err() {
+        let _ = dotenvy::dotenv();
+    }
 
     // Initialize tracing subscriber for structured logging
     tracing_subscriber::fmt::init();
