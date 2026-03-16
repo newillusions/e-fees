@@ -10,6 +10,7 @@
   import ActivityLogModal from '$lib/components/ActivityLogModal.svelte';
   import { loadAllData, isLoadingStore } from '$lib/stores';
   import { invoke } from '@tauri-apps/api/core';
+  import { logApiError } from '$lib/services/logger';
   import { onMount } from 'svelte';
   import { push } from 'svelte-spa-router';
 
@@ -44,7 +45,7 @@
       const result = await invoke<typeof stats>('get_stats');
       stats = result;
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      logApiError('load stats', error as Error);
     } finally {
       isLoadingStats = false;
     }
@@ -55,10 +56,8 @@
     loadAllData(); // Load data for ActivityFeed and PendingProposals
   });
 
-  function handleModalOpen(event: CustomEvent) {
-    const { type } = event.detail;
-    
-    switch (type) {
+  function handleModalOpen(data: { type: 'project' | 'fee' | 'company' }) {
+    switch (data.type) {
       case 'project':
         showProjectModal = true;
         break;
@@ -120,7 +119,7 @@
   <div class="dashboard-container">
   <!-- Quick Actions -->
   <section class="dashboard-section">
-    <QuickActions on:openModal={handleModalOpen} />
+    <QuickActions onopenModal={handleModalOpen} />
   </section>
   
   <!-- Stats Grid -->
@@ -158,7 +157,7 @@
   <section class="dashboard-section">
     <div class="content-grid">
       <div class="content-panel">
-        <ActivityFeed isLoading={$isLoadingStore} on:viewAll={() => showActivityLogModal = true} />
+        <ActivityFeed isLoading={$isLoadingStore} onviewAll={() => showActivityLogModal = true} />
       </div>
       
       <div class="content-panel">

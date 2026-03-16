@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { logo } from '../../assets';
   import { getAppVersion } from '../utils';
+  import { logger } from '$lib/services/logger';
   
   
   let { onComplete }: {
@@ -108,7 +109,7 @@
           alt="Company Logo"
           class="w-32 h-16 mx-auto filter brightness-110 transition-all duration-1000"
           class:animate-pulse={progress < 30}
-          on:error={() => console.error('Failed to load logo:', logo)}
+          on:error={() => logger.error('Failed to load logo', { src: logo })}
         />
       {:else}
         <!-- Fallback logo placeholder -->

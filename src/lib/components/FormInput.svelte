@@ -1,9 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  let { type = 'text', value = $bindable(''), placeholder = '', label = '', id = '', required = false, disabled = false, error = '', readonly = false, maxlength = undefined as number | undefined, min = undefined as number | undefined, max = undefined as number | undefined, autocomplete = undefined as HTMLInputElement['autocomplete'] | undefined, inputmode = undefined as 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined, className = '' }: {
+  let { type = 'text', value = $bindable(''), placeholder = '', label = '', id = '', required = false, disabled = false, error = '', readonly = false, maxlength = undefined as number | undefined, min = undefined as number | undefined, max = undefined as number | undefined, autocomplete = undefined as HTMLInputElement['autocomplete'] | undefined, inputmode = undefined as 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined, className = '', onblur }: {
     type?: string;
     value?: string | number;
     placeholder?: string;
@@ -19,6 +15,7 @@
     autocomplete?: HTMLInputElement['autocomplete'] | undefined;
     inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined;
     className?: string;
+    onblur?: (e: FocusEvent) => void;
   } = $props();
 
   // Generate ID if not provided
@@ -58,7 +55,7 @@
     class={inputClasses}
     aria-invalid={error ? 'true' : undefined}
     aria-describedby={error ? `${inputId}-error` : undefined}
-    on:blur={(e) => dispatch('blur', e)}
+    on:blur={(e) => onblur?.(e)}
   />
 
   {#if error}

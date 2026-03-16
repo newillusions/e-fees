@@ -1707,6 +1707,32 @@
     color: var(--emittiv-splash);
   }
 
+  /* -------------------------------------------------------------------------
+   * Status colour classes — used by STATUS_COLORS map in constants.ts
+   * Each provides text + background tint referencing design tokens.
+   * ------------------------------------------------------------------------- */
+  .status-color--lead        { color: var(--color-status-lead);        background-color: color-mix(in srgb, var(--color-status-lead)        10%, transparent); }
+  .status-color--draft       { color: var(--color-status-draft);       background-color: color-mix(in srgb, var(--color-status-draft)       10%, transparent); }
+  .status-color--rfp         { color: var(--color-status-rfp);         background-color: color-mix(in srgb, var(--color-status-rfp)         10%, transparent); }
+  .status-color--submitted   { color: var(--color-status-negotiation); background-color: color-mix(in srgb, var(--color-status-negotiation) 10%, transparent); }
+  .status-color--sent        { color: var(--color-status-sent);        background-color: color-mix(in srgb, var(--color-status-sent)        10%, transparent); }
+  .status-color--negotiation { color: var(--color-status-negotiation); background-color: color-mix(in srgb, var(--color-status-negotiation) 10%, transparent); }
+  .status-color--awarded     { color: var(--color-status-awarded);     background-color: color-mix(in srgb, var(--color-status-awarded)     10%, transparent); }
+  .status-color--accepted    { color: var(--color-status-accepted);    background-color: color-mix(in srgb, var(--color-status-accepted)    10%, transparent); }
+  .status-color--design      { color: var(--color-info);               background-color: color-mix(in srgb, var(--color-info)               10%, transparent); }
+  .status-color--construction { color: var(--color-stat-companies);    background-color: color-mix(in srgb, var(--color-stat-companies)     10%, transparent); }
+  .status-color--completed   { color: var(--color-success);            background-color: color-mix(in srgb, var(--color-success)            10%, transparent); }
+  .status-color--lost        { color: var(--color-status-lost);        background-color: color-mix(in srgb, var(--color-status-lost)        10%, transparent); }
+  .status-color--rejected    { color: var(--color-status-rejected);    background-color: color-mix(in srgb, var(--color-status-rejected)    10%, transparent); }
+  .status-color--no-response { color: var(--color-status-no-response); background-color: color-mix(in srgb, var(--color-status-no-response) 10%, transparent); }
+  .status-color--cancelled   { color: var(--color-status-no-response); background-color: color-mix(in srgb, var(--color-status-no-response) 10%, transparent); }
+  .status-color--on-hold     { color: var(--color-status-rfp);         background-color: color-mix(in srgb, var(--color-status-rfp)         10%, transparent); }
+  .status-color--superseded  { color: var(--color-info);               background-color: color-mix(in srgb, var(--color-info)               10%, transparent); }
+
+  /* Validation total — used by DisciplinesPanel.svelte */
+  .total-valid   { color: var(--color-success); }
+  .total-invalid { color: var(--color-error); }
+
   /* Confirm Button — small action buttons for status changes and alerts
      Replaces: inline height/padding/font-size + bg color utilities */
   .emittiv-confirm-btn {

@@ -13,6 +13,7 @@
     checkProjectFolderExists,
     copyProjectTemplate
   } from '$lib/api';
+  import { logApiError } from '$lib/services/logger';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '$lib/constants';
@@ -133,7 +134,7 @@
       const projectNumber = await generateNextProjectNumber(formData.country, formData.year);
       formData.project_number = projectNumber;
     } catch (error) {
-      console.error('Failed to generate project number:', error);
+      logApiError('generate project number', error as Error);
       operationActions.setError('Failed to generate project number');
     } finally {
       isGenerating = false;
@@ -161,7 +162,7 @@
         dial_code: country.dial_code
       }));
     } catch (error) {
-      console.error('Failed to search countries:', error);
+      logApiError('search countries', error as Error);
       countryOptions = [];
     }
   }
@@ -182,7 +183,7 @@
         .map(area => ({ id: area, name: area }))
         .slice(0, 10);
     } catch (error) {
-      console.error('Failed to get area suggestions:', error);
+      logApiError('get area suggestions', error as Error);
       areaOptions = [];
     }
   }
@@ -203,7 +204,7 @@
         .map(city => ({ id: city, name: city }))
         .slice(0, 10);
     } catch (error) {
-      console.error('Failed to get city suggestions:', error);
+      logApiError('get city suggestions', error as Error);
       cityOptions = [];
     }
   }
@@ -322,7 +323,7 @@
     try {
       await copyProjectTemplate(projectNumber, projectShortName);
     } catch (error) {
-      console.error('Failed to create project folder:', error);
+      logApiError('create project folder', error as Error);
       operationActions.setError(`Project created but folder creation failed: ${error}`);
     }
   }

@@ -236,41 +236,41 @@
   }
 
   .proposal-item.sent {
-    border-left: 3px solid #f59e0b; /* Orange left border for sent */
+    border-left: 3px solid var(--color-status-sent);
   }
 
   .proposal-item.draft {
-    border-left: 3px solid #6b7280; /* Gray left border for draft */
+    border-left: 3px solid var(--color-status-no-response);
   }
 
   .proposal-item.sent:hover {
-    background: rgba(245, 158, 11, 0.06);
-    border-color: rgba(245, 158, 11, 0.4);
-    border-left-color: #f59e0b;
+    background: color-mix(in srgb, var(--color-status-sent) 6%, transparent);
+    border-color: color-mix(in srgb, var(--color-status-sent) 40%, transparent);
+    border-left-color: var(--color-status-sent);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .proposal-item.draft:hover {
-    background: rgba(107, 114, 128, 0.06);
-    border-color: rgba(107, 114, 128, 0.4);
-    border-left-color: #6b7280;
+    background: color-mix(in srgb, var(--color-status-no-response) 6%, transparent);
+    border-color: color-mix(in srgb, var(--color-status-no-response) 40%, transparent);
+    border-left-color: var(--color-status-no-response);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .proposal-item.sent:focus {
     outline: none;
-    background: rgba(245, 158, 11, 0.06);
-    border-color: #f59e0b;
-    border-left-color: #f59e0b;
+    background: color-mix(in srgb, var(--color-status-sent) 6%, transparent);
+    border-color: var(--color-status-sent);
+    border-left-color: var(--color-status-sent);
   }
 
   .proposal-item.draft:focus {
     outline: none;
-    background: rgba(107, 114, 128, 0.06);
-    border-color: #6b7280;
-    border-left-color: #6b7280;
+    background: color-mix(in srgb, var(--color-status-no-response) 6%, transparent);
+    border-color: var(--color-status-no-response);
+    border-left-color: var(--color-status-no-response);
   }
 
   .proposal-status {
@@ -289,11 +289,11 @@
   }
 
   .status-indicator.sent {
-    background: #f59e0b; /* Orange for sent proposals */
+    background: var(--color-status-sent);
   }
 
   .status-indicator.draft {
-    background: #6b7280; /* Gray for draft proposals */
+    background: var(--color-status-no-response);
   }
 
   .status-badge {
@@ -305,13 +305,13 @@
   }
 
   .status-badge.sent {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
+    background: color-mix(in srgb, var(--color-status-sent) 20%, transparent);
+    color: var(--color-status-sent);
   }
 
   .status-badge.draft {
-    background: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
+    background: color-mix(in srgb, var(--color-status-no-response) 20%, transparent);
+    color: var(--color-status-no-response);
   }
 
   .proposal-details {
@@ -410,19 +410,19 @@
   }
 
   .days-indicator.recent {
-    color: #10b981;
+    color: var(--color-success);
   }
 
   .days-indicator.moderate {
-    color: #f59e0b;
+    color: var(--color-warning);
   }
 
   .days-indicator.old {
-    color: #f97316;
+    color: var(--color-status-rfp);
   }
 
   .days-indicator.stale {
-    color: #ef4444;
+    color: var(--color-error);
   }
 
   .proposal-date {

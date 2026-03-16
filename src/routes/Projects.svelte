@@ -15,6 +15,7 @@
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
   import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
+  import { logger, logApiError } from '$lib/services/logger';
   import StatusChips from '$lib/components/StatusChips.svelte';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
   import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
@@ -72,7 +73,7 @@
       clearSelection();
       paginatedProjectsStore.actions.refresh();
     } catch (e) {
-      console.error('Bulk delete failed:', e);
+      logApiError('bulk delete projects', e as Error);
     }
   }
 
@@ -83,7 +84,7 @@
       clearSelection();
       paginatedProjectsStore.actions.refresh();
     } catch (e) {
-      console.error('Bulk status change failed:', e);
+      logApiError('bulk status change projects', e as Error);
     }
   }
 
@@ -263,7 +264,7 @@
         setTimeout(() => folderError = '', 5000);
       }
     } catch (error) {
-      console.error('Failed to open project folder:', error);
+      logApiError('open project folder', error as Error);
       folderError = 'Failed to open project folder. Please check the path exists.';
       setTimeout(() => folderError = '', 5000);
     }

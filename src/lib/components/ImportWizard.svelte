@@ -497,10 +497,10 @@
   }
 
   .import-wizard-error {
-    color: #ef4444;
+    color: var(--color-error);
     font-size: 12px;
     padding: 8px 12px;
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
     border-radius: 4px;
     margin-top: 8px;
   }
@@ -616,10 +616,10 @@
   }
 
   .import-wizard-warning {
-    color: #f59e0b;
+    color: var(--color-warning);
     font-size: 12px;
     padding: 6px 10px;
-    background-color: rgba(245, 158, 11, 0.1);
+    background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
     border-radius: 4px;
   }
 
@@ -673,11 +673,11 @@
   }
 
   .import-wizard-result__icon.success {
-    color: #22c55e;
+    color: var(--color-success);
   }
 
   .import-wizard-result__icon.error {
-    color: #ef4444;
+    color: var(--color-error);
   }
 
   .import-wizard-result__stats {

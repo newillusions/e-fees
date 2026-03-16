@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { feesStore, loadAllData } from '$lib/stores';
   import { extractId, findEntityById } from '$lib/utils';
+  import { logApiError } from '$lib/services/logger';
   import { push, location } from 'svelte-spa-router';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -66,7 +67,7 @@
       try {
         await loadAllData();
       } catch (err) {
-        console.error('Failed to load proposals:', err);
+        logApiError('load proposals', err as Error);
         error = 'Failed to load proposal data';
         loading = false;
       }

@@ -115,26 +115,26 @@ export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = [
 
 /**
  * Status color mappings for badges and UI elements.
- * Returns Tailwind classes for text and background colors.
+ * Returns semantic CSS class names referencing design tokens (defined in app.css).
  */
 export const STATUS_COLORS: Record<string, string> = {
-  'Lead': 'text-gray-400 bg-gray-400/10',
-  'Draft': 'text-yellow-400 bg-yellow-400/10',
-  'RFP': 'text-blue-400 bg-blue-400/10',
-  'Submitted': 'text-purple-400 bg-purple-400/10',
-  'Sent': 'text-purple-400 bg-purple-400/10',
-  'Negotiation': 'text-blue-400 bg-blue-400/10',
-  'Awarded': 'text-green-400 bg-green-400/10',
-  'Accepted': 'text-green-400 bg-green-400/10',
-  'Design': 'text-blue-400 bg-blue-400/10',
-  'Construction': 'text-teal-400 bg-teal-400/10',
-  'Completed': 'text-green-500 bg-green-500/10',
-  'Lost': 'text-red-400 bg-red-400/10',
-  'Rejected': 'text-red-400 bg-red-400/10',
-  'No Response': 'text-gray-500 bg-gray-500/10',
-  'Cancelled': 'text-gray-400 bg-gray-400/10',
-  'On Hold': 'text-orange-400 bg-orange-400/10',
-  'Superseded': 'text-cyan-400 bg-cyan-400/10',
+  'Lead': 'status-color--lead',
+  'Draft': 'status-color--draft',
+  'RFP': 'status-color--rfp',
+  'Submitted': 'status-color--submitted',
+  'Sent': 'status-color--sent',
+  'Negotiation': 'status-color--negotiation',
+  'Awarded': 'status-color--awarded',
+  'Accepted': 'status-color--accepted',
+  'Design': 'status-color--design',
+  'Construction': 'status-color--construction',
+  'Completed': 'status-color--completed',
+  'Lost': 'status-color--lost',
+  'Rejected': 'status-color--rejected',
+  'No Response': 'status-color--no-response',
+  'Cancelled': 'status-color--cancelled',
+  'On Hold': 'status-color--on-hold',
+  'Superseded': 'status-color--superseded',
 };
 
 /**

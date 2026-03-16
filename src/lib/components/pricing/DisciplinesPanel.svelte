@@ -213,17 +213,17 @@
         <span class="text-emittiv-light text-xs">Total:</span>
         <span
           class="font-medium text-xs"
-          class:text-green-500={isValid}
-          class:text-red-500={!isValid}
+          class:total-valid={isValid}
+          class:total-invalid={!isValid}
         >
           {formatPercent(totalPercentage, 1)}
         </span>
         {#if isValid}
-          <svg class="emittiv-icon-check text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="emittiv-icon-check total-valid" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
           </svg>
         {:else}
-          <span class="text-red-500 text-xxs">(must equal 100%)</span>
+          <span class="total-invalid text-xxs">(must equal 100%)</span>
         {/if}
       </div>
     {/if}

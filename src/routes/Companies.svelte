@@ -13,6 +13,7 @@
   import { createCompanyFilterConfig } from '$lib/utils/search';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { batchDeleteEntities } from '$lib/api/batch';
+  import { logApiError } from '$lib/services/logger';
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import type { Company } from '../types';
@@ -52,7 +53,7 @@
       paginatedCompaniesStore.actions.refresh();
       companiesActions.load();
     } catch (e) {
-      console.error('Bulk delete failed:', e);
+      logApiError('bulk delete companies', e as Error);
     }
   }
 

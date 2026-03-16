@@ -12,6 +12,7 @@
   import ListCard from './ListCard.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import WarningModal from './WarningModal.svelte';
+  import { logger, logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
 
   const dispatch = createEventDispatcher();
@@ -126,7 +127,7 @@
         setTimeout(() => folderError = '', 5000);
       }
     } catch (error) {
-      console.error('Failed to open project folder:', error);
+      logApiError('open project folder', error as Error);
       folderError = 'Failed to open project folder. Please check the path exists.';
       setTimeout(() => folderError = '', 5000);
     }
@@ -143,7 +144,7 @@
   // Project folder creation workflow
   async function handleCreateProjectFolder() {
     if (!project) {
-      console.error('Cannot create project folder: no project data');
+      logger.error('Cannot create project folder: no project data');
       return;
     }
     
@@ -152,7 +153,7 @@
       const projectName = project.name_short || project.name || '';
       
       if (!projectNumber || !projectName) {
-        console.error('Cannot create project folder: missing project number or name');
+        logger.error('Cannot create project folder: missing project number or name');
         warningModal = {
           isOpen: true,
           title: 'Missing Information',
@@ -193,7 +194,7 @@
                 onCancel: null
               };
             } catch (error) {
-              console.error('Failed to overwrite project folder:', error);
+              logApiError('overwrite project folder', error as Error);
               warningModal = {
                 isOpen: true,
                 title: 'Error',
@@ -224,7 +225,7 @@
       };
       
     } catch (error) {
-      console.error('Failed to create project folder:', error);
+      logApiError('create project folder', error as Error);
       warningModal = {
         isOpen: true,
         title: 'Error',

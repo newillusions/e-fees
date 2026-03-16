@@ -18,6 +18,7 @@
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { batchDeleteEntities } from '$lib/api/batch';
+  import { logApiError } from '$lib/services/logger';
   import type { Contact } from '../types';
 
   // Filter states
@@ -55,7 +56,7 @@
       clearSelection();
       paginatedContactsStore.actions.refresh();
     } catch (e) {
-      console.error('Bulk delete failed:', e);
+      logApiError('bulk delete contacts', e as Error);
     }
   }
 

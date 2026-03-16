@@ -6,6 +6,7 @@
     assembleDeliverables,
     saveScopeBuilder,
   } from '$lib/api/scope';
+  import { logApiError } from '$lib/services/logger';
   import type {
     StageConfig,
     Deliverable,
@@ -85,7 +86,7 @@
       await runAssemble();
     } catch (err: any) {
       error = err.message || 'Failed to load scope data';
-      console.error('ScopeBuilder load error:', err);
+      logApiError('ScopeBuilder load', err as Error);
     } finally {
       loading = false;
     }
@@ -107,7 +108,7 @@
 
       activeByStage = byStage;
     } catch (err: any) {
-      console.error('Assemble error:', err);
+      logApiError('assemble scope', err as Error);
       // If assemble fails (e.g. no saved state), start with empty stages
       activeByStage = {};
     }
@@ -240,7 +241,7 @@
       </span>
     {/if}
     {#if saveMessage}
-      <span style="font-size: 11px; color: #4caf50;">{saveMessage}</span>
+      <span style="font-size: 11px; color: var(--color-success);">{saveMessage}</span>
     {/if}
     <button
       class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm"
@@ -265,7 +266,7 @@
     </div>
   {:else if error}
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px;">
-      <p style="color: #ef5350; font-size: 14px; margin: 0;">{error}</p>
+      <p style="color: var(--color-error); font-size: 14px; margin: 0;">{error}</p>
       <button class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm" onclick={loadData}>
         Retry
       </button>

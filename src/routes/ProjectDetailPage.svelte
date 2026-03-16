@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { projectsStore, loadAllData } from '$lib/stores';
   import { extractId, findEntityById } from '$lib/utils';
+  import { logApiError } from '$lib/services/logger';
   import { push, location } from 'svelte-spa-router';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -60,7 +61,7 @@
       try {
         await loadAllData();
       } catch (err) {
-        console.error('Failed to load projects:', err);
+        logApiError('load projects', err as Error);
         error = 'Failed to load project data';
         loading = false;
       }

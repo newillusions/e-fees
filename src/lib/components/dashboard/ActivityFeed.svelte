@@ -1,16 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
-  let { isLoading = false }: { isLoading?: boolean } = $props();
-
-  const dispatch = createEventDispatcher();
+  let { isLoading = false, onviewAll }: { isLoading?: boolean; onviewAll?: () => void } = $props();
 
   // Emit event to open full activity log modal
   function openFullActivityLog() {
-    dispatch('viewAll');
+    onviewAll?.();
   }
 
   // Activity log state
@@ -109,14 +106,14 @@
     }
   }
 
-  // Get border color for action type
+  // Get border color CSS variable for action type
   function getActionBorderColor(action: string): string {
     switch (action) {
-      case 'create': return '#10b981';
-      case 'update': return '#3b82f6';
-      case 'delete': return '#ef4444';
-      case 'status_change': return '#f59e0b';
-      default: return '#6b7280';
+      case 'create': return 'var(--color-success)';
+      case 'update': return 'var(--color-info)';
+      case 'delete': return 'var(--color-error)';
+      case 'status_change': return 'var(--color-warning)';
+      default: return 'var(--color-status-no-response)';
     }
   }
 
@@ -555,12 +552,12 @@
   .error-icon {
     width: 48px;
     height: 48px;
-    color: #ef4444;
+    color: var(--color-error);
     margin-bottom: 16px;
   }
 
   .error-message {
-    color: #ef4444;
+    color: var(--color-error);
     font-size: 14px;
     margin: 0 0 16px 0;
   }

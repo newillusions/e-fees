@@ -19,6 +19,7 @@
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { createThrottled } from '$lib/utils/crud';
   import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
+  import { logApiError } from '$lib/services/logger';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import { SvelteSet, SvelteMap } from 'svelte/reactivity';
@@ -68,7 +69,7 @@
       clearSelection();
       paginatedFeesStore.actions.refresh();
     } catch (e) {
-      console.error('Bulk delete failed:', e);
+      logApiError('bulk delete fees', e as Error);
     }
   }
 
@@ -79,7 +80,7 @@
       clearSelection();
       paginatedFeesStore.actions.refresh();
     } catch (e) {
-      console.error('Bulk status change failed:', e);
+      logApiError('bulk status change fees', e as Error);
     }
   }
 

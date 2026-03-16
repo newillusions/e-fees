@@ -11,6 +11,7 @@
   import { CommonValidationRules } from '$lib/utils/validation';
   import { get } from 'svelte/store';
   import CrudModal from './base/CrudModal.svelte';
+  import { logger } from '$lib/services/logger';
   import type { Contact, ContactCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
@@ -57,7 +58,7 @@
           })
           .slice(0, 10);
       } catch (error) {
-        console.warn('Failed to search companies:', error);
+        logger.warn('Failed to search companies');
         return [];
       }
     }

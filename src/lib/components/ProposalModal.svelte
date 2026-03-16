@@ -11,6 +11,7 @@
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
+  import { logger, logApiError } from '$lib/services/logger';
   import { PROPOSAL_STATUS_OPTIONS, type ProposalStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
@@ -392,7 +393,7 @@
             operationActions.setMessage('Proposal created successfully, but could not extract ID for JSON export');
           }
         } catch (error) {
-          console.error('Auto-export failed:', error);
+          logApiError('auto-export proposal', error as Error);
           operationActions.setMessage(`Proposal created successfully, but JSON export failed: ${error}`);
         }
       } else {
@@ -409,7 +410,7 @@
   async function handleUpdate() {
     const activeProposal = proposal || originalProposal;
     if (!activeProposal) {
-      console.error('ProposalModal: No proposal data available');
+      logger.error('ProposalModal: No proposal data available');
       operationActions.setError('No proposal data available for update');
       return;
     }
@@ -482,13 +483,13 @@
       const activeProposal = proposal || originalProposal;
 
       if (!activeProposal) {
-        console.error('ProposalModal: No proposal data available');
+        logger.error('ProposalModal: No proposal data available');
         throw new Error('No proposal data available for update');
       }
 
       const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
-        console.error('ProposalModal: Failed to extract proposal ID');
+        logger.error('ProposalModal: Failed to extract proposal ID');
         throw new Error('Invalid proposal ID');
       }
 
@@ -587,7 +588,7 @@
         operationActions.setError('JSON export failed - no result returned');
       }
     } catch (error) {
-      console.error('JSON export failed:', error);
+      logApiError('JSON export', error as Error);
       operationActions.setError(`JSON export failed: ${error}`);
     }
   }
@@ -1079,7 +1080,7 @@
             inputmode="numeric"
             required
             error={formErrors.issue_date}
-            on:blur={() => {
+            onblur={() => {
               if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
                 formErrors = { ...formErrors, issue_date: 'Must be 6 digits (YYYYMM)' };
               } else {
