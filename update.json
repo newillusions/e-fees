@@ -1,19 +1,19 @@
 {
-  "version": "0.13.9",
-  "notes": "Release v0.13.9",
-  "pub_date": "2026-03-15T13:19:20Z",
+  "version": "0.13.10",
+  "notes": "Release v0.13.10",
+  "pub_date": "2026-03-16T13:58:13Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2pBY3d4T0dDQXMwdENZL01NMy81R1dNZUJldlNSbUtXNkdvUkV0ZnZnL0I0eEJYU2RyZHBjdkdyRXJlaWp6Y2dWMXZ0TVMwUnoxVUFUSk02bDdnUkFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNTgwMjk3CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKRmpNNC9pOTdZZzVJUEhmeGxqMlpub1FGNUhZeUpTZG1PbmhxS1J6c09jamdSTmtUOUM0cUY5S2swcWRIT29nOFpQVmFONjR4SUFHN3BEaG9zaHFNRHc9PQo=",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.9/E-Fees_0.13.9_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3M1OFM2dlA5THVBeXRiR01pVFlBbnBNYzJWaFRZb09OemVTeDVRdjgycTV1bXd5Mi83eFQwRGU2bExoYUFWdVU3aTkwakhaQXRUSGgzc0Ira2UyMHcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNjY4NjUwCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKdHlQWDNGeWFFSm1FUHVDUzR2b2FSRzJpb01yYnZNMmxMN0JOZGhCVndPcVI2ZVdsUUN2TmwxdXB4WURzQVZraFE2a3hxNEhyNnV5TjZxMWQyMVhrRGc9PQo=",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.10/E-Fees_0.13.10_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd29yK29xUndQYW1LSnYyWWVOUDRNK1JqTHd4N2NSRzVWUU9BemVhQ0VndlIzUTllQkhZajN1Mms2c2MvaVRyTWN2Z2U3Zjh6YWNlRHJjYnk5RW5aYVFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNTgwMjY4CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKWkxlWXptSlRUT0dWK2VpUDhBckt3L0poeEtnSFM5RnFSbFA3cVN3OUtuWFdQK0huS1lFWnVtemJpUlZ5NGpraHgrcld3NTRETXV2R05hNWovL1ZBQ2c9PQo=",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.9/E-Fees_0.13.9_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd21yNG81Q0wvamszOUdjWktRV1FhQ3dETGpPOFFsc1V3dlhSMXR3VWxPV2lWbERzVU5nS213N3pKSGxMUVl4cFF6RzBManZrRnA3QnJ1MXVPVTkzS3dRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNjY4NjM0CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKdmczcHBsak9oMW5YWEp2Y01lVDE0dDlpSnVZRnlOcXJRUEVIVWt3QTdxVllGRGFTbHBWZDVMVS9sZUpISkkrMXIyaERFVGx1S28yUkEvL1pvbFk0QXc9PQo=",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.10/E-Fees_0.13.10_x64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3VDaDdLK2k2Z3RnN201eHRkc09pMTBMVWwreDdreTRlQi9iWUFzcjVrSU1OVDhlRlBodTdsNFZCYmxybDdVYU1aeWVBOEo4RlBEb1gwWlR4ZnZUU3dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNTgwNzQ1CWZpbGU6RS1GZWVzXzAuMTMuOV94NjQtc2V0dXAuZXhlCnoxMjJMTGtKZE5qV1lwRmQ4WTg1Z3lFYVlQQnFaQTBBdkJoYWFhSjRkSTJ0SWZQcHJiR1NuRW1jYVhpYkFqV0IwWWpWNFJRK2tGTzk1dWtRci8xS0R3PT0K",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.9/E-Fees_0.13.9_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3VHdkFaQjJRcW8wQ0p6M1luSnh5OEo1eWdBK2M1VFRhaHN3eVBIcFQ5czdWSUxudm1UQVVGeFpkUlh6WWswU1RSMHpjbE42ZExUSk5Yc0FQSXZHUmdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNjY5NDUxCWZpbGU6RS1GZWVzXzAuMTMuMTBfeDY0LXNldHVwLmV4ZQp0MThjUk92NW1xd1R3MlBMeHVlSjZhanhuQ0dPcU9GV3dIOEVIWlhpVWYweUtDT0V1NGpIaDYwVzBDd2R5dCs0Uk5Wbjh0MGt0MTNGQzB6MS9wUE1EZz09Cg==",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.10/E-Fees_0.13.10_x64-setup.exe"
     }
   }
 }
