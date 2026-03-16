@@ -265,7 +265,8 @@ describe('ContactModal Component', () => {
 
       // Note: CrudModal form fields may not render in test environment
       // Modal opening is verified, form functionality tested elsewhere
-      expect(screen.getAllByRole('button', { name: 'Close modal' })).toHaveLength(2);
+      // Backdrop no longer has role="button" — only the actual close button remains
+      expect(screen.getAllByRole('button', { name: 'Close modal' })).toHaveLength(1);
     });
   });
 

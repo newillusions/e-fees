@@ -47,9 +47,9 @@
 
   // Status colors
   const statusColors = {
-    pending: 'text-emittiv-light',
-    invoiced: 'text-yellow-500',
-    paid: 'text-green-500',
+    pending: 'payment-pending',
+    invoiced: 'payment-invoiced',
+    paid: 'payment-paid',
   };
 
   const statusIcons = {
@@ -350,7 +350,7 @@
       <div class="emittiv-sortable-col--grow">TOTAL</div>
       <div class="emittiv-sortable-col--number"></div>
       <div class="emittiv-sortable-col--number">
-        <span class:text-emittiv-splash={scheduleValid} class:text-red-500={!scheduleValid} class="font-bold">
+        <span class:text-emittiv-splash={scheduleValid} class:schedule-invalid={!scheduleValid} class="font-bold">
           {formatNumber(scheduledTotal)}
         </span>
       </div>
@@ -362,7 +362,7 @@
     {#if !scheduleValid}
       <div class="emittiv-schedule-diff">
         <span class="text-emittiv-light">Schedule difference:</span>
-        <span class={scheduleDifference > 0 ? 'text-green-500' : 'text-red-500'} class:font-medium={true}>
+        <span class={scheduleDifference > 0 ? 'schedule-surplus' : 'schedule-invalid'} class:font-medium={true}>
           {scheduleDifference > 0 ? '+' : ''}{formatNumber(Math.round(scheduleDifference))}
         </span>
         <span class="text-emittiv-light">from target</span>
@@ -374,11 +374,11 @@
     <div class="flex items-center gap-3 text-xs">
       <div class="flex items-center gap-1">
         <span class="text-emittiv-light">Invoiced:</span>
-        <span class="text-yellow-500 font-medium">{formatNumber(schedule.total_invoiced)}</span>
+        <span class="payment-invoiced font-medium">{formatNumber(schedule.total_invoiced)}</span>
       </div>
       <div class="flex items-center gap-1">
         <span class="text-emittiv-light">Paid:</span>
-        <span class="text-green-500 font-medium">{formatNumber(schedule.total_paid)}</span>
+        <span class="payment-paid font-medium">{formatNumber(schedule.total_paid)}</span>
       </div>
       <div class="flex items-center gap-1">
         <span class="text-emittiv-light">Outstanding:</span>
@@ -387,3 +387,11 @@
     </div>
   {/snippet}
 </PanelCard>
+
+<style>
+  .payment-pending  { color: var(--color-status-pending); }
+  .payment-invoiced { color: var(--color-status-invoiced); }
+  .payment-paid     { color: var(--color-status-paid); }
+  .schedule-invalid { color: var(--color-error); }
+  .schedule-surplus { color: var(--color-success); }
+</style>

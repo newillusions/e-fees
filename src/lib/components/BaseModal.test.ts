@@ -67,14 +67,12 @@ describe('BaseModal Component', () => {
   it('should emit close event when overlay is clicked', async () => {
     const user = userEvent.setup();
 
-    render(BaseModal, {
+    // Get the backdrop by class (no role="button" — backdrop is not an interactive element)
+    const { container } = render(BaseModal, {
       isOpen: true,
       title: 'Test Modal'
     });
-
-    // Get the backdrop (div with emittiv-backdrop class)
-    const overlays = screen.getAllByRole('button', { name: /close modal/i });
-    const backdrop = overlays.find(el => el.tagName === 'DIV' && el.classList.contains('emittiv-backdrop'));
+    const backdrop = container.querySelector('.emittiv-backdrop');
 
     await user.click(backdrop!);
 
@@ -179,10 +177,13 @@ describe('BaseModal Component', () => {
 
       const modal = screen.getByRole('dialog');
       expect(modal).toHaveAttribute('aria-modal', 'true');
-      expect(modal).toHaveAttribute('aria-labelledby', 'modal-title');
+      // IDs are now unique per instance (modal-XXXXX-title pattern)
+      const labelledBy = modal.getAttribute('aria-labelledby');
+      expect(labelledBy).toMatch(/^modal-\w+-title$/);
 
       const title = screen.getByText('Accessible Modal');
-      expect(title).toHaveAttribute('id', 'modal-title');
+      expect(title.id).toMatch(/^modal-\w+-title$/);
+      expect(title.id).toBe(labelledBy);
     });
 
     it('should announce modal opening to screen readers', () => {

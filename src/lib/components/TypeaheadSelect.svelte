@@ -6,7 +6,8 @@
   import { createEventDispatcher } from 'svelte';
   
   const dispatch = createEventDispatcher();
-  
+  const inputId = `typeahead-${Math.random().toString(36).substr(2, 9)}`;
+
   let { label = '', value = $bindable(''), searchText = $bindable(''), placeholder = 'Search...', options = [] as Array<{ id: string; [key: string]: unknown }>, displayFields = ['name'], required = false, error = '', showAddButton = false, addButtonLabel = 'Add new', maxHeight = '192px', disabled = false }: {
     label?: string;
     value?: string;
@@ -144,7 +145,7 @@
   <!-- Label -->
   {#if label}
     <label
-      for="typeahead-{label.replace(/\s+/g, '-').toLowerCase()}"
+      for={inputId}
       class="emittiv-label"
       class:emittiv-label--required={required}
     >
@@ -191,9 +192,11 @@
       
       <!-- Dropdown Options -->
       {#if dropdownOpen && options.length > 0 && !disabled}
-        <div 
+        <div
           class="emittiv-typeahead-dropdown"
           style="max-height: {maxHeight};"
+          role="listbox"
+          id="{inputId}-listbox"
         >
           {#each options as option, index}
             <button
@@ -201,6 +204,9 @@
               on:click={() => selectOption(option.id)}
               on:mouseenter={() => selectedIndex = index}
               class="emittiv-dropdown-item {selectedIndex === index ? 'emittiv-dropdown-item--active' : ''}"
+              role="option"
+              id="{inputId}-option-{index}"
+              aria-selected={selectedIndex === index}
             >
               <slot name="option" {option}>
                 {displayFields.map(field => option[field]).filter(Boolean).join(' - ')}
@@ -229,7 +235,7 @@
   
   <!-- Error Message -->
   {#if error}
-    <div class="emittiv-error">{error}</div>
+    <div id="{inputId}-error" class="emittiv-error" aria-live="polite">{error}</div>
   {/if}
 </div>
 

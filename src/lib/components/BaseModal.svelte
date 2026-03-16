@@ -3,16 +3,18 @@
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
-  let { isOpen = $bindable(false), title = '', maxWidth = '450px', showCloseButton = true, customClass = '', zIndex = 100 }: {
+  let { isOpen = $bindable(false), title = '', maxWidth = '', size = 'md' as 'sm' | 'md' | 'lg' | 'xl', showCloseButton = true, customClass = '', zIndex = 100 }: {
     isOpen?: boolean;
     title?: string;
     maxWidth?: string;
+    size?: 'sm' | 'md' | 'lg' | 'xl';
     showCloseButton?: boolean;
     customClass?: string;
     zIndex?: number;
   } = $props();
 
   const dispatch = createEventDispatcher();
+  const modalId = `modal-${Math.random().toString(36).substr(2, 9)}`;
 
   function closeModal() {
     dispatch('close');
@@ -29,6 +31,40 @@
       closeModal();
     }
   }
+
+  function trapFocus(node: HTMLElement) {
+    function getFocusable() {
+      return node.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+    }
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    node.addEventListener('keydown', handleTab);
+    requestAnimationFrame(() => {
+      const focusable = getFocusable();
+      if (focusable.length > 0) focusable[0].focus();
+    });
+
+    return {
+      destroy() { node.removeEventListener('keydown', handleTab); }
+    };
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -40,9 +76,7 @@
     style="z-index: {zIndex};"
     on:click={handleBackdropClick}
     on:keydown={() => {}}
-    role="button"
     tabindex="-1"
-    aria-label="Close modal"
     in:fade={{ duration: 200 }}
     out:fade={{ duration: 200 }}
   ></div>
@@ -53,20 +87,21 @@
     style="z-index: {zIndex + 1};"
     role="dialog"
     aria-modal="true"
-    aria-labelledby={title ? 'modal-title' : undefined}
+    aria-labelledby={title ? `${modalId}-title` : undefined}
   >
     <div
-      class="emittiv-modal w-full pointer-events-auto"
-      style="max-width: {maxWidth};"
+      class="emittiv-modal emittiv-modal--{size} w-full pointer-events-auto"
+      style={maxWidth ? `max-width: ${maxWidth};` : undefined}
       on:click={e => e.stopPropagation()}
       in:scale={{ duration: 250, start: 0.95, easing: cubicOut }}
       out:scale={{ duration: 200, start: 0.95, easing: cubicOut }}
+      use:trapFocus
     >
       {#if title || showCloseButton}
         <!-- Modal Header -->
         <div class="emittiv-modal__header">
           {#if title}
-            <h2 id="modal-title" class="emittiv-modal__title">
+            <h2 id="{modalId}-title" class="emittiv-modal__title">
               {title}
             </h2>
           {:else}
@@ -95,4 +130,3 @@
     </div>
   </div>
 {/if}
-

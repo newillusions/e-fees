@@ -90,10 +90,18 @@
   let showDeleteConfirm = $state(false);
   let showProjectStatusSync = $state(false);
   let showJsonExportAlert = $state(false);
+  let showDiscardConfirm = $state(false);
   let originalStatus = $state('');
   let pendingUpdateData: Partial<Fee> | null = $state(null);
   let formInitialized = $state(false);
   let dataLoaded = $state(false);
+
+  // Unsaved changes guard
+  let initialFormData: ProposalFormData | null = $state(null);
+  const isDirty = $derived(
+    initialFormData !== null &&
+    JSON.stringify(formData) !== JSON.stringify(initialFormData)
+  );
 
   // Failsafe: Store original proposal data when modal opens
   let originalProposal: Fee | null = $state(null);
@@ -392,11 +400,11 @@
       }
       
       resetForm();
-      closeModal();
+      doClose();
       return result;
     }, operationActions, 'saving');
   }
-  
+
   // Update proposal with loading state
   async function handleUpdate() {
     const activeProposal = proposal || originalProposal;
@@ -443,7 +451,7 @@
       const result = await feesActions.update(proposalId, updateData);
       
       operationActions.setMessage('Proposal updated successfully');
-      closeModal();
+      doClose();
 
       return result;
     }, operationActions, 'saving');
@@ -460,7 +468,7 @@
 
       const result = await feesActions.delete(proposalId);
       operationActions.setMessage('Proposal deleted successfully');
-      closeModal();
+      doClose();
       return result;
     }, operationActions, 'deleting');
   }
@@ -531,8 +539,8 @@
       operationActions.setMessage(syncStatus 
         ? 'Proposal and project status updated successfully!' 
         : 'Proposal updated successfully!');
-      
-      closeModal();
+
+      doClose();
       return true;
     }, operationActions, 'saving');
     
@@ -574,7 +582,7 @@
         }
         
         operationActions.setMessage(message);
-        closeModal();
+        doClose();
       } else {
         operationActions.setError('JSON export failed - no result returned');
       }
@@ -587,7 +595,7 @@
   // Handle dismissing the JSON export alert
   function handleJsonExportDismiss() {
     showJsonExportAlert = false;
-    closeModal();
+    doClose();
   }
   
   // Form management
@@ -616,6 +624,7 @@
     showDeleteConfirm = false;
     showProjectStatusSync = false;
     showJsonExportAlert = false;
+    showDiscardConfirm = false;
     originalStatus = '';
     pendingUpdateData = null;
     formInitialized = false;
@@ -631,6 +640,15 @@
   }
   
   function closeModal() {
+    if (isDirty) {
+      showDiscardConfirm = true;
+      return;
+    }
+    doClose();
+  }
+
+  function doClose() {
+    showDiscardConfirm = false;
     resetForm();
     operationActions.reset();
     dispatch('close');
@@ -821,6 +839,7 @@
       dataLoaded = false;
       originalStatus = '';
       originalProposal = null; // Clear failsafe data
+      initialFormData = null;
     }
   });
 
@@ -867,12 +886,19 @@
 
     // Clear any existing validation errors when loading edit data
     formErrors = {};
+
+    // Capture initial snapshot for dirty-check
+    initialFormData = JSON.parse(JSON.stringify(formData));
   }
 
   // Initialize form for create mode
   $effect(() => {
     if (mode === 'create' && isOpen && !formInitialized) {
       resetForm();
+      // Capture initial snapshot after reset (next microtask so all effects have run)
+      setTimeout(() => {
+        initialFormData = JSON.parse(JSON.stringify(formData));
+      }, 0);
     }
   });
 
@@ -912,18 +938,18 @@
 <BaseModal 
   {isOpen} 
   title={mode === 'create' ? 'Create New Fee Proposal' : 'Edit Fee Proposal'}
-  maxWidth="500px"
+  size="lg"
   on:close={closeModal}
 >
   <!-- Form -->
-  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
-    
+  <form on:submit={handleSubmit} class="emittiv-form-section" style="gap: 16px;">
+
     <!-- PROJECT & CLIENT INFORMATION SECTION - MOVED TO TOP -->
-    <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+    <div class="emittiv-form-section">
+      <h3 class="emittiv-form-section__title">
         Project & Client Information
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         
         <!-- Project Selection -->
         <div class="flex relative" style="gap: 8px;">
@@ -1018,14 +1044,14 @@
     </div>
     
     <!-- BASIC INFORMATION SECTION -->
-    <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+    <div class="emittiv-form-section">
+      <h3 class="emittiv-form-section__title">
         Basic Information
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         
         <!-- Number and Name -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Proposal Number"
             bind:value={formData.number}
@@ -1044,14 +1070,23 @@
         </div>
         
         <!-- Issue Date and Revision -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Issue Date"
             bind:value={formData.issue_date}
             placeholder="YYMMDD format"
             maxlength={6}
+            inputmode="numeric"
             required
             error={formErrors.issue_date}
+            on:blur={() => {
+              if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
+                formErrors = { ...formErrors, issue_date: 'Must be 6 digits (YYYYMM)' };
+              } else {
+                const { issue_date: _, ...rest } = formErrors;
+                formErrors = rest;
+              }
+            }}
           />
 
           <FormInput
@@ -1063,7 +1098,7 @@
         </div>
         
         <!-- Status and Package -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormSelect
             label="Status"
             bind:value={formData.status}
@@ -1078,7 +1113,7 @@
         </div>
         
         <!-- Activity and Strap Line -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Activity"
             bind:value={formData.activity}
@@ -1095,14 +1130,14 @@
     </div>
     
     <!-- STAFF INFORMATION SECTION -->
-    <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+    <div class="emittiv-form-section">
+      <h3 class="emittiv-form-section__title">
         Staff Information
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         
         <!-- Staff Name and Email -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Staff Name"
             bind:value={formData.staff_name}
@@ -1118,7 +1153,7 @@
         </div>
         
         <!-- Staff Phone and Position -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Staff Phone"
             type="tel"
@@ -1137,8 +1172,8 @@
     
     <!-- Pricing Section (Edit Mode Only) -->
     {#if mode === 'edit'}
-      <div>
-        <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+      <div class="emittiv-form-section">
+        <h3 class="emittiv-form-section__title">
           Fee Pricing
         </h3>
         <div class="flex items-center justify-between">
@@ -1162,8 +1197,8 @@
 
     <!-- Auto-Export Options (Create Mode Only) -->
     {#if mode === 'create'}
-      <div>
-        <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+      <div class="emittiv-form-section">
+        <h3 class="emittiv-form-section__title">
           Export Options
         </h3>
         <div class="flex items-center" style="gap: 8px;">
@@ -1207,10 +1242,9 @@
     <!-- Project Status Sync Confirmation -->
     {#if showProjectStatusSync}
       <div class="emittiv-alert emittiv-alert--info">
-        <p class="font-medium mb-2">Update Project Status</p>
+        <p class="font-medium mb-2">Also update the project status?</p>
         <p class="text-xs opacity-80 mb-3">
-          The proposal status change would also update the project status to "{getProjectStatusFromProposalStatus(formData.status)}". 
-          Would you like to sync the project status as well?
+          Changing the proposal to "{formData.status}" would set the project to "{getProjectStatusFromProposalStatus(formData.status)}". Update both, or the proposal only?
         </p>
         <div class="flex gap-2">
           <button
@@ -1219,7 +1253,7 @@
             class="emittiv-confirm-btn emittiv-confirm-btn--blue"
             disabled={$operationState.saving}
           >
-            Yes, sync both
+            Update both
           </button>
           <button
             type="button"
@@ -1227,7 +1261,7 @@
             class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-blue"
             disabled={$operationState.saving}
           >
-            No, proposal only
+            Proposal only
           </button>
         </div>
       </div>
@@ -1258,6 +1292,30 @@
       </div>
     {/if}
     
+    <!-- Discard Unsaved Changes Confirmation -->
+    {#if showDiscardConfirm}
+      <div class="emittiv-alert emittiv-alert--warning">
+        <p class="font-medium" style="margin-bottom: 4px;">Discard unsaved changes?</p>
+        <p class="text-xs opacity-80" style="margin-bottom: 8px;">Your changes have not been saved.</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={doClose}
+            class="emittiv-confirm-btn emittiv-confirm-btn--primary"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            on:click={() => showDiscardConfirm = false}
+            class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-orange"
+          >
+            Keep Editing
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <!-- Actions - Full Width Container -->
     <div class="w-full" style="height: 40px;">
       {#if mode === 'edit' && !showDeleteConfirm}

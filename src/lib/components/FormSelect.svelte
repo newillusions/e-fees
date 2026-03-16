@@ -27,7 +27,15 @@
     </label>
   {/if}
 
-  <select id={selectId} {required} {disabled} bind:value class={selectClasses}>
+  <select
+    id={selectId}
+    {required}
+    {disabled}
+    bind:value
+    class={selectClasses}
+    aria-invalid={error ? 'true' : undefined}
+    aria-describedby={error ? `${selectId}-error` : undefined}
+  >
     {#if placeholder && !value}
       <option value="" disabled>{placeholder}</option>
     {/if}
@@ -38,7 +46,7 @@
   </select>
 
   {#if error}
-    <div class="emittiv-error">{error}</div>
+    <div id="{selectId}-error" class="emittiv-error" aria-live="polite">{error}</div>
   {/if}
 </div>
 

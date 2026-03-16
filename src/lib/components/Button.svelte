@@ -16,10 +16,11 @@
   {type}
   {disabled}
   class={buttonClass}
+  aria-busy={loading || undefined}
   on:click
 >
   {#if loading}
-    <div class="emittiv-spinner"></div>
+    <div class="emittiv-spinner" aria-hidden="true"></div>
   {/if}
   <slot />
 </button>

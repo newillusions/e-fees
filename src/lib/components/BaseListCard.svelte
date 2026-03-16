@@ -47,7 +47,7 @@
     on:mouseenter={handleMouseEnter}
     on:mouseleave={handleMouseLeave}
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="emittiv-list-card__body">
       {#if selectable}
         <div class="flex items-center flex-shrink-0 pt-0.5">
           <input
@@ -60,9 +60,9 @@
       {/if}
 
       <!-- Main content area -->
-      <div class="flex-1 min-w-0">
+      <div class="emittiv-list-card__content">
         <!-- Title slot -->
-        <div class="flex items-center gap-2">
+        <div class="emittiv-list-card__title-row">
           <slot name="title" />
         </div>
 
@@ -82,7 +82,7 @@
       </div>
 
       <!-- Actions area -->
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="emittiv-list-card__actions flex items-center gap-2">
         <!-- Badge slot (optional) -->
         {#if $$slots.badge}
           <slot name="badge" />
@@ -110,7 +110,7 @@
     role={clickable ? 'button' : 'presentation'}
     tabindex={clickable ? 0 : null}
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="emittiv-list-card__body">
       {#if selectable}
         <div class="flex items-center flex-shrink-0 pt-0.5">
           <input
@@ -123,9 +123,9 @@
       {/if}
 
       <!-- Main content area -->
-      <div class="flex-1 min-w-0">
+      <div class="emittiv-list-card__content">
         <!-- Title slot -->
-        <div class="flex items-center gap-2">
+        <div class="emittiv-list-card__title-row">
           <slot name="title" />
         </div>
 
@@ -145,7 +145,7 @@
       </div>
 
       <!-- Actions area -->
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="emittiv-list-card__actions flex items-center gap-2">
         <!-- Badge slot (optional) -->
         {#if $$slots.badge}
           <slot name="badge" />

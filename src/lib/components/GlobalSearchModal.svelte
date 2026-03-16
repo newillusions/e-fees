@@ -252,13 +252,14 @@
     on:keydown={handleKeydown}
     role="dialog"
     aria-modal="true"
-    aria-labelledby="search-title"
+    aria-labelledby="search-dialog-title"
     tabindex="-1"
   >
     <div class="search-container">
+      <h2 id="search-dialog-title" class="sr-only">Quick Search</h2>
       <!-- Search Input -->
       <div class="search-input-wrapper">
-        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -267,7 +268,8 @@
           type="text"
           class="search-input"
           placeholder="Search projects, companies, contacts, proposals..."
-          id="search-title"
+          id="search-input"
+          aria-label="Search"
           autocomplete="off"
           spellcheck="false"
         />

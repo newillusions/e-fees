@@ -80,8 +80,9 @@
           class="w-full px-6 py-2 flex items-center text-left transition-smooth group"
           class:nav-active={$location === item.id}
           class:nav-inactive={$location !== item.id}
+          title="{item.label} (⌘{item.shortcut})"
         >
-          <div class="flex items-center space-x-3 transition-transform group-hover:scale-105">
+          <div class="flex items-center space-x-3">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
             </svg>

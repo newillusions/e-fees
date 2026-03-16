@@ -21,6 +21,9 @@
     project?: Project | null;
   } = $props();
 
+  // Inline folder error state
+  let folderError = $state('');
+
   // Modal state
   let warningModal: {
     isOpen: boolean;
@@ -109,7 +112,8 @@
 
     const projectFolderPath = $settingsStore.project_folder_path;
     if (!projectFolderPath) {
-      alert('Project folder path not configured. Please set it in Settings.');
+      folderError = 'Project folder path not configured. Please set it in Settings.';
+      setTimeout(() => folderError = '', 5000);
       return;
     }
 
@@ -118,11 +122,13 @@
     try {
       const result = await openFolderInExplorer(fullPath);
       if (result.includes('Failed')) {
-        alert('Failed to open project folder. Please check the path exists.');
+        folderError = 'Failed to open project folder. Please check the path exists.';
+        setTimeout(() => folderError = '', 5000);
       }
     } catch (error) {
       console.error('Failed to open project folder:', error);
-      alert('Failed to open project folder. Please check the path exists.');
+      folderError = 'Failed to open project folder. Please check the path exists.';
+      setTimeout(() => folderError = '', 5000);
     }
   }
   
@@ -243,7 +249,11 @@
   ]);
 </script>
 
-<DetailPanel 
+{#if folderError}
+  <div class="emittiv-alert emittiv-alert--error" style="margin: 8px 0;">{folderError}</div>
+{/if}
+
+<DetailPanel
   {isOpen}
   show={!!project}
   title="project"

@@ -50,6 +50,9 @@
   let selectedIds: Set<string> = new SvelteSet();
   let selectMode = $state(false);
 
+  // Inline folder error state
+  let folderError = $state('');
+
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -246,7 +249,8 @@
   async function openProjectFolder(project: Project) {
     const projectFolderPath = $settingsStore.project_folder_path;
     if (!projectFolderPath) {
-      alert('Project folder path not configured. Please set it in Settings.');
+      folderError = 'Project folder path not configured. Please set it in Settings.';
+      setTimeout(() => folderError = '', 5000);
       return;
     }
 
@@ -255,11 +259,13 @@
     try {
       const result = await openFolderInExplorer(fullPath);
       if (result.includes('Failed')) {
-        alert('Failed to open project folder. Please check the path exists.');
+        folderError = 'Failed to open project folder. Please check the path exists.';
+        setTimeout(() => folderError = '', 5000);
       }
     } catch (error) {
       console.error('Failed to open project folder:', error);
-      alert('Failed to open project folder. Please check the path exists.');
+      folderError = 'Failed to open project folder. Please check the path exists.';
+      setTimeout(() => folderError = '', 5000);
     }
   }
 </script>
@@ -276,14 +282,17 @@
           class="emittiv-search-input"
         />
       </div>
-      <button
-        class="emittiv-search-button"
-        aria-label="Search"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </button>
+      {#if searchQuery}
+        <button
+          class="emittiv-icon-btn"
+          onclick={() => searchQuery = ''}
+          aria-label="Clear search"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      {/if}
       <ResultsCounter
         totalItems={totalRecords}
         filteredItems={filteredProjects.length}
@@ -378,6 +387,10 @@
       </button>
     </div>
   {:else}
+    {#if folderError}
+      <div class="emittiv-alert emittiv-alert--error" style="margin: 8px 0;">{folderError}</div>
+    {/if}
+
     <!-- Bulk Action Bar -->
     <BulkActionBar
       selectedCount={selectedIds.size}

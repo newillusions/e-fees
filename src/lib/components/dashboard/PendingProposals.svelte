@@ -31,7 +31,7 @@
 
   // Filter for pending proposals (Sent + Draft - not closed)
   const pendingProposals = $derived($feesStore
-    .filter(fee => fee.status === 'Sent' || fee.status === 'Draft')
+    .filter(fee => fee.status === 'Sent' || fee.status === 'Draft' || fee.status === 'Negotiation')
     .filter(fee => fee.time) // Filter out fees without time info
     .sort(
       (a, b) =>

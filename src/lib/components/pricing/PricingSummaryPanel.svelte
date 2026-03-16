@@ -206,14 +206,14 @@
               </div>
             </div>
             <div class="text-center">
-              <div class="text-yellow-500 text-sm mb-1">Invoiced</div>
-              <div class="text-yellow-500 font-medium">
+              <div class="summary-invoiced text-sm mb-1">Invoiced</div>
+              <div class="summary-invoiced font-medium">
                 {formatCurrency(paymentSchedule.total_invoiced, currency)}
               </div>
             </div>
             <div class="text-center">
-              <div class="text-green-500 text-sm mb-1">Paid</div>
-              <div class="text-green-500 font-medium">
+              <div class="summary-paid text-sm mb-1">Paid</div>
+              <div class="summary-paid font-medium">
                 {formatCurrency(paymentSchedule.total_paid, currency)}
               </div>
             </div>
@@ -223,3 +223,8 @@
     </div>
   {/if}
 </PanelCard>
+
+<style>
+  .summary-invoiced { color: var(--color-status-invoiced); }
+  .summary-paid { color: var(--color-status-paid); }
+</style>

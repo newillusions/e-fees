@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { type = 'text', value = $bindable(''), placeholder = '', label = '', id = '', required = false, disabled = false, error = '', readonly = false, maxlength = undefined as number | undefined, min = undefined as number | undefined, max = undefined as number | undefined, autocomplete = undefined as HTMLInputElement['autocomplete'] | undefined, className = '' }: {
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
+
+  let { type = 'text', value = $bindable(''), placeholder = '', label = '', id = '', required = false, disabled = false, error = '', readonly = false, maxlength = undefined as number | undefined, min = undefined as number | undefined, max = undefined as number | undefined, autocomplete = undefined as HTMLInputElement['autocomplete'] | undefined, inputmode = undefined as 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined, className = '' }: {
     type?: string;
     value?: string | number;
     placeholder?: string;
@@ -13,6 +17,7 @@
     min?: number | undefined;
     max?: number | undefined;
     autocomplete?: HTMLInputElement['autocomplete'] | undefined;
+    inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined;
     className?: string;
   } = $props();
 
@@ -48,12 +53,16 @@
     {min}
     {max}
     autocomplete={autocomplete}
+    inputmode={inputmode}
     bind:value
     class={inputClasses}
+    aria-invalid={error ? 'true' : undefined}
+    aria-describedby={error ? `${inputId}-error` : undefined}
+    on:blur={(e) => dispatch('blur', e)}
   />
 
   {#if error}
-    <div class="emittiv-error">{error}</div>
+    <div id="{inputId}-error" class="emittiv-error" aria-live="polite">{error}</div>
   {/if}
 </div>
 

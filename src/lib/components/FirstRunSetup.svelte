@@ -155,7 +155,7 @@
       <!-- Header -->
       <div class="p-3 pb-2 border-b flex-shrink-0" style="border-color: var(--emittiv-dark);">
         <h2 class="text-lg font-bold" style="color: var(--emittiv-white);">
-          Welcome to Fee Proposal Management
+          Welcome to E-Fees
         </h2>
         <p class="text-xs mt-1" style="color: var(--emittiv-light);">
           Let's set up your application for first use
@@ -423,8 +423,7 @@
                   Setup Complete!
                 </h4>
                 <p class="text-xs" style="color: var(--emittiv-light);">
-                  Your Fee Proposal Management system is ready to use. Click "Finish Setup" to save
-                  your configuration and start using the application.
+                  Your E-Fees workspace is ready.
                 </p>
               </div>
             </div>

@@ -13,13 +13,27 @@
     statuses?: string[];
   } = $props();
 
-  let selectedStatus = $state('');
   let confirming: 'delete' | null = $state(null);
+  let confirmingStatus = $state('');
 
-  function handleStatusChange() {
-    if (!selectedStatus) return;
-    dispatch('status-change', selectedStatus);
-    selectedStatus = '';
+  // Derive singular entity label for button text
+  const entityLabel = $derived(
+    entityType.endsWith('ies')
+      ? entityType.slice(0, -3) + 'y'
+      : entityType.endsWith('s')
+        ? entityType.slice(0, -1)
+        : entityType
+  );
+
+  function handleStatusSelect(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    confirmingStatus = value;
+  }
+
+  function handleApplyStatus() {
+    if (!confirmingStatus) return;
+    dispatch('status-change', confirmingStatus);
+    confirmingStatus = '';
   }
 
   function handleDelete() {
@@ -33,12 +47,16 @@
 
   function handleClear() {
     confirming = null;
+    confirmingStatus = '';
     dispatch('clear');
   }
 
   // Reset confirmation when selection changes
   $effect(() => {
-    if (selectedCount === 0) confirming = null;
+    if (selectedCount === 0) {
+      confirming = null;
+      confirmingStatus = '';
+    }
   });
 </script>
 
@@ -49,17 +67,25 @@
     </span>
 
     {#if statuses.length > 0}
-      <div class="emittiv-bulk-bar__action">
+      <div class="emittiv-bulk-bar__action" style="display: flex; align-items: center; gap: 8px;">
         <select
-          bind:value={selectedStatus}
+          value={confirmingStatus}
           class="emittiv-bulk-bar__select"
-          onchange={handleStatusChange}
+          onchange={handleStatusSelect}
         >
           <option value="">Change status...</option>
           {#each statuses as status}
             <option value={status}>{status}</option>
           {/each}
         </select>
+        {#if confirmingStatus}
+          <button
+            class="emittiv-btn emittiv-btn--sm emittiv-btn--primary"
+            onclick={handleApplyStatus}
+          >
+            Apply
+          </button>
+        {/if}
       </div>
     {/if}
 
@@ -67,7 +93,7 @@
       class="emittiv-btn emittiv-btn--sm {confirming === 'delete' ? 'emittiv-btn--danger' : 'emittiv-btn--secondary'}"
       onclick={handleDelete}
     >
-      {confirming === 'delete' ? 'Confirm Delete' : 'Delete'}
+      {confirming === 'delete' ? `Delete ${selectedCount} ${selectedCount === 1 ? entityLabel : entityType}` : 'Delete'}
     </button>
 
     <button

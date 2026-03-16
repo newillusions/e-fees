@@ -6,7 +6,7 @@
   } = $props();
 </script>
 
-<div class="animate-pulse space-y-3">
+<div class="animate-pulse space-y-3" role="status" aria-label="Loading..." aria-live="polite">
   {#each Array(rows) as _}
     <div class="skeleton {height} {width}"></div>
   {/each}

@@ -103,60 +103,127 @@
     <!-- Logo -->
     <div class="mb-8 transform transition-transform duration-1000" class:scale-110={progress > 50}>
       {#if logo}
-        <img 
-          src={logo} 
-          alt="Company Logo" 
+        <img
+          src={logo}
+          alt="Company Logo"
           class="w-32 h-16 mx-auto filter brightness-110 transition-all duration-1000"
           class:animate-pulse={progress < 30}
           on:error={() => console.error('Failed to load logo:', logo)}
         />
       {:else}
         <!-- Fallback logo placeholder -->
-        <div class="w-32 h-16 mx-auto bg-gray-700 rounded flex items-center justify-center border border-gray-600">
-          <span class="text-xs text-gray-400">e-fees</span>
+        <div class="splash-logo-fallback">
+          <span class="splash-logo-fallback__text">e-fees</span>
         </div>
       {/if}
     </div>
-    
+
     <!-- Company Name -->
-    <h1 class="text-2xl font-bold mb-2 text-white">
-      e-<span class="text-orange-500">fees</span>
+    <h1 class="splash-title">
+      e-<span class="splash-accent">fees</span>
     </h1>
-    <p class="text-sm text-gray-400">by emittiv</p>
-    <p class="text-xs mb-8 text-gray-500">v{appVersion}</p>
-    
+    <p class="splash-subtitle">by emittiv</p>
+    <p class="splash-version">v{appVersion}</p>
+
     <!-- Progress Bar -->
     <div class="mb-6">
-      <div class="w-full h-1 rounded-full bg-gray-700">
-        <div 
+      <div class="splash-progress-track">
+        <div
           class="splash-progress-fill"
           style="width: {progress}%;"
         ></div>
       </div>
     </div>
-    
+
     <!-- Connection Status -->
     <div class="flex items-center justify-center" style="min-height: 2rem;">
-      <p class="text-sm transition-all duration-300 text-gray-300">
+      <p class="splash-status-text">
         {connectionText}<span class="inline-block w-6 text-left">{dots}</span>
       </p>
     </div>
   </div>
-  
+
   <!-- Animated Background Elements -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
     <!-- Floating circles -->
-    <div class="absolute top-1/4 left-1/4 w-2 h-2 rounded-full animate-ping bg-orange-500 opacity-30" style="animation-delay: 0s; animation-duration: 3s;"></div>
-    <div class="absolute top-3/4 right-1/4 w-1 h-1 rounded-full animate-ping bg-orange-500 opacity-30" style="animation-delay: 1s; animation-duration: 4s;"></div>
-    <div class="absolute top-1/2 left-1/6 w-1.5 h-1.5 rounded-full animate-ping bg-orange-500 opacity-30" style="animation-delay: 2s; animation-duration: 3.5s;"></div>
+    <div class="splash-ping" style="top: 25%; left: 25%; width: 8px; height: 8px; animation-delay: 0s; animation-duration: 3s;"></div>
+    <div class="splash-ping" style="top: 75%; right: 25%; width: 4px; height: 4px; animation-delay: 1s; animation-duration: 4s;"></div>
+    <div class="splash-ping" style="top: 50%; left: 16.67%; width: 6px; height: 6px; animation-delay: 2s; animation-duration: 3.5s;"></div>
   </div>
 </div>
 
 <style>
+  .splash-logo-fallback {
+    width: 128px;
+    height: 64px;
+    margin: 0 auto;
+    background: var(--emittiv-darker);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--emittiv-dark);
+  }
+
+  .splash-logo-fallback__text {
+    font-size: 12px;
+    color: var(--emittiv-light);
+  }
+
+  .splash-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--emittiv-white);
+  }
+
+  .splash-accent {
+    color: var(--emittiv-splash);
+  }
+
+  .splash-subtitle {
+    font-size: 14px;
+    color: var(--emittiv-light);
+  }
+
+  .splash-version {
+    font-size: 12px;
+    margin-bottom: 32px;
+    color: var(--emittiv-dark);
+  }
+
+  .splash-progress-track {
+    width: 100%;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--emittiv-darker);
+  }
+
   .splash-progress-fill {
     height: 100%;
     border-radius: 9999px;
-    background: linear-gradient(to right, #f97316, #fb923c);
+    background: linear-gradient(to right, var(--emittiv-splash), #fb923c);
     transition: width 0.3s ease-out;
+  }
+
+  .splash-status-text {
+    font-size: 14px;
+    transition: all 0.3s;
+    color: var(--emittiv-lighter);
+  }
+
+  .splash-ping {
+    position: absolute;
+    border-radius: 9999px;
+    background: var(--emittiv-splash);
+    opacity: 0.3;
+    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
   }
 </style>
