@@ -134,8 +134,8 @@
   }
   
   // Handle field click events from InfoCard
-  function handleFieldClick(event: CustomEvent) {
-    const { field } = event.detail;
+  function handleFieldClick(detail: { field: { label: string; value: string | number | undefined; type?: string; clickable?: boolean }, index: number }) {
+    const { field } = detail;
     if (field.label === 'Folder') {
       openProjectFolder();
     }
@@ -292,7 +292,7 @@
           { label: 'Last Updated', value: project.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(project.id), type: 'id' }
         ]}
-        on:field-click={handleFieldClick}
+        onfieldclick={handleFieldClick}
       />
     
     <!-- Fee Proposals Section -->
@@ -366,5 +366,5 @@
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
-  on:close={() => warningModal.isOpen = false}
+  onclose={() => warningModal.isOpen = false}
 />

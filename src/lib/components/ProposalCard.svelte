@@ -1,14 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import type { Fee } from '../../types';
   import CurrencyAmount from './CurrencyAmount.svelte';
-  
-  const dispatch = createEventDispatcher();
-  
-  let { proposal, clickable = true, projectName = '', companyName = '', contactName = '', selectable = false, selected = false }: {
+
+  let { proposal, clickable = true, projectName = '', companyName = '', contactName = '', selectable = false, selected = false, onedit, onview }: {
     proposal: Fee;
     clickable?: boolean;
     projectName?: string;
@@ -16,22 +13,24 @@
     contactName?: string;
     selectable?: boolean;
     selected?: boolean;
+    onedit?: (proposal: Fee) => void;
+    onview?: (proposal: Fee) => void;
   } = $props();
-  
+
   function handleCardClick() {
     if (clickable) {
-      dispatch('view', proposal);
+      onview?.(proposal);
     }
   }
-  
+
   function handleEdit(event: Event) {
     event.stopPropagation();
-    dispatch('edit', proposal);
+    onedit?.(proposal);
   }
-  
+
   function handleView(event: Event) {
     event.stopPropagation();
-    dispatch('view', proposal);
+    onview?.(proposal);
   }
 </script>
 

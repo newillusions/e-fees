@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { connectionStore } from '../stores';
   import { checkDbConnection, saveSettings, getSettings } from '../api';
   import { fade, slide } from 'svelte/transition';
   import { logApiError } from '$lib/services/logger';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false) }: {
+  let { isOpen = $bindable(false), oncomplete }: {
     isOpen?: boolean;
+    oncomplete?: () => void;
   } = $props();
 
   // Setup steps
@@ -124,7 +123,7 @@
         project_folder_path: projectPath
       });
 
-      dispatch('complete');
+      oncomplete?.();
       isOpen = false;
 
       // Reload the page to apply new settings

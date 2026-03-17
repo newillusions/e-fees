@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseModal from './BaseModal.svelte';
   import Button from './Button.svelte';
   import { moveProjectFolder, getFolderForStatus, getStatusForFolder, type FolderOperationResult } from '$lib/api/folderManagement';
@@ -7,15 +6,15 @@
   import { logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
   
-  const dispatch = createEventDispatcher();
-  
-  let { isOpen = $bindable(false), project = null, proposal = null, newStatus = '', relatedFees = [], mode = 'project-primary' }: {
+  let { isOpen = $bindable(false), project = null, proposal = null, newStatus = '', relatedFees = [], mode = 'project-primary', oncancel, onconfirm }: {
     isOpen?: boolean;
     project?: Project | null;
     proposal?: Fee | null;
     newStatus?: string;
     relatedFees?: Fee[];
     mode?: 'project-primary' | 'proposal-primary';
+    oncancel?: () => void;
+    onconfirm?: (detail: Record<string, unknown>) => void;
   } = $props();
   
   let isProcessing = $state(false);
@@ -90,7 +89,7 @@
   function handleCancel() {
     isOpen = false;
     operationResult = null;
-    dispatch('cancel');
+    oncancel?.();
   }
   
   async function handleConfirm() {
@@ -109,8 +108,8 @@
           newStatus: suggestedFeeStatus
         }));
         
-        // Dispatch the status change event - parent will handle folder operations
-        dispatch('confirm', {
+        // Call the confirm callback - parent will handle folder operations
+        onconfirm?.({
           project,
           newStatus,
           folderChangeRequired,
@@ -124,9 +123,9 @@
           id: project.id,
           newStatus: suggestedProjectStatus
         }] : [];
-        
-        // Dispatch the status change event - parent will handle folder operations
-        dispatch('confirm', {
+
+        // Call the confirm callback - parent will handle folder operations
+        onconfirm?.({
           proposal,
           newStatus,
           folderChangeRequired,

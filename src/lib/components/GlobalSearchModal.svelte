@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { push } from 'svelte-spa-router';
   import { projectsStore, companiesStore, contactsStore, feesStore } from '$lib/stores';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -18,11 +18,10 @@
   } from '$lib/utils/search';
   import type { Project, Company, Contact, Fee } from '../../types';
 
-  let { isOpen = $bindable(false) }: {
+  let { isOpen = $bindable(false), onclose }: {
     isOpen?: boolean;
+    onclose?: () => void;
   } = $props();
-
-  const dispatch = createEventDispatcher();
 
   // Search state
   let searchQuery = $state('');
@@ -197,7 +196,7 @@
     searchQuery = '';
     selectedIndex = 0;
     isOpen = false;
-    dispatch('close');
+    onclose?.();
   }
 
   // Keyboard navigation

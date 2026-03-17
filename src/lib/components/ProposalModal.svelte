@@ -1448,8 +1448,8 @@
 <FeePricingModal
   bind:isOpen={showPricingModal}
   fee={proposal}
-  on:close={() => showPricingModal = false}
-  on:save={async () => {
+  onclose={() => showPricingModal = false}
+  onsave={async () => {
     await feesActions.load();
     // Refresh local proposal from store so pricing data persists
     if (proposal?.id) {

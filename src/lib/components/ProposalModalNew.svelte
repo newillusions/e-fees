@@ -5,7 +5,6 @@
   Focuses on core CRUD functionality.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { feesActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
@@ -21,12 +20,11 @@
   const searchCompanies = createCompanyTypeaheadSearch(extractSurrealId);
   const searchContacts = createContactTypeaheadSearch(extractSurrealId);
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), proposal = null, mode = 'create' }: {
+  let { isOpen = $bindable(false), proposal = null, mode = 'create', onclose }: {
     isOpen?: boolean;
     proposal?: Fee | null;
     mode?: 'create' | 'edit';
+    onclose?: () => void;
   } = $props();
 
 
@@ -180,7 +178,7 @@
 
   // Close handler
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
 </script>
 

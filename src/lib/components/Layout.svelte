@@ -241,7 +241,7 @@
 <!-- Global Search Modal -->
 <GlobalSearchModal
   bind:isOpen={isSearchOpen}
-  on:close={closeSearch}
+  onclose={closeSearch}
 />
 
 <style>

@@ -413,8 +413,8 @@
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(project.id || ''))}
           onFolderClick={openProjectFolder}
-          on:edit={(e) => handleEditProject(e.detail)}
-          on:view={(e) => handleViewProject(e.detail)}
+          onedit={(project) => handleEditProject(project)}
+          onview={(project) => handleViewProject(project)}
           on:select={() => toggleSelect(extractIdFromRelation(project.id || ''))}
         />
       {/each}

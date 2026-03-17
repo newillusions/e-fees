@@ -498,8 +498,8 @@
           projectName={getProjectName(proposal.project_id)}
           companyName={getCompanyName(proposal.company_id)}
           contactName={getContactName(proposal.contact_id)}
-          on:edit={(e) => handleEditProposal(e.detail)}
-          on:view={(e) => handleViewProposal(e.detail)}
+          onedit={(proposal) => handleEditProposal(proposal)}
+          onview={(proposal) => handleViewProposal(proposal)}
           on:select={() => toggleSelect(extractIdFromRelation(proposal.id || ''))}
         />
       {/each}
@@ -542,6 +542,6 @@
 <!-- Import Wizard Modal -->
 <ImportWizard
   bind:isOpen={showImportWizard}
-  on:close={() => showImportWizard = false}
-  on:imported={handleImportComplete}
+  onclose={() => showImportWizard = false}
+  onimported={handleImportComplete}
 />

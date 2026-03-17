@@ -1,35 +1,34 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import type { Project } from '../../types';
-  
-  const dispatch = createEventDispatcher();
-  
-  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false }: {
+
+  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false, onedit, onview }: {
     project: Project;
     clickable?: boolean;
     showFolderLink?: boolean;
     onFolderClick?: ((project: Project) => void) | undefined;
     selectable?: boolean;
     selected?: boolean;
+    onedit?: (project: Project) => void;
+    onview?: (project: Project) => void;
   } = $props();
-  
+
   function handleCardClick() {
     if (clickable) {
-      dispatch('view', project);
+      onview?.(project);
     }
   }
-  
+
   function handleEdit(event: Event) {
     event.stopPropagation();
-    dispatch('edit', project);
+    onedit?.(project);
   }
-  
+
   function handleView(event: Event) {
     event.stopPropagation();
-    dispatch('view', project);
+    onview?.(project);
   }
   
   function handleFolderClick(event: Event) {

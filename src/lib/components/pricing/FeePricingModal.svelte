@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import type { Fee } from '../../../types';
   import type { PricingBreakdown, PricingConfig, Discipline, Stage, PricingCell, PostContractItem, ReimbursableCost, PaymentSchedule } from '../../../types/database';
   import { extractSurrealId } from '$lib/utils/surrealdb';
@@ -21,11 +20,11 @@
   import PaymentSchedulePanel from './PaymentSchedulePanel.svelte';
   import PricingSummaryBar from './PricingSummaryBar.svelte';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), fee = null as Fee | null }: {
+  let { isOpen = $bindable(false), fee = null as Fee | null, onsave, onclose }: {
     isOpen?: boolean;
     fee?: Fee | null;
+    onsave?: () => void;
+    onclose?: () => void;
   } = $props();
 
   // UI state
@@ -193,7 +192,7 @@
 
       // Close modal after a brief delay to show success message
       setTimeout(() => {
-        dispatch('save');
+        onsave?.();
         closeModal();
       }, 1000);
     } catch (err) {
@@ -206,7 +205,7 @@
 
   function closeModal() {
     isOpen = false;
-    dispatch('close');
+    onclose?.();
   }
 
   // Tab configuration - Order: Disciplines → Stages → Costs → Calculator → Payments

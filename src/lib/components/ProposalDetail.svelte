@@ -601,5 +601,5 @@
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
-  on:close={() => warningModal.isOpen = false}
+  onclose={() => warningModal.isOpen = false}
 />

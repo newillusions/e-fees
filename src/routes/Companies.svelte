@@ -315,8 +315,8 @@
           {company}
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(company.id || ''))}
-          on:edit={(e) => handleEditCompany(e.detail)}
-          on:view={(e) => handleViewCompany(e.detail)}
+          onedit={(company) => handleEditCompany(company)}
+          onview={(company) => handleViewCompany(company)}
           on:select={() => toggleSelect(extractIdFromRelation(company.id || ''))}
         />
       {/each}

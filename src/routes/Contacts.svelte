@@ -349,8 +349,8 @@
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(contact.id || ''))}
           companyName={companyLookup.getCompanyName(contact.company)}
-          on:edit={(e) => handleEditContact(e.detail)}
-          on:view={(e) => handleViewContact(e.detail)}
+          onedit={(contact) => handleEditContact(contact)}
+          onview={(contact) => handleViewContact(contact)}
           on:select={() => toggleSelect(extractIdFromRelation(contact.id || ''))}
         />
       {/each}

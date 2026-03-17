@@ -156,8 +156,8 @@
   }
   
   // Handle status change confirmation
-  async function handleStatusChangeConfirm(event: CustomEvent) {
-    const { project: projectData, newStatus, folderChangeRequired, affectedFees, feesToUpdate, suggestedFeeStatus } = event.detail;
+  async function handleStatusChangeConfirm(detail: Record<string, unknown>) {
+    const { project: projectData, newStatus, folderChangeRequired, affectedFees, feesToUpdate, suggestedFeeStatus } = detail as any;
     
     // Update the form data with the new status
     formData.status = newStatus;
@@ -497,6 +497,6 @@
   newStatus={pendingStatusChange}
   relatedFees={relatedFees}
   mode="project-primary"
-  on:confirm={handleStatusChangeConfirm}
-  on:cancel={handleStatusChangeCancel}
+  onconfirm={handleStatusChangeConfirm}
+  oncancel={handleStatusChangeCancel}
 />

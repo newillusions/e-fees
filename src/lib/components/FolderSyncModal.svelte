@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseModal from './BaseModal.svelte';
   import {
     scanFolderSync,
@@ -15,10 +14,9 @@
   import { projectsActions } from '$lib/stores';
   import type { FolderSyncResult, FolderInconsistency } from '../../types/folderSync';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = false }: {
+  let { isOpen = false, onclose }: {
     isOpen?: boolean;
+    onclose?: () => void;
   } = $props();
 
   // Scan state
@@ -163,7 +161,7 @@
   }
 
   function closeModal() {
-    dispatch('close');
+    onclose?.();
   }
 
   /**

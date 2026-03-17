@@ -1,33 +1,32 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import type { Contact } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { contact, clickable = true, companyName = '', selectable = false, selected = false }: {
+  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview }: {
     contact: Contact;
     clickable?: boolean;
     companyName?: string;
     selectable?: boolean;
     selected?: boolean;
+    onedit?: (contact: Contact) => void;
+    onview?: (contact: Contact) => void;
   } = $props();
 
   function handleCardClick() {
     if (clickable) {
-      dispatch('view', contact);
+      onview?.(contact);
     }
   }
 
   function handleEdit(event: Event) {
     event.stopPropagation();
-    dispatch('edit', contact);
+    onedit?.(contact);
   }
 
   function handleView(event: Event) {
     event.stopPropagation();
-    dispatch('view', contact);
+    onview?.(contact);
   }
 </script>
 

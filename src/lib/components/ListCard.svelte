@@ -1,23 +1,20 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  let { clickable = true, customPadding = false }: {
+  let { clickable = true, customPadding = false, onclick }: {
     clickable?: boolean;
     customPadding?: boolean;
+    onclick?: (event: MouseEvent | KeyboardEvent) => void;
   } = $props();
 
   function handleClick(event: MouseEvent) {
     if (clickable) {
-      dispatch('click', event);
+      onclick?.(event);
     }
   }
 
   function handleKeydown(event: KeyboardEvent) {
     if (clickable && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
-      dispatch('click', event);
+      onclick?.(event);
     }
   }
 

@@ -194,7 +194,7 @@
 
 <ActivityLogModal
   isOpen={showActivityLogModal}
-  on:close={() => showActivityLogModal = false}
+  onclose={() => showActivityLogModal = false}
 />
 
 <style>

@@ -1,9 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  let { title = 'Information', fields = [], columns = 3 }: {
+  let { title = 'Information', fields = [], columns = 3, onfieldclick }: {
     title?: string;
     fields?: Array<{
       label: string;
@@ -12,6 +8,7 @@
       clickable?: boolean;
     }>;
     columns?: number;
+    onfieldclick?: (detail: { field: { label: string; value: string | number | undefined; type?: string; clickable?: boolean }, index: number }) => void;
   } = $props();
 
   function formatValue(value: string | number | undefined, type: string = 'text'): string {
@@ -48,7 +45,7 @@
           {#if field.clickable && field.value && field.value !== '—'}
             <button
               class="emittiv-link text-sm text-left"
-              on:click={() => dispatch('field-click', { field, index })}
+              onclick={() => onfieldclick?.({ field, index })}
               title="Click to open"
             >
               {formatValue(field.value, field.type)}
