@@ -3,7 +3,7 @@
   Reduced from ~790 lines to ~480 lines using base components and utilities
 -->
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import type { ProjectStatus } from '../../types';
   import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
@@ -26,12 +26,11 @@
   import FeePricingModal from './pricing/FeePricingModal.svelte';
   import CurrencyAmount from './CurrencyAmount.svelte';
   
-  const dispatch = createEventDispatcher();
-  
-  let { isOpen = $bindable(false), proposal = null, mode = 'create' }: {
+  let { isOpen = $bindable(false), proposal = null, mode = 'create', onclose }: {
     isOpen?: boolean;
     proposal?: Fee | null;
     mode?: 'create' | 'edit';
+    onclose?: () => void;
   } = $props();
   
   // Use the new operation state utility
@@ -652,13 +651,13 @@
     showDiscardConfirm = false;
     resetForm();
     operationActions.reset();
-    dispatch('close');
+    onclose?.();
   }
   
   // Typeahead handlers
-  function handleProjectSelect(event: CustomEvent) {
-    formData.project_id = event.detail.id;
-    projectSearchText = event.detail.option.name; // Keep search text in sync
+  function handleProjectSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.project_id = data.id;
+    projectSearchText = data.option.name as string; // Keep search text in sync
     generateProposalNumber();
   }
   
@@ -667,21 +666,21 @@
     projectSearchText = '';
   }
   
-  function handleCompanySelect(event: CustomEvent) {
-    formData.company_id = event.detail.id;
-    companySearchText = event.detail.option.name;
+  function handleCompanySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.company_id = data.id;
+    companySearchText = data.option.name as string;
     // Clear contact when company changes
     formData.contact_id = '';
     contactSearchText = '';
   }
-  
-  function handleContactSelect(event: CustomEvent) {
-    formData.contact_id = event.detail.id;
-    contactSearchText = event.detail.option.full_name;
-    
+
+  function handleContactSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.contact_id = data.id;
+    contactSearchText = data.option.full_name as string;
+
     // Only auto-select company if form is initialized and not loading existing data
     if (formInitialized && mode === 'create') {
-      const selectedContact = contactOptionsMap.get(event.detail.id);
+      const selectedContact = contactOptionsMap.get(data.id);
       if (selectedContact && selectedContact.company) {
         const contactCompanyId = selectedContact.company;
         if (contactCompanyId && contactCompanyId !== formData.company_id) {
@@ -940,7 +939,7 @@
   {isOpen} 
   title={mode === 'create' ? 'Create New Fee Proposal' : 'Edit Fee Proposal'}
   size="lg"
-  on:close={closeModal}
+  onclose={closeModal}
 >
   <!-- Form -->
   <form on:submit={handleSubmit} class="emittiv-form-section" style="gap: 16px;">
@@ -964,9 +963,9 @@
               placeholder="Search projects..."
               required
               error={formErrors.project_id}
-              on:input={(e) => handleProjectSearch(e.detail)}
-              on:select={handleProjectSelect}
-              on:clear={handleProjectClear}
+              oninput={handleProjectSearch}
+              onselect={handleProjectSelect}
+              onclear={handleProjectClear}
             >
               <svelte:fragment slot="option" let:option>
                 <span class="font-medium">{option.number}</span> - <span class="truncate">{option.name}</span>
@@ -998,8 +997,8 @@
               placeholder="Search companies..."
               required
               error={formErrors.company_id}
-              on:select={handleCompanySelect}
-              on:clear={handleCompanyClear}
+              onselect={handleCompanySelect}
+              onclear={handleCompanyClear}
             />
           </div>
           <button
@@ -1025,8 +1024,8 @@
               options={contactOptions}
               displayFields={['full_name']}
               placeholder="Search contacts..."
-              on:select={handleContactSelect}
-              on:clear={handleContactClear}
+              onselect={handleContactSelect}
+              onclear={handleContactClear}
             />
           </div>
           <button

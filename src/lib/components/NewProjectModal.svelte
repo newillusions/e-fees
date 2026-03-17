@@ -425,21 +425,21 @@
   });
 
   // Typeahead handlers
-  function handleCountrySelect(event: CustomEvent) {
-    formData.country = event.detail.option.name;
-    countrySearchText = event.detail.option.name; // Keep search text in sync
+  function handleCountrySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.country = data.option.name as string;
+    countrySearchText = data.option.name as string; // Keep search text in sync
     // Don't clear area and city automatically - let user decide
     // This was causing the area field to be cleared unexpectedly
   }
 
-  function handleAreaSelect(event: CustomEvent) {
-    formData.area = event.detail.option.name;
-    areaSearchText = event.detail.option.name; // Keep search text in sync
+  function handleAreaSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.area = data.option.name as string;
+    areaSearchText = data.option.name as string; // Keep search text in sync
   }
 
-  function handleCitySelect(event: CustomEvent) {
-    formData.city = event.detail.option.name;
-    citySearchText = event.detail.option.name; // Keep search text in sync
+  function handleCitySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.city = data.option.name as string;
+    citySearchText = data.option.name as string; // Keep search text in sync
   }
 
   // Clear handlers for typeahead fields
@@ -575,9 +575,9 @@
           placeholder="Search countries..."
           required
           error={formErrors.country}
-          on:input={e => handleCountrySearch(e.detail)}
-          on:select={handleCountrySelect}
-          on:clear={handleCountryClear}
+          oninput={handleCountrySearch}
+          onselect={handleCountrySelect}
+          onclear={handleCountryClear}
         >
           <svelte:fragment slot="option" let:option>
             <span>{option.name}</span>
@@ -596,9 +596,9 @@
             placeholder="Search cities..."
             required
             error={formErrors.city}
-            on:input={e => handleCitySearch(e.detail)}
-            on:select={handleCitySelect}
-            on:clear={handleCityClear}
+            oninput={handleCitySearch}
+            onselect={handleCitySelect}
+            onclear={handleCityClear}
           />
 
           <TypeaheadSelect
@@ -610,9 +610,9 @@
             placeholder="Search areas..."
             required
             error={formErrors.area}
-            on:input={e => handleAreaSearch(e.detail)}
-            on:select={handleAreaSelect}
-            on:clear={handleAreaClear}
+            oninput={handleAreaSearch}
+            onselect={handleAreaSelect}
+            onclear={handleAreaClear}
           />
         </div>
       </div>

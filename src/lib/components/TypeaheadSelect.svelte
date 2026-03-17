@@ -3,12 +3,9 @@
   Used for complex search and select interactions with add-new functionality
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  
-  const dispatch = createEventDispatcher();
   const inputId = `typeahead-${Math.random().toString(36).substr(2, 9)}`;
 
-  let { label = '', value = $bindable(''), searchText = $bindable(''), placeholder = 'Search...', options = [] as Array<{ id: string; [key: string]: unknown }>, displayFields = ['name'], required = false, error = '', showAddButton = false, addButtonLabel = 'Add new', maxHeight = '192px', disabled = false }: {
+  let { label = '', value = $bindable(''), searchText = $bindable(''), placeholder = 'Search...', options = [] as Array<{ id: string; [key: string]: unknown }>, displayFields = ['name'], required = false, error = '', showAddButton = false, addButtonLabel = 'Add new', maxHeight = '192px', disabled = false, onclear, onselect, oninput, onfocus, onblur, onaddnew }: {
     label?: string;
     value?: string;
     searchText?: string;
@@ -21,6 +18,12 @@
     addButtonLabel?: string;
     maxHeight?: string;
     disabled?: boolean;
+    onclear?: () => void;
+    onselect?: (data: { id: string; option: { id: string; [key: string]: unknown } }) => void;
+    oninput?: (searchText: string) => void;
+    onfocus?: () => void;
+    onblur?: () => void;
+    onaddnew?: () => void;
   } = $props();
   
   let dropdownOpen = $state(false);
@@ -33,9 +36,9 @@
     value = '';
     dropdownOpen = false;
     selectedIndex = -1;
-    dispatch('clear');
+    onclear?.();
   }
-  
+
   // Select an option
   function selectOption(optionId: string) {
     const selectedOption = options.find(opt => opt.id === optionId);
@@ -44,46 +47,46 @@
       searchText = displayFields.map(field => selectedOption[field]).filter(Boolean).join(' - ');
       dropdownOpen = false;
       selectedIndex = -1;
-      dispatch('select', { id: optionId, option: selectedOption });
+      onselect?.({ id: optionId, option: selectedOption });
     }
   }
-  
+
   // Handle input events
   function handleInput() {
     dropdownOpen = true;
     selectedIndex = -1; // Reset selection when typing
-    
+
     // Check if the typed text exactly matches any option
-    const exactMatch = options.find(opt => 
+    const exactMatch = options.find(opt =>
       displayFields.map(field => opt[field]).filter(Boolean).join(' - ').toLowerCase() === searchText.toLowerCase()
     );
-    
+
     if (exactMatch) {
       // Auto-select exact matches
       selectOption(exactMatch.id);
     } else if (searchText && !options.some(opt => displayFields.map(field => opt[field]).filter(Boolean).join(' - ') === searchText)) {
       value = '';
     }
-    
-    dispatch('input', searchText);
+
+    oninput?.(searchText);
   }
-  
+
   function handleFocus() {
     dropdownOpen = true;
     selectedIndex = -1; // Reset selection when focusing
-    dispatch('focus');
+    onfocus?.();
   }
-  
+
   function handleBlur() {
     // Delay closing to allow click events on options
     setTimeout(() => {
       dropdownOpen = false;
-      dispatch('blur');
+      onblur?.();
     }, 200);
   }
-  
+
   function handleAddNew() {
-    dispatch('add-new');
+    onaddnew?.();
   }
   
   // Handle keyboard navigation

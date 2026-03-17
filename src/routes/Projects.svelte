@@ -415,7 +415,7 @@
           onFolderClick={openProjectFolder}
           onedit={(project) => handleEditProject(project)}
           onview={(project) => handleViewProject(project)}
-          on:select={() => toggleSelect(extractIdFromRelation(project.id || ''))}
+          onselect={() => toggleSelect(extractIdFromRelation(project.id || ''))}
         />
       {/each}
 

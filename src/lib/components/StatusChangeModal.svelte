@@ -190,7 +190,7 @@
   title="Confirm Status Change"
   maxWidth="600px"
   showCloseButton={false}
-  on:close={handleCancel}
+  onclose={handleCancel}
 >
   {#if primaryEntity}
     <div class="space-y-1.5">

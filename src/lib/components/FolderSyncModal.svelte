@@ -196,7 +196,7 @@
   }
 </script>
 
-<BaseModal {isOpen} on:close={closeModal} title="Folder Sync" maxWidth="700px">
+<BaseModal {isOpen} onclose={closeModal} title="Folder Sync" maxWidth="700px">
   <div style="padding: 16px;">
     <!-- Base Path Display -->
     <div style="margin-bottom: 16px;">

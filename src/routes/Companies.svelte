@@ -317,7 +317,7 @@
           selected={selectedIds.has(extractIdFromRelation(company.id || ''))}
           onedit={(company) => handleEditCompany(company)}
           onview={(company) => handleViewCompany(company)}
-          on:select={() => toggleSelect(extractIdFromRelation(company.id || ''))}
+          onselect={() => toggleSelect(extractIdFromRelation(company.id || ''))}
         />
       {/each}
 

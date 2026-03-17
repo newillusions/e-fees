@@ -1,15 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
   // Props for flexible card configuration
-  let { clickable = true, href = '', customClass = '', selectable = false, selected = false }: {
+  let { clickable = true, href = '', customClass = '', selectable = false, selected = false, onclick, onselect }: {
     clickable?: boolean;
     href?: string;
     customClass?: string;
     selectable?: boolean;
     selected?: boolean;
+    onclick?: () => void;
+    onselect?: (selected: boolean) => void;
   } = $props();
 
   // Mouse event handlers - now using CSS classes for consistent hover effects
@@ -23,7 +21,7 @@
 
   function handleClick() {
     if (clickable && !href) {
-      dispatch('click');
+      onclick?.();
     }
   }
 
@@ -36,7 +34,7 @@
 
   function handleCheckbox(event: Event) {
     event.stopPropagation();
-    dispatch('select', !selected);
+    onselect?.(!selected);
   }
 </script>
 

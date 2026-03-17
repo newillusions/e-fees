@@ -5,19 +5,17 @@
   Handles validation, layout, and field-specific logic.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import FormInput from '../FormInput.svelte';
   import FormSelect from '../FormSelect.svelte';
   import TypeaheadSelect from '../TypeaheadSelect.svelte';
   import type { FormFieldConfig, FieldChangeEvent } from './types';
   import { logger } from '$lib/services/logger';
 
-  const dispatch = createEventDispatcher<{ fieldChange: FieldChangeEvent }>();
-
-  let { field, formData = $bindable({}), error = '' }: {
+  let { field, formData = $bindable({}), error = '', onfieldchange }: {
     field: FormFieldConfig;
     formData?: Record<string, unknown>;
     error?: string;
+    onfieldchange?: (event: FieldChangeEvent) => void;
   } = $props();
 
   // Get/set value from formData (cast to string for form elements)
@@ -34,7 +32,7 @@
 
   // Handle value changes
   function handleValueChange() {
-    dispatch('fieldChange', {
+    onfieldchange?.({
       fieldName: field.name,
       value,
       formData: {} // Will be filled by parent component
@@ -56,10 +54,10 @@
   }
 
   // Handle typeahead selection
-  function handleTypeaheadSelect(event: CustomEvent) {
-    setValue(event.detail.id);
+  function handleTypeaheadSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    setValue(data.id);
     if (field.onSelect) {
-      field.onSelect(event.detail);
+      field.onSelect(data);
     }
   }
 
@@ -82,7 +80,7 @@
 
     <div class="grid grid-cols-2" style="gap: 8px;">
       {#each field.fields || [] as groupField}
-        <svelte:self field={groupField} bind:formData {error} on:fieldChange />
+        <svelte:self field={groupField} bind:formData {error} {onfieldchange} />
       {/each}
     </div>
   </div>
@@ -153,8 +151,8 @@
       required={field.required}
       disabled={field.disabled}
       {error}
-      on:input={e => handleTypeaheadSearch(e.detail)}
-      on:select={handleTypeaheadSelect}
+      oninput={handleTypeaheadSearch}
+      onselect={handleTypeaheadSelect}
     >
       <svelte:fragment slot="option" let:option>
         <div class="flex flex-col">

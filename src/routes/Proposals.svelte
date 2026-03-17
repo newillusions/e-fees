@@ -500,7 +500,7 @@
           contactName={getContactName(proposal.contact_id)}
           onedit={(proposal) => handleEditProposal(proposal)}
           onview={(proposal) => handleViewProposal(proposal)}
-          on:select={() => toggleSelect(extractIdFromRelation(proposal.id || ''))}
+          onselect={() => toggleSelect(extractIdFromRelation(proposal.id || ''))}
         />
       {/each}
 

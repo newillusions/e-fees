@@ -173,7 +173,6 @@
   isOpen={showProjectModal}
   mode="create"
   onclose={() => showProjectModal = false}
-  oncreated={() => showProjectModal = false}
 />
 
 <ProposalModal

@@ -288,7 +288,7 @@
   {isOpen} 
   title={mode === 'create' ? 'New Project' : 'Edit Project'}
   maxWidth="500px"
-  on:close={closeModal}
+  onclose={closeModal}
 >
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">

@@ -155,7 +155,6 @@
     proposal={selectedProposal}
     mode={proposalModalMode}
     onclose={() => showProposalModal = false}
-    onproposalUpdated={handleProposalUpdate}
   />
 {/if}
 

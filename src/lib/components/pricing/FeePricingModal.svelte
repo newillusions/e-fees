@@ -222,7 +222,7 @@
   {isOpen}
   title="Fee Pricing: {fee?.number || 'Unknown'}"
   maxWidth="1100px"
-  on:close={closeModal}
+  onclose={closeModal}
 >
   <div class="flex flex-col h-full">
     <!-- Summary Bar (always visible) -->

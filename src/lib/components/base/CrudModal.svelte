@@ -163,7 +163,7 @@
     <!-- Dynamic Fields -->
     <div style="display: flex; flex-direction: column; gap: 8px;">
       {#each fields as field}
-        <FormField {field} bind:formData error={formErrors[field.name]} on:fieldChange />
+        <FormField {field} bind:formData error={formErrors[field.name]} />
       {/each}
     </div>
 

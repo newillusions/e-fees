@@ -3,7 +3,7 @@
   import ActionButton from './ActionButton.svelte';
   import type { Contact } from '../../types';
 
-  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview }: {
+  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview, onselect }: {
     contact: Contact;
     clickable?: boolean;
     companyName?: string;
@@ -11,6 +11,7 @@
     selected?: boolean;
     onedit?: (contact: Contact) => void;
     onview?: (contact: Contact) => void;
+    onselect?: (selected: boolean) => void;
   } = $props();
 
   function handleCardClick() {
@@ -30,7 +31,7 @@
   }
 </script>
 
-<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
+<BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3

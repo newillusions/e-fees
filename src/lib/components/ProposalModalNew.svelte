@@ -194,5 +194,5 @@
   maxWidth="600px"
   customClass="proposal-modal"
   zIndex={65}
-  on:close={handleClose}
+  onclose={handleClose}
 />

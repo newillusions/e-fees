@@ -351,7 +351,7 @@
           companyName={companyLookup.getCompanyName(contact.company)}
           onedit={(contact) => handleEditContact(contact)}
           onview={(contact) => handleViewContact(contact)}
-          on:select={() => toggleSelect(extractIdFromRelation(contact.id || ''))}
+          onselect={() => toggleSelect(extractIdFromRelation(contact.id || ''))}
         />
       {/each}
 

@@ -4,7 +4,7 @@
   import StatusBadge from './StatusBadge.svelte';
   import type { Project } from '../../types';
 
-  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false, onedit, onview }: {
+  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false, onedit, onview, onselect }: {
     project: Project;
     clickable?: boolean;
     showFolderLink?: boolean;
@@ -13,6 +13,7 @@
     selected?: boolean;
     onedit?: (project: Project) => void;
     onview?: (project: Project) => void;
+    onselect?: (selected: boolean) => void;
   } = $props();
 
   function handleCardClick() {
@@ -39,7 +40,7 @@
   }
 </script>
 
-<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
+<BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3 class="emittiv-card-title">
