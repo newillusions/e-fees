@@ -1,6 +1,6 @@
 ---
 name: sendit
-description: Use when ready to ship staged changes for e-fees — runs full commit→bump→tag→CI→verify pipeline autonomously in background. Handles Forgejo PR/merge, GitHub tag push, CI polling with timed checkins, and update.json sync.
+description: Use when ready to ship staged changes for e-fees — runs full commit→cleanit→review→bump→tag→CI→verify pipeline autonomously in background. Handles code quality checks, Forgejo/GitHub push, CI polling with timed checkins, and update.json sync.
 ---
 
 # /sendit — E-Fees Ship It Pipeline
@@ -16,7 +16,7 @@ Runs the complete e-fees release pipeline autonomously in the background. The ma
 /sendit minor           — Minor version bump (feat: equivalent)
 /sendit major           — Major version bump (breaking change)
 /sendit --dry-run       — Show all steps without executing (safe to run anytime)
-/sendit --skip-review   — Skip automated code review (for trivial/docs changes)
+/sendit --skip-review   — Skip cleanit + code review (for trivial/docs changes)
 /sendit --skip-publish  — Stop after merge (skip tag + CI + verification)
 ```
 
@@ -53,8 +53,9 @@ Agent tool:
 ## What the Pipeline Does
 
 ```
-Pre-flight → Commit → Version bump → Forgejo PR → Review → Merge
-    → Tag → Push tag to GitHub → CI poll loop (every 60s)
+Pre-flight → Commit → Cleanit (review→simplify→guard) → Code Review
+    → Version bump → Push (Forgejo + GitHub)
+    → Tag → CI poll loop (every 60s)
     → Pull update.json from Forgejo → Push to GitHub → Verify release
     → Report
 ```
