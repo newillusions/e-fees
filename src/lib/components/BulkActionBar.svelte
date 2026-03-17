@@ -1,16 +1,18 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
   let {
     selectedCount = 0,
     entityType = 'items',
     statuses = [] as string[],
+    onstatuschange,
+    ondelete,
+    onclear,
   }: {
     selectedCount: number;
     entityType: string;
     statuses?: string[];
+    onstatuschange?: (status: string) => void;
+    ondelete?: () => void;
+    onclear?: () => void;
   } = $props();
 
   let confirming: 'delete' | null = $state(null);
@@ -32,13 +34,13 @@
 
   function handleApplyStatus() {
     if (!confirmingStatus) return;
-    dispatch('status-change', confirmingStatus);
+    onstatuschange?.(confirmingStatus);
     confirmingStatus = '';
   }
 
   function handleDelete() {
     if (confirming === 'delete') {
-      dispatch('delete');
+      ondelete?.();
       confirming = null;
     } else {
       confirming = 'delete';
@@ -48,7 +50,7 @@
   function handleClear() {
     confirming = null;
     confirmingStatus = '';
-    dispatch('clear');
+    onclear?.();
   }
 
   // Reset confirmation when selection changes

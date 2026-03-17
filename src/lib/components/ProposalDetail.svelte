@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { projectsStore, projectsActions, companiesStore, companiesActions, contactsStore, contactsActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, findEntityById } from '$lib/utils';
@@ -14,11 +13,11 @@
   import { logger, logApiError } from '$lib/services/logger';
   import type { Fee, Project, Company, Contact } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), proposal = null }: {
+  let { isOpen = $bindable(false), proposal = null, onedit, onclose }: {
     isOpen?: boolean;
     proposal?: Fee | null;
+    onedit?: (proposal: Fee | null) => void;
+    onclose?: () => void;
   } = $props();
 
   // Modal state
@@ -68,11 +67,11 @@
   });
   
   function handleEdit() {
-    dispatch('edit', proposal);
+    onedit?.(proposal);
   }
-  
+
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
   
   function formatIssueDate(dateStr: string): string {
@@ -453,8 +452,8 @@
   title="proposal"
   canEdit={true}
   {customActions}
-  on:edit={handleEdit}
-  on:close={handleClose}
+  onedit={handleEdit}
+  onclose={handleClose}
 >
   <svelte:fragment slot="header">
     {#if proposal}

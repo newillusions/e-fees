@@ -61,15 +61,15 @@
   
   <!-- Actions -->
   <svelte:fragment slot="actions">
-    <ActionButton 
-      type="edit" 
+    <ActionButton
+      type="edit"
       ariaLabel="Edit project"
-      on:click={handleEdit}
+      onclick={handleEdit}
     />
-    <ActionButton 
-      type="view" 
+    <ActionButton
+      type="view"
       ariaLabel="View project details"
-      on:click={handleView}
+      onclick={handleView}
     />
   </svelte:fragment>
   

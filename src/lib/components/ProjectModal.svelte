@@ -3,7 +3,6 @@
   Reduced from ~519 lines to ~320 lines using base components and utilities
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { projectsActions, feesStore } from '$lib/stores';
   import { getEntityId, compareSurrealIds } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
@@ -17,12 +16,11 @@
   import StatusChangeModal from './StatusChangeModal.svelte';
   import type { Project, Fee } from '../../types';
   
-  const dispatch = createEventDispatcher();
-  
-  let { isOpen = $bindable(false), project = null as Project | null, mode = 'create' as 'create' | 'edit' }: {
+  let { isOpen = $bindable(false), project = null as Project | null, mode = 'create' as 'create' | 'edit', onclose }: {
     isOpen?: boolean;
     project?: Project | null;
     mode?: 'create' | 'edit';
+    onclose?: () => void;
   } = $props();
   
   // Use the new operation state utility
@@ -259,7 +257,7 @@
   function closeModal() {
     resetForm();
     operationActions.reset();
-    dispatch('close');
+    onclose?.();
   }
   
   // Get related fees for impact analysis (uses utility for SurrealDB ID comparison)

@@ -5,7 +5,6 @@
   Maintains all existing functionality with significantly reduced code.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { contactsActions, companiesStore } from '$lib/stores';
   import { getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
@@ -15,13 +14,12 @@
   import type { Contact, ContactCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), contact = null, mode = 'create', zIndex = 100 }: {
+  let { isOpen = $bindable(false), contact = null, mode = 'create', zIndex = 100, onclose }: {
     isOpen?: boolean;
     contact?: Contact | null;
     mode?: 'create' | 'edit';
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
   // Company typeahead field (defined first so it can be included in fields array)
@@ -180,7 +178,7 @@
 
   // Close handler
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
 </script>
 
@@ -196,5 +194,5 @@
   maxWidth="500px"
   customClass="contact-modal"
   {zIndex}
-  on:close={handleClose}
+  onclose={handleClose}
 />

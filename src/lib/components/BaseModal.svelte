@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
-  let { isOpen = $bindable(false), title = '', maxWidth = '', size = 'md' as 'sm' | 'md' | 'lg' | 'xl', showCloseButton = true, customClass = '', zIndex = 100 }: {
+  let { isOpen = $bindable(false), title = '', maxWidth = '', size = 'md' as 'sm' | 'md' | 'lg' | 'xl', showCloseButton = true, customClass = '', zIndex = 100, onclose }: {
     isOpen?: boolean;
     title?: string;
     maxWidth?: string;
@@ -11,13 +10,13 @@
     showCloseButton?: boolean;
     customClass?: string;
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
-  const dispatch = createEventDispatcher();
   const modalId = `modal-${Math.random().toString(36).substr(2, 9)}`;
 
   function closeModal() {
-    dispatch('close');
+    onclose?.();
   }
 
   function handleBackdropClick(event: MouseEvent) {

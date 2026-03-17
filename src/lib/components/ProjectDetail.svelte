@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { feesStore, feesActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, compareIds } from '$lib/utils';
@@ -15,11 +14,11 @@
   import { logger, logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), project = null }: {
+  let { isOpen = $bindable(false), project = null, onedit, onclose }: {
     isOpen?: boolean;
     project?: Project | null;
+    onedit?: (project: Project | null) => void;
+    onclose?: () => void;
   } = $props();
 
   // Inline folder error state
@@ -70,11 +69,11 @@
   });
   
   function handleEdit() {
-    dispatch('edit', project);
+    onedit?.(project);
   }
-  
+
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
   
   // Function to get full project folder path
@@ -259,8 +258,8 @@
   show={!!project}
   title="project"
   {customActions}
-  on:edit={handleEdit}
-  on:close={handleClose}
+  onedit={handleEdit}
+  onclose={handleClose}
 >
   <svelte:fragment slot="header">
     {#if project}

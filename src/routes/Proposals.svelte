@@ -73,10 +73,10 @@
     }
   }
 
-  async function handleBulkStatusChange(event: CustomEvent<string>) {
+  async function handleBulkStatusChange(status: string) {
     const ids = [...selectedIds];
     try {
-      await batchUpdateStatus('fees', ids, event.detail);
+      await batchUpdateStatus('fees', ids, status);
       clearSelection();
       paginatedFeesStore.actions.refresh();
     } catch (e) {
@@ -247,10 +247,10 @@
     selectedProposal = null;
   }
   
-  function handleEditFromDetail(event: CustomEvent) {
+  function handleEditFromDetail(proposal: typeof selectedProposal) {
     // Close detail panel and open edit modal
     isProposalDetailOpen = false;
-    selectedProposal = event.detail;
+    selectedProposal = proposal;
     proposalModalMode = 'edit';
     showProposalModal = true;
   }
@@ -528,15 +528,15 @@
   bind:isOpen={showProposalModal}
   proposal={selectedProposal}
   mode={proposalModalMode}
-  on:close={() => showProposalModal = false}
+  onclose={() => showProposalModal = false}
 />
 
 <!-- Proposal Detail Panel -->
 <ProposalDetail
   isOpen={isProposalDetailOpen}
   proposal={selectedProposal}
-  on:close={handleCloseDetail}
-  on:edit={handleEditFromDetail}
+  onclose={handleCloseDetail}
+  onedit={handleEditFromDetail}
 />
 
 <!-- Import Wizard Modal -->

@@ -97,9 +97,9 @@
     loadAllData();
   }
 
-  function handleEditFromDetail(event: CustomEvent) {
+  function handleEditFromDetail(proposal: typeof selectedProposal) {
     // Open edit modal with the proposal from the detail panel
-    selectedProposal = event.detail;
+    selectedProposal = proposal;
     proposalModalMode = 'edit';
     showProposalModal = true;
   }
@@ -139,12 +139,11 @@
       </div>
     </div>
   {:else if proposal}
-    <ProposalDetail 
-      {proposal} 
-      isOpen={true} 
-      on:close={handleClose}
-      on:edit={handleEditFromDetail}
-      on:proposalUpdated={handleProposalUpdate}
+    <ProposalDetail
+      {proposal}
+      isOpen={true}
+      onclose={handleClose}
+      onedit={handleEditFromDetail}
     />
   {/if}
 </div>
@@ -155,8 +154,8 @@
     isOpen={true}
     proposal={selectedProposal}
     mode={proposalModalMode}
-    on:close={() => showProposalModal = false}
-    on:proposalUpdated={handleProposalUpdate}
+    onclose={() => showProposalModal = false}
+    onproposalUpdated={handleProposalUpdate}
   />
 {/if}
 

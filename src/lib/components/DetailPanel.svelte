@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
@@ -11,22 +10,22 @@
     icon: string;
   }
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = false, title = '', canEdit = true, customActions = [], show = true }: {
+  let { isOpen = false, title = '', canEdit = true, customActions = [], show = true, onedit, onclose }: {
     isOpen?: boolean;
     title?: string;
     canEdit?: boolean;
     customActions?: CustomAction[];
     show?: boolean;
+    onedit?: () => void;
+    onclose?: () => void;
   } = $props();
 
   function closePanel() {
-    dispatch('close');
+    onclose?.();
   }
 
   function handleEdit() {
-    dispatch('edit');
+    onedit?.();
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -36,14 +35,14 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if show && isOpen}
   <!-- Backdrop -->
   <div
     class="emittiv-backdrop emittiv-backdrop--blur"
-    on:click={closePanel}
-    on:keydown={e => e.key === 'Escape' && closePanel()}
+    onclick={closePanel}
+    onkeydown={e => e.key === 'Escape' && closePanel()}
     role="button"
     tabindex="-1"
     aria-label="Close detail view"
@@ -67,7 +66,7 @@
         <!-- Custom Action Buttons -->
         {#each customActions as action}
           <button
-            on:click={() => action.handler()}
+            onclick={() => action.handler()}
             class="emittiv-icon-btn"
             aria-label={action.label}
             disabled={action.disabled}
@@ -86,7 +85,7 @@
         {#if canEdit}
           <!-- Edit Button -->
           <button
-            on:click={handleEdit}
+            onclick={handleEdit}
             class="emittiv-icon-btn"
             aria-label="Edit {title}"
           >
@@ -102,7 +101,7 @@
         {/if}
         <!-- Close Button -->
         <button
-          on:click={closePanel}
+          onclick={closePanel}
           class="emittiv-icon-btn"
           aria-label="Close detail view"
         >

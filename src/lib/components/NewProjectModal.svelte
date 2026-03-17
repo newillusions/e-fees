@@ -3,7 +3,6 @@
   Reduced from ~990 lines to ~350 lines using base components and utilities
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { projectsActions } from '$lib/stores';
   import {
     generateNextProjectNumber,
@@ -30,12 +29,11 @@
     projectShortName: string;
   }
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), mode = 'create', zIndex = 100 }: {
+  let { isOpen = $bindable(false), mode = 'create', zIndex = 100, onclose }: {
     isOpen?: boolean;
     mode?: 'create';
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
   // Use the new operation state utility
@@ -394,7 +392,7 @@
   function closeModal() {
     resetForm();
     operationActions.reset();
-    dispatch('close');
+    onclose?.();
   }
 
   // Initialize modal when it opens/closes
@@ -466,7 +464,7 @@
   }
 </script>
 
-<BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} on:close={closeModal}>
+<BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} onclose={closeModal}>
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
     <!-- PROJECT INFORMATION SECTION -->

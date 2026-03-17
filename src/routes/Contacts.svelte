@@ -164,9 +164,9 @@
     selectedContact = null;
   }
   
-  function handleEditFromDetail(event: CustomEvent) {
+  function handleEditFromDetail(contact: Contact | null) {
     // Keep detail view open and show edit modal on top
-    selectedContact = event.detail;
+    selectedContact = contact;
     modalMode = 'edit';
     isContactModalOpen = true;
   }
@@ -238,7 +238,7 @@
         loadedItems={contacts.length}
         hasMore={hasMore}
         inline={true}
-        on:clear-filters={clearFilters}
+        onclearfilters={clearFilters}
       />
     </div>
     <button
@@ -334,8 +334,8 @@
     <BulkActionBar
       selectedCount={selectedIds.size}
       entityType="contacts"
-      on:delete={handleBulkDelete}
-      on:clear={clearSelection}
+      ondelete={handleBulkDelete}
+      onclear={clearSelection}
     />
 
     <!-- Scrollable container for infinite scroll -->
@@ -379,13 +379,13 @@
   bind:isOpen={isContactModalOpen}
   contact={selectedContact}
   mode={modalMode}
-  on:close={handleCloseModal}
+  onclose={handleCloseModal}
 />
 
 <!-- Contact Detail Panel -->
-<ContactDetail 
+<ContactDetail
   isOpen={isContactDetailOpen}
   contact={selectedContact}
-  on:close={handleCloseDetail}
-  on:edit={handleEditFromDetail}
+  onclose={handleCloseDetail}
+  onedit={handleEditFromDetail}
 />

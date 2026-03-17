@@ -60,8 +60,8 @@
 
   <!-- Actions -->
   <svelte:fragment slot="actions">
-    <ActionButton type="edit" ariaLabel="Edit contact" on:click={handleEdit} />
-    <ActionButton type="view" ariaLabel="View contact details" on:click={handleView} />
+    <ActionButton type="edit" ariaLabel="Edit contact" onclick={handleEdit} />
+    <ActionButton type="view" ariaLabel="View contact details" onclick={handleView} />
   </svelte:fragment>
 
   <!-- Extra - Full width phone and email -->

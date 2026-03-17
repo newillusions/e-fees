@@ -1424,7 +1424,7 @@
 <NewProjectModal
   bind:isOpen={showNewProjectModal}
   zIndex={200}
-  on:close={handleNewProjectClosed}
+  onclose={handleNewProjectClosed}
 />
 
 <!-- Company Modal -->
@@ -1433,7 +1433,7 @@
   company={selectedCompany}
   mode={companyModalMode}
   zIndex={200}
-  on:close={handleCompanyModalClosed}
+  onclose={handleCompanyModalClosed}
 />
 
 <!-- Contact Modal -->
@@ -1442,7 +1442,7 @@
   contact={selectedContact}
   mode={contactModalMode}
   zIndex={200}
-  on:close={handleContactModalClosed}
+  onclose={handleContactModalClosed}
 />
 
 <FeePricingModal

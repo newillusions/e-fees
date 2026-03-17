@@ -620,9 +620,9 @@
   </section>
 </div>
 
-<CompanyModal isOpen={showCompanyForm} on:close={handleFormClose} on:submit={handleCompanySubmit} />
-<ContactModal isOpen={showContactForm} on:close={handleFormClose} on:submit={handleContactSubmit} />
-<NewProjectModal isOpen={showProjectForm} on:close={handleFormClose} on:submit={handleProjectSubmit} />
+<CompanyModal isOpen={showCompanyForm} onclose={handleFormClose} />
+<ContactModal isOpen={showContactForm} onclose={handleFormClose} />
+<NewProjectModal isOpen={showProjectForm} onclose={handleFormClose} />
 
 <style>
   .dev-container {

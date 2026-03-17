@@ -5,7 +5,6 @@
   Maintains all existing functionality with significantly reduced code.
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { companiesActions } from '$lib/stores';
   import { getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
@@ -15,13 +14,12 @@
   import type { Company, CompanyCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), company = null, mode = 'create', zIndex = 100 }: {
+  let { isOpen = $bindable(false), company = null, mode = 'create', zIndex = 100, onclose }: {
     isOpen?: boolean;
     company?: Company | null;
     mode?: 'create' | 'edit';
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
   // Form field configuration
@@ -166,7 +164,7 @@
 
   // Close handler
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
 </script>
 
@@ -182,7 +180,7 @@
   maxWidth="500px"
   customClass="company-modal"
   {zIndex}
-  on:close={handleClose}
+  onclose={handleClose}
 />
 
 <style>

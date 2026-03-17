@@ -5,7 +5,7 @@
   Supports any entity type with configurable fields and validation.
 -->
 <script lang="ts">
-  import { createEventDispatcher, untrack } from 'svelte';
+  import { untrack } from 'svelte';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { validateForm, hasValidationErrors, type ValidationRule } from '$lib/utils/validation';
   import BaseModal from '../BaseModal.svelte';
@@ -21,10 +21,8 @@
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type DeleteCallback = (entity: any) => Promise<void>;
 
-  const dispatch = createEventDispatcher();
-
   // Props - EntityType allows any entity object to be passed in
-  let { isOpen = $bindable(false), entity = null as EntityType | null, mode = 'create' as 'create' | 'edit', title, fields, validationRules = [] as ValidationRule<FormDataType>[], onSave, onDelete = null as DeleteCallback | null, maxWidth = '500px', customClass = '', zIndex = 100 }: {
+  let { isOpen = $bindable(false), entity = null as EntityType | null, mode = 'create' as 'create' | 'edit', title, fields, validationRules = [] as ValidationRule<FormDataType>[], onSave, onDelete = null as DeleteCallback | null, maxWidth = '500px', customClass = '', zIndex = 100, onclose }: {
     isOpen?: boolean;
     entity?: EntityType | null;
     mode?: 'create' | 'edit';
@@ -36,6 +34,7 @@
     maxWidth?: string;
     customClass?: string;
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
   // Operation state management
@@ -140,7 +139,7 @@
   // Close modal and reset state
   function closeModal() {
     resetForm();
-    dispatch('close');
+    onclose?.();
   }
 
   // Reactive statements — untrack inner calls to avoid tracking `fields` prop
@@ -158,7 +157,7 @@
   });
 </script>
 
-<BaseModal {isOpen} {title} {maxWidth} {customClass} {zIndex} on:close={closeModal}>
+<BaseModal {isOpen} {title} {maxWidth} {customClass} {zIndex} onclose={closeModal}>
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 12px;">
     <!-- Dynamic Fields -->

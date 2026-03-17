@@ -1,20 +1,17 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  let { type = 'custom', href = '', ariaLabel = '', size = 16, customIcon = '', class: className = '' }: {
+  let { type = 'custom', href = '', ariaLabel = '', size = 16, customIcon = '', class: className = '', onclick }: {
     type?: 'edit' | 'view' | 'delete' | 'email' | 'phone' | 'custom';
     href?: string;
     ariaLabel?: string;
     size?: number;
     customIcon?: string;
     class?: string;
+    onclick?: (event: MouseEvent) => void;
   } = $props();
 
   function handleClick(event: MouseEvent) {
     event.stopPropagation();
-    dispatch('click');
+    onclick?.(event);
   }
 
   function getIcon(type: string): string {
@@ -52,7 +49,7 @@
   </a>
 {:else}
   <button
-    on:click={handleClick}
+    onclick={handleClick}
     class="emittiv-icon-btn {className}"
     aria-label={ariaLabel}
   >

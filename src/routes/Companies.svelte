@@ -161,10 +161,10 @@
     selectedCompany = null;
   }
   
-  function handleEditFromDetail(event: CustomEvent) {
+  function handleEditFromDetail(company: Company | null) {
     // Close detail view and open edit modal
     isCompanyDetailOpen = false;
-    selectedCompany = event.detail;
+    selectedCompany = company;
     modalMode = 'edit';
     isCompanyModalOpen = true;
   }
@@ -216,7 +216,7 @@
         loadedItems={companies.length}
         hasMore={hasMore}
         inline={true}
-        on:clear-filters={clearFilters}
+        onclearfilters={clearFilters}
       />
     </div>
     <button
@@ -301,8 +301,8 @@
     <BulkActionBar
       selectedCount={selectedIds.size}
       entityType="companies"
-      on:delete={handleBulkDelete}
-      on:clear={clearSelection}
+      ondelete={handleBulkDelete}
+      onclear={clearSelection}
     />
 
     <!-- Scrollable container for infinite scroll -->
@@ -345,13 +345,13 @@
   bind:isOpen={isCompanyModalOpen}
   company={selectedCompany}
   mode={modalMode}
-  on:close={handleCloseModal}
+  onclose={handleCloseModal}
 />
 
 <!-- Company Detail View -->
-<CompanyDetail 
+<CompanyDetail
   isOpen={isCompanyDetailOpen}
   company={selectedCompany}
-  on:close={handleCloseDetail}
-  on:edit={handleEditFromDetail}
+  onclose={handleCloseDetail}
+  onedit={handleEditFromDetail}
 />

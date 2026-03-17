@@ -55,8 +55,8 @@
 
   <!-- Actions -->
   <svelte:fragment slot="actions">
-    <ActionButton type="edit" ariaLabel="Edit company" on:click={handleEdit} />
-    <ActionButton type="view" ariaLabel="View company details" on:click={handleView} />
+    <ActionButton type="edit" ariaLabel="Edit company" onclick={handleEdit} />
+    <ActionButton type="view" ariaLabel="View company details" onclick={handleView} />
   </svelte:fragment>
 
   <!-- Extra - Full width body section with all metadata -->
