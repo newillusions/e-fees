@@ -39,15 +39,16 @@ export type {
   SearchResult,
 } from './crudTypes';
 
+// Re-export extracted utilities for backward compatibility
+export { useModalState } from './modalState';
+export { useOperationState, withLoadingState } from './operationState';
+
 import type {
   CrudState,
   CrudApi,
   CrudStoreOptions,
   CrudActions,
   CrudStoreInterface,
-  ModalState,
-  OperationState,
-  OperationActions,
 } from './crudTypes';
 
 /**
@@ -665,130 +666,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
   return { store, actions, destroy };
 }
 
-// ============================================================================
-// MODAL STATE MANAGEMENT UTILITIES
-// ============================================================================
-
-/**
- * Creates a modal state store for entity management.
- */
-export function useModalState<T>() {
-  const initialState: ModalState<T> = {
-    isOpen: false,
-    mode: 'create',
-    item: null,
-  };
-
-  const store = writable(initialState);
-
-  const actions: ModalActions<T> = {
-    openCreate() {
-      store.update(state => ({
-        ...state,
-        isOpen: true,
-        mode: 'create',
-        item: null,
-      }));
-    },
-
-    openEdit(item: T) {
-      store.update(state => ({
-        ...state,
-        isOpen: true,
-        mode: 'edit',
-        item,
-      }));
-    },
-
-    close() {
-      store.set(initialState);
-    },
-  };
-
-  return { store, actions };
-}
-
-// ============================================================================
-// OPERATION STATE MANAGEMENT
-// ============================================================================
-
-/**
- * Creates an operation state store for tracking async operations.
- */
-export function useOperationState() {
-  const initialState: OperationState = {
-    loading: false,
-    saving: false,
-    deleting: false,
-    message: '',
-    error: null,
-  };
-
-  const store = writable(initialState);
-
-  const actions: OperationActions = {
-    setLoading(loading: boolean) {
-      store.update(state => ({ ...state, loading }));
-    },
-
-    setSaving(saving: boolean) {
-      store.update(state => ({ ...state, saving }));
-    },
-
-    setDeleting(deleting: boolean) {
-      store.update(state => ({ ...state, deleting }));
-    },
-
-    setMessage(message: string) {
-      store.update(state => ({ ...state, message, error: null }));
-    },
-
-    setError(error: string | null) {
-      store.update(state => ({ ...state, error, message: '' }));
-    },
-
-    clearMessages() {
-      store.update(state => ({ ...state, message: '', error: null }));
-    },
-
-    reset() {
-      store.set(initialState);
-    },
-  };
-
-  return { store, actions };
-}
-
-/**
- * Wraps an async operation with loading state management.
- */
-export async function withLoadingState<T>(
-  operation: () => Promise<T>,
-  actions: OperationActions,
-  loadingType: 'loading' | 'saving' | 'deleting' = 'loading'
-): Promise<T> {
-  // Map loading types to their corresponding action methods
-  const loadingActions = {
-    loading: actions.setLoading,
-    saving: actions.setSaving,
-    deleting: actions.setDeleting
-  } as const;
-  const setLoadingState = loadingActions[loadingType];
-
-  try {
-    actions.clearMessages();
-    setLoadingState(true);
-
-    const result = await operation();
-
-    setLoadingState(false);
-    return result;
-  } catch (error) {
-    setLoadingState(false);
-    actions.setError(getErrorMessage(error, 'An error occurred'));
-    throw error;
-  }
-}
 
 // ============================================================================
 // SURREALDB-SPECIFIC UTILITIES
