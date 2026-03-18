@@ -7,10 +7,10 @@
 
 import type { ProjectNumber } from '../../types';
 
-export interface ProjectFormFields {
+export interface ProjectFormFields<S extends string = string> {
   name: string;
   name_short: string;
-  status: string;
+  status: S;
   area: string;
   city: string;
   country: string;
@@ -35,20 +35,10 @@ export function parseProjectNumber(raw: string): ProjectNumber {
   };
 }
 
-export function buildProjectPayload(
-  formData: ProjectFormFields,
+export function buildProjectPayload<S extends string>(
+  formData: ProjectFormFields<S>,
   projectNumber: ProjectNumber
-): {
-  name: string;
-  name_short: string;
-  status: string;
-  area: string;
-  city: string;
-  country: string;
-  number: ProjectNumber;
-  folder: string;
-  time: { created_at: string; updated_at: string };
-} {
+) {
   const timestamp = new Date().toISOString();
 
   return {
