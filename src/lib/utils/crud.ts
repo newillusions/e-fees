@@ -17,6 +17,7 @@
 import { writable, get } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
+import { applyFiltersAndSearch, applySorting } from './crudPipeline';
 import type { UnknownSurrealThing } from '../../types';
 
 // Re-export all types from crudTypes for backward compatibility
@@ -57,14 +58,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'string') return error;
   if (error instanceof Error) return error.message;
   return fallback;
-}
-
-/**
- * Type-safe helper to access a property by key on an object.
- * Returns undefined if the property doesn't exist.
- */
-function getPropertyValue<T extends object>(obj: T, key: string): unknown {
-  return (obj as Record<string, unknown>)[key];
 }
 
 // ============================================================================
@@ -115,76 +108,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     }, autoRefresh);
   }
 
-  /**
-   * Apply current filters and search to items
-   */
-  const applyFiltersAndSearch = (items: T[], searchQuery: string, filters: Record<string, unknown>): T[] => {
-    let filtered = [...items];
-
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => {
-        // PERF-H8: Use defined searchFields when available (avoids JSON.stringify per item)
-        if (searchFields && searchFields.length > 0) {
-          for (const field of searchFields) {
-            const value = item[field];
-            if (value !== null && value !== undefined) {
-              const stringValue = typeof value === 'string' ? value : String(value);
-              if (stringValue.toLowerCase().includes(query)) {
-                return true;
-              }
-            }
-          }
-          return false;
-        }
-        // Fallback to JSON.stringify if no searchFields defined
-        const searchableText = JSON.stringify(item).toLowerCase();
-        return searchableText.includes(query);
-      });
-    }
-
-    // Apply filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        filtered = filtered.filter(item => {
-          const itemValue = getPropertyValue(item, key);
-          if (typeof value === 'string' && typeof itemValue === 'string') {
-            return itemValue.toLowerCase().includes(value.toLowerCase());
-          }
-          return itemValue === value;
-        });
-      }
-    });
-
-    return filtered;
-  };
-
-  /**
-   * Apply sorting to items
-   */
-  const applySorting = (items: T[], sort: { field: string; direction: 'asc' | 'desc' } | null): T[] => {
-    if (!sort) return items;
-
-    return [...items].sort((a, b) => {
-      const aValue = getPropertyValue(a, sort.field);
-      const bValue = getPropertyValue(b, sort.field);
-
-      let comparison = 0;
-      // Handle null/undefined values (push them to the end)
-      const aIsEmpty = aValue === undefined || aValue === null;
-      const bIsEmpty = bValue === undefined || bValue === null;
-
-      if (aIsEmpty && !bIsEmpty) comparison = 1;
-      else if (!aIsEmpty && bIsEmpty) comparison = -1;
-      else if (!aIsEmpty && !bIsEmpty) {
-        if (aValue < bValue) comparison = -1;
-        else if (aValue > bValue) comparison = 1;
-      }
-
-      return sort.direction === 'desc' ? -comparison : comparison;
-    });
-  };
+  // Wrap imported pipeline functions to pass searchFields from closure
+  const filterAndSearch = (items: T[], searchQuery: string, filters: Record<string, unknown>): T[] =>
+    applyFiltersAndSearch(items, searchQuery, filters, searchFields as (keyof T)[] | undefined);
 
   const actions: CrudActions<T> = {
     async load() {
@@ -196,7 +122,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         const stateValue = get(store);
 
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, stateValue.searchQuery, stateValue.filters),
+          filterAndSearch(items, stateValue.searchQuery, stateValue.filters),
           stateValue.sort
         );
         
@@ -238,7 +164,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         store.update(state => {
           const newItems = [...state.items, optimisticItem!];
           const newFilteredItems = applySorting(
-            applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+            filterAndSearch(newItems, state.searchQuery, state.filters),
             state.sort
           );
           return {
@@ -270,7 +196,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           }
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -295,7 +221,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           store.update(state => {
             const items = state.items.filter(item => idExtractor(item.id) !== tempId);
             const filteredItems = applySorting(
-              applyFiltersAndSearch(items, state.searchQuery, state.filters),
+              filterAndSearch(items, state.searchQuery, state.filters),
               state.sort
             );
             const newOptimisticUpdates = new Map(state.optimisticUpdates);
@@ -347,7 +273,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             newItems[itemIndex] = optimisticItem;
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -372,7 +298,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -401,7 +327,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             });
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(items, state.searchQuery, state.filters),
+              filterAndSearch(items, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -454,7 +380,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             });
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -479,7 +405,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -506,7 +432,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             newItems.splice(itemIndex, 0, deletedItem!);
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -567,7 +493,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           const searchResults = await api.search(query);
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(searchResults, query, state.filters),
+              filterAndSearch(searchResults, query, state.filters),
               state.sort
             );
             return {
@@ -583,7 +509,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           // Fall back to client-side search
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(state.items, query, state.filters),
+              filterAndSearch(state.items, query, state.filters),
               state.sort
             );
             return {
@@ -597,7 +523,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         // Client-side search
         store.update(state => {
           const filteredItems = applySorting(
-            applyFiltersAndSearch(state.items, query, state.filters),
+            filterAndSearch(state.items, query, state.filters),
             state.sort
           );
           return {
@@ -617,7 +543,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           const filterResults = await api.filter(filters);
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(filterResults, state.searchQuery, filters),
+              filterAndSearch(filterResults, state.searchQuery, filters),
               state.sort
             );
             return {
@@ -633,7 +559,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           // Fall back to client-side filtering
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(state.items, state.searchQuery, filters),
+              filterAndSearch(state.items, state.searchQuery, filters),
               state.sort
             );
             return {
@@ -648,7 +574,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         // Client-side filtering
         store.update(state => {
           const filteredItems = applySorting(
-            applyFiltersAndSearch(state.items, state.searchQuery, filters),
+            filterAndSearch(state.items, state.searchQuery, filters),
             state.sort
           );
           return {
@@ -665,7 +591,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       store.update(state => {
         const sort = { field, direction };
         const filteredItems = applySorting(
-          applyFiltersAndSearch(state.items, state.searchQuery, state.filters),
+          filterAndSearch(state.items, state.searchQuery, state.filters),
           sort
         );
         return {
@@ -706,7 +632,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         });
         
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, state.searchQuery, state.filters),
+          filterAndSearch(items, state.searchQuery, state.filters),
           state.sort
         );
         
