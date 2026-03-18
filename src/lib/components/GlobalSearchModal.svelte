@@ -1,42 +1,26 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { push } from 'svelte-spa-router';
   import { projectsStore, companiesStore, contactsStore, feesStore } from '$lib/stores';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { extractId } from '$lib/utils';
+  import { createProjectLookup } from '$lib/utils/search';
   import {
-    createProjectLookup,
-    PROJECT_SEARCH_FIELDS,
-    COMPANY_SEARCH_FIELDS,
-    CONTACT_SEARCH_FIELDS,
-    FEE_SEARCH_FIELDS,
-    getProjectDisplayInfo,
-    getCompanyDisplayInfo,
-    getContactDisplayInfo,
-    getFeeDisplayInfo,
-    normalizedMatch
-  } from '$lib/utils/search';
-  import type { Project, Company, Contact, Fee } from '../../types';
+    searchProjects,
+    searchCompanies,
+    searchContacts,
+    searchFees,
+    type SearchResult,
+  } from '$lib/utils/searchProviders';
 
-  let { isOpen = $bindable(false) }: {
+  let { isOpen = $bindable(false), onclose }: {
     isOpen?: boolean;
+    onclose?: () => void;
   } = $props();
-
-  const dispatch = createEventDispatcher();
 
   // Search state
   let searchQuery = $state('');
   let inputElement: HTMLInputElement;
   let selectedIndex = $state(0);
-
-  // Results
-  interface SearchResult {
-    type: 'project' | 'company' | 'contact' | 'proposal';
-    id: string;
-    name: string;
-    subtitle: string;
-    route: string;
-  }
 
   const MAX_RESULTS_PER_TYPE = 5;
 
@@ -62,121 +46,25 @@
     proposal: 'Proposal'
   };
 
-  // Search function - fuzzy match across all entities using unified search utilities
-  // Uses normalizedMatch to handle punctuation (e.g., "uae" matches "U.A.E.")
+  // Search function - delegates to pure search providers
   function performSearch(query: string): SearchResult[] {
     if (!query || query.length < 2) return [];
 
     const q = query.trim();
-    const allResults: SearchResult[] = [];
-
-    // Get data from stores
     const projects = $projectsStore || [];
     const companies = $companiesStore || [];
     const contacts = $contactsStore || [];
     const fees = $feesStore || [];
 
-    // Create lookups for related entity search
     const companyLookup = createCompanyLookup(companies);
     const projectLookup = createProjectLookup(projects);
-    const lookups = { companyLookup, projectLookup };
 
-    // Search Projects using unified search fields with normalized matching
-    const projectResults = projects
-      .filter((p: Project) => {
-        const searchFields = PROJECT_SEARCH_FIELDS.map(field => String(p[field] || ''));
-        // Also search project_number which isn't in the standard fields
-        searchFields.push(String(p.project_number || ''));
-        return searchFields.some(f => normalizedMatch(f, q));
-      })
-      .slice(0, MAX_RESULTS_PER_TYPE)
-      .map((p: Project): SearchResult => {
-        const displayInfo = getProjectDisplayInfo(p);
-        return {
-          type: 'project',
-          id: extractId(p.id),
-          name: displayInfo.name,
-          subtitle: displayInfo.subtitle,
-          route: `/projects`
-        };
-      });
-    allResults.push(...projectResults);
-
-    // Search Companies using unified search fields with normalized matching
-    const companyResults = companies
-      .filter((c: Company) => {
-        const searchFields = COMPANY_SEARCH_FIELDS.map(field => String(c[field] || ''));
-        return searchFields.some(f => normalizedMatch(f, q));
-      })
-      .slice(0, MAX_RESULTS_PER_TYPE)
-      .map((c: Company): SearchResult => {
-        const displayInfo = getCompanyDisplayInfo(c);
-        return {
-          type: 'company',
-          id: extractId(c.id),
-          name: displayInfo.name,
-          subtitle: displayInfo.subtitle,
-          route: `/companies`
-        };
-      });
-    allResults.push(...companyResults);
-
-    // Search Contacts using unified search fields + company lookup with normalized matching
-    const contactResults = contacts
-      .filter((c: Contact) => {
-        const searchFields = CONTACT_SEARCH_FIELDS.map(field => String(c[field] || ''));
-        // Also search company name, abbreviation, name_short via lookup
-        const companySearchText = companyLookup.getCompanySearchText(c.company);
-        return searchFields.some(f => normalizedMatch(f, q)) || normalizedMatch(companySearchText, q);
-      })
-      .slice(0, MAX_RESULTS_PER_TYPE)
-      .map((c: Contact): SearchResult => {
-        const displayInfo = getContactDisplayInfo(c, lookups);
-        return {
-          type: 'contact',
-          id: extractId(c.id),
-          name: displayInfo.name,
-          subtitle: displayInfo.subtitle,
-          route: `/contacts`
-        };
-      });
-    allResults.push(...contactResults);
-
-    // Search Proposals/Fees using unified search fields + company/project lookups with normalized matching
-    const feeResults = [...fees]
-      .sort((a, b) => {
-        // Sort by updated_at or created_at, newest first (fees use time.updated_at)
-        const dateA = a.time?.updated_at || a.time?.created_at || '';
-        const dateB = b.time?.updated_at || b.time?.created_at || '';
-        return dateB.localeCompare(dateA);
-      })
-      .filter((f: Fee) => {
-        // Search fee fields using unified search fields
-        const feeFields = FEE_SEARCH_FIELDS.map(field => String(f[field] || ''));
-        // Also search company name, abbreviation, name_short via lookup
-        const companySearchText = companyLookup.getCompanySearchText(f.company_id);
-        // Also search project name via lookup
-        const projectId = extractId(f.project_id);
-        const project = projectLookup.get(projectId);
-        const projectSearchText = [project?.name, project?.name_short].filter(Boolean).join(' ');
-        return feeFields.some(field => normalizedMatch(field, q)) ||
-               normalizedMatch(companySearchText, q) ||
-               normalizedMatch(projectSearchText, q);
-      })
-      .slice(0, MAX_RESULTS_PER_TYPE)
-      .map((f: Fee): SearchResult => {
-        const displayInfo = getFeeDisplayInfo(f, lookups);
-        return {
-          type: 'proposal',
-          id: extractId(f.id),
-          name: displayInfo.name,
-          subtitle: displayInfo.subtitle,
-          route: `/proposals`
-        };
-      });
-    allResults.push(...feeResults);
-
-    return allResults;
+    return [
+      ...searchProjects(projects, q, MAX_RESULTS_PER_TYPE),
+      ...searchCompanies(companies, q, MAX_RESULTS_PER_TYPE),
+      ...searchContacts(contacts, companyLookup, q, MAX_RESULTS_PER_TYPE),
+      ...searchFees(fees, companyLookup, projectLookup, q, MAX_RESULTS_PER_TYPE),
+    ];
   }
 
   // Reactive search
@@ -197,7 +85,7 @@
     searchQuery = '';
     selectedIndex = 0;
     isOpen = false;
-    dispatch('close');
+    onclose?.();
   }
 
   // Keyboard navigation

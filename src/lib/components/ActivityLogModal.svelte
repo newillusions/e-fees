@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { getActivityLogs, type ActivityLog } from '$lib/api';
   import LoadingSkeleton from './LoadingSkeleton.svelte';
   import { push } from 'svelte-spa-router';
 
-  let { isOpen = $bindable(false) }: { isOpen?: boolean } = $props();
-
-  const dispatch = createEventDispatcher();
+  let { isOpen = $bindable(false), onclose }: { isOpen?: boolean; onclose?: () => void } = $props();
 
   // Activity log state
   let activities: ActivityLog[] = $state([]);
@@ -90,7 +87,7 @@
   // Close modal
   function close() {
     isOpen = false;
-    dispatch('close');
+    onclose?.();
   }
 
   // Handle escape key

@@ -14,145 +14,43 @@
  * - Comprehensive error handling
  */
 
-import { writable, get, type Writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
+import { applyFiltersAndSearch, applySorting } from './crudPipeline';
+import { getErrorMessage } from './operationState';
 import type { UnknownSurrealThing } from '../../types';
 
-/**
- * Extract a human-readable message from an unknown error.
- * Tauri IPC errors arrive as plain strings, not Error instances.
- */
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
-  return fallback;
-}
+// Re-export all types from crudTypes for backward compatibility
+export type {
+  CrudState,
+  CrudApi,
+  CrudStoreOptions,
+  CrudActions,
+  CrudStoreInterface,
+  SurrealEntity,
+  ModalState,
+  ModalActions,
+  OperationState,
+  OperationActions,
+  EntityId,
+  FormData,
+  UpdateData,
+  PaginatedResult,
+  SearchResultSet,
+} from './crudTypes';
 
-/**
- * Type-safe helper to access a property by key on an object.
- * Returns undefined if the property doesn't exist.
- */
-function getPropertyValue<T extends object>(obj: T, key: string): unknown {
-  return (obj as Record<string, unknown>)[key];
-}
+// Re-export extracted utilities for backward compatibility
+export { useModalState } from './modalState';
+export { useOperationState, withLoadingState, getErrorMessage } from './operationState';
 
-// ============================================================================
-// TYPE DEFINITIONS AND INTERFACES
-// ============================================================================
-
-/**
- * Enhanced CRUD state interface with additional features.
- */
-export interface CrudState<T> {
-  /** Array of entities */
-  items: T[];
-  /** Filtered items (subset of items) */
-  filteredItems: T[];
-  /** Loading state for read operations */
-  loading: boolean;
-  /** Error message if any operation fails */
-  error: string | null;
-  /** Loading state for create/update/delete operations */
-  saving: boolean;
-  /** Current search query */
-  searchQuery: string;
-  /** Current filter criteria */
-  filters: Record<string, unknown>;
-  /** Current sort configuration */
-  sort: {
-    field: string;
-    direction: 'asc' | 'desc';
-  } | null;
-  /** Last successful update timestamp */
-  lastUpdated: Date | null;
-  /** Optimistic update tracking */
-  optimisticUpdates: Map<string, T>;
-}
-
-/**
- * Enhanced CRUD API interface with SurrealDB support.
- */
-export interface CrudApi<T> {
-  /** Fetch all entities */
-  getAll(): Promise<T[]>;
-  /** Search entities with query */
-  search?(query: string): Promise<T[]>;
-  /** Filter entities with criteria */
-  filter?(criteria: Record<string, unknown>): Promise<T[]>;
-  /** Create a new entity */
-  create(data: Omit<T, 'id'>): Promise<T>;
-  /** Update an existing entity */
-  update(id: string, data: Partial<T>): Promise<T>;
-  /** Delete an entity */
-  delete(id: string): Promise<T>;
-}
-
-/**
- * Options for configuring CRUD store behavior.
- */
-export interface CrudStoreOptions<T = unknown> {
-  /** Enable optimistic updates */
-  enableOptimistic?: boolean;
-  /** Enable logging */
-  enableLogging?: boolean;
-  /** Component name for logging context */
-  component?: string;
-  /** Custom ID extractor function */
-  idExtractor?: (id: UnknownSurrealThing) => string | null;
-  /** Auto-refresh interval in milliseconds */
-  autoRefresh?: number;
-  /** Fields to search within (avoids JSON.stringify per item) */
-  searchFields?: (keyof T)[];
-}
-
-/**
- * Enhanced CRUD actions interface with additional operations.
- */
-export interface CrudActions<T> {
-  /** Load all entities from API */
-  load(): Promise<void>;
-  /** Create a new entity */
-  create(data: Omit<T, 'id'>): Promise<T>;
-  /** Update an existing entity */
-  update(id: string, data: Partial<T>): Promise<T>;
-  /** Delete an entity */
-  delete(id: string): Promise<T>;
-  /** Refresh data (alias for load) */
-  refresh(): Promise<void>;
-  /** Clear all data and reset state */
-  clear(): void;
-  /** Set error message */
-  setError(error: string | null): void;
-  /** Search entities */
-  search(query: string): Promise<void>;
-  /** Apply filters */
-  applyFilters(filters: Record<string, unknown>): Promise<void>;
-  /** Sort entities */
-  sort(field: string, direction?: 'asc' | 'desc'): void;
-  /** Reset filters and search */
-  resetFilters(): void;
-  /** Rollback optimistic updates */
-  rollback(): void;
-  /** Get entity by ID */
-  getById(id: string): T | null;
-}
-
-/**
- * Complete CRUD store interface returned by useCrudStore.
- */
-export interface CrudStoreInterface<T> {
-  store: Writable<CrudState<T>>;
-  actions: CrudActions<T>;
-  destroy: () => void;
-}
-
-/**
- * Generic interface for entities with SurrealDB ID support.
- */
-export interface SurrealEntity {
-  id?: UnknownSurrealThing;
-}
+import type {
+  CrudState,
+  CrudApi,
+  CrudStoreOptions,
+  CrudActions,
+  CrudStoreInterface,
+} from './crudTypes';
 
 // ============================================================================
 // ENHANCED CRUD STORE IMPLEMENTATION
@@ -202,76 +100,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     }, autoRefresh);
   }
 
-  /**
-   * Apply current filters and search to items
-   */
-  const applyFiltersAndSearch = (items: T[], searchQuery: string, filters: Record<string, unknown>): T[] => {
-    let filtered = [...items];
-
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => {
-        // PERF-H8: Use defined searchFields when available (avoids JSON.stringify per item)
-        if (searchFields && searchFields.length > 0) {
-          for (const field of searchFields) {
-            const value = item[field];
-            if (value !== null && value !== undefined) {
-              const stringValue = typeof value === 'string' ? value : String(value);
-              if (stringValue.toLowerCase().includes(query)) {
-                return true;
-              }
-            }
-          }
-          return false;
-        }
-        // Fallback to JSON.stringify if no searchFields defined
-        const searchableText = JSON.stringify(item).toLowerCase();
-        return searchableText.includes(query);
-      });
-    }
-
-    // Apply filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        filtered = filtered.filter(item => {
-          const itemValue = getPropertyValue(item, key);
-          if (typeof value === 'string' && typeof itemValue === 'string') {
-            return itemValue.toLowerCase().includes(value.toLowerCase());
-          }
-          return itemValue === value;
-        });
-      }
-    });
-
-    return filtered;
-  };
-
-  /**
-   * Apply sorting to items
-   */
-  const applySorting = (items: T[], sort: { field: string; direction: 'asc' | 'desc' } | null): T[] => {
-    if (!sort) return items;
-
-    return [...items].sort((a, b) => {
-      const aValue = getPropertyValue(a, sort.field);
-      const bValue = getPropertyValue(b, sort.field);
-
-      let comparison = 0;
-      // Handle null/undefined values (push them to the end)
-      const aIsEmpty = aValue === undefined || aValue === null;
-      const bIsEmpty = bValue === undefined || bValue === null;
-
-      if (aIsEmpty && !bIsEmpty) comparison = 1;
-      else if (!aIsEmpty && bIsEmpty) comparison = -1;
-      else if (!aIsEmpty && !bIsEmpty) {
-        if (aValue < bValue) comparison = -1;
-        else if (aValue > bValue) comparison = 1;
-      }
-
-      return sort.direction === 'desc' ? -comparison : comparison;
-    });
-  };
+  // Wrap imported pipeline functions to pass searchFields from closure
+  const filterAndSearch = (items: T[], searchQuery: string, filters: Record<string, unknown>): T[] =>
+    applyFiltersAndSearch(items, searchQuery, filters, searchFields as (keyof T)[] | undefined);
 
   const actions: CrudActions<T> = {
     async load() {
@@ -283,7 +114,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         const stateValue = get(store);
 
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, stateValue.searchQuery, stateValue.filters),
+          filterAndSearch(items, stateValue.searchQuery, stateValue.filters),
           stateValue.sort
         );
         
@@ -325,7 +156,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         store.update(state => {
           const newItems = [...state.items, optimisticItem!];
           const newFilteredItems = applySorting(
-            applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+            filterAndSearch(newItems, state.searchQuery, state.filters),
             state.sort
           );
           return {
@@ -357,7 +188,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           }
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -382,7 +213,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           store.update(state => {
             const items = state.items.filter(item => idExtractor(item.id) !== tempId);
             const filteredItems = applySorting(
-              applyFiltersAndSearch(items, state.searchQuery, state.filters),
+              filterAndSearch(items, state.searchQuery, state.filters),
               state.sort
             );
             const newOptimisticUpdates = new Map(state.optimisticUpdates);
@@ -434,7 +265,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             newItems[itemIndex] = optimisticItem;
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -459,7 +290,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -488,7 +319,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             });
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(items, state.searchQuery, state.filters),
+              filterAndSearch(items, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -541,7 +372,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             });
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -566,7 +397,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           });
           
           const filteredItems = applySorting(
-            applyFiltersAndSearch(items, state.searchQuery, state.filters),
+            filterAndSearch(items, state.searchQuery, state.filters),
             state.sort
           );
           
@@ -593,7 +424,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             newItems.splice(itemIndex, 0, deletedItem!);
             
             const filteredItems = applySorting(
-              applyFiltersAndSearch(newItems, state.searchQuery, state.filters),
+              filterAndSearch(newItems, state.searchQuery, state.filters),
               state.sort
             );
             
@@ -654,7 +485,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           const searchResults = await api.search(query);
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(searchResults, query, state.filters),
+              filterAndSearch(searchResults, query, state.filters),
               state.sort
             );
             return {
@@ -670,7 +501,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           // Fall back to client-side search
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(state.items, query, state.filters),
+              filterAndSearch(state.items, query, state.filters),
               state.sort
             );
             return {
@@ -684,7 +515,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         // Client-side search
         store.update(state => {
           const filteredItems = applySorting(
-            applyFiltersAndSearch(state.items, query, state.filters),
+            filterAndSearch(state.items, query, state.filters),
             state.sort
           );
           return {
@@ -704,7 +535,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           const filterResults = await api.filter(filters);
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(filterResults, state.searchQuery, filters),
+              filterAndSearch(filterResults, state.searchQuery, filters),
               state.sort
             );
             return {
@@ -720,7 +551,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           // Fall back to client-side filtering
           store.update(state => {
             const filteredItems = applySorting(
-              applyFiltersAndSearch(state.items, state.searchQuery, filters),
+              filterAndSearch(state.items, state.searchQuery, filters),
               state.sort
             );
             return {
@@ -735,7 +566,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         // Client-side filtering
         store.update(state => {
           const filteredItems = applySorting(
-            applyFiltersAndSearch(state.items, state.searchQuery, filters),
+            filterAndSearch(state.items, state.searchQuery, filters),
             state.sort
           );
           return {
@@ -752,7 +583,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       store.update(state => {
         const sort = { field, direction };
         const filteredItems = applySorting(
-          applyFiltersAndSearch(state.items, state.searchQuery, state.filters),
+          filterAndSearch(state.items, state.searchQuery, state.filters),
           sort
         );
         return {
@@ -793,7 +624,7 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         });
         
         const filteredItems = applySorting(
-          applyFiltersAndSearch(items, state.searchQuery, state.filters),
+          filterAndSearch(items, state.searchQuery, state.filters),
           state.sort
         );
         
@@ -826,172 +657,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
   return { store, actions, destroy };
 }
 
-// ============================================================================
-// MODAL STATE MANAGEMENT UTILITIES
-// ============================================================================
-
-/**
- * Modal state interface for entity operations.
- */
-export interface ModalState<T> {
-  isOpen: boolean;
-  mode: 'create' | 'edit';
-  item: T | null;
-}
-
-/**
- * Modal actions interface.
- */
-export interface ModalActions<T> {
-  openCreate(): void;
-  openEdit(item: T): void;
-  close(): void;
-}
-
-/**
- * Creates a modal state store for entity management.
- */
-export function useModalState<T>() {
-  const initialState: ModalState<T> = {
-    isOpen: false,
-    mode: 'create',
-    item: null,
-  };
-
-  const store = writable(initialState);
-
-  const actions: ModalActions<T> = {
-    openCreate() {
-      store.update(state => ({
-        ...state,
-        isOpen: true,
-        mode: 'create',
-        item: null,
-      }));
-    },
-
-    openEdit(item: T) {
-      store.update(state => ({
-        ...state,
-        isOpen: true,
-        mode: 'edit',
-        item,
-      }));
-    },
-
-    close() {
-      store.set(initialState);
-    },
-  };
-
-  return { store, actions };
-}
-
-// ============================================================================
-// OPERATION STATE MANAGEMENT
-// ============================================================================
-
-/**
- * Operation state interface for tracking async operations.
- */
-export interface OperationState {
-  loading: boolean;
-  saving: boolean;
-  deleting: boolean;
-  message: string;
-  error: string | null;
-}
-
-/**
- * Operation actions interface.
- */
-export interface OperationActions {
-  setLoading(loading: boolean): void;
-  setSaving(saving: boolean): void;
-  setDeleting(deleting: boolean): void;
-  setMessage(message: string): void;
-  setError(error: string | null): void;
-  clearMessages(): void;
-  reset(): void;
-}
-
-/**
- * Creates an operation state store for tracking async operations.
- */
-export function useOperationState() {
-  const initialState: OperationState = {
-    loading: false,
-    saving: false,
-    deleting: false,
-    message: '',
-    error: null,
-  };
-
-  const store = writable(initialState);
-
-  const actions: OperationActions = {
-    setLoading(loading: boolean) {
-      store.update(state => ({ ...state, loading }));
-    },
-
-    setSaving(saving: boolean) {
-      store.update(state => ({ ...state, saving }));
-    },
-
-    setDeleting(deleting: boolean) {
-      store.update(state => ({ ...state, deleting }));
-    },
-
-    setMessage(message: string) {
-      store.update(state => ({ ...state, message, error: null }));
-    },
-
-    setError(error: string | null) {
-      store.update(state => ({ ...state, error, message: '' }));
-    },
-
-    clearMessages() {
-      store.update(state => ({ ...state, message: '', error: null }));
-    },
-
-    reset() {
-      store.set(initialState);
-    },
-  };
-
-  return { store, actions };
-}
-
-/**
- * Wraps an async operation with loading state management.
- */
-export async function withLoadingState<T>(
-  operation: () => Promise<T>,
-  actions: OperationActions,
-  loadingType: 'loading' | 'saving' | 'deleting' = 'loading'
-): Promise<T> {
-  // Map loading types to their corresponding action methods
-  const loadingActions = {
-    loading: actions.setLoading,
-    saving: actions.setSaving,
-    deleting: actions.setDeleting
-  } as const;
-  const setLoadingState = loadingActions[loadingType];
-
-  try {
-    actions.clearMessages();
-    setLoadingState(true);
-
-    const result = await operation();
-
-    setLoadingState(false);
-    return result;
-  } catch (error) {
-    setLoadingState(false);
-    actions.setError(getErrorMessage(error, 'An error occurred'));
-    throw error;
-  }
-}
 
 // ============================================================================
 // SURREALDB-SPECIFIC UTILITIES
@@ -1071,46 +736,6 @@ export abstract class BaseCrudApi<T> implements CrudApi<T> {
   protected logSuccess(operation: string, result: unknown, context?: LogContext): void {
     this.logger.info(`${operation} successful`, { ...context, result: !!result });
   }
-}
-
-// ============================================================================
-// TYPE UTILITIES AND INTERFACES
-// ============================================================================
-
-/**
- * Type utility for extracting the ID type from an entity.
- */
-export type EntityId<T> = T extends { id: infer U } ? U : never;
-
-/**
- * Type utility for creating form data (entity without ID).
- */
-export type FormData<T> = Omit<T, 'id'>;
-
-/**
- * Type utility for creating update data (partial entity without ID).
- */
-export type UpdateData<T> = Partial<Omit<T, 'id'>>;
-
-/**
- * Interface for paginated results.
- */
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-}
-
-/**
- * Interface for search results with metadata.
- */
-export interface SearchResult<T> {
-  items: T[];
-  query: string;
-  totalMatches: number;
-  searchTime: number;
 }
 
 // ============================================================================

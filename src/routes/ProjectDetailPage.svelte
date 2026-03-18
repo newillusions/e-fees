@@ -126,11 +126,10 @@
       </div>
     </div>
   {:else if project}
-    <ProjectDetail 
-      {project} 
-      isOpen={true} 
-      on:close={handleClose}
-      on:projectUpdated={handleProjectUpdate}
+    <ProjectDetail
+      {project}
+      isOpen={true}
+      onclose={handleClose}
     />
   {/if}
 </div>

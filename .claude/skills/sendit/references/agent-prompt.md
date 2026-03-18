@@ -135,6 +135,111 @@ fi
 
 ---
 
+## Step 2.5: Code Quality (cleanit)
+
+**Skip if `--skip-review` was passed.**
+**In DRY_RUN mode: print `[DRY-RUN]` and skip.**
+
+Run the full cleanit pipeline (review → simplify → guard) on changed files before code review.
+
+```bash
+echo ""
+echo "=== Code Quality (cleanit) ==="
+
+if [ "$SKIP_REVIEW" = "true" ]; then
+  echo "(Skipped — --skip-review)"
+elif [ "$DRY_RUN" = "true" ]; then
+  echo "[DRY-RUN] Would spawn cleanit-reviewer subagent against changed files"
+else
+  CLEANIT_FILES=$(git diff HEAD~1 HEAD --name-only 2>/dev/null)
+
+  if [ -z "$CLEANIT_FILES" ]; then
+    echo "(No changed files — skipping)"
+  else
+    echo "Changed files for cleanit:"
+    echo "$CLEANIT_FILES" | sed 's/^/  /'
+
+    # Write file list to temp file for subagent
+    CLEANIT_FILES_PATH=$(mktemp /tmp/sendit-cleanit-XXXXXX.txt)
+    echo "$CLEANIT_FILES" > "$CLEANIT_FILES_PATH"
+
+    echo "Spawning cleanit reviewer..."
+    # Subagent is spawned inline via the Agent tool — see below
+  fi
+fi
+```
+
+**Spawn the cleanit subagent now** (only when not in DRY_RUN, not skipped, and files exist):
+
+Use the Agent tool. Substitute the actual value of `$CLEANIT_FILES_PATH` from the bash block above into the prompt — it is a real temp file path on disk.
+
+```
+Agent tool:
+  subagent_type: "cleanit-reviewer"
+  model: "sonnet"
+  run_in_background: false
+  description: "Cleanit quality gate for sendit"
+  prompt: |
+    You are running a code quality gate as part of the /sendit shipping pipeline.
+    Project root: /Volumes/base/dev/app/e-fees
+
+    Read the cleanit skill at: ~/.claude/skills/cleanit/SKILL.md
+    Read its resource files from: ~/.claude/skills/cleanit/resources/
+
+    Execute the full cleanit pipeline (review → simplify → guard) on the files listed in:
+    <CLEANIT_FILES_PATH>
+
+    IMPORTANT — commit ownership: If simplify modifies files and tests pass,
+    YOU (the subagent) stage and commit them:
+
+      Scope detection from changed file paths:
+        e-fees-api/ → api | e-fees-scope/ → scope | src-tauri/ → tauri | src/ → ui | else → e-fees
+
+      git add [modified files]
+      git commit -m "style(<scope>): cleanit fixes
+
+      Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+
+    If simplify reverts (tests failed after changes), that's OK — return WARN verdict.
+
+    End your response with EXACTLY one verdict line as the very last line:
+      VERDICT: PASS    — all files CLEAN or NEEDS_WORK
+      VERDICT: WARN    — issues noted but nothing SERIOUS+, or simplify reverted
+      VERDICT: FAIL    — at least one file SERIOUS or DISASTER
+
+    Before the verdict, list per-file categories:
+      FILE: <path> — <CLEAN|NEEDS_WORK|PROBLEM|SERIOUS|DISASTER>
+```
+
+After spawning the subagent, capture its result as `CLEANIT_RESULT`. Then:
+
+```bash
+# Print the full cleanit result
+echo "$CLEANIT_RESULT"
+echo ""
+
+# Parse verdict (last VERDICT: line in output)
+CLEANIT_VERDICT=$(echo "$CLEANIT_RESULT" | grep '^VERDICT:' | tail -1 | awk '{print $2}')
+
+if [ "$CLEANIT_VERDICT" = "FAIL" ]; then
+  echo ""
+  echo "PIPELINE BLOCKED: Cleanit found SERIOUS+ quality issues."
+  echo "Fix the issues above, then re-run /sendit."
+  rm -f "$CLEANIT_FILES_PATH"
+  exit 1
+elif [ "$CLEANIT_VERDICT" = "WARN" ]; then
+  echo "⚠ Cleanit warnings noted — continuing to code review"
+elif [ "$CLEANIT_VERDICT" = "PASS" ]; then
+  echo "✓ Code quality check passed"
+else
+  echo "WARNING: Could not parse cleanit verdict — continuing"
+fi
+
+rm -f "$CLEANIT_FILES_PATH"
+```
+
+---
+
 ## Step 3: Full Code Review
 
 **Skip if `--skip-review` was passed.**
@@ -600,6 +705,7 @@ if [ -n "$STAGED" ] && [ "$STAGED" != "" ]; then
 else
   echo "  - No staged changes committed"
 fi
+echo "  ✓ Cleanit: ${CLEANIT_VERDICT:-skipped}"
 echo "  ✓ Code review: ${VERDICT:-skipped}"
 echo "  ✓ Version: ${CURRENT_VERSION} → ${NEW_VERSION}"
 echo "  ✓ Pushed: Forgejo (origin/main) + GitHub (github/main)"

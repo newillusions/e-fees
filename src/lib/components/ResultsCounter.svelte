@@ -1,9 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  const dispatch = createEventDispatcher();
-
-  let { totalItems = 0, filteredItems = 0, hasFilters = false, entityName = 'items', loadedItems = undefined as number | undefined, hasMore = false, inline = false }: {
+  let { totalItems = 0, filteredItems = 0, hasFilters = false, entityName = 'items', loadedItems = undefined as number | undefined, hasMore = false, inline = false, onclearfilters }: {
     totalItems?: number;
     filteredItems?: number;
     hasFilters?: boolean;
@@ -11,10 +7,11 @@
     loadedItems?: number | undefined;
     hasMore?: boolean;
     inline?: boolean;
+    onclearfilters?: () => void;
   } = $props();
 
   function handleClearFilters() {
-    dispatch('clear-filters');
+    onclearfilters?.();
   }
 
   const entityNameSingular = $derived(entityName.endsWith('ies')
@@ -38,7 +35,7 @@
   </div>
   {#if hasFilters}
     <button
-      on:click={handleClearFilters}
+      onclick={handleClearFilters}
       class="emittiv-chip emittiv-chip--btn"
     >
       <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">

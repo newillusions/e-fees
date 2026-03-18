@@ -172,29 +172,26 @@
 <NewProjectModal
   isOpen={showProjectModal}
   mode="create"
-  on:close={() => showProjectModal = false}
-  on:created={() => showProjectModal = false}
+  onclose={() => showProjectModal = false}
 />
 
 <ProposalModal
   isOpen={showFeeModal}
   mode="create"
   proposal={null}
-  on:close={() => showFeeModal = false}
-  on:saved={() => showFeeModal = false}
+  onclose={() => showFeeModal = false}
 />
 
 <CompanyModal
   isOpen={showCompanyModal}
   mode="create"
   company={null}
-  on:close={() => showCompanyModal = false}
-  on:saved={() => showCompanyModal = false}
+  onclose={() => showCompanyModal = false}
 />
 
 <ActivityLogModal
   isOpen={showActivityLogModal}
-  on:close={() => showActivityLogModal = false}
+  onclose={() => showActivityLogModal = false}
 />
 
 <style>

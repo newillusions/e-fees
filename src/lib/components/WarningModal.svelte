@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  
-  const dispatch = createEventDispatcher();
+
   const modalId = `warning-${Math.random().toString(36).substr(2, 9)}`;
 
-  let { isOpen = false, title = 'Warning', message = '', confirmText = 'OK', cancelText = '', onConfirm = null, onCancel = null }: {
+  let { isOpen = false, title = 'Warning', message = '', confirmText = 'OK', cancelText = '', onConfirm = null, onCancel = null, onconfirm, onclose, oncancel }: {
     isOpen?: boolean;
     title?: string;
     message?: string;
@@ -14,22 +12,25 @@
     cancelText?: string;
     onConfirm?: (() => void) | null;
     onCancel?: (() => void) | null;
+    onconfirm?: () => void;
+    onclose?: () => void;
+    oncancel?: () => void;
   } = $props();
   
   function handleConfirm() {
     if (onConfirm) {
       onConfirm();
     }
-    dispatch('confirm');
-    dispatch('close');
+    onconfirm?.();
+    onclose?.();
   }
-  
+
   function handleCancel() {
     if (onCancel) {
       onCancel();
     }
-    dispatch('cancel');
-    dispatch('close');
+    oncancel?.();
+    onclose?.();
   }
   
   function handleKeydown(event: KeyboardEvent) {

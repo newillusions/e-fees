@@ -77,10 +77,10 @@
     }
   }
 
-  async function handleBulkStatusChange(event: CustomEvent<string>) {
+  async function handleBulkStatusChange(status: string) {
     const ids = [...selectedIds];
     try {
-      await batchUpdateStatus('projects', ids, event.detail);
+      await batchUpdateStatus('projects', ids, status);
       clearSelection();
       paginatedProjectsStore.actions.refresh();
     } catch (e) {
@@ -183,10 +183,10 @@
     selectedProject = null;
   }
   
-  function handleEditFromDetail(event: CustomEvent) {
+  function handleEditFromDetail(project: Project | null) {
     // Close detail panel and open edit modal
     isProjectDetailOpen = false;
-    selectedProject = event.detail;
+    selectedProject = project;
     projectModalMode = 'edit';
     showProjectModal = true;
   }
@@ -302,7 +302,7 @@
         loadedItems={projects.length}
         hasMore={hasMore}
         inline={true}
-        on:clear-filters={clearFilters}
+        onclearfilters={clearFilters}
       />
     </div>
     <button
@@ -397,9 +397,9 @@
       selectedCount={selectedIds.size}
       entityType="projects"
       statuses={[...PROJECT_STATUSES]}
-      on:delete={handleBulkDelete}
-      on:status-change={handleBulkStatusChange}
-      on:clear={clearSelection}
+      ondelete={handleBulkDelete}
+      onstatuschange={handleBulkStatusChange}
+      onclear={clearSelection}
     />
 
     <!-- Scrollable container for infinite scroll -->
@@ -413,9 +413,9 @@
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(project.id || ''))}
           onFolderClick={openProjectFolder}
-          on:edit={(e) => handleEditProject(e.detail)}
-          on:view={(e) => handleViewProject(e.detail)}
-          on:select={() => toggleSelect(extractIdFromRelation(project.id || ''))}
+          onedit={(project) => handleEditProject(project)}
+          onview={(project) => handleViewProject(project)}
+          onselect={() => toggleSelect(extractIdFromRelation(project.id || ''))}
         />
       {/each}
 
@@ -439,9 +439,9 @@
 </div>
 
 <!-- New Project Modal -->
-<NewProjectModal 
+<NewProjectModal
   bind:isOpen={showNewProjectModal}
-  on:close={handleNewProjectClosed}
+  onclose={handleNewProjectClosed}
 />
 
 <!-- Edit Project Modal -->
@@ -449,13 +449,13 @@
   bind:isOpen={showProjectModal}
   project={selectedProject}
   mode={projectModalMode}
-  on:close={() => showProjectModal = false}
+  onclose={() => showProjectModal = false}
 />
 
 <!-- Project Detail Panel -->
-<ProjectDetail 
+<ProjectDetail
   isOpen={isProjectDetailOpen}
   project={selectedProject}
-  on:close={handleCloseDetail}
-  on:edit={handleEditFromDetail}
+  onclose={handleCloseDetail}
+  onedit={handleEditFromDetail}
 />

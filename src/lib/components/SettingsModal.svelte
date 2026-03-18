@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
   import { invoke } from '@tauri-apps/api/core';
   import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
@@ -10,10 +9,9 @@
   // Folder sync modal state
   let showFolderSyncModal = $state(false);
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false) }: {
+  let { isOpen = $bindable(false), onclose }: {
     isOpen?: boolean;
+    onclose?: () => void;
   } = $props();
 
   // Settings form data - initialize with defaults
@@ -144,7 +142,7 @@
   function closeModal() {
     isOpen = false;
     saveMessage = '';
-    dispatch('close');
+    onclose?.();
   }
   
   function handleKeydown(event: KeyboardEvent) {
@@ -523,5 +521,5 @@
 <!-- Folder Sync Modal (rendered outside main modal for proper z-index) -->
 <FolderSyncModal
   isOpen={showFolderSyncModal}
-  on:close={() => showFolderSyncModal = false}
+  onclose={() => showFolderSyncModal = false}
 />

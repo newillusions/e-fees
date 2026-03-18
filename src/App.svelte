@@ -116,7 +116,7 @@
 {#if showSplash}
   <SplashScreen onComplete={handleSplashComplete} />
 {:else if showFirstRun}
-  <FirstRunSetup bind:isOpen={showFirstRun} on:complete={handleFirstRunComplete} />
+  <FirstRunSetup bind:isOpen={showFirstRun} oncomplete={handleFirstRunComplete} />
 {:else if appReady}
   <Layout>
     <div class="route-content">

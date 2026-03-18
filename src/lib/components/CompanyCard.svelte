@@ -1,36 +1,36 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import type { Company } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { company, clickable = true, selectable = false, selected = false }: {
+  let { company, clickable = true, selectable = false, selected = false, onedit, onview, onselect }: {
     company: Company;
     clickable?: boolean;
     selectable?: boolean;
     selected?: boolean;
+    onedit?: (company: Company) => void;
+    onview?: (company: Company) => void;
+    onselect?: (selected: boolean) => void;
   } = $props();
 
   function handleCardClick() {
     if (clickable) {
-      dispatch('view', company);
+      onview?.(company);
     }
   }
 
   function handleEdit(event: Event) {
     event.stopPropagation();
-    dispatch('edit', company);
+    onedit?.(company);
   }
 
   function handleView(event: Event) {
     event.stopPropagation();
-    dispatch('view', company);
+    onview?.(company);
   }
 </script>
 
-<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
+<BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3
@@ -56,8 +56,8 @@
 
   <!-- Actions -->
   <svelte:fragment slot="actions">
-    <ActionButton type="edit" ariaLabel="Edit company" on:click={handleEdit} />
-    <ActionButton type="view" ariaLabel="View company details" on:click={handleView} />
+    <ActionButton type="edit" ariaLabel="Edit company" onclick={handleEdit} />
+    <ActionButton type="view" ariaLabel="View company details" onclick={handleView} />
   </svelte:fragment>
 
   <!-- Extra - Full width body section with all metadata -->

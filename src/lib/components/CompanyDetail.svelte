@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import {
     contactsStore,
     contactsActions,
@@ -17,11 +16,11 @@
   import StatusBadge from './StatusBadge.svelte';
   import type { Company, Contact, Fee, Project } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), company = null }: {
+  let { isOpen = $bindable(false), company = null, onedit, onclose }: {
     isOpen?: boolean;
     company?: Company | null;
+    onedit?: (company: Company | null) => void;
+    onclose?: () => void;
   } = $props();
 
   // Filter contacts for this company using type-safe comparison
@@ -57,15 +56,15 @@
   });
 
   function handleEdit() {
-    dispatch('edit', company);
+    onedit?.(company);
   }
 
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
 </script>
 
-<DetailPanel {isOpen} show={!!company} title="company" on:edit={handleEdit} on:close={handleClose}>
+<DetailPanel {isOpen} show={!!company} title="company" onedit={handleEdit} onclose={handleClose}>
   <svelte:fragment slot="header">
     {#if company}
       <DetailHeader

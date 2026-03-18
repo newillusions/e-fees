@@ -3,7 +3,6 @@
   Reduced from ~990 lines to ~350 lines using base components and utilities
 -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { projectsActions } from '$lib/stores';
   import {
     generateNextProjectNumber,
@@ -16,13 +15,13 @@
   import { logApiError } from '$lib/services/logger';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import { parseProjectNumber, buildProjectPayload } from '$lib/utils/projectNumber';
   import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project, ProjectNumber } from '../../types';
 
   // Local interface for pending folder confirmation
   interface PendingFolderData {
@@ -30,12 +29,11 @@
     projectShortName: string;
   }
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), mode = 'create', zIndex = 100 }: {
+  let { isOpen = $bindable(false), mode = 'create', zIndex = 100, onclose }: {
     isOpen?: boolean;
     mode?: 'create';
     zIndex?: number;
+    onclose?: () => void;
   } = $props();
 
   // Use the new operation state utility
@@ -246,43 +244,8 @@
   async function handleCreate() {
     await withLoadingState(
       async () => {
-        // Parse project number to extract components
-        const parts = formData.project_number.split('-');
-        if (parts.length !== 2) {
-          throw new Error('Invalid project number format');
-        }
-
-        const year = parseInt(parts[0]);
-        const countryCode = parts[1].substring(0, 3);
-        const seq = parseInt(parts[1].substring(3));
-
-        // Construct ProjectNumber object for database
-        const projectNumber: ProjectNumber = {
-          year,
-          country: parseInt(countryCode),
-          seq,
-          id: formData.project_number
-        };
-
-        // Create timestamp once for consistency
-        const timestamp = new Date().toISOString();
-
-        // Construct Project object with required fields only
-        const project = {
-          name: formData.name,
-          name_short: formData.name_short,
-          status: formData.status,
-          area: formData.area,
-          city: formData.city,
-          country: formData.country,
-          number: projectNumber,
-          folder: formData.folder,
-          time: {
-            // QUAL-L6: Use single timestamp for consistency
-            created_at: timestamp,
-            updated_at: timestamp
-          }
-        };
+        const projectNumber = parseProjectNumber(formData.project_number);
+        const project = buildProjectPayload(formData, projectNumber);
 
         // Create project in database first
         const result = await projectsActions.create(project);
@@ -394,7 +357,7 @@
   function closeModal() {
     resetForm();
     operationActions.reset();
-    dispatch('close');
+    onclose?.();
   }
 
   // Initialize modal when it opens/closes
@@ -427,21 +390,21 @@
   });
 
   // Typeahead handlers
-  function handleCountrySelect(event: CustomEvent) {
-    formData.country = event.detail.option.name;
-    countrySearchText = event.detail.option.name; // Keep search text in sync
+  function handleCountrySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.country = data.option.name as string;
+    countrySearchText = data.option.name as string; // Keep search text in sync
     // Don't clear area and city automatically - let user decide
     // This was causing the area field to be cleared unexpectedly
   }
 
-  function handleAreaSelect(event: CustomEvent) {
-    formData.area = event.detail.option.name;
-    areaSearchText = event.detail.option.name; // Keep search text in sync
+  function handleAreaSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.area = data.option.name as string;
+    areaSearchText = data.option.name as string; // Keep search text in sync
   }
 
-  function handleCitySelect(event: CustomEvent) {
-    formData.city = event.detail.option.name;
-    citySearchText = event.detail.option.name; // Keep search text in sync
+  function handleCitySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+    formData.city = data.option.name as string;
+    citySearchText = data.option.name as string; // Keep search text in sync
   }
 
   // Clear handlers for typeahead fields
@@ -466,7 +429,7 @@
   }
 </script>
 
-<BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} on:close={closeModal}>
+<BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} onclose={closeModal}>
   <!-- Form -->
   <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
     <!-- PROJECT INFORMATION SECTION -->
@@ -577,9 +540,9 @@
           placeholder="Search countries..."
           required
           error={formErrors.country}
-          on:input={e => handleCountrySearch(e.detail)}
-          on:select={handleCountrySelect}
-          on:clear={handleCountryClear}
+          oninput={handleCountrySearch}
+          onselect={handleCountrySelect}
+          onclear={handleCountryClear}
         >
           <svelte:fragment slot="option" let:option>
             <span>{option.name}</span>
@@ -598,9 +561,9 @@
             placeholder="Search cities..."
             required
             error={formErrors.city}
-            on:input={e => handleCitySearch(e.detail)}
-            on:select={handleCitySelect}
-            on:clear={handleCityClear}
+            oninput={handleCitySearch}
+            onselect={handleCitySelect}
+            onclear={handleCityClear}
           />
 
           <TypeaheadSelect
@@ -612,9 +575,9 @@
             placeholder="Search areas..."
             required
             error={formErrors.area}
-            on:input={e => handleAreaSearch(e.detail)}
-            on:select={handleAreaSelect}
-            on:clear={handleAreaClear}
+            oninput={handleAreaSearch}
+            onselect={handleAreaSelect}
+            onclear={handleAreaClear}
           />
         </div>
       </div>

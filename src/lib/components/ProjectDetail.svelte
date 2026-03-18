@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { feesStore, feesActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, compareIds } from '$lib/utils';
@@ -15,11 +14,11 @@
   import { logger, logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), project = null }: {
+  let { isOpen = $bindable(false), project = null, onedit, onclose }: {
     isOpen?: boolean;
     project?: Project | null;
+    onedit?: (project: Project | null) => void;
+    onclose?: () => void;
   } = $props();
 
   // Inline folder error state
@@ -70,11 +69,11 @@
   });
   
   function handleEdit() {
-    dispatch('edit', project);
+    onedit?.(project);
   }
-  
+
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
   
   // Function to get full project folder path
@@ -134,8 +133,8 @@
   }
   
   // Handle field click events from InfoCard
-  function handleFieldClick(event: CustomEvent) {
-    const { field } = event.detail;
+  function handleFieldClick(detail: { field: { label: string; value: string | number | undefined; type?: string; clickable?: boolean }, index: number }) {
+    const { field } = detail;
     if (field.label === 'Folder') {
       openProjectFolder();
     }
@@ -259,8 +258,8 @@
   show={!!project}
   title="project"
   {customActions}
-  on:edit={handleEdit}
-  on:close={handleClose}
+  onedit={handleEdit}
+  onclose={handleClose}
 >
   <svelte:fragment slot="header">
     {#if project}
@@ -292,7 +291,7 @@
           { label: 'Last Updated', value: project.time?.updated_at, type: 'date' },
           { label: 'Record ID', value: extractId(project.id), type: 'id' }
         ]}
-        on:field-click={handleFieldClick}
+        onfieldclick={handleFieldClick}
       />
     
     <!-- Fee Proposals Section -->
@@ -366,5 +365,5 @@
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
-  on:close={() => warningModal.isOpen = false}
+  onclose={() => warningModal.isOpen = false}
 />

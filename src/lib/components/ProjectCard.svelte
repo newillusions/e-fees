@@ -1,35 +1,35 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import BaseListCard from './BaseListCard.svelte';
   import ActionButton from './ActionButton.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import type { Project } from '../../types';
-  
-  const dispatch = createEventDispatcher();
-  
-  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false }: {
+
+  let { project, clickable = true, showFolderLink = true, onFolderClick = undefined, selectable = false, selected = false, onedit, onview, onselect }: {
     project: Project;
     clickable?: boolean;
     showFolderLink?: boolean;
     onFolderClick?: ((project: Project) => void) | undefined;
     selectable?: boolean;
     selected?: boolean;
+    onedit?: (project: Project) => void;
+    onview?: (project: Project) => void;
+    onselect?: (selected: boolean) => void;
   } = $props();
-  
+
   function handleCardClick() {
     if (clickable) {
-      dispatch('view', project);
+      onview?.(project);
     }
   }
-  
+
   function handleEdit(event: Event) {
     event.stopPropagation();
-    dispatch('edit', project);
+    onedit?.(project);
   }
-  
+
   function handleView(event: Event) {
     event.stopPropagation();
-    dispatch('view', project);
+    onview?.(project);
   }
   
   function handleFolderClick(event: Event) {
@@ -40,7 +40,7 @@
   }
 </script>
 
-<BaseListCard {clickable} {selectable} {selected} on:click={handleCardClick} on:select>
+<BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
     <h3 class="emittiv-card-title">
@@ -62,15 +62,15 @@
   
   <!-- Actions -->
   <svelte:fragment slot="actions">
-    <ActionButton 
-      type="edit" 
+    <ActionButton
+      type="edit"
       ariaLabel="Edit project"
-      on:click={handleEdit}
+      onclick={handleEdit}
     />
-    <ActionButton 
-      type="view" 
+    <ActionButton
+      type="view"
       ariaLabel="View project details"
-      on:click={handleView}
+      onclick={handleView}
     />
   </svelte:fragment>
   

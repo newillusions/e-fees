@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { feesStore, feesActions, companiesStore, companiesActions } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, compareIds } from '$lib/utils';
@@ -12,11 +11,11 @@
   import ActionButton from './ActionButton.svelte';
   import type { Contact, Fee, Company } from '../../types';
 
-  const dispatch = createEventDispatcher();
-
-  let { isOpen = $bindable(false), contact = null }: {
+  let { isOpen = $bindable(false), contact = null, onedit, onclose }: {
     isOpen?: boolean;
     contact?: Contact | null;
+    onedit?: (contact: Contact | null) => void;
+    onclose?: () => void;
   } = $props();
 
   // Create optimized company lookup
@@ -49,11 +48,11 @@
   });
 
   function handleEdit() {
-    dispatch('edit', contact);
+    onedit?.(contact);
   }
 
   function handleClose() {
-    dispatch('close');
+    onclose?.();
   }
 
   // Generate initials for avatar
@@ -67,7 +66,7 @@
     : '');
 </script>
 
-<DetailPanel {isOpen} show={!!contact} title="contact" on:edit={handleEdit} on:close={handleClose}>
+<DetailPanel {isOpen} show={!!contact} title="contact" onedit={handleEdit} onclose={handleClose}>
   <svelte:fragment slot="header">
     {#if contact}
       <DetailHeader

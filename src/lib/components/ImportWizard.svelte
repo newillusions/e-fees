@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { importScanDirectory, importExecute } from '$lib/api/import';
   import type { ImportPreview, ImportResult } from '$lib/api/import';
   import { selectFolder } from '$lib/api';
 
-  let { isOpen = $bindable(false) }: {
+  let { isOpen = $bindable(false), onclose, onimported }: {
     isOpen?: boolean;
+    onclose?: () => void;
+    onimported?: (result: ImportResult | null) => void;
   } = $props();
-
-  const dispatch = createEventDispatcher();
 
   // Wizard state
   let step: 'select' | 'preview' | 'importing' | 'result' = $state('select');
@@ -31,7 +30,7 @@
     result = null;
     error = '';
     scanLoading = false;
-    dispatch('close');
+    onclose?.();
   }
 
   function handleBackdropClick(event: MouseEvent) {
@@ -92,7 +91,7 @@
   }
 
   function handleDone() {
-    dispatch('imported', result);
+    onimported?.(result);
     closeModal();
   }
 
