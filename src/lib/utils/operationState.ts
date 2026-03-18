@@ -14,7 +14,7 @@ export type { OperationState, OperationActions };
  * Extract a human-readable message from an unknown error.
  * Tauri IPC errors arrive as plain strings, not Error instances.
  */
-function getErrorMessage(error: unknown, fallback: string): string {
+export function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'string') return error;
   if (error instanceof Error) return error.message;
   return fallback;

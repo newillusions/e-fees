@@ -18,6 +18,7 @@ import { writable, get } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import { applyFiltersAndSearch, applySorting } from './crudPipeline';
+import { getErrorMessage } from './operationState';
 import type { UnknownSurrealThing } from '../../types';
 
 // Re-export all types from crudTypes for backward compatibility
@@ -36,12 +37,12 @@ export type {
   FormData,
   UpdateData,
   PaginatedResult,
-  SearchResult,
+  SearchResultSet,
 } from './crudTypes';
 
 // Re-export extracted utilities for backward compatibility
 export { useModalState } from './modalState';
-export { useOperationState, withLoadingState } from './operationState';
+export { useOperationState, withLoadingState, getErrorMessage } from './operationState';
 
 import type {
   CrudState,
@@ -50,16 +51,6 @@ import type {
   CrudActions,
   CrudStoreInterface,
 } from './crudTypes';
-
-/**
- * Extract a human-readable message from an unknown error.
- * Tauri IPC errors arrive as plain strings, not Error instances.
- */
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
-  return fallback;
-}
 
 // ============================================================================
 // ENHANCED CRUD STORE IMPLEMENTATION

@@ -128,7 +128,7 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
 }
 
-export interface SearchResult<T> {
+export interface SearchResultSet<T> {
   items: T[];
   query: string;
   totalMatches: number;

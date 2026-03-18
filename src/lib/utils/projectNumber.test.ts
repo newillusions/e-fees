@@ -43,6 +43,14 @@ describe('parseProjectNumber', () => {
   it('throws on wrong number of parts', () => {
     expect(() => parseProjectNumber('25-971-05')).toThrow('Invalid project number format');
   });
+
+  it('throws on non-numeric country code', () => {
+    expect(() => parseProjectNumber('25-abc05')).toThrow('non-numeric components');
+  });
+
+  it('throws on non-numeric year', () => {
+    expect(() => parseProjectNumber('YY-97105')).toThrow('non-numeric components');
+  });
 });
 
 describe('buildProjectPayload', () => {

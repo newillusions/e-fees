@@ -23,13 +23,18 @@ export function parseProjectNumber(raw: string): ProjectNumber {
     throw new Error('Invalid project number format');
   }
 
-  const year = parseInt(parts[0]);
+  const year = parseInt(parts[0], 10);
   const countryCode = parts[1].substring(0, 3);
-  const seq = parseInt(parts[1].substring(3));
+  const country = parseInt(countryCode, 10);
+  const seq = parseInt(parts[1].substring(3), 10);
+
+  if (isNaN(year) || isNaN(country) || isNaN(seq)) {
+    throw new Error(`Invalid project number "${raw}": non-numeric components. Expected YY-CCCNN (e.g., 25-97105).`);
+  }
 
   return {
     year,
-    country: parseInt(countryCode),
+    country,
     seq,
     id: raw,
   };
