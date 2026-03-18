@@ -15,13 +15,13 @@
   import { logApiError } from '$lib/services/logger';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
+  import { parseProjectNumber, buildProjectPayload } from '$lib/utils/projectNumber';
   import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
   import FormInput from './FormInput.svelte';
   import FormSelect from './FormSelect.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
-  import type { Project, ProjectNumber } from '../../types';
 
   // Local interface for pending folder confirmation
   interface PendingFolderData {
@@ -244,43 +244,8 @@
   async function handleCreate() {
     await withLoadingState(
       async () => {
-        // Parse project number to extract components
-        const parts = formData.project_number.split('-');
-        if (parts.length !== 2) {
-          throw new Error('Invalid project number format');
-        }
-
-        const year = parseInt(parts[0]);
-        const countryCode = parts[1].substring(0, 3);
-        const seq = parseInt(parts[1].substring(3));
-
-        // Construct ProjectNumber object for database
-        const projectNumber: ProjectNumber = {
-          year,
-          country: parseInt(countryCode),
-          seq,
-          id: formData.project_number
-        };
-
-        // Create timestamp once for consistency
-        const timestamp = new Date().toISOString();
-
-        // Construct Project object with required fields only
-        const project = {
-          name: formData.name,
-          name_short: formData.name_short,
-          status: formData.status,
-          area: formData.area,
-          city: formData.city,
-          country: formData.country,
-          number: projectNumber,
-          folder: formData.folder,
-          time: {
-            // QUAL-L6: Use single timestamp for consistency
-            created_at: timestamp,
-            updated_at: timestamp
-          }
-        };
+        const projectNumber = parseProjectNumber(formData.project_number);
+        const project = buildProjectPayload(formData, projectNumber);
 
         // Create project in database first
         const result = await projectsActions.create(project);
