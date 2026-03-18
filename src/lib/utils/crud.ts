@@ -14,10 +14,40 @@
  * - Comprehensive error handling
  */
 
-import { writable, get, type Writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import type { UnknownSurrealThing } from '../../types';
+
+// Re-export all types from crudTypes for backward compatibility
+export type {
+  CrudState,
+  CrudApi,
+  CrudStoreOptions,
+  CrudActions,
+  CrudStoreInterface,
+  SurrealEntity,
+  ModalState,
+  ModalActions,
+  OperationState,
+  OperationActions,
+  EntityId,
+  FormData,
+  UpdateData,
+  PaginatedResult,
+  SearchResult,
+} from './crudTypes';
+
+import type {
+  CrudState,
+  CrudApi,
+  CrudStoreOptions,
+  CrudActions,
+  CrudStoreInterface,
+  ModalState,
+  OperationState,
+  OperationActions,
+} from './crudTypes';
 
 /**
  * Extract a human-readable message from an unknown error.
@@ -35,123 +65,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
  */
 function getPropertyValue<T extends object>(obj: T, key: string): unknown {
   return (obj as Record<string, unknown>)[key];
-}
-
-// ============================================================================
-// TYPE DEFINITIONS AND INTERFACES
-// ============================================================================
-
-/**
- * Enhanced CRUD state interface with additional features.
- */
-export interface CrudState<T> {
-  /** Array of entities */
-  items: T[];
-  /** Filtered items (subset of items) */
-  filteredItems: T[];
-  /** Loading state for read operations */
-  loading: boolean;
-  /** Error message if any operation fails */
-  error: string | null;
-  /** Loading state for create/update/delete operations */
-  saving: boolean;
-  /** Current search query */
-  searchQuery: string;
-  /** Current filter criteria */
-  filters: Record<string, unknown>;
-  /** Current sort configuration */
-  sort: {
-    field: string;
-    direction: 'asc' | 'desc';
-  } | null;
-  /** Last successful update timestamp */
-  lastUpdated: Date | null;
-  /** Optimistic update tracking */
-  optimisticUpdates: Map<string, T>;
-}
-
-/**
- * Enhanced CRUD API interface with SurrealDB support.
- */
-export interface CrudApi<T> {
-  /** Fetch all entities */
-  getAll(): Promise<T[]>;
-  /** Search entities with query */
-  search?(query: string): Promise<T[]>;
-  /** Filter entities with criteria */
-  filter?(criteria: Record<string, unknown>): Promise<T[]>;
-  /** Create a new entity */
-  create(data: Omit<T, 'id'>): Promise<T>;
-  /** Update an existing entity */
-  update(id: string, data: Partial<T>): Promise<T>;
-  /** Delete an entity */
-  delete(id: string): Promise<T>;
-}
-
-/**
- * Options for configuring CRUD store behavior.
- */
-export interface CrudStoreOptions<T = unknown> {
-  /** Enable optimistic updates */
-  enableOptimistic?: boolean;
-  /** Enable logging */
-  enableLogging?: boolean;
-  /** Component name for logging context */
-  component?: string;
-  /** Custom ID extractor function */
-  idExtractor?: (id: UnknownSurrealThing) => string | null;
-  /** Auto-refresh interval in milliseconds */
-  autoRefresh?: number;
-  /** Fields to search within (avoids JSON.stringify per item) */
-  searchFields?: (keyof T)[];
-}
-
-/**
- * Enhanced CRUD actions interface with additional operations.
- */
-export interface CrudActions<T> {
-  /** Load all entities from API */
-  load(): Promise<void>;
-  /** Create a new entity */
-  create(data: Omit<T, 'id'>): Promise<T>;
-  /** Update an existing entity */
-  update(id: string, data: Partial<T>): Promise<T>;
-  /** Delete an entity */
-  delete(id: string): Promise<T>;
-  /** Refresh data (alias for load) */
-  refresh(): Promise<void>;
-  /** Clear all data and reset state */
-  clear(): void;
-  /** Set error message */
-  setError(error: string | null): void;
-  /** Search entities */
-  search(query: string): Promise<void>;
-  /** Apply filters */
-  applyFilters(filters: Record<string, unknown>): Promise<void>;
-  /** Sort entities */
-  sort(field: string, direction?: 'asc' | 'desc'): void;
-  /** Reset filters and search */
-  resetFilters(): void;
-  /** Rollback optimistic updates */
-  rollback(): void;
-  /** Get entity by ID */
-  getById(id: string): T | null;
-}
-
-/**
- * Complete CRUD store interface returned by useCrudStore.
- */
-export interface CrudStoreInterface<T> {
-  store: Writable<CrudState<T>>;
-  actions: CrudActions<T>;
-  destroy: () => void;
-}
-
-/**
- * Generic interface for entities with SurrealDB ID support.
- */
-export interface SurrealEntity {
-  id?: UnknownSurrealThing;
 }
 
 // ============================================================================
@@ -831,24 +744,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
 // ============================================================================
 
 /**
- * Modal state interface for entity operations.
- */
-export interface ModalState<T> {
-  isOpen: boolean;
-  mode: 'create' | 'edit';
-  item: T | null;
-}
-
-/**
- * Modal actions interface.
- */
-export interface ModalActions<T> {
-  openCreate(): void;
-  openEdit(item: T): void;
-  close(): void;
-}
-
-/**
  * Creates a modal state store for entity management.
  */
 export function useModalState<T>() {
@@ -890,30 +785,6 @@ export function useModalState<T>() {
 // ============================================================================
 // OPERATION STATE MANAGEMENT
 // ============================================================================
-
-/**
- * Operation state interface for tracking async operations.
- */
-export interface OperationState {
-  loading: boolean;
-  saving: boolean;
-  deleting: boolean;
-  message: string;
-  error: string | null;
-}
-
-/**
- * Operation actions interface.
- */
-export interface OperationActions {
-  setLoading(loading: boolean): void;
-  setSaving(saving: boolean): void;
-  setDeleting(deleting: boolean): void;
-  setMessage(message: string): void;
-  setError(error: string | null): void;
-  clearMessages(): void;
-  reset(): void;
-}
 
 /**
  * Creates an operation state store for tracking async operations.
@@ -1071,46 +942,6 @@ export abstract class BaseCrudApi<T> implements CrudApi<T> {
   protected logSuccess(operation: string, result: unknown, context?: LogContext): void {
     this.logger.info(`${operation} successful`, { ...context, result: !!result });
   }
-}
-
-// ============================================================================
-// TYPE UTILITIES AND INTERFACES
-// ============================================================================
-
-/**
- * Type utility for extracting the ID type from an entity.
- */
-export type EntityId<T> = T extends { id: infer U } ? U : never;
-
-/**
- * Type utility for creating form data (entity without ID).
- */
-export type FormData<T> = Omit<T, 'id'>;
-
-/**
- * Type utility for creating update data (partial entity without ID).
- */
-export type UpdateData<T> = Partial<Omit<T, 'id'>>;
-
-/**
- * Interface for paginated results.
- */
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-}
-
-/**
- * Interface for search results with metadata.
- */
-export interface SearchResult<T> {
-  items: T[];
-  query: string;
-  totalMatches: number;
-  searchTime: number;
 }
 
 // ============================================================================
