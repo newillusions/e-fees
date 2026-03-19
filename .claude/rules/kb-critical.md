@@ -2,7 +2,7 @@
 # KB Project Critical Rules
 
 *Auto-generated for E-Fees*
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-19T09:00:00Z*
 
 ---
 
@@ -12,7 +12,7 @@
 
 CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with massive inline class strings. Extract repeated patterns into components or CSS classes. Use existing emittiv-* classes. Use semantic text sizes (text-xs, text-xxs) not arbitrary values.
 
-*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 277*
+*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 401*
 
 ---
 
@@ -42,7 +42,17 @@ CRITICAL: E-Fees is a Tauri desktop app - Playwright/browser testing DOES NOT WO
 
 DESIGN APPROVED (2026-02-28): Two workstreams for E-Fees. (1) UI smoke tests via Tauri MCP tools — 10 checks covering DB, data, statuses, routes. (2) Standalone REST API with full CRUD, pagination, OpenAPI docs.
 
-*Source: observation:t21ywvrr4rsuin7bwun5 | Scope: unscoped (e-fees related) | Access count: 14*
+*Source: observation:t21ywvrr4rsuin7bwun5 | Scope: unscoped (e-fees related) | Access count: 136*
+
+---
+
+## Surrealdb Rpc Endpoint For Complex Text
+
+**Priority:** 9 | **Type:** pattern
+
+PATTERN (2026-03-15): SurrealDB /sql endpoint with URL query params breaks on complex text (newlines, special chars). Use /rpc endpoint with JSON body instead.
+
+*Source: observation:z0oi37svdjnatpduimdj | Scope: auto [surrealdb] | Access count: 15*
 
 ---
 
@@ -52,7 +62,7 @@ DESIGN APPROVED (2026-02-28): Two workstreams for E-Fees. (1) UI smoke tests via
 
 CRITICAL BUG: SurrealDB v3 math::max([]) returns -Infinity (float type), NOT null/NONE. This breaks deserialization of option<i64> fields. Fix: IF array::len(arr) > 0 THEN math::max(arr) ELSE 0 END.
 
-*Source: observation:a91ginzo7ly8hdgljzrd | Scope: auto [surrealdb] | Access count: 51*
+*Source: observation:a91ginzo7ly8hdgljzrd | Scope: auto [surrealdb] | Access count: 162*
 
 ---
 
@@ -62,7 +72,7 @@ CRITICAL BUG: SurrealDB v3 math::max([]) returns -Infinity (float type), NOT nul
 
 CRITICAL PATTERN: SurrealDB v3 SurrealValue derive for f64 fields REJECTS Number::Int values. Always use Number::Float or cast to f64.
 
-*Source: observation:a055mx2sbu80jbpp9khs | Scope: auto [surrealdb, rust, tauri] | Access count: 59*
+*Source: observation:a055mx2sbu80jbpp9khs | Scope: auto [surrealdb, rust, tauri] | Access count: 170*
 
 ---
 
@@ -80,7 +90,7 @@ CONFIRMED BUG (2026-02-23): SurrealDB v3.0.0 WebSocket SDK parameterized values 
 
 **Priority:** 9 | **Type:** problem
 
-CONFIRMED BUG: SurrealDB v3.0.0 search::score() returns 0.0 for ALL queries. Use vector search mode instead.
+CONFIRMED BUG: SurrealDB v3.0.0 search::score() returns 0.0 for ALL queries. Fixed in v3.0.4.
 
 *Source: observation:6j1gpqvnjuctbulbtzf7 | Scope: auto [surrealdb] | Access count: 91*
 
@@ -106,4 +116,4 @@ E-Fees SurrealDB migration completed (2026-02-13): All configuration files updat
 
 ---
 
-*Total: 10 project rules (3 project-scoped, 5 auto-matched, 2 unscoped e-fees-related)*
+*Total: 11 project rules (3 project-scoped, 6 auto-matched [surrealdb, rust, tauri], 2 unscoped e-fees-related)*

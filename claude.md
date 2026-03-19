@@ -12,7 +12,7 @@ Premium desktop application built with Tauri v2 and Svelte 5 for managing fee pr
 - **Frontend**: Svelte 5 (TypeScript, `mount()` API)
 - **Desktop**: Tauri v2 (Rust backend)
 - **Database**: SurrealDB (WebSocket)
-- **Styling**: TailwindCSS + Emittiv palette
+- **Styling**: CSS custom properties (design tokens) + `.emittiv-*` classes
 - **Router**: svelte-spa-router
 - **Build**: Vite with HMR
 
@@ -228,9 +228,42 @@ When user says "/release", "/release patch", "/release minor", "/release major",
 - HMR for frontend changes
 - Tauri uses less memory than Electron
 
+## Standards & Workflow
+
+### Workspace Standards
+Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md) for all code style, security, and workflow rules. Key standards for this project:
+- **Styling**: CSS custom properties (design tokens) with semantic `.emittiv-*` classes. TailwindCSS is deprecated workspace-wide.
+- **Security**: Credentials in `~/.claude/.credentials.env`, MCP configs use `_FROM` wrapper pattern.
+- **Code quality**: Auto-formatted by PostToolUse hook (Prettier, rustfmt).
+
+### Conventional Commits
+All commits use the format: `<type>(<scope>): <description>`
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`
+
+Every commit must include:
+```
+Co-Authored-By: Claude <model> <noreply@anthropic.com>
+```
+
+### Test-Driven Development (Mandatory — Tier 1 Project)
+TDD is required for all coding work:
+1. **RED** — Write a failing test that defines expected behavior
+2. **GREEN** — Write minimum code to make the test pass
+3. **REFACTOR** — Clean up while keeping tests green
+
+Applies to: new features, bug fixes (reproduce first), refactors, API changes.
+Test before committing: `cargo test -p app --lib` (Rust), `npm test` (frontend).
+
+### Session Workflow
+1. `/lamp-on` — Load KB context, sync pending data, check hub messages
+2. Check hub messages for pending requests
+3. Do work (observe key findings via `kb_observe`)
+4. `/lamp-off` — Save context, update HANDOVER.md, close KB session
+
 ---
-**Last Updated**: December 14, 2025
-**Version**: 0.10.24
+**Last Updated**: March 15, 2026
+**Version**: 0.13.8
 **Status**: Production-ready. Auto-updater working. KB integration active.
 
 ## Planning & Strategy Documentation

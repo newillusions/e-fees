@@ -2,6 +2,7 @@
   import type { PricingBreakdown } from '../../../types/database';
   import { convertToClientCurrency } from '../../../types/database';
   import { formatNumber } from '$lib/utils/format';
+  import { calcWhtAmounts } from '$lib/utils/pricingUtils';
 
   interface Props {
     pricing: PricingBreakdown | null;
@@ -100,8 +101,7 @@
       {/if}
 
       {#if showTax && taxType === 'withholding' && (pricing?.config?.vat_percent ?? 0) > 0}
-        {@const whtRate = (pricing?.config?.vat_percent ?? 0) / 100}
-        {@const grossedUp = Math.round(subtotal / (1 - whtRate))}
+        {@const { invoiced: grossedUp } = calcWhtAmounts(subtotal, (pricing?.config?.vat_percent ?? 0) / 100)}
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item" title="Invoiced amount after {pricing?.config?.vat_percent}% WHT gross-up">
           <span class="emittiv-summary-bar__label">WHT Invoice</span>

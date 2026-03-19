@@ -12,6 +12,17 @@ use super::types::{
 };
 use crate::commands::{CompanyUpdate, ContactUpdate, ProjectUpdate};
 
+/// Normalize a SurrealDB WebSocket URL to ensure it ends with `/rpc`.
+/// SurrealDB SDK v3 requires the `/rpc` endpoint; without it, connections
+/// silently fail to execute queries.
+pub(crate) fn normalize_ws_url(url: &str) -> String {
+    if url.ends_with("/rpc") {
+        url.to_string()
+    } else {
+        format!("{}/rpc", url.trim_end_matches('/'))
+    }
+}
+
 /// Validate a record ID contains only alphanumeric chars, underscores, and hyphens.
 /// Returns Error if invalid, preventing SQL injection in table:key references.
 fn validate_record_id(id: &str, field_name: &str) -> Result<(), Error> {
@@ -71,13 +82,20 @@ impl DatabaseClient {
     pub async fn connect(url: &str) -> Result<Self, Error> {
         if url.starts_with("ws://") || url.starts_with("wss://") {
             let is_secure = url.starts_with("wss://");
-            info!("Attempting {} WebSocket connection to {}",
-                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" }, url);
 
-            let connection_address = url
+            let normalized_url = normalize_ws_url(url);
+            if normalized_url != url {
+                warn!("SURREALDB_URL missing /rpc suffix — auto-corrected to: {}", normalized_url);
+            }
+
+            info!("Attempting {} WebSocket connection to {}",
+                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" }, normalized_url);
+
+            let connection_address = normalized_url
                 .strip_prefix("ws://")
-                .or_else(|| url.strip_prefix("wss://"))
-                .unwrap_or(url);
+                .or_else(|| normalized_url.strip_prefix("wss://"))
+                .unwrap_or(&normalized_url)
+                .to_string();
 
             match Surreal::new::<Ws>(connection_address).await {
                 Ok(connection) => {
@@ -90,10 +108,10 @@ impl DatabaseClient {
                 Err(ws_err) => {
                     warn!("WebSocket connection failed: {}, attempting HTTP fallback", ws_err);
 
-                    let http_url = if url.starts_with("ws://") {
-                        url.replace("ws://", "http://")
+                    let http_url = if normalized_url.starts_with("ws://") {
+                        normalized_url.replace("ws://", "http://")
                     } else {
-                        url.replace("wss://", "https://")
+                        normalized_url.replace("wss://", "https://")
                     };
 
                     match Surreal::new::<Http>(&http_url).await {

@@ -7,7 +7,8 @@
     generatePricingId,
     DEFAULT_PRICING_CONFIG
   } from '../../../types/database';
-  import { formatCurrency, formatNumber, formatPercent, roundToIncrement } from '$lib/utils/format';
+  import { formatCurrency, formatNumber, formatPercent } from '$lib/utils/format';
+  import { roundWithConfig, calcWhtAmounts, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import CurrencyAmount from '../CurrencyAmount.svelte';
@@ -151,29 +152,20 @@
     if (stageTotalOverrides.has(stageId)) {
       return stageTotalOverrides.get(stageId)!;
     }
-    const raw = getStageTotal(stageId);
-    const increment = config?.rounding_increment ?? 50;
-    const mode = config?.rounding_mode ?? 'ceiling';
-    return roundToIncrement(raw, increment, mode);
+    return roundWithConfig(getStageTotal(stageId), config);
   }
 
   // Check if stage total has override (only if it actually differs from calculated)
   function hasStageTotalOverride(stageId: string): boolean {
     if (!stageTotalOverrides.has(stageId)) return false;
     const override = stageTotalOverrides.get(stageId)!;
-    const raw = getStageTotal(stageId);
-    const increment = config?.rounding_increment ?? 50;
-    const mode = config?.rounding_mode ?? 'ceiling';
-    const calculatedRounded = roundToIncrement(raw, increment, mode);
+    const calculatedRounded = roundWithConfig(getStageTotal(stageId), config);
     return Math.round(override) !== Math.round(calculatedRounded);
   }
 
   // Set stage total override (only if value differs from calculated rounded total)
   function setStageTotalOverride(stageId: string, value: number) {
-    const raw = getStageTotal(stageId);
-    const increment = config?.rounding_increment ?? 50;
-    const mode = config?.rounding_mode ?? 'ceiling';
-    const calculatedRounded = roundToIncrement(raw, increment, mode);
+    const calculatedRounded = roundWithConfig(getStageTotal(stageId), config);
 
     // Only set override if value actually differs from calculated rounded value
     if (Math.round(value) !== Math.round(calculatedRounded)) {
@@ -210,14 +202,9 @@
   // For invoicing integration, this may reverse: display gross-up amounts, hover shows quoted.
   const isWithholding = $derived(config?.tax_type === 'withholding');
   const whtRate = $derived(isWithholding ? (config?.vat_percent || 0) / 100 : 0);
-  function grossUp(amount: number): number {
-    return whtRate > 0 ? amount / (1 - whtRate) : amount;
-  }
   function whtTooltip(amount: number): string {
     if (!isWithholding || whtRate === 0) return '';
-    const invoiced = grossUp(amount);
-    const wht = invoiced - amount;
-    return `Invoice: ${formatNumber(Math.round(invoiced))} (incl. ${formatNumber(Math.round(wht))} WHT ${config.vat_percent}%)`;
+    return whtTooltipFn(amount, config, formatNumber);
   }
 
   // Multi-currency conversion
@@ -686,7 +673,7 @@
               {/if}
             </div>
           {/each}
-          <div class="emittiv-sortable-col--accent" title="{isWithholding ? whtTooltip(getRoundedStageTotal(stage.id)) : `Calculated: ${formatNumber(getStageTotal(stage.id))} → Rounded: ${formatNumber(roundToIncrement(getStageTotal(stage.id), config?.rounding_increment ?? 50, config?.rounding_mode ?? 'ceiling'))}`}">
+          <div class="emittiv-sortable-col--accent" title="{isWithholding ? whtTooltip(getRoundedStageTotal(stage.id)) : `Calculated: ${formatNumber(getStageTotal(stage.id))} → Rounded: ${formatNumber(roundWithConfig(getStageTotal(stage.id), config))}`}">
             {#if !readonly}
               {@const isOverridden = hasStageTotalOverride(stage.id)}
               <div class="emittiv-sortable-cell-group">
@@ -750,11 +737,11 @@
           </div>
           {#each sortedDisciplines as disc}
             <div class="emittiv-sortable-col--number text-emittiv-light text-xs">
-              {formatNumber(Math.round(grossUp(getDisciplineTotal(disc.id))))}
+              {formatNumber(calcWhtAmounts(getDisciplineTotal(disc.id), whtRate).invoiced)}
             </div>
           {/each}
           <div class="emittiv-sortable-col--accent text-emittiv-light text-xs">
-            {formatNumber(Math.round(grossUp(designSubtotal)))}
+            {formatNumber(calcWhtAmounts(designSubtotal, whtRate).invoiced)}
           </div>
         </div>
       {/if}

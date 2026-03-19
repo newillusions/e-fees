@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { PaymentScheduleEntry, PaymentSchedule, Stage, PricingConfig, PricingCell } from '../../../types/database';
   import { generatePricingId } from '../../../types/database';
-  import { formatNumber, formatPercent, formatDate, roundToIncrement } from '$lib/utils/format';
+  import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
+  import { roundWithConfig, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -40,9 +41,7 @@
     const rawTotal = cells
       .filter(c => c.stage_id === stageId)
       .reduce((sum, c) => sum + (c.override_amount ?? c.amount), 0);
-    const increment = config?.rounding_increment ?? 50;
-    const mode = config?.rounding_mode ?? 'ceiling';
-    return roundToIncrement(rawTotal, increment, mode);
+    return roundWithConfig(rawTotal, config);
   }
 
   // Status colors
@@ -218,13 +217,8 @@
   }
 
   // Withholding tax gross-up for payment tooltips
-  const isWithholding = $derived(config?.tax_type === 'withholding');
-  const whtRate = $derived(isWithholding ? (config?.vat_percent || 0) / 100 : 0);
   function whtTooltip(amount: number): string {
-    if (!isWithholding || whtRate === 0) return `${Math.round(amount / designTotal * 10000) / 100}% of total`;
-    const invoiced = amount / (1 - whtRate);
-    const wht = invoiced - amount;
-    return `Invoice: ${formatNumber(Math.round(invoiced))} (incl. ${formatNumber(Math.round(wht))} WHT ${config.vat_percent}%)`;
+    return whtTooltipFn(amount, config, formatNumber);
   }
 
   // Total of all payments

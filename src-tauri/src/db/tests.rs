@@ -820,6 +820,35 @@ mod tests {
     }
 
     // ============================================================================
+    // WEBSOCKET URL NORMALIZATION TESTS
+    // ============================================================================
+
+    #[test]
+    fn test_normalize_ws_url_appends_rpc_when_missing() {
+        use crate::db::client::normalize_ws_url;
+        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000"), "ws://10.0.23.11:8000/rpc");
+    }
+
+    #[test]
+    fn test_normalize_ws_url_preserves_existing_rpc() {
+        use crate::db::client::normalize_ws_url;
+        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000/rpc"), "ws://10.0.23.11:8000/rpc");
+    }
+
+    #[test]
+    fn test_normalize_ws_url_handles_trailing_slash() {
+        use crate::db::client::normalize_ws_url;
+        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000/"), "ws://10.0.23.11:8000/rpc");
+    }
+
+    #[test]
+    fn test_normalize_ws_url_handles_wss() {
+        use crate::db::client::normalize_ws_url;
+        assert_eq!(normalize_ws_url("wss://prod.example.com:8000"), "wss://prod.example.com:8000/rpc");
+        assert_eq!(normalize_ws_url("wss://prod.example.com:8000/rpc"), "wss://prod.example.com:8000/rpc");
+    }
+
+    // ============================================================================
     // PROD INTEGRATION TEST - run manually with:
     // cargo test test_prod_fee_deserialization -- --ignored --nocapture
     // ============================================================================
