@@ -4,7 +4,7 @@
    * Uses fixed px values for desktop app OS scaling
    */
 
-  let { icon = 'plus', label = '', variant = 'secondary', size = 'sm', disabled = false, title = '', className = '' }: {
+  let { icon = 'plus', label = '', variant = 'secondary', size = 'sm', disabled = false, title = '', className = '', onclick }: {
     icon?: 'plus' | 'minus' | 'trash' | 'check' | 'x' | 'edit' | 'split';
     label?: string;
     variant?: 'primary' | 'secondary' | 'danger';
@@ -12,6 +12,7 @@
     disabled?: boolean;
     title?: string;
     className?: string;
+    onclick?: (e: MouseEvent) => void;
   } = $props();
 
   // SVG paths for each icon
@@ -34,7 +35,7 @@
   class={buttonClass}
   {disabled}
   {title}
-  on:click
+  {onclick}
 >
   <svg class="emittiv-icon-btn__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icons[icon]} />

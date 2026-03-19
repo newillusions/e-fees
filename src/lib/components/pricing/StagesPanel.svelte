@@ -153,7 +153,7 @@
               Distribute Evenly
             </button>
           {/if}
-          <IconButton icon="plus" label="Add" variant="primary" size="md" on:click={addDesignStage} />
+          <IconButton icon="plus" label="Add" variant="primary" size="md" onclick={addDesignStage} />
         </div>
       {/if}
     {/snippet}
@@ -233,7 +233,7 @@
                   variant="danger"
                   size="sm"
                   title="Remove stage"
-                  on:click={() => removeStage(stage.id)}
+                  onclick={() => removeStage(stage.id)}
                 />
               </div>
             </div>
@@ -281,7 +281,7 @@
   <PanelCard title="Post-Contract Services">
     {#snippet headerActions()}
       {#if !readonly}
-        <IconButton icon="plus" label="Add Service" variant="primary" size="md" on:click={addPostContractStage} />
+        <IconButton icon="plus" label="Add Service" variant="primary" size="md" onclick={addPostContractStage} />
       {/if}
     {/snippet}
 
@@ -347,7 +347,7 @@
                   variant="danger"
                   size="sm"
                   title="Remove service"
-                  on:click={() => removeStage(stage.id)}
+                  onclick={() => removeStage(stage.id)}
                 />
               </div>
             </div>

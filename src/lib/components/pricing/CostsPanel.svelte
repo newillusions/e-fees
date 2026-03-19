@@ -93,7 +93,7 @@
             Apply {defaultMarkup}% to all
           </button>
         {/if}
-        <IconButton icon="plus" label="Add Cost" variant="primary" size="md" on:click={addCost} />
+        <IconButton icon="plus" label="Add Cost" variant="primary" size="md" onclick={addCost} />
       </div>
     {/if}
   {/snippet}
@@ -193,7 +193,7 @@
         <!-- Remove -->
         {#if !readonly}
           <div class="emittiv-sortable-col--action">
-            <IconButton icon="trash" variant="danger" size="sm" title="Remove" on:click={() => removeCost(cost.id)} />
+            <IconButton icon="trash" variant="danger" size="sm" title="Remove" onclick={() => removeCost(cost.id)} />
           </div>
         {/if}
       </div>

@@ -19,6 +19,8 @@ import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import { applyFiltersAndSearch, applySorting } from './crudPipeline';
 import { getErrorMessage } from './operationState';
+import { optimisticCreate, optimisticUpdate, optimisticDelete, recomputeFiltered } from './crudOptimistic';
+import { createQueryActions } from './crudQueryActions';
 import type { UnknownSurrealThing } from '../../types';
 
 // Re-export all types from crudTypes for backward compatibility
@@ -146,98 +148,35 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     async create(data) {
       store.update(state => ({ ...state, saving: true, error: null }));
       componentLogger?.info('Creating new entity', { data });
-      
-      // Create temporary optimistic item for immediate UI feedback
-      let optimisticItem: T | null = null;
-      const tempId = `temp_${Date.now()}`;
-      
-      if (enableOptimistic) {
-        optimisticItem = { ...data, id: tempId } as T;
-        store.update(state => {
-          const newItems = [...state.items, optimisticItem!];
-          const newFilteredItems = applySorting(
-            filterAndSearch(newItems, state.searchQuery, state.filters),
-            state.sort
-          );
-          return {
-            ...state,
-            items: newItems,
-            filteredItems: newFilteredItems,
-            optimisticUpdates: new Map(state.optimisticUpdates).set(tempId, optimisticItem!)
-          };
-        });
-      }
-      
+
+      const opt = enableOptimistic
+        ? optimisticCreate(store, data, idExtractor, filterAndSearch, applySorting)
+        : null;
+
       try {
         const newItem = await api.create(data);
-        
-        store.update(state => {
-          const items = [...state.items];
-          
-          if (enableOptimistic && optimisticItem) {
-            // Replace optimistic item with real item
-            const tempIndex = items.findIndex(item => idExtractor(item.id) === tempId);
-            if (tempIndex !== -1) {
-              items[tempIndex] = newItem;
-            } else {
-              // Optimistic item was rolled back, add real item
-              items.push(newItem);
-            }
-          } else {
-            items.push(newItem);
-          }
-          
-          const filteredItems = applySorting(
-            filterAndSearch(items, state.searchQuery, state.filters),
-            state.sort
-          );
-          
-          const newOptimisticUpdates = new Map(state.optimisticUpdates);
-          newOptimisticUpdates.delete(tempId);
-          
-          return {
-            ...state,
-            items,
-            filteredItems,
-            saving: false,
-            lastUpdated: new Date(),
-            optimisticUpdates: newOptimisticUpdates
-          };
-        });
-        
-        componentLogger?.info('Successfully created entity', { id: idExtractor(newItem.id) });
-        return newItem;
-      } catch (error) {
-        // Rollback optimistic update on error
-        if (enableOptimistic && optimisticItem) {
+
+        if (opt) {
+          opt.commit(newItem);
+        } else {
           store.update(state => {
-            const items = state.items.filter(item => idExtractor(item.id) !== tempId);
-            const filteredItems = applySorting(
-              filterAndSearch(items, state.searchQuery, state.filters),
-              state.sort
-            );
-            const newOptimisticUpdates = new Map(state.optimisticUpdates);
-            newOptimisticUpdates.delete(tempId);
-            
+            const items = [...state.items, newItem];
             return {
               ...state,
               items,
-              filteredItems,
-              optimisticUpdates: newOptimisticUpdates
+              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
             };
           });
         }
-        
+
+        store.update(state => ({ ...state, saving: false, lastUpdated: new Date() }));
+        componentLogger?.info('Successfully created entity', { id: idExtractor(newItem.id) });
+        return newItem;
+      } catch (error) {
+        opt?.rollback();
         const errorMessage = getErrorMessage(error, 'Failed to create item');
-        store.update(state => ({ 
-          ...state, 
-          saving: false, 
-          error: errorMessage 
-        }));
-        
-        if (enableLogging) {
-          await logApiError('create', error as Error, { component, data });
-        }
+        store.update(state => ({ ...state, saving: false, error: errorMessage }));
+        if (enableLogging) await logApiError('create', error as Error, { component, data });
         throw error;
       }
     },
@@ -245,106 +184,37 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     async update(id, data) {
       store.update(state => ({ ...state, saving: true, error: null }));
       componentLogger?.info('Updating entity', { id, data });
-      
-      // Store original item for rollback
-      let originalItem: T | null = null;
-      let optimisticItem: T | null = null;
-      
-      if (enableOptimistic) {
-        store.update(state => {
-          const itemIndex = state.items.findIndex(item => {
-            const itemId = idExtractor(item.id);
-            return itemId === id;
-          });
-          
-          if (itemIndex !== -1) {
-            originalItem = state.items[itemIndex];
-            optimisticItem = { ...originalItem, ...data };
-            
-            const newItems = [...state.items];
-            newItems[itemIndex] = optimisticItem;
-            
-            const filteredItems = applySorting(
-              filterAndSearch(newItems, state.searchQuery, state.filters),
-              state.sort
-            );
-            
-            return {
-              ...state,
-              items: newItems,
-              filteredItems,
-              optimisticUpdates: new Map(state.optimisticUpdates).set(id, optimisticItem)
-            };
-          }
-          return state;
-        });
-      }
-      
+
+      const opt = enableOptimistic
+        ? optimisticUpdate(store, id, data, idExtractor, filterAndSearch, applySorting)
+        : null;
+
       try {
         const updatedItem = await api.update(id, data);
-        
-        store.update(state => {
-          const items = state.items.map(item => {
-            const itemId = idExtractor(item.id);
-            return itemId === id ? updatedItem : item;
-          });
-          
-          const filteredItems = applySorting(
-            filterAndSearch(items, state.searchQuery, state.filters),
-            state.sort
-          );
-          
-          const newOptimisticUpdates = new Map(state.optimisticUpdates);
-          newOptimisticUpdates.delete(id);
-          
-          return {
-            ...state,
-            items,
-            filteredItems,
-            saving: false,
-            lastUpdated: new Date(),
-            optimisticUpdates: newOptimisticUpdates
-          };
-        });
-        
-        componentLogger?.info('Successfully updated entity', { id });
-        return updatedItem;
-      } catch (error) {
-        // Rollback optimistic update on error
-        if (enableOptimistic && originalItem) {
+
+        if (opt) {
+          opt.commit(updatedItem);
+        } else {
           store.update(state => {
-            const items = state.items.map(item => {
-              const itemId = idExtractor(item.id);
-              return itemId === id ? originalItem! : item;
-            });
-            
-            const filteredItems = applySorting(
-              filterAndSearch(items, state.searchQuery, state.filters),
-              state.sort
+            const items = state.items.map(item =>
+              idExtractor(item.id) === id ? updatedItem : item,
             );
-            
-            const newOptimisticUpdates = new Map(state.optimisticUpdates);
-            newOptimisticUpdates.delete(id);
-            
             return {
               ...state,
               items,
-              filteredItems,
-              optimisticUpdates: newOptimisticUpdates
+              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
             };
           });
         }
-        
+
+        store.update(state => ({ ...state, saving: false, lastUpdated: new Date() }));
+        componentLogger?.info('Successfully updated entity', { id });
+        return updatedItem;
+      } catch (error) {
+        opt?.rollback();
         const errorMessage = getErrorMessage(error, 'Failed to update item');
-        store.update(state => ({ 
-          ...state, 
-          saving: false, 
-          error: errorMessage 
-        }));
-        
-        if (enableLogging) {
-          await logApiError('update', error as Error, { component, id, data });
-        }
+        store.update(state => ({ ...state, saving: false, error: errorMessage }));
+        if (enableLogging) await logApiError('update', error as Error, { component, id, data });
         throw error;
       }
     },
@@ -352,104 +222,35 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     async delete(id) {
       store.update(state => ({ ...state, saving: true, error: null }));
       componentLogger?.info('Deleting entity', { id });
-      
-      // Store item for rollback
-      let deletedItem: T | null = null;
-      let itemIndex = -1;
-      
-      if (enableOptimistic) {
-        store.update(state => {
-          itemIndex = state.items.findIndex(item => {
-            const itemId = idExtractor(item.id);
-            return itemId === id;
-          });
-          
-          if (itemIndex !== -1) {
-            deletedItem = state.items[itemIndex];
-            const newItems = state.items.filter(item => {
-              const itemId = idExtractor(item.id);
-              return itemId !== id;
-            });
-            
-            const filteredItems = applySorting(
-              filterAndSearch(newItems, state.searchQuery, state.filters),
-              state.sort
-            );
-            
-            return {
-              ...state,
-              items: newItems,
-              filteredItems,
-              optimisticUpdates: new Map(state.optimisticUpdates).set(id, deletedItem!)
-            };
-          }
-          return state;
-        });
-      }
-      
+
+      const opt = enableOptimistic
+        ? optimisticDelete(store, id, idExtractor, filterAndSearch, applySorting)
+        : null;
+
       try {
         const result = await api.delete(id);
-        
-        store.update(state => {
-          const items = state.items.filter(item => {
-            const itemId = idExtractor(item.id);
-            return itemId !== id;
+
+        if (opt) {
+          opt.commit();
+        } else {
+          store.update(state => {
+            const items = state.items.filter(item => idExtractor(item.id) !== id);
+            return {
+              ...state,
+              items,
+              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
+            };
           });
-          
-          const filteredItems = applySorting(
-            filterAndSearch(items, state.searchQuery, state.filters),
-            state.sort
-          );
-          
-          const newOptimisticUpdates = new Map(state.optimisticUpdates);
-          newOptimisticUpdates.delete(id);
-          
-          return {
-            ...state,
-            items,
-            filteredItems,
-            saving: false,
-            lastUpdated: new Date(),
-            optimisticUpdates: newOptimisticUpdates
-          };
-        });
-        
+        }
+
+        store.update(state => ({ ...state, saving: false, lastUpdated: new Date() }));
         componentLogger?.info('Successfully deleted entity', { id });
         return result;
       } catch (error) {
-        // Rollback optimistic delete on error
-        if (enableOptimistic && deletedItem && itemIndex !== -1) {
-          store.update(state => {
-            const newItems = [...state.items];
-            newItems.splice(itemIndex, 0, deletedItem!);
-            
-            const filteredItems = applySorting(
-              filterAndSearch(newItems, state.searchQuery, state.filters),
-              state.sort
-            );
-            
-            const newOptimisticUpdates = new Map(state.optimisticUpdates);
-            newOptimisticUpdates.delete(id);
-            
-            return {
-              ...state,
-              items: newItems,
-              filteredItems,
-              optimisticUpdates: newOptimisticUpdates
-            };
-          });
-        }
-        
+        opt?.rollback();
         const errorMessage = getErrorMessage(error, 'Failed to delete item');
-        store.update(state => ({ 
-          ...state, 
-          saving: false, 
-          error: errorMessage 
-        }));
-        
-        if (enableLogging) {
-          await logApiError('delete', error as Error, { component, id });
-        }
+        store.update(state => ({ ...state, saving: false, error: errorMessage }));
+        if (enableLogging) await logApiError('delete', error as Error, { component, id });
         throw error;
       }
     },
@@ -475,176 +276,10 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
       }
     },
 
-    async search(query) {
-      componentLogger?.info('Searching entities', { query });
-      store.update(state => ({ ...state, searchQuery: query }));
-      
-      if (api.search && query.trim()) {
-        try {
-          store.update(state => ({ ...state, loading: true }));
-          const searchResults = await api.search(query);
-          store.update(state => {
-            const filteredItems = applySorting(
-              filterAndSearch(searchResults, query, state.filters),
-              state.sort
-            );
-            return {
-              ...state,
-              filteredItems,
-              loading: false
-            };
-          });
-        } catch (error) {
-          if (enableLogging) {
-            await logApiError('search', error as Error, { component, query });
-          }
-          // Fall back to client-side search
-          store.update(state => {
-            const filteredItems = applySorting(
-              filterAndSearch(state.items, query, state.filters),
-              state.sort
-            );
-            return {
-              ...state,
-              filteredItems,
-              loading: false
-            };
-          });
-        }
-      } else {
-        // Client-side search
-        store.update(state => {
-          const filteredItems = applySorting(
-            filterAndSearch(state.items, query, state.filters),
-            state.sort
-          );
-          return {
-            ...state,
-            filteredItems
-          };
-        });
-      }
-    },
-
-    async applyFilters(filters) {
-      componentLogger?.info('Applying filters', { filters });
-      
-      if (api.filter && Object.keys(filters).length > 0) {
-        try {
-          store.update(state => ({ ...state, loading: true, filters }));
-          const filterResults = await api.filter(filters);
-          store.update(state => {
-            const filteredItems = applySorting(
-              filterAndSearch(filterResults, state.searchQuery, filters),
-              state.sort
-            );
-            return {
-              ...state,
-              filteredItems,
-              loading: false
-            };
-          });
-        } catch (error) {
-          if (enableLogging) {
-            await logApiError('filter', error as Error, { component, filters });
-          }
-          // Fall back to client-side filtering
-          store.update(state => {
-            const filteredItems = applySorting(
-              filterAndSearch(state.items, state.searchQuery, filters),
-              state.sort
-            );
-            return {
-              ...state,
-              filters,
-              filteredItems,
-              loading: false
-            };
-          });
-        }
-      } else {
-        // Client-side filtering
-        store.update(state => {
-          const filteredItems = applySorting(
-            filterAndSearch(state.items, state.searchQuery, filters),
-            state.sort
-          );
-          return {
-            ...state,
-            filters,
-            filteredItems
-          };
-        });
-      }
-    },
-
-    sort(field, direction = 'asc') {
-      componentLogger?.info('Sorting entities', { field, direction });
-      store.update(state => {
-        const sort = { field, direction };
-        const filteredItems = applySorting(
-          filterAndSearch(state.items, state.searchQuery, state.filters),
-          sort
-        );
-        return {
-          ...state,
-          sort,
-          filteredItems
-        };
-      });
-    },
-
-    resetFilters() {
-      componentLogger?.info('Resetting filters and search');
-      store.update(state => ({
-        ...state,
-        searchQuery: '',
-        filters: {},
-        sort: null,
-        filteredItems: [...state.items]
-      }));
-    },
-
-    rollback() {
-      componentLogger?.info('Rolling back optimistic updates');
-      store.update(state => {
-        // Revert all optimistic updates
-        const items = [...state.items];
-        state.optimisticUpdates.forEach((originalItem, id) => {
-          const index = items.findIndex(item => idExtractor(item.id) === id);
-          if (index !== -1) {
-            if (id.startsWith('temp_')) {
-              // Remove temporary items
-              items.splice(index, 1);
-            } else {
-              // Restore original items
-              items[index] = originalItem;
-            }
-          }
-        });
-        
-        const filteredItems = applySorting(
-          filterAndSearch(items, state.searchQuery, state.filters),
-          state.sort
-        );
-        
-        return {
-          ...state,
-          items,
-          filteredItems,
-          optimisticUpdates: new Map()
-        };
-      });
-    },
-
-    getById(id) {
-      const currentState = get(store);
-
-      return currentState.items.find(item => {
-        const itemId = idExtractor(item.id);
-        return itemId === id;
-      }) || null;
-    }
+    ...createQueryActions({
+      store, api, filterAndSearch, idExtractor,
+      componentLogger, enableLogging, component,
+    })
   };
 
   // Cleanup function

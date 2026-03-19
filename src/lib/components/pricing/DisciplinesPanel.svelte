@@ -101,7 +101,7 @@
             Distribute Evenly
           </button>
         {/if}
-        <IconButton icon="plus" label="Add" variant="primary" size="md" on:click={addDiscipline} />
+        <IconButton icon="plus" label="Add" variant="primary" size="md" onclick={addDiscipline} />
       </div>
     {/if}
   {/snippet}
@@ -183,7 +183,7 @@
                 variant="danger"
                 size="sm"
                 title="Remove discipline"
-                on:click={() => removeDiscipline(discipline.id)}
+                onclick={() => removeDiscipline(discipline.id)}
               />
             </div>
           </div>

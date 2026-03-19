@@ -42,7 +42,7 @@
 <PanelCard title="Fee Summary">
   {#snippet headerActions()}
     {#if onClose}
-      <IconButton icon="x" variant="secondary" size="sm" on:click={onClose} />
+      <IconButton icon="x" variant="secondary" size="sm" onclick={onClose} />
     {/if}
   {/snippet}
 

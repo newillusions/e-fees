@@ -234,7 +234,7 @@
         <button type="button" class="emittiv-text-btn" onclick={generateFromPricing}>
           Generate from Pricing
         </button>
-        <IconButton icon="plus" label="Add" variant="primary" size="md" on:click={addPayment} />
+        <IconButton icon="plus" label="Add" variant="primary" size="md" onclick={addPayment} />
       </div>
     {/if}
   {/snippet}
@@ -329,10 +329,10 @@
                   variant="secondary"
                   size="sm"
                   title="Split into 50%/100%"
-                  on:click={() => splitPayment(entry.id)}
+                  onclick={() => splitPayment(entry.id)}
                 />
               {/if}
-              <IconButton icon="trash" variant="danger" size="sm" title="Remove" on:click={() => removePayment(entry.id)} />
+              <IconButton icon="trash" variant="danger" size="sm" title="Remove" onclick={() => removePayment(entry.id)} />
             </div>
           </div>
         {/if}
