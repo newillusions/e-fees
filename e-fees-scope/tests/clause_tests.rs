@@ -86,7 +86,66 @@ async fn test_health() {
     assert_eq!(resp.status(), 200);
 
     let body: Value = resp.json().await.expect("Failed to parse health response");
-    assert_eq!(body["service"], "e-fees-scope");
+    assert!(body["status"].is_string(), "missing 'status' field");
+    assert!(body["version"].is_string(), "missing 'version' field");
+    assert!(body["uptime"].is_number(), "missing 'uptime' field");
+    assert!(body["checked_at"].is_string(), "missing 'checked_at' field");
+    assert!(body["dependencies"].is_object(), "missing 'dependencies' field");
+}
+
+#[tokio::test]
+async fn test_health_has_dependencies() {
+    let body: Value = client()
+        .get(format!("{}/health", base_url()))
+        .send().await.unwrap().json().await.unwrap();
+    assert!(body["dependencies"]["surrealdb"].is_object(), "missing 'surrealdb' dependency");
+    assert!(body["dependencies"]["surrealdb"]["status"].is_string(), "missing surrealdb status");
+    assert!(body["dependencies"]["ollama"].is_object(), "missing 'ollama' dependency");
+    assert!(body["dependencies"]["ollama"]["status"].is_string(), "missing ollama status");
+}
+
+#[tokio::test]
+async fn test_api_health_alias() {
+    let resp = client()
+        .get(format!("{}/api/health", base_url()))
+        .send().await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(body["status"].is_string());
+    assert!(body["uptime"].is_number());
+}
+
+#[tokio::test]
+async fn test_openapi_json_endpoint() {
+    let resp = client()
+        .get(format!("{}/openapi.json", base_url()))
+        .send().await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(body["openapi"].is_string(), "must have 'openapi' field");
+    assert!(body["paths"].is_object(), "must have 'paths' field");
+}
+
+#[tokio::test]
+async fn test_help_endpoint() {
+    let resp = client()
+        .get(format!("{}/help", base_url()))
+        .send().await.unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: Value = resp.json().await.unwrap();
+    assert!(body["service"].is_string(), "must have 'service'");
+    assert!(body["version"].is_string(), "must have 'version'");
+    assert!(body["description"].is_string(), "must have 'description'");
+    assert!(body["endpoints"].is_array(), "must have 'endpoints' array");
+    assert!(!body["endpoints"].as_array().unwrap().is_empty(), "endpoints must not be empty");
+}
+
+#[tokio::test]
+async fn test_help_no_auth_required() {
+    let resp = client()
+        .get(format!("{}/help", base_url()))
+        .send().await.unwrap();
+    assert_ne!(resp.status(), 401, "/help should not require auth");
 }
 
 #[tokio::test]

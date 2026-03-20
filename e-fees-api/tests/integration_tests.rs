@@ -8,6 +8,7 @@
 //! Run with: `cargo test -p e-fees-api --test integration_tests`
 
 use reqwest::Client;
+use chrono;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -69,24 +70,69 @@ async fn test_health_no_auth() {
 #[tokio::test]
 async fn test_health_response_format() {
     verify_not_production();
-
     let client = Client::new();
     let resp = client
         .get(format!("{}/health", base_url()))
         .send()
         .await
         .expect("Failed to send request");
-
     assert_eq!(resp.status(), 200);
-
     let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
-
     assert!(body["status"].is_string(), "missing 'status' field");
-    assert!(body["service"].is_string(), "missing 'service' field");
     assert!(body["version"].is_string(), "missing 'version' field");
-    assert!(body["database"].is_string(), "missing 'database' field");
+    assert!(body["uptime"].is_number(), "missing 'uptime' field");
+    assert!(body["checked_at"].is_string(), "missing 'checked_at' field");
+    assert!(body["dependencies"].is_object(), "missing 'dependencies' field");
+}
 
-    assert_eq!(body["service"], "e-fees-api");
+#[tokio::test]
+async fn test_health_has_uptime() {
+    verify_not_production();
+    let client = Client::new();
+    let body: serde_json::Value = client
+        .get(format!("{}/health", base_url()))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(body["uptime"].is_number(), "missing 'uptime' field (should be seconds as number)");
+    assert!(body["uptime"].as_f64().unwrap() >= 0.0, "uptime must be non-negative");
+}
+
+#[tokio::test]
+async fn test_health_has_checked_at() {
+    verify_not_production();
+    let client = Client::new();
+    let body: serde_json::Value = client
+        .get(format!("{}/health", base_url()))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(body["checked_at"].is_string(), "missing 'checked_at' field");
+    let ts = body["checked_at"].as_str().unwrap();
+    assert!(chrono::DateTime::parse_from_rfc3339(ts).is_ok(), "checked_at must be RFC3339: got {}", ts);
+}
+
+#[tokio::test]
+async fn test_health_has_dependencies() {
+    verify_not_production();
+    let client = Client::new();
+    let body: serde_json::Value = client
+        .get(format!("{}/health", base_url()))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(body["dependencies"].is_object(), "missing 'dependencies' object");
+    assert!(body["dependencies"]["surrealdb"].is_object(), "missing 'surrealdb' dependency");
+    assert!(body["dependencies"]["surrealdb"]["status"].is_string(), "missing dependency status");
 }
 
 // ---------------------------------------------------------------------------
@@ -1889,4 +1935,73 @@ async fn test_create_folder_returns_expected_fields() {
     } else {
         panic!("Unexpected status {}: {:?}", status, body);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Task 2: /api/health alias and /openapi.json endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_api_health_alias() {
+    verify_not_production();
+    let client = Client::new();
+    let resp = client
+        .get(format!("{}/api/health", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["status"].is_string(), "/api/health must return same schema as /health");
+    assert!(body["uptime"].is_number(), "/api/health must include uptime");
+}
+
+#[tokio::test]
+async fn test_openapi_json_endpoint() {
+    verify_not_production();
+    let client = Client::new();
+    let resp = client
+        .get(format!("{}/openapi.json", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["openapi"].is_string(), "must have 'openapi' field");
+    assert!(body["paths"].is_object(), "must have 'paths' field");
+}
+
+// ---------------------------------------------------------------------------
+// Task 3: /help endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_help_endpoint() {
+    verify_not_production();
+    let client = Client::new();
+    let resp = client
+        .get(format!("{}/help", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(body["service"].is_string(), "must have 'service'");
+    assert!(body["version"].is_string(), "must have 'version'");
+    assert!(body["description"].is_string(), "must have 'description'");
+    assert!(body["endpoints"].is_array(), "must have 'endpoints' array");
+    assert!(!body["endpoints"].as_array().unwrap().is_empty(), "endpoints must not be empty");
+}
+
+#[tokio::test]
+async fn test_help_no_auth_required() {
+    verify_not_production();
+    let client = Client::new();
+    let resp = client
+        .get(format!("{}/help", base_url()))
+        .send()
+        .await
+        .unwrap();
+    assert_ne!(resp.status(), 401, "/help should not require auth");
+}
 }

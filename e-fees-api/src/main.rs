@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod health;
 mod pagination;
 mod routes;
 mod schemas;
@@ -8,9 +9,10 @@ mod validation;
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
-use axum::{extract::State, middleware, response::Json, routing::get, Router};
-use serde_json::{json, Value};
+use axum::{middleware, response::Json, routing::get, Router};
+use serde_json::Value;
 use surrealdb::engine::remote::ws::Ws;
 use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
@@ -26,6 +28,7 @@ pub struct AppState {
     pub db: Surreal<surrealdb::engine::remote::ws::Client>,
     pub api_keys: HashSet<String>,
     pub folder_config: Option<config::FolderConfig>,
+    pub started_at: Instant,
 }
 
 /// OpenAPI documentation for the e-fees API.
@@ -34,11 +37,12 @@ pub struct AppState {
     info(
         title = "E-Fees API",
         description = "REST API for managing fee proposals, projects, companies, and contacts.",
-        version = "0.1.0",
+        version = "0.2.0",
         contact(name = "Emittiv", url = "https://emittiv.com"),
     ),
     paths(
-        health,
+        health::health,
+        health::help,
         routes::stats::get_stats,
         routes::projects::list_projects,
         routes::projects::get_next_number,
@@ -153,6 +157,7 @@ async fn main() {
         db,
         api_keys: config.api_keys.into_iter().collect(),
         folder_config: config.folder_config,
+        started_at: Instant::now(),
     });
 
     // Configure CORS
@@ -217,9 +222,12 @@ async fn main() {
             auth::require_api_key,
         ));
 
-    // Build router — health + docs are public, all other routes require auth
+    // Build router — health + docs + help are public, all other routes require auth
     let app = Router::new()
-        .route("/health", get(health))
+        .route("/health", get(health::health))
+        .route("/api/health", get(health::health))
+        .route("/openapi.json", get(openapi_json))
+        .route("/help", get(health::help))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .merge(protected)
         .layer(cors)
@@ -238,22 +246,18 @@ async fn main() {
         .expect("Server error");
 }
 
-/// Health check endpoint (no auth required).
-#[utoipa::path(
-    get,
-    path = "/health",
-    tag = "Health",
-    responses(
-        (status = 200, description = "Service health status", body = schemas::HealthResponse),
-    )
-)]
-async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
-    let db_ok = state.db.health().await.is_ok();
-
-    Json(json!({
-        "status": if db_ok { "ok" } else { "degraded" },
-        "service": "e-fees-api",
-        "version": env!("CARGO_PKG_VERSION"),
-        "database": if db_ok { "connected" } else { "disconnected" },
-    }))
+/// Serve the OpenAPI spec as JSON (no auth required).
+async fn openapi_json() -> (axum::http::StatusCode, Json<Value>) {
+    let spec = ApiDoc::openapi();
+    match serde_json::to_value(spec) {
+        Ok(val) => (axum::http::StatusCode::OK, Json(val)),
+        Err(e) => {
+            tracing::error!("Failed to serialize OpenAPI spec: {e}");
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Failed to generate OpenAPI specification"})),
+            )
+        }
+    }
 }
+

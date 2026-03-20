@@ -7,13 +7,40 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
+/// Help/self-documentation response.
+#[derive(Serialize, ToSchema)]
+pub struct HelpResponse {
+    pub service: String,
+    pub version: String,
+    pub description: String,
+    pub config_file: String,
+    pub endpoints: Vec<HelpEndpoint>,
+}
+
+/// Single endpoint in help response.
+#[derive(Serialize, ToSchema)]
+pub struct HelpEndpoint {
+    pub method: String,
+    pub path: String,
+    pub description: String,
+    pub auth: bool,
+}
+
+/// Dependency health status.
+#[derive(Serialize, ToSchema)]
+pub struct DependencyStatus {
+    pub status: String,
+    pub latency_ms: f64,
+}
+
+/// Health check response (Container Standards compliant).
 #[derive(Serialize, ToSchema)]
 pub struct HealthResponse {
     pub status: String,
-    pub service: String,
     pub version: String,
-    pub database: String,
-    pub ollama: String,
+    pub uptime: f64,
+    pub checked_at: String,
+    pub dependencies: std::collections::HashMap<String, DependencyStatus>,
 }
 
 #[derive(Serialize, ToSchema)]

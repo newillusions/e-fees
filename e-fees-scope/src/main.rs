@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod health;
 mod llm;
 mod models;
 mod routes;
@@ -8,8 +9,9 @@ mod schemas;
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
-use axum::{extract::State, middleware, response::Json, routing::{get, post}, Router};
+use axum::{middleware, response::Json, routing::get, routing::post, Router};
 use serde_json::{json, Value};
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
@@ -29,6 +31,7 @@ pub struct AppState {
     pub docling_url: String,
     pub stirling_url: String,
     pub http: reqwest::Client,
+    pub started_at: Instant,
 }
 
 #[derive(OpenApi)]
@@ -36,11 +39,12 @@ pub struct AppState {
     info(
         title = "E-Fees Scope Service",
         description = "Scope/deliverables management, clause library, and proposal corpus",
-        version = "0.1.0",
+        version = "0.2.0",
         contact(name = "Emittiv", url = "https://emittiv.com"),
     ),
     paths(
-        health,
+        health::health,
+        health::help,
         routes::clauses::list_clauses,
         routes::clauses::get_clause,
         routes::clauses::create_clause,
@@ -145,6 +149,7 @@ async fn main() {
         docling_url: config.docling_url,
         stirling_url: config.stirling_url,
         http: reqwest::Client::new(),
+        started_at: Instant::now(),
     });
 
     let cors = CorsLayer::new()
@@ -225,7 +230,10 @@ async fn main() {
         ));
 
     let app = Router::new()
-        .route("/health", get(health))
+        .route("/health", get(health::health))
+        .route("/api/health", get(health::health))
+        .route("/help", get(health::help))
+        .route("/openapi.json", get(openapi_json))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .merge(protected)
         .layer(cors)
@@ -239,39 +247,16 @@ async fn main() {
     axum::serve(listener, app).await.expect("Server error");
 }
 
-#[utoipa::path(
-    get,
-    path = "/health",
-    tag = "Health",
-    responses(
-        (status = 200, description = "Service health", body = schemas::HealthResponse),
-    )
-)]
-async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
-    let db_ok = state.db.health().await.is_ok();
-
-    let ollama_ok = state
-        .http
-        .get(format!("{}/api/tags", state.ollama_url))
-        .timeout(std::time::Duration::from_secs(3))
-        .send()
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-
-    let status = if db_ok && ollama_ok {
-        "ok"
-    } else if db_ok {
-        "degraded"
-    } else {
-        "unhealthy"
-    };
-
-    Json(json!({
-        "status": status,
-        "service": "e-fees-scope",
-        "version": env!("CARGO_PKG_VERSION"),
-        "database": if db_ok { "connected" } else { "disconnected" },
-        "ollama": if ollama_ok { "connected" } else { "disconnected" },
-    }))
+async fn openapi_json() -> (axum::http::StatusCode, Json<Value>) {
+    let spec = ApiDoc::openapi();
+    match serde_json::to_value(spec) {
+        Ok(val) => (axum::http::StatusCode::OK, Json(val)),
+        Err(e) => {
+            tracing::error!("Failed to serialize OpenAPI spec: {e}");
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Failed to generate OpenAPI specification"})),
+            )
+        }
+    }
 }
