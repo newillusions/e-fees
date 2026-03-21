@@ -4,6 +4,7 @@
 
 pub mod companies;
 pub mod contacts;
+pub mod fee_export;
 pub mod fees;
 pub mod folders;
 pub mod projects;

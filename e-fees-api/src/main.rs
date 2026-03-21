@@ -56,6 +56,8 @@ pub struct AppState {
         routes::fees::create_fee,
         routes::fees::update_fee,
         routes::fees::delete_fee,
+        routes::fee_export::export_fee_json,
+        routes::fee_export::fee_json_status,
         routes::companies::list_companies,
         routes::companies::get_company,
         routes::companies::create_company,
@@ -197,6 +199,14 @@ async fn main() {
             get(routes::fees::get_fee)
                 .put(routes::fees::update_fee)
                 .delete(routes::fees::delete_fee),
+        )
+        .route(
+            "/fees/{id}/json-export",
+            axum::routing::post(routes::fee_export::export_fee_json),
+        )
+        .route(
+            "/fees/{id}/json-status",
+            get(routes::fee_export::fee_json_status),
         )
         .route(
             "/companies",
