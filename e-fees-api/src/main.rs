@@ -69,6 +69,7 @@ pub struct AppState {
         routes::contacts::update_contact,
         routes::contacts::delete_contact,
         routes::folders::create_folder,
+        routes::documents::upload_document,
     ),
     tags(
         (name = "Health", description = "Service health checks"),
@@ -189,6 +190,10 @@ async fn main() {
         .route(
             "/projects/{id}/folder",
             axum::routing::post(routes::folders::create_folder),
+        )
+        .route(
+            "/projects/{id}/documents",
+            axum::routing::post(routes::documents::upload_document),
         )
         .route(
             "/fees",

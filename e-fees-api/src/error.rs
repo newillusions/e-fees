@@ -4,6 +4,7 @@ use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 
 /// Structured API error with HTTP status, machine-readable code, and human message.
+#[derive(Debug)]
 pub struct ApiError {
     pub status: StatusCode,
     pub code: String,

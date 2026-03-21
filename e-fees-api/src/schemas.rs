@@ -149,6 +149,16 @@ pub struct NextNumberResponse {
     pub seq: u8,
 }
 
+/// Document upload success response.
+#[derive(Serialize, ToSchema)]
+pub struct UploadDocumentResponse {
+    pub status: String,
+    pub project_id: String,
+    pub filename: String,
+    pub path: String,
+    pub size_bytes: u64,
+}
+
 /// Folder creation success response.
 #[derive(Serialize, ToSchema)]
 pub struct FolderCreatedResponse {
