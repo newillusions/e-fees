@@ -2004,4 +2004,3 @@ async fn test_help_no_auth_required() {
         .unwrap();
     assert_ne!(resp.status(), 401, "/help should not require auth");
 }
-}
