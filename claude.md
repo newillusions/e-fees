@@ -31,7 +31,7 @@ Premium desktop application built with Tauri v2 and Svelte 5 for managing fee pr
 - **Transitions**: 300ms cubic-bezier(0.4, 0, 0.2, 1)
 
 ## Database Configuration
-- **URL**: ws://10.0.21.8:8000
+- **URL**: ws://10.0.23.11:8000
 - **Namespace**: emittiv
 - **Database**: projects
 - **Auth**: martin/[env variable]

@@ -1,6 +1,6 @@
 [package]
 name = "e-fees-api"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "HTTP API for e-fees data"
 
