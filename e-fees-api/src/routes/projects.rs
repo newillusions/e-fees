@@ -26,6 +26,8 @@ pub struct ProjectListParams {
     pub page_size: Option<u64>,
     /// Filter by exact project status (e.g. "Lead", "RFP", "Awarded").
     pub status: Option<String>,
+    /// Case-insensitive substring search across name, name_short, and number.id.
+    pub search: Option<String>,
 }
 
 /// List projects with pagination and optional status filter.
@@ -48,14 +50,32 @@ pub async fn list_projects(
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(50);
 
-    let filter = if let Some(ref status) = params.status {
+    let mut clauses = Vec::new();
+    let mut binds: Vec<(String, serde_json::Value)> = Vec::new();
+
+    if let Some(ref status) = params.status {
         validate_status(status, PROJECT_STATUSES, "project")?;
-        Some(FilterClause {
-            clause: "status = $filter_status".into(),
-            binds: vec![("filter_status".into(), json!(status))],
-        })
-    } else {
+        clauses.push("status = $filter_status".to_string());
+        binds.push(("filter_status".into(), json!(status)));
+    }
+
+    if let Some(ref search) = params.search {
+        clauses.push(
+            "(string::lowercase(name) CONTAINS string::lowercase($search) \
+             OR string::lowercase(name_short) CONTAINS string::lowercase($search) \
+             OR number.id CONTAINS $search)"
+                .to_string(),
+        );
+        binds.push(("search".into(), json!(search)));
+    }
+
+    let filter = if clauses.is_empty() {
         None
+    } else {
+        Some(FilterClause {
+            clause: clauses.join(" AND "),
+            binds,
+        })
     };
 
     let (projects, total): (Vec<Project>, u64) =
