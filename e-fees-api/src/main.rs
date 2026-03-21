@@ -5,6 +5,7 @@ mod health;
 mod pagination;
 mod routes;
 mod schemas;
+mod ssh;
 mod validation;
 
 use std::collections::HashSet;
@@ -55,6 +56,8 @@ pub struct AppState {
         routes::fees::create_fee,
         routes::fees::update_fee,
         routes::fees::delete_fee,
+        routes::fee_export::export_fee_json,
+        routes::fee_export::fee_json_status,
         routes::companies::list_companies,
         routes::companies::get_company,
         routes::companies::create_company,
@@ -66,6 +69,7 @@ pub struct AppState {
         routes::contacts::update_contact,
         routes::contacts::delete_contact,
         routes::folders::create_folder,
+        routes::documents::upload_document,
     ),
     tags(
         (name = "Health", description = "Service health checks"),
@@ -188,6 +192,10 @@ async fn main() {
             axum::routing::post(routes::folders::create_folder),
         )
         .route(
+            "/projects/{id}/documents",
+            axum::routing::post(routes::documents::upload_document),
+        )
+        .route(
             "/fees",
             get(routes::fees::list_fees).post(routes::fees::create_fee),
         )
@@ -196,6 +204,14 @@ async fn main() {
             get(routes::fees::get_fee)
                 .put(routes::fees::update_fee)
                 .delete(routes::fees::delete_fee),
+        )
+        .route(
+            "/fees/{id}/json-export",
+            axum::routing::post(routes::fee_export::export_fee_json),
+        )
+        .route(
+            "/fees/{id}/json-status",
+            get(routes::fee_export::fee_json_status),
         )
         .route(
             "/companies",

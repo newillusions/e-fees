@@ -837,13 +837,13 @@ async fn test_fee_crud_lifecycle() {
     assert_eq!(resp.status(), 200);
 
     // 4. Create Fee
-    // Note: issue_date must be YYYYMM format (6-digit numeric string per DB ASSERT)
+    // Note: issue_date must be YYMMDD format (6-digit numeric string per DB ASSERT)
     let fee_body = serde_json::json!({
         "name": "DELETE ME - Test Fee API",
         "number": "FP-001",
         "rev": 1,
         "status": "Draft",
-        "issue_date": "202603",
+        "issue_date": "260315",
         "activity": "Lighting Design",
         "package": "Full Scope",
         "project_id": project_number_id,
@@ -1145,7 +1145,7 @@ async fn test_create_fee_empty_name() {
         "number": "FP-001",
         "rev": 1,
         "status": "Draft",
-        "issue_date": "202603",
+        "issue_date": "260315",
         "activity": "",
         "package": "",
         "project_id": "26-97100",
@@ -1183,7 +1183,7 @@ async fn test_create_fee_invalid_status() {
         "number": "FP-001",
         "rev": 1,
         "status": "InvalidFeeStatus",
-        "issue_date": "202603",
+        "issue_date": "260315",
         "activity": "",
         "package": "",
         "project_id": "26-97100",
@@ -2004,4 +2004,252 @@ async fn test_help_no_auth_required() {
         .unwrap();
     assert_ne!(resp.status(), 401, "/help should not require auth");
 }
+
+// ---------------------------------------------------------------------------
+// Task 9: Project search parameter
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_project_search() {
+    verify_not_production();
+    let client = authed_client();
+
+    // Create test project
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let seq = (ts % 900 + 100) as i64;
+    let project_number_id = format!("26-971{}", seq);
+    let project_key = project_number_id.replace('-', "_");
+
+    let body = serde_json::json!({
+        "name": "DELETE ME - Search Test Project",
+        "name_short": "DELETE ME Search",
+        "status": "Lead",
+        "country": "UAE",
+        "city": "Dubai",
+        "area": "Downtown",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": seq, "id": project_number_id }
+    });
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&body)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "project creation failed");
+
+    // Search by name — should find it
+    let resp = client
+        .get(format!("{}/projects?search=Search Test", base_url()))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let results: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        results["total"].as_u64().unwrap() >= 1,
+        "search by name should find project"
+    );
+
+    // Search by name_short
+    let resp = client
+        .get(format!("{}/projects?search=DELETE ME Search", base_url()))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let results: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        results["total"].as_u64().unwrap() >= 1,
+        "search by name_short should find project"
+    );
+
+    // Search with no results
+    let resp = client
+        .get(format!("{}/projects?search=ZZZNONEXISTENT999", base_url()))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let results: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(
+        results["total"].as_u64().unwrap(),
+        0,
+        "nonexistent search should return 0"
+    );
+
+    // Combined search + status filter
+    let resp = client
+        .get(format!(
+            "{}/projects?search=Search Test&status=Lead",
+            base_url()
+        ))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let results: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        results["total"].as_u64().unwrap() >= 1,
+        "combined search+status should find project"
+    );
+
+    // Cleanup
+    let resp = client
+        .delete(format!("{}/projects/{}", base_url(), project_key))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+}
+
+// ---------------------------------------------------------------------------
+// Task 9: Fee JSON status endpoint
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fee_json_status() {
+    verify_not_production();
+    let client = authed_client();
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let seq = (ts % 900 + 100) as i64;
+
+    // Create company
+    let company_body = serde_json::json!({
+        "name": "DELETE ME - JSON Status Test Co",
+        "name_short": "DELETE ME JST",
+        "abbreviation": "DMJST",
+        "city": "Dubai",
+        "country": "UAE"
+    });
+    let resp = client
+        .post(format!("{}/companies", base_url()))
+        .json(&company_body)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let company: serde_json::Value = resp.json().await.unwrap();
+    let company_full_id = company["data"]["id"].as_str().unwrap().to_string();
+    let company_key = company_full_id.strip_prefix("company:").unwrap().to_string();
+
+    // Create contact
+    let contact_body = serde_json::json!({
+        "first_name": "DELETE ME",
+        "last_name": "Tester",
+        "email": "delete-me-jst@example.com",
+        "phone": "+971501234567",
+        "position": "Test Manager",
+        "company": company_key
+    });
+    let resp = client
+        .post(format!("{}/contacts", base_url()))
+        .json(&contact_body)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let contact: serde_json::Value = resp.json().await.unwrap();
+    let contact_full_id = contact["data"]["id"].as_str().unwrap().to_string();
+    let contact_key = contact_full_id.strip_prefix("contacts:").unwrap().to_string();
+
+    // Create project
+    let project_number_id = format!("26-971{}", seq);
+    let project_key = project_number_id.replace('-', "_");
+    let project_body = serde_json::json!({
+        "name": "DELETE ME - JSON Status Project",
+        "name_short": "DELETE ME JSP",
+        "status": "Lead",
+        "country": "UAE",
+        "city": "Dubai",
+        "area": "Downtown",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": seq, "id": project_number_id }
+    });
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&project_body)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // Create fee
+    let fee_body = serde_json::json!({
+        "name": "DELETE ME - Fee Proposal JST",
+        "number": "DELETE-ME-FP",
+        "rev": 1,
+        "status": "Draft",
+        "issue_date": "260315",
+        "activity": "Design and Consultancy",
+        "package": "Specialist Lighting",
+        "project_id": project_number_id,
+        "company_id": company_key,
+        "contact_id": contact_key,
+        "staff_name": "Test Staff",
+        "staff_email": "test@example.com",
+        "staff_phone": "+971501234567",
+        "staff_position": "Test Position",
+        "strap_line": "sensory design studio",
+        "revisions": []
+    });
+    let resp = client
+        .post(format!("{}/fees", base_url()))
+        .json(&fee_body)
+        .send()
+        .await
+        .unwrap();
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(status, 200, "fee creation failed: {}", body);
+    let fee_full_id = body["data"]["id"].as_str().unwrap().to_string();
+    let fee_key = fee_full_id.strip_prefix("fee:").unwrap().to_string();
+
+    // GET json-status (may 404 if endpoint not yet deployed — that is expected
+    // until the new container image is deployed in Task 10)
+    let resp = client
+        .get(format!("{}/fees/{}/json-status", base_url(), fee_key))
+        .send()
+        .await
+        .unwrap();
+    let status_code = resp.status().as_u16();
+    if status_code == 404 {
+        // Endpoint not yet deployed — skip assertions, just clean up
+        eprintln!("SKIP: /fees/{{id}}/json-status returned 404 — endpoint not yet deployed");
+    } else {
+        assert_eq!(status_code, 200, "json-status endpoint failed");
+        let status_body: serde_json::Value = resp.json().await.unwrap();
+        assert_eq!(status_body["total_fields"].as_u64().unwrap(), 23);
+        assert!(status_body["populated"].as_u64().unwrap() > 0);
+        assert!(status_body["fields"].is_object());
+    }
+
+    // Cleanup in reverse: fee → project → contact → company
+    client
+        .delete(format!("{}/fees/{}", base_url(), fee_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/projects/{}", base_url(), project_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/contacts/{}", base_url(), contact_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/companies/{}", base_url(), company_key))
+        .send()
+        .await
+        .ok();
 }

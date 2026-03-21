@@ -5,13 +5,13 @@
 
 use std::fs;
 use std::path::Path;
-use chrono::Utc;
 use log::{info, error};
-use serde_json::json;
 use surrealdb::types::RecordId;
 
 use crate::db::{Fee, Project, Company, Contact};
 use crate::db::types::record_key_string;
+pub use e_fees_core::export::build_fee_json;
+use e_fees_core::export::clean_record_key;
 
 /// Find a fee record by ID from a list of fees.
 ///
@@ -60,64 +60,6 @@ pub fn find_contact_for_fee<'a>(contacts: &'a [Contact], fee: &Fee) -> Option<&'
     find_by_record_id(contacts, &fee.contact_id, |c| c.id.as_ref())
 }
 
-/// Format a fee issue date from YYMMDD format to "dd MMM yyyy".
-pub fn format_issue_date(date_str: &str) -> String {
-    if date_str.len() == 6 {
-        if let (Ok(year), Ok(month), Ok(day)) = (
-            date_str[0..2].parse::<i32>(),
-            date_str[2..4].parse::<u32>(),
-            date_str[4..6].parse::<u32>()
-        ) {
-            let full_year = if year >= 50 { 1900 + year } else { 2000 + year };
-            if let Some(date) = chrono::NaiveDate::from_ymd_opt(full_year, month, day) {
-                return date.format("%d %b %Y").to_string();
-            }
-        }
-    }
-    Utc::now().format("%d %b %Y").to_string()
-}
-
-/// Build the JSON data structure for a fee proposal export.
-pub fn build_fee_json(
-    fee: &Fee,
-    project: &Project,
-    company: &Company,
-    contact: &Contact,
-) -> serde_json::Value {
-    let issue_date = format_issue_date(&fee.issue_date);
-    let contact_name = contact.full_name.clone().unwrap_or_else(|| {
-        let first = contact.first_name.clone().unwrap_or_default();
-        let last = contact.last_name.clone().unwrap_or_default();
-        format!("{} {}", first, last)
-    });
-
-    json!({
-        "01 Document Name": fee.name.clone(),
-        "02 Document Number": fee.number.clone(),
-        "03 Document Release": format!("{:02}", fee.rev),
-        "04 Document Issue Date": issue_date,
-        "06 Project Name": project.name.clone(),
-        "07 Project Activity": fee.activity.clone(),
-        "08 Project Package": fee.package.clone(),
-        "09 Project Stage": project.status.clone(),
-        "11 Project Area": project.area.clone(),
-        "12 Project City": project.city.clone(),
-        "13 Project Country": project.country.clone(),
-        "21 Client Company": company.name.clone(),
-        "22 Client City": company.city.clone(),
-        "23 Client Country": company.country.clone(),
-        "26 Contact Name": contact_name,
-        "27 Contact Position": contact.position.clone().unwrap_or_default(),
-        "28 Contact Phone": contact.phone.clone().unwrap_or_default(),
-        "29 Contact Email": contact.email.clone().unwrap_or_default(),
-        "91 Staff Name": fee.staff_name.clone(),
-        "92 Staff Position": fee.staff_position.clone(),
-        "93 Staff Phone": fee.staff_phone.clone(),
-        "94 Staff Email": fee.staff_email.clone(),
-        "99 Strap Line": fee.strap_line.clone()
-    })
-}
-
 /// Build the file paths for fee JSON export.
 pub struct FeeJsonPaths {
     pub project_dir: String,
@@ -130,10 +72,8 @@ pub fn build_fee_json_paths(
     project_folder_path: &str,
     project: &Project,
 ) -> FeeJsonPaths {
-    let project_number = project.number.id
-        .replace("⟨", "")
-        .replace("⟩", "");
-    let project_name = &project.name_short;
+    let project_number = clean_record_key(&project.number.id);
+    let project_name = &project.name;
 
     let project_dir = format!(
         "{}/01 RFPs/{} {}",
@@ -211,26 +151,4 @@ pub fn write_json_to_file(
 
     info!("Successfully wrote fee data to: {}", json_file_path);
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_format_issue_date_valid() {
-        assert_eq!(format_issue_date("250115"), "15 Jan 2025");
-        assert_eq!(format_issue_date("991231"), "31 Dec 1999");
-        assert_eq!(format_issue_date("000101"), "01 Jan 2000");
-    }
-
-    #[test]
-    fn test_format_issue_date_invalid() {
-        // Invalid dates should return current date (we just check it doesn't panic)
-        let result = format_issue_date("invalid");
-        assert!(!result.is_empty());
-
-        let result = format_issue_date("12345");
-        assert!(!result.is_empty());
-    }
 }

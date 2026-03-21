@@ -7,6 +7,7 @@ description = "HTTP API for e-fees data"
 [dependencies]
 e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
 axum = "0.8"
+axum-extra = { version = "0.10", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
 surrealdb = { version = "3.0.4", features = ["protocol-ws", "rustls"] }
 serde = { version = "1.0", features = ["derive"] }

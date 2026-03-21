@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use axum::{extract::Path, extract::State, Json};
 use serde_json::{json, Value};
-use tokio::process::Command;
-use tracing::{info, warn};
+use tracing::info;
 
 use e_fees_core::models::Project;
 
 use crate::error::ApiError;
+use crate::ssh::SshOps;
 use crate::validation::validate_id;
 use crate::AppState;
 
@@ -60,45 +60,20 @@ pub async fn create_folder(
     let folder_path = format!("01 Projects/01 RFPs/{} {}/", number, name);
 
     // SSH to Primary and run the folder creation script.
-    // Must send as a single quoted command string — SSH splits bare args on spaces.
-    let user_host = format!("{}@{}", folder_config.ssh_user, folder_config.ssh_host);
+    let ssh = SshOps::from_folder_config(folder_config);
     let remote_cmd = format!(
-        "bash '{}' '{}' '{}'",
-        folder_config.script_path, number, name
+        "bash {} {} {}",
+        crate::ssh::shell_quote(&folder_config.script_path),
+        crate::ssh::shell_quote(&number),
+        crate::ssh::shell_quote(name),
     );
-    let output = Command::new("ssh")
-        .args([
-            "-i", &folder_config.ssh_key,
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
-            &user_host,
-            &remote_cmd,
-        ])
-        .output()
-        .await
-        .map_err(|e| {
-            warn!("SSH command failed to execute: {}", e);
-            ApiError::service_unavailable(format!("SSH connection failed: {}", e))
-        })?;
+    let stdout = ssh.exec(&remote_cmd).await?;
+    info!("Created folder for project {} ({}): {}", number, name, stdout.trim());
 
-    if output.status.success() {
-        info!("Created folder for project {} ({})", number, name);
-        Ok(Json(json!({
-            "status": "created",
-            "project": number,
-            "name": name,
-            "path": folder_path,
-        })))
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        warn!(
-            "Folder creation failed for {}: stderr={}, stdout={}",
-            number, stderr, stdout
-        );
-        Err(ApiError::service_unavailable(format!(
-            "Folder creation failed: {}",
-            stderr.trim()
-        )))
-    }
+    Ok(Json(json!({
+        "status": "created",
+        "project": number,
+        "name": name,
+        "path": folder_path,
+    })))
 }

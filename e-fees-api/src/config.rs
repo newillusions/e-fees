@@ -6,6 +6,7 @@ pub struct FolderConfig {
     pub ssh_user: String,
     pub ssh_key: String,
     pub script_path: String,
+    pub nc_base_path: String,
 }
 
 /// API server configuration loaded from environment variables.
@@ -45,6 +46,8 @@ impl Config {
                 .unwrap_or_else(|_| "/root/.ssh/id_ed25519".into()),
             script_path: env::var("NC_SCRIPT_PATH")
                 .unwrap_or_else(|_| "/mnt/user/appdata/scripts/nc-project-create.sh".into()),
+            nc_base_path: env::var("NC_BASE_PATH")
+                .unwrap_or_else(|_| "/mnt/user/emittiv/nc/__groupfolders/1/01 Projects".into()),
         });
 
         Self {
