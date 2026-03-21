@@ -5,6 +5,7 @@ mod health;
 mod pagination;
 mod routes;
 mod schemas;
+mod ssh;
 mod validation;
 
 use std::collections::HashSet;
