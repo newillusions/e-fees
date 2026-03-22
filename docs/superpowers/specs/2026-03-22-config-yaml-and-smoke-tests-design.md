@@ -47,6 +47,11 @@ axum = ["dep:axum"]
 - `actix` (default): existing behavior, nothing breaks for current consumers
 - `axum`: new axum route handlers
 
+**Consumer dependency declaration:** Axum-based services must disable the default actix feature:
+```toml
+emittiv-container-utils = { path = "../../container-utils/rust", default-features = false, features = ["axum"] }
+```
+
 #### Shared Types (`health.rs`)
 
 Framework-agnostic response types only. Each framework module handles its own dependency checking pattern (actix uses background thread with `Arc<RwLock<HashMap>>`, axum uses on-request async checks). The shared types are the JSON response structures:
@@ -92,20 +97,35 @@ pub fn compute_status(deps: &HashMap<String, DependencyStatus>, critical_deps: &
 
 **Design decision:** The actix routes (`routes_actix.rs`) keep their existing dependency checking model unchanged — background thread with `Arc<RwLock<HashMap<String, Value>>>`. The axum routes (`routes_axum.rs`) use on-request async checks matching the current e-fees pattern. Only the response types and status computation logic are shared. This avoids forcing actix consumers to change.
 
+#### Axum Health State Contract
+
+Services must provide an `AxumHealthState` in their AppState for the axum health router to work:
+
+```rust
+/// Axum-specific health state. Services embed this in their AppState.
+pub struct AxumHealthState {
+    pub started_at: Instant,
+    pub version: String,
+    pub service_name: String,
+    /// List of (name, critical, async checker fn)
+    pub dep_checkers: Vec<(String, bool, Box<dyn Fn() -> Pin<Box<dyn Future<Output = (bool, f64)> + Send>> + Send + Sync>)>,
+    /// Populated at startup from OpenAPI spec introspection
+    pub endpoints: Vec<EndpointInfo>,
+}
+```
+
 #### Axum Routes (`routes_axum.rs`)
 
 ```rust
-pub fn health_router<S>() -> Router<S>
-where
-    S: Clone + Send + Sync + 'static,
-    // AppState must contain Arc<HealthState>
-{
+pub fn health_router() -> Router<Arc<AxumHealthState>> {
     Router::new()
         .route("/health", get(health_handler))
         .route("/api/health", get(health_handler))
         .route("/help", get(help_handler))
 }
 ```
+
+Services nest this router with their own state using `Router::nest` or by embedding `Arc<AxumHealthState>` in their `AppState` via `FromRef`.
 
 The health handler runs all dependency checkers concurrently via `futures::join_all`, computes status (ok/degraded/error), and returns 503 if any critical dependency fails.
 
@@ -274,7 +294,7 @@ Each entity check includes create → read-back → update → verify update. If
 - `window.__TAURI_INTERNALS__.invoke('create_project', { project: {...} })`
 - `window.__TAURI_INTERNALS__.invoke('create_fee', { fee: {...} })`
 
-**Note:** Use `window.__TAURI_INTERNALS__` (not `window.__TAURI__`) for consistency with Tauri v2.24+ and existing smoke checks.
+**Note:** Use `window.__TAURI_INTERNALS__` (not `window.__TAURI__`) for consistency with Tauri v2.24+ and `run-smoke.ts`. The existing `helpers/smoke-checks.ts` still uses `window.__TAURI__` — update it to `__TAURI_INTERNALS__` as part of this work to unify the convention across all test files.
 
 Test data naming: `"DELETE ME - Test {Entity} {Date.now()}"`
 
