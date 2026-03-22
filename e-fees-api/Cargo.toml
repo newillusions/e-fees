@@ -6,6 +6,8 @@ description = "HTTP API for e-fees data"
 
 [dependencies]
 e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
+emittiv-container-utils = { path = "../../../container-utils/rust", default-features = false, features = ["axum"] }
+serde_yaml = "0.9"
 axum = "0.8"
 axum-extra = { version = "0.10", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }

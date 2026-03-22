@@ -112,8 +112,8 @@ async fn main() {
     // Initialize tracing subscriber for structured logging
     tracing_subscriber::fmt::init();
 
-    // Load configuration from environment
-    let config = Config::from_env();
+    // Load configuration from config.yaml + environment
+    let config = Config::load();
     let port = config.port;
     info!(
         "Starting e-fees-api on port {} (db: {})",
@@ -250,7 +250,7 @@ async fn main() {
         .with_state(state);
 
     // Start server
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = format!("{}:{}", config.host, port);
     info!("Listening on {} (docs at /docs)", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr)

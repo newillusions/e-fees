@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use axum::{extract::State, response::Json};
-use serde_json::{json, Value};
+use axum::{extract::State, http::StatusCode, response::Json};
+use emittiv_container_utils::health::{
+    compute_status, DependencyStatus, EndpointInfo, HealthResponse, HelpResponse,
+};
 use tracing::{error, warn};
 use utoipa::OpenApi;
 
@@ -23,7 +26,7 @@ const PUBLIC_PATHS: &[&str] = &["/health", "/api/health", "/help", "/openapi.jso
         (status = 503, description = "Service unhealthy"),
     )
 )]
-pub async fn health(State(state): State<Arc<AppState>>) -> (axum::http::StatusCode, Json<Value>) {
+pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<HealthResponse>) {
     // Run both dependency checks concurrently
     let db_check = async {
         let start = Instant::now();
@@ -56,37 +59,37 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (axum::http::StatusCo
         warn!("Health check: Ollama unreachable (latency: {ollama_latency}ms)");
     }
 
-    let status = if db_ok && ollama_ok {
-        "ok"
-    } else if db_ok {
-        "degraded"
+    let mut dependencies = HashMap::new();
+    dependencies.insert(
+        "surrealdb".to_string(),
+        DependencyStatus {
+            status: if db_ok { "ok" } else { "error" }.to_string(),
+            latency_ms: db_latency,
+        },
+    );
+    dependencies.insert(
+        "ollama".to_string(),
+        DependencyStatus {
+            status: if ollama_ok { "ok" } else { "error" }.to_string(),
+            latency_ms: ollama_latency,
+        },
+    );
+
+    // Only surrealdb is critical — ollama failure produces "degraded" not "error"
+    let (status, is_error) = compute_status(&dependencies, &["surrealdb"]);
+    let http_status = if is_error {
+        StatusCode::SERVICE_UNAVAILABLE
     } else {
-        "error"
+        StatusCode::OK
     };
 
-    // 200 for ok/degraded (service can still handle non-LLM requests when Ollama is down)
-    let http_status = if db_ok {
-        axum::http::StatusCode::OK
-    } else {
-        axum::http::StatusCode::SERVICE_UNAVAILABLE
+    let body = HealthResponse {
+        status,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        uptime: state.started_at.elapsed().as_secs_f64(),
+        checked_at: chrono::Utc::now().to_rfc3339(),
+        dependencies,
     };
-
-    let body = json!({
-        "status": status,
-        "version": env!("CARGO_PKG_VERSION"),
-        "uptime": state.started_at.elapsed().as_secs_f64(),
-        "checked_at": chrono::Utc::now().to_rfc3339(),
-        "dependencies": {
-            "surrealdb": {
-                "status": if db_ok { "ok" } else { "error" },
-                "latency_ms": db_latency,
-            },
-            "ollama": {
-                "status": if ollama_ok { "ok" } else { "error" },
-                "latency_ms": ollama_latency,
-            }
-        }
-    });
 
     (http_status, Json(body))
 }
@@ -100,10 +103,10 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (axum::http::StatusCo
         (status = 200, description = "Service documentation", body = crate::schemas::HelpResponse),
     )
 )]
-pub async fn help() -> Json<Value> {
+pub async fn help() -> Json<HelpResponse> {
     let spec = crate::ApiDoc::openapi();
 
-    let endpoints: Vec<Value> = spec
+    let endpoints: Vec<EndpointInfo> = spec
         .paths
         .paths
         .iter()
@@ -121,25 +124,26 @@ pub async fn help() -> Json<Value> {
                 .filter_map(|(method, op)| {
                     op.map(|op| {
                         let is_public = PUBLIC_PATHS.contains(&path.as_str());
-                        json!({
-                            "method": method,
-                            "path": path,
-                            "description": op.description.as_deref()
+                        EndpointInfo {
+                            method: method.to_string(),
+                            path: path.clone(),
+                            description: op
+                                .description
+                                .as_deref()
                                 .or(op.summary.as_deref())
-                                .unwrap_or(""),
-                            "auth": !is_public,
-                        })
+                                .unwrap_or("")
+                                .to_string(),
+                            auth_required: !is_public,
+                        }
                     })
                 })
                 .collect::<Vec<_>>()
         })
         .collect();
 
-    Json(json!({
-        "service": "e-fees-scope",
-        "version": env!("CARGO_PKG_VERSION"),
-        "description": "Scope/deliverables management, clause library, and proposal corpus.",
-        "config_source": "environment variables (.env)",
-        "endpoints": endpoints,
-    }))
+    Json(HelpResponse {
+        service: "e-fees-scope".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        endpoints,
+    })
 }

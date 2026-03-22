@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use axum::{middleware, response::Json, routing::get, routing::post, Router};
-use serde_json::{json, Value};
+use serde_json::Value;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
@@ -110,7 +110,7 @@ async fn main() {
     let _ = dotenvy::dotenv();
     tracing_subscriber::fmt::init();
 
-    let config = Config::from_env();
+    let config = Config::load();
     let port = config.port;
 
     info!("Connecting to SurrealDB at {}", config.surreal_url);
