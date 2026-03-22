@@ -1,19 +1,19 @@
 {
-  "version": "0.13.14",
-  "notes": "Release v0.13.14",
-  "pub_date": "2026-03-22T17:38:08Z",
+  "version": "0.13.15",
+  "notes": "Release v0.13.15",
+  "pub_date": "2026-03-22T18:07:58Z",
   "platforms": {
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.14/E-Fees_0.13.14_aarch64.app.tar.gz"
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.14/E-Fees_0.13.14_x64.app.tar.gz"
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_x64.app.tar.gz"
     },
     "windows-x86_64": {
       "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.14/E-Fees_0.13.14_x64-setup.exe"
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_x64-setup.exe"
     }
   }
 }
