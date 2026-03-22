@@ -316,8 +316,10 @@ export const crudFee = `(async () => {
     if (!contactId) throw new Error('Missing window.__CRUD_IDS.contact — run crudContact first');
 
     // Create
+    const ts = Date.now();
     const created = await invoke('create_fee', {
       fee: {
+        name: 'DELETE ME - Test Fee ' + ts,
         project_id: projectId,
         company_id: companyId,
         contact_id: contactId,
@@ -436,10 +438,14 @@ export const crudCleanup = `(async () => {
     ]);
 
     for (const fee of (Array.isArray(fees) ? fees : [])) {
-      const fId = extractId(fee, 'fee');
-      if (fId && fId !== ids.fee) {
-        // Fees don't have a name field — skip orphan scan for fees
-        // (no reliable "DELETE ME" marker on fee records)
+      if (fee.name && fee.name.startsWith('DELETE ME')) {
+        const fId = extractId(fee, 'fee');
+        if (fId && fId !== ids.fee) {
+          try {
+            await invoke('delete_fee', { id: fId });
+            orphanDeleted.push(fId);
+          } catch(_) {}
+        }
       }
     }
 
