@@ -39,7 +39,7 @@ jobs:
       - name: Checkout container-utils
         run: |
           git clone https://x-access-token:${{ secrets.GITEA_TOKEN }}@forge.mms.name/emittiv/container-utils.git \
-            "$GITHUB_WORKSPACE/../container-utils"
+            "$GITHUB_WORKSPACE/../../container-utils"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -231,7 +231,7 @@ jobs:
         shell: bash
         run: |
           git clone https://x-access-token:${{ secrets.GITEA_TOKEN }}@forge.mms.name/emittiv/container-utils.git \
-            "$GITHUB_WORKSPACE/../container-utils"
+            "$GITHUB_WORKSPACE/../../container-utils"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
