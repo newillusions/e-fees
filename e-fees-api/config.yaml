@@ -1,0 +1,10 @@
+server:
+  port: 3200
+  host: "0.0.0.0"
+
+database:
+  url: "ws://10.0.23.11:8000"
+  namespace: "emittiv"
+  database: "projects"
+
+log_level: "info"
