@@ -2,6 +2,12 @@ FROM rust:1.89-slim AS builder
 
 WORKDIR /app
 
+# Install build deps (curl for utoipa-swagger-ui, git for container-utils)
+RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
+
+# Clone container-utils from Forgejo (path dependency at ../../../container-utils/rust)
+RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /container-utils
+
 # Create a minimal workspace with only the crates needed for the API build.
 # This avoids pulling in src-tauri and its complex dependencies (tauri, tauri-plugin-mcp, etc.).
 RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n' > Cargo.toml
@@ -14,9 +20,6 @@ COPY crates/ crates/
 
 # Copy the API crate
 COPY e-fees-api/ e-fees-api/
-
-# Install curl (needed by utoipa-swagger-ui build script to download Swagger UI assets)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Build release binary
 RUN cargo build --release -p e-fees-api
