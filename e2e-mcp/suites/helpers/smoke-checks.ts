@@ -23,8 +23,8 @@
  */
 export const checkDbConnection = `(async () => {
   try {
-    const connectionStatus = await window.__TAURI__.invoke('get_connection_status');
-    const dbInfo = await window.__TAURI__.invoke('get_db_info');
+    const connectionStatus = await window.__TAURI_INTERNALS__.invoke('get_connection_status');
+    const dbInfo = await window.__TAURI_INTERNALS__.invoke('get_db_info');
 
     const isConnected = connectionStatus?.is_connected === true;
 
@@ -62,10 +62,10 @@ export const checkDbConnection = `(async () => {
 export const checkDataLoaded = `(async () => {
   try {
     const [projects, companies, contacts, fees] = await Promise.all([
-      window.__TAURI__.invoke('get_projects'),
-      window.__TAURI__.invoke('get_companies'),
-      window.__TAURI__.invoke('get_contacts'),
-      window.__TAURI__.invoke('get_fees')
+      window.__TAURI_INTERNALS__.invoke('get_projects'),
+      window.__TAURI_INTERNALS__.invoke('get_companies'),
+      window.__TAURI_INTERNALS__.invoke('get_contacts'),
+      window.__TAURI_INTERNALS__.invoke('get_fees')
     ]);
 
     const projectCount = Array.isArray(projects) ? projects.length : 0;
@@ -106,7 +106,7 @@ export const checkDataLoaded = `(async () => {
  */
 export const checkNotProduction = `(async () => {
   try {
-    const dbInfo = await window.__TAURI__.invoke('get_db_info');
+    const dbInfo = await window.__TAURI_INTERNALS__.invoke('get_db_info');
     const url = dbInfo?.url || '';
 
     // Production database IP
@@ -144,7 +144,7 @@ export const checkNotProduction = `(async () => {
  */
 export const checkEntityCounts = `(async () => {
   try {
-    const stats = await window.__TAURI__.invoke('get_stats');
+    const stats = await window.__TAURI_INTERNALS__.invoke('get_stats');
 
     return {
       check: 'entity_counts',
@@ -171,7 +171,7 @@ export const checkEntityCounts = `(async () => {
  */
 export const checkProjectStatuses = `(async () => {
   try {
-    const projects = await window.__TAURI__.invoke('get_projects');
+    const projects = await window.__TAURI_INTERNALS__.invoke('get_projects');
     const validStatuses = [
       'Lead',
       'RFP',
@@ -234,7 +234,7 @@ export const checkProjectStatuses = `(async () => {
  */
 export const checkFeeStatuses = `(async () => {
   try {
-    const fees = await window.__TAURI__.invoke('get_fees');
+    const fees = await window.__TAURI_INTERNALS__.invoke('get_fees');
     const validStatuses = [
       'Draft',
       'Sent',
