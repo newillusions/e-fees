@@ -20,6 +20,8 @@ pub struct SshOps {
     host: String,
     user: String,
     key_path: String,
+    /// UID:GID for file ownership (e.g. "99:100" for Unraid nobody:users).
+    nc_owner: String,
 }
 
 impl SshOps {
@@ -29,6 +31,7 @@ impl SshOps {
             host: cfg.ssh_host.clone(),
             user: cfg.ssh_user.clone(),
             key_path: cfg.ssh_key.clone(),
+            nc_owner: cfg.nc_owner.clone(),
         }
     }
 
@@ -80,10 +83,15 @@ impl SshOps {
 
     /// Write `content` to `remote_path` via `cat` piped over SSH stdin.
     ///
-    /// Creates or overwrites the remote file via `cat > 'path'`.
+    /// Creates or overwrites the remote file via `cat > 'path'`, then sets
+    /// ownership to `nc_owner` (default 99:100 = nobody:users on Unraid).
     pub async fn write_file(&self, remote_path: &str, content: &[u8]) -> Result<(), ApiError> {
         let user_host = format!("{}@{}", self.user, self.host);
-        let remote_cmd = format!("cat > {}", shell_quote(remote_path));
+        let quoted = shell_quote(remote_path);
+        let remote_cmd = format!(
+            "cat > {} && chown {} {}",
+            quoted, self.nc_owner, quoted
+        );
 
         let mut child = Command::new("ssh")
             .args(self.ssh_args())
@@ -144,14 +152,26 @@ impl SshOps {
         Ok(())
     }
 
+    /// Recursively set ownership on `path` to `nc_owner`.
+    pub async fn chown_recursive(&self, path: &str) -> Result<(), ApiError> {
+        let remote_cmd = format!(
+            "chown -R {} {}",
+            self.nc_owner, shell_quote(path)
+        );
+        self.exec(&remote_cmd).await?;
+        Ok(())
+    }
+
     /// Trigger a Nextcloud rescan of `subpath`.
     ///
-    /// Attempts a targeted OCC scan first; falls back to `--shallow` on group folder 1
-    /// if that fails (space-in-path quoting issues across SSH+docker layers are known).
+    /// Wraps the occ command in `sh -c` inside docker exec to handle paths with
+    /// spaces correctly. Falls back to `--shallow` on group folder 1 if targeted
+    /// scan fails.
     pub async fn nc_rescan(&self, subpath: &str) -> Result<(), ApiError> {
+        let inner_cmd = format!("php /var/www/html/occ files:scan --path={}", shell_quote(subpath));
         let targeted_cmd = format!(
-            "docker exec nextcloud-e php occ files:scan --path={}",
-            shell_quote(subpath)
+            "docker exec nextcloud-e sh -c {}",
+            shell_quote(&inner_cmd)
         );
         if self.exec(&targeted_cmd).await.is_ok() {
             return Ok(());

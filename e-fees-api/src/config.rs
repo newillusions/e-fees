@@ -11,6 +11,8 @@ pub struct FolderConfig {
     pub ssh_key: String,
     pub script_path: String,
     pub nc_base_path: String,
+    /// UID:GID for Nextcloud file ownership (default: "99:100" = nobody:users on Unraid).
+    pub nc_owner: String,
 }
 
 /// API server configuration. Non-secret values come from config.yaml via ConfigManager;
@@ -109,6 +111,7 @@ impl Config {
                 .unwrap_or_else(|_| "/mnt/user/appdata/scripts/nc-project-create.sh".into()),
             nc_base_path: env::var("NC_BASE_PATH")
                 .unwrap_or_else(|_| "/mnt/user/emittiv/nc/__groupfolders/1/01 Projects".into()),
+            nc_owner: env::var("NC_OWNER").unwrap_or_else(|_| "99:100".into()),
         });
 
         Self {
