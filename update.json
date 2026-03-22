@@ -1,19 +1,19 @@
 {
-  "version": "0.13.15",
-  "notes": "Release v0.13.15",
-  "pub_date": "2026-03-22T18:07:58Z",
+  "version": "0.13.16",
+  "notes": "Release v0.13.16",
+  "pub_date": "2026-03-22T18:36:46Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3RITXVnYVpTV3N5QXNQK0RCRzlUT3M0cVRPT0lsN3hMRXFqRlVWYlk3dzNPQ0p4cmpFVTZNbnlpRzNsU0VLTlZnMERCYnFEcDJIK280WHEzZWNjakFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MjA0MDM5CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKbDByNGxNRVlJL0M5SmVUODNHS0JMdDF0emQ5THRhZXEvQzdxN3ZmNmorbDRHS0NGUGRZQlVYK0xCYlBmb1JVaysyM25kQ1NkZEIrajd6OTRRdFdMQUE9PQo=",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.16/E-Fees_0.13.16_aarch64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2lIRTBicGliZ01OVGpQS2FjdzR3OGQ2UE5aTWNndEtxcnVGa1l3aWZWZHZjekhkcmlnOXVodnRtQjdSZ25DWkt0eENuVk9RWERuNnQ2aHRQVklLMUFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MjAzOTc0CWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKa2w4R2VRSHpCYmg1WElqZGhwaHAyVTlHVldraHhNTEwxMjlmSDFsdkdGcTdmdEFFbEpmWlVjVW5iOGMxdXlGLzQ2VVY3a2xobW5PMWNRVlFTT0l6Qmc9PQo=",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.16/E-Fees_0.13.16_x64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.15/E-Fees_0.13.15_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd29Ic0dINTRlSXBrVXVZQzA2R2JTOGdRcDl0endQcGNDYmRaM2NGVXZYVzdkSHJURjl1TmNabEZkSFk3WjRCTFU4V1hPTXN5bDBMRmFlMVEvaC9VakE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MjA0NTg0CWZpbGU6RS1GZWVzXzAuMTMuMTZfeDY0LXNldHVwLmV4ZQpyaFVJZVdzbWJaQzgzQ3pDM1hYWnZaNlZoTE5ocHlwSFNHeE5ERU9lbnpIa1c4M0VBdG03WkxvTTJpd0hVSHIxclVDVitXcWEwTWFFcUViK0tPKzVEUT09Cg==",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.13.16/E-Fees_0.13.16_x64-setup.exe"
     }
   }
 }
