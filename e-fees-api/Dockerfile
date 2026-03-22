@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /container-utils
 
 # Create a minimal workspace with only the crates needed for the API build.
-# This avoids pulling in src-tauri and its complex dependencies (tauri, tauri-plugin-mcp, etc.).
+# container-utils is cloned to /container-utils; the path dep ../../../container-utils/rust
+# resolves from /app/e-fees-api/ → / → /container-utils/rust.
 RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n' > Cargo.toml
 
-# Copy lockfile for deterministic builds
-COPY Cargo.lock .
+# Skip Cargo.lock — the minimal workspace differs from the full workspace,
+# so Cargo regenerates with correct path dependency resolution.
 
 # Copy the shared core crate
 COPY crates/ crates/

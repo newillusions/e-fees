@@ -11,7 +11,8 @@ RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /cont
 # Minimal workspace (only scope + core)
 RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-scope"]\nresolver = "2"\n' > Cargo.toml
 
-COPY Cargo.lock .
+# Skip Cargo.lock — the minimal workspace differs from the full workspace,
+# so Cargo regenerates with correct path dependency resolution.
 COPY crates/ crates/
 COPY e-fees-scope/ e-fees-scope/
 
