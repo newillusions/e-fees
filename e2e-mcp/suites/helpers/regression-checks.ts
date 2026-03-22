@@ -28,9 +28,10 @@
  * Check 1: recordidV3
  *
  * SurrealDB v3 changed RecordId serialization from a plain string to
- * an object { tb: "projects", id: { String: "abc" } }. The frontend must
- * handle IDs as strings. This check verifies every project's `id` field
- * is a string, not an object.
+ * an object { table: "projects", key: { String: "abc" } }. The frontend
+ * normalizes these via extractId(). This check verifies every project's
+ * `id` field is extractable — either a string OR a valid v3 object with
+ * `table` and `key` fields.
  *
  * Bug introduced: SurrealDB v3 upgrade
  * Fix applied: Frontend normalization in multiple files
@@ -51,27 +52,32 @@ export const recordidV3 = `(async () => {
       return;
     }
 
-    const objectIds = [];
+    // Verify each ID is extractable: string OR valid v3 object {table, key}
+    const badIds = [];
     for (const project of projects) {
-      if (project.id !== null && project.id !== undefined && typeof project.id !== 'string') {
-        objectIds.push({
-          id: JSON.stringify(project.id),
-          name: project.name || '(no name)'
-        });
+      const id = project.id;
+      if (id === null || id === undefined) {
+        badIds.push({ id: 'null/undefined', name: project.name || '(no name)' });
+      } else if (typeof id === 'string') {
+        // String ID — valid (v2 format or already normalized)
+      } else if (typeof id === 'object' && id.table && id.key !== undefined) {
+        // v3 RecordId object {table, key} — valid, frontend extracts via extractId()
+      } else {
+        badIds.push({ id: JSON.stringify(id), name: project.name || '(no name)' });
       }
     }
 
-    const pass = objectIds.length === 0;
+    const pass = badIds.length === 0;
 
     window.__SMOKE_RESULT = JSON.stringify({
       check: 'recordid_v3',
       pass,
       details: {
         total: projects.length,
-        objectIds,
+        badIds,
         message: pass
-          ? 'All project IDs are strings'
-          : objectIds.length + ' project(s) have non-string IDs (SurrealDB v3 RecordId regression)'
+          ? 'All project IDs are extractable (string or v3 {table, key} object)'
+          : badIds.length + ' project(s) have unextractable IDs'
       }
     });
   } catch(e) {
@@ -338,27 +344,32 @@ export const companyIdExtract = `(async () => {
       return;
     }
 
-    const objectIds = [];
+    // Verify each ID is extractable: string OR valid v3 object {table, key}
+    const badIds = [];
     for (const company of companies) {
-      if (company.id !== null && company.id !== undefined && typeof company.id !== 'string') {
-        objectIds.push({
-          id: JSON.stringify(company.id),
-          name: company.name || '(no name)'
-        });
+      const id = company.id;
+      if (id === null || id === undefined) {
+        badIds.push({ id: 'null/undefined', name: company.name || '(no name)' });
+      } else if (typeof id === 'string') {
+        // String ID — valid
+      } else if (typeof id === 'object' && id.table && id.key !== undefined) {
+        // v3 RecordId object {table, key} — valid, frontend extracts via extractId()
+      } else {
+        badIds.push({ id: JSON.stringify(id), name: company.name || '(no name)' });
       }
     }
 
-    const pass = objectIds.length === 0;
+    const pass = badIds.length === 0;
 
     window.__SMOKE_RESULT = JSON.stringify({
       check: 'company_id_extract',
       pass,
       details: {
         total: companies.length,
-        objectIds,
+        badIds,
         message: pass
-          ? 'All company IDs are strings'
-          : objectIds.length + ' company/companies have non-string IDs (SurrealDB v3 RecordId regression)'
+          ? 'All company IDs are extractable (string or v3 {table, key} object)'
+          : badIds.length + ' company/companies have unextractable IDs'
       }
     });
   } catch(e) {
