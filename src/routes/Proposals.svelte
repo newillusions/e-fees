@@ -22,7 +22,7 @@
   import { logApiError } from '$lib/services/logger';
   import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
-  import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+  import { SvelteSet } from 'svelte/reactivity';
   import type { Fee, UnknownSurrealThing } from '../types';
 
   // Modal states
@@ -157,7 +157,7 @@
 
   // Filter to latest revision per project when toggle is off
   function filterToLatestRevisions(fees: Fee[]): Fee[] {
-    const latestByProject = new SvelteMap<string, Fee>();
+    const latestByProject = new Map<string, Fee>();
     for (const fee of fees) {
       const pid = extractId(fee.project_id);
       const existing = latestByProject.get(pid);
@@ -181,8 +181,8 @@
   const filteredProposals = $derived(createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig, advanced));
 
   // Count projects with multiple revisions
-  const multiRevisionCount = $derived(() => {
-    const revCounts = new SvelteMap<string, number>();
+  const multiRevisionCount = $derived((() => {
+    const revCounts = new Map<string, number>();
     for (const fee of fees) {
       const pid = extractId(fee.project_id);
       revCounts.set(pid, (revCounts.get(pid) ?? 0) + 1);
@@ -192,7 +192,7 @@
       if (c > 1) count++;
     }
     return count;
-  });
+  })());
 
   // Get unique values for dropdown filters
   const uniqueStaff = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.staff_name || '').filter(Boolean));
@@ -404,7 +404,7 @@
     <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
 
     <!-- Revisions Toggle -->
-    {#if multiRevisionCount() > 0}
+    {#if multiRevisionCount > 0}
       <label class="flex items-center gap-1.5 ml-2 cursor-pointer">
         <input
           type="checkbox"
@@ -412,7 +412,7 @@
           class="accent-emittiv-splash"
         />
         <span class="text-xs text-emittiv-light hover:text-emittiv-white transition-all">
-          Show all revisions ({multiRevisionCount()})
+          Show all revisions ({multiRevisionCount})
         </span>
       </label>
     {/if}
