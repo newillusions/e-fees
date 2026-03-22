@@ -9,11 +9,13 @@ RUN apt-get update && apt-get install -y curl git pkg-config libssl-dev && rm -r
 RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /container-utils
 
 # Minimal workspace (only scope + core)
-# Create a minimal workspace and override the container-utils path dependency
-# to point to the cloned repo location.
-RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-scope"]\nresolver = "2"\n\n[workspace.dependencies]\nemittiv-container-utils = { path = "/container-utils/rust" }\n\n[patch.crates-io]\nemittiv-container-utils = { path = "/container-utils/rust" }\n' > Cargo.toml
+# Create a minimal workspace.
+RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-scope"]\nresolver = "2"\n' > Cargo.toml
 COPY crates/ crates/
+
+# Copy the scope crate and fix container-utils path for Docker context
 COPY e-fees-scope/ e-fees-scope/
+RUN sed -i 's|path = "../../../container-utils/rust"|path = "/container-utils/rust"|' e-fees-scope/Cargo.toml
 
 RUN cargo build --release -p e-fees-scope
 
