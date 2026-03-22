@@ -8,13 +8,9 @@ RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 # Clone container-utils from Forgejo (path dependency at ../../../container-utils/rust)
 RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /container-utils
 
-# Create a minimal workspace with only the crates needed for the API build.
-# container-utils is cloned to /container-utils; the path dep ../../../container-utils/rust
-# resolves from /app/e-fees-api/ → / → /container-utils/rust.
-RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n' > Cargo.toml
-
-# Skip Cargo.lock — the minimal workspace differs from the full workspace,
-# so Cargo regenerates with correct path dependency resolution.
+# Create a minimal workspace and override the container-utils path dependency
+# to point to the cloned repo location.
+RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-api"]\nresolver = "2"\n\n[workspace.dependencies]\nemittiv-container-utils = { path = "/container-utils/rust" }\n\n[patch.crates-io]\nemittiv-container-utils = { path = "/container-utils/rust" }\n' > Cargo.toml
 
 # Copy the shared core crate
 COPY crates/ crates/

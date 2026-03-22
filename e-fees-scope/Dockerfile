@@ -9,10 +9,9 @@ RUN apt-get update && apt-get install -y curl git pkg-config libssl-dev && rm -r
 RUN git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git /container-utils
 
 # Minimal workspace (only scope + core)
-RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-scope"]\nresolver = "2"\n' > Cargo.toml
-
-# Skip Cargo.lock — the minimal workspace differs from the full workspace,
-# so Cargo regenerates with correct path dependency resolution.
+# Create a minimal workspace and override the container-utils path dependency
+# to point to the cloned repo location.
+RUN printf '[workspace]\nmembers = ["crates/e-fees-core", "e-fees-scope"]\nresolver = "2"\n\n[workspace.dependencies]\nemittiv-container-utils = { path = "/container-utils/rust" }\n\n[patch.crates-io]\nemittiv-container-utils = { path = "/container-utils/rust" }\n' > Cargo.toml
 COPY crates/ crates/
 COPY e-fees-scope/ e-fees-scope/
 
