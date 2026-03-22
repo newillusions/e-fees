@@ -6,12 +6,14 @@ description = "Scope/deliverables service for e-fees"
 
 [dependencies]
 e-fees-core = { path = "../crates/e-fees-core", features = ["openapi"] }
+emittiv-container-utils = { path = "../../../container-utils/rust", default-features = false, features = ["axum"] }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 surrealdb = { version = "3.0.4", features = ["protocol-ws", "rustls"] }
 surrealdb-types = "3.0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 tower-http = { version = "0.6", features = ["cors"] }
 dotenvy = "0.15"
 tracing = "0.1"
