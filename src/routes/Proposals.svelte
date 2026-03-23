@@ -42,7 +42,7 @@
   });
 
   // Advanced filter states
-  let statusSelected: Set<string> = new SvelteSet();
+  let statusSelected = $state<Set<string>>(new SvelteSet());
   let dateFrom = $state('');
   let dateTo = $state('');
 
