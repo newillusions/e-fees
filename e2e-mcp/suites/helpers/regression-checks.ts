@@ -520,9 +520,9 @@ export const projectStatusLegacy = `(async () => {
  */
 export const navOrder = `(async () => {
   try {
-    // Find all nav links/items in the sidebar
+    // Find all nav links/items in the sidebar (nav uses buttons, not anchor tags)
     const navLinks = document.querySelectorAll(
-      'nav a, nav [class*="nav-item"], nav [class*="link"], [class*="sidebar"] a, [class*="sidebar"] [class*="nav"]'
+      'nav a, nav button, nav [class*="nav-item"], nav [class*="link"], [class*="sidebar"] a, [class*="sidebar"] button, [class*="sidebar"] [class*="nav"]'
     );
 
     const EXPECTED_ORDER = ['Dashboard', 'Projects', 'Companies', 'Contacts', 'Proposals'];

@@ -206,6 +206,7 @@ export const feeProjectMapping = `(async () => {
 export const connectionIndicator = `(async () => {
   try {
     const selectors = [
+      '[class*="led-glow"]',
       '[class*="connection"]',
       '[class*="status-indicator"]',
       '[class*="connection-status"]',
@@ -240,7 +241,8 @@ export const connectionIndicator = `(async () => {
     const classes = foundEl.className || '';
     const hasConnectedText = text.includes('connected') || text.includes('online');
     const hasSuccessClass = classes.includes('connected') || classes.includes('success') ||
-                            classes.includes('green') || classes.includes('active');
+                            classes.includes('green') || classes.includes('active') ||
+                            classes.includes('led-glow-connected');
 
     const pass = hasConnectedText || hasSuccessClass;
 

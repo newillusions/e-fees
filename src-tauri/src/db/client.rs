@@ -446,41 +446,46 @@ impl DatabaseClient {
         validate_record_id(&fee.company_id, "company_id")?;
         validate_record_id(&fee.contact_id, "contact_id")?;
 
-        // Build parameterized data map for string fields
-        let mut data = serde_json::Map::new();
-        data.insert("name".into(), serde_json::Value::String(fee.name));
-        data.insert("number".into(), serde_json::Value::String(fee.number));
-        data.insert("rev".into(), serde_json::json!(fee.rev));
-        data.insert("status".into(), serde_json::Value::String(fee.status));
-        data.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
-        data.insert("activity".into(), serde_json::Value::String(fee.activity));
-        data.insert("package".into(), serde_json::Value::String(fee.package));
-        data.insert("strap_line".into(), serde_json::Value::String(fee.strap_line));
-        data.insert("staff_name".into(), serde_json::Value::String(fee.staff_name));
-        data.insert("staff_email".into(), serde_json::Value::String(fee.staff_email));
-        data.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone));
-        data.insert("staff_position".into(), serde_json::Value::String(fee.staff_position));
-        data.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
-
-        let data_value = serde_json::Value::Object(data);
-
-        // Record-id fields use type::record() with parameterized bindings.
-        // String fields go through $data (parameterized, no injection risk).
-        // fee_id and project_key are validated above so safe to interpolate in record keys.
+        // Single-statement CREATE SET with all fields inline.
+        // SurrealDB v3 strict schema rejects NONE for record<T> fields,
+        // so record links must be in the same CREATE, not a separate UPDATE.
         let project_key = fee.project_id.replace("-", "_");
         let query = format!(
-            "CREATE fee:{fee_id} MERGE $data RETURN NONE; \
-             UPDATE fee:{fee_id} SET \
+            "CREATE fee:{fee_id} SET \
+             name = $name, \
+             number = $number, \
+             rev = $rev, \
+             status = $status, \
+             issue_date = $issue_date, \
+             activity = $activity, \
+             package = $package, \
+             strap_line = $strap_line, \
+             staff_name = $staff_name, \
+             staff_email = $staff_email, \
+             staff_phone = $staff_phone, \
+             staff_position = $staff_position, \
+             revisions = $revisions, \
              project_id = type::record('projects', $project_key), \
              company_id = type::record('company', $company_id), \
              contact_id = type::record('contacts', $contact_id), \
-             time = {{ created_at: time::now(), updated_at: time::now() }} RETURN NONE; \
-             SELECT * OMIT import_source FROM fee:{fee_id};",
+             time = {{ created_at: time::now(), updated_at: time::now() }};",
             fee_id = fee_id,
         );
 
         let mut bindings = serde_json::Map::new();
-        bindings.insert("data".into(), data_value);
+        bindings.insert("name".into(), serde_json::Value::String(fee.name));
+        bindings.insert("number".into(), serde_json::Value::String(fee.number));
+        bindings.insert("rev".into(), serde_json::json!(fee.rev));
+        bindings.insert("status".into(), serde_json::Value::String(fee.status));
+        bindings.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
+        bindings.insert("activity".into(), serde_json::Value::String(fee.activity));
+        bindings.insert("package".into(), serde_json::Value::String(fee.package));
+        bindings.insert("strap_line".into(), serde_json::Value::String(fee.strap_line));
+        bindings.insert("staff_name".into(), serde_json::Value::String(fee.staff_name));
+        bindings.insert("staff_email".into(), serde_json::Value::String(fee.staff_email));
+        bindings.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone));
+        bindings.insert("staff_position".into(), serde_json::Value::String(fee.staff_position));
+        bindings.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
         bindings.insert("project_key".into(), serde_json::Value::String(project_key));
         bindings.insert("company_id".into(), serde_json::Value::String(fee.company_id));
         bindings.insert("contact_id".into(), serde_json::Value::String(fee.contact_id));
@@ -488,7 +493,7 @@ impl DatabaseClient {
         info!("Executing Fee creation query (parameterized)");
 
         let mut response = self.query_bind_map(&query, bindings).await?;
-        let result: Result<Vec<Fee>, _> = response.take(2);
+        let result: Result<Vec<Fee>, _> = response.take(0);
         match result {
             Ok(mut fees) => Ok(fees.pop()),
             Err(e) => Err(e),

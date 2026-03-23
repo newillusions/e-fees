@@ -37,8 +37,8 @@ const extractIdHelper = `
     if (!record) return null;
     if (typeof record.id === 'string') return record.id;
     if (record.id && typeof record.id === 'object') {
-      const tb = record.id.tb || tableName;
-      const key = record.id.id;
+      const tb = record.id.tb || record.id.table || tableName;
+      const key = record.id.id || record.id.key;
       if (key && typeof key === 'object') {
         // { String: "abc" } or { Number: 1 } etc.
         const inner = Object.values(key)[0];
@@ -49,6 +49,12 @@ const extractIdHelper = `
     // Already a plain string at top level
     if (typeof record === 'string') return record;
     return null;
+  }
+  // Strip table prefix for foreign key fields (e.g. "company:ABC" → "ABC")
+  function stripTable(fullId) {
+    if (!fullId) return fullId;
+    const idx = fullId.indexOf(':');
+    return idx >= 0 ? fullId.substring(idx + 1) : fullId;
   }
 `;
 
@@ -82,8 +88,9 @@ export const crudCompany = `(async () => {
 
     // Create
     const ts = Date.now();
+    const abbr = 'DM' + String(ts).slice(-4);
     const created = await invoke('create_company', {
-      company: { name: 'DELETE ME - Test Company ' + ts, country: 'Test' }
+      company: { name: 'DELETE ME - Test Company ' + ts, name_short: abbr, abbreviation: abbr, city: '', country: 'Test', reg_no: null, tax_no: null }
     });
     const createdId = extractId(created, 'company');
     if (!createdId) throw new Error('create_company returned no ID: ' + JSON.stringify(created));
@@ -99,7 +106,7 @@ export const crudCompany = `(async () => {
     const updatedName = 'DELETE ME - Updated Company ' + Date.now();
     await invoke('update_company', {
       id: createdId,
-      company: { name: updatedName, country: 'Test' }
+      company: { name: updatedName, name_short: abbr, abbreviation: abbr, city: '', country: 'Test', reg_no: null, tax_no: null }
     });
 
     // Verify update
@@ -160,7 +167,9 @@ export const crudContact = `(async () => {
         first_name: 'DELETE ME',
         last_name: 'Test Contact ' + ts,
         email: 'delete-me-' + ts + '@example.com',
-        company_id: companyId
+        phone: '+971500000000',
+        position: 'Test',
+        company: stripTable(companyId)
       }
     });
     const createdId = extractId(created, 'contacts');
@@ -180,8 +189,10 @@ export const crudContact = `(async () => {
       contact: {
         first_name: 'DELETE ME',
         last_name: updatedLastName,
-        email: found.email,
-        company_id: companyId
+        email: found.email || 'delete-me@example.com',
+        phone: '+971500000000',
+        position: 'Test',
+        company: stripTable(companyId)
       }
     });
 
@@ -233,14 +244,20 @@ export const crudProject = `(async () => {
 
     // Create
     const ts = Date.now();
+    const now = new Date().toISOString();
+    const seqNum = Number(String(ts).slice(-2));
+    const projId = '26_971' + String(seqNum).padStart(2, '0');
     const created = await invoke('create_project', {
       project: {
         name: 'DELETE ME - Test Project ' + ts,
         name_short: 'DELME',
-        number: { country: '971', year: '26', sequence: 99 },
+        status: 'Lead',
+        number: { country: 971, year: 26, seq: seqNum, id: projId },
         city: 'Test',
         country: 'Test',
-        area: 'Test'
+        area: 'Test',
+        folder: '',
+        time: { created_at: now, updated_at: now }
       }
     });
     const createdId = extractId(created, 'projects');
@@ -315,17 +332,26 @@ export const crudFee = `(async () => {
     if (!companyId) throw new Error('Missing window.__CRUD_IDS.company — run crudCompany first');
     if (!contactId) throw new Error('Missing window.__CRUD_IDS.contact — run crudContact first');
 
-    // Create
+    // Create — FeeCreate requires all staff/display fields
     const ts = Date.now();
     const created = await invoke('create_fee', {
       fee: {
         name: 'DELETE ME - Test Fee ' + ts,
-        project_id: projectId,
-        company_id: companyId,
-        contact_id: contactId,
-        issue_date: '202603',
+        number: 'DM-' + ts,
+        rev: 1,
         status: 'Draft',
-        rev: 1
+        issue_date: '202603',
+        activity: 'Test',
+        package: 'Test',
+        project_id: stripTable(projectId),
+        company_id: stripTable(companyId),
+        contact_id: stripTable(contactId),
+        staff_name: 'Test',
+        staff_email: 'test@example.com',
+        staff_phone: '+971500000000',
+        staff_position: 'Test',
+        strap_line: 'Test',
+        revisions: []
       }
     });
     const createdId = extractId(created, 'fee');
