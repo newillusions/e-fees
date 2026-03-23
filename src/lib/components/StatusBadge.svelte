@@ -1,7 +1,8 @@
 <script lang="ts">
-  let { status, type = 'general' }: {
+  let { status, type = 'general', onclick }: {
     status: string;
     type?: 'project' | 'proposal' | 'general';
+    onclick?: (status: string) => void;
   } = $props();
 
   function getStatusClasses(status: string, type: string): string {
@@ -54,8 +55,23 @@
         return 'emittiv-badge emittiv-badge--splash';
     }
   }
+
+  function handleClick(event: Event) {
+    event.stopPropagation();
+    onclick?.(status);
+  }
 </script>
 
-<span class={getStatusClasses(status, type)}>
-  {status}
-</span>
+{#if onclick}
+  <button
+    type="button"
+    class="{getStatusClasses(status, type)} emittiv-badge--clickable"
+    onclick={handleClick}
+  >
+    {status}
+  </button>
+{:else}
+  <span class={getStatusClasses(status, type)}>
+    {status}
+  </span>
+{/if}
