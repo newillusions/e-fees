@@ -103,16 +103,14 @@ export const formValidation = `(async () => {
     openBtn.click();
     await new Promise(r => setTimeout(r, 500));
 
-    // Find and click the submit button inside the modal
-    const modal = document.querySelector('[class*="modal"], .overlay, [role="dialog"]');
-    const submitBtn = modal
-      ? Array.from(modal.querySelectorAll('button')).find(b => /save|submit|create|add/i.test(b.textContent || ''))
-      : null;
+    // Find the submit button — search entire document (CrudModal renders buttons outside overlay match)
+    const submitBtn = document.querySelector('[type="submit"]') ||
+      document.querySelector('button.emittiv-btn--primary[type="submit"]');
 
     if (!submitBtn) {
       // Close modal and report
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      window.__SMOKE_RESULT = JSON.stringify({ check: 'form_validation', pass: false, error: 'No submit button found in modal' });
+      window.__SMOKE_RESULT = JSON.stringify({ check: 'form_validation', pass: false, error: 'No submit button found' });
       return;
     }
 

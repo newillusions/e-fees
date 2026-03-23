@@ -102,11 +102,11 @@ export const crudCompany = `(async () => {
       : null;
     if (!found) throw new Error('Could not find created company with id: ' + createdId);
 
-    // Update
+    // Update — must include all required fields to avoid SurrealDB v3 NONE rejection
     const updatedName = 'DELETE ME - Updated Company ' + Date.now();
     await invoke('update_company', {
-      id: createdId,
-      company: { name: updatedName, name_short: abbr, abbreviation: abbr, city: '', country: 'Test', reg_no: null, tax_no: null }
+      id: stripTable(createdId),
+      companyUpdate: { name: updatedName, name_short: abbr, abbreviation: abbr, city: '', country: 'Test', reg_no: '', tax_no: '' }
     });
 
     // Verify update
@@ -182,18 +182,11 @@ export const crudContact = `(async () => {
       : null;
     if (!found) throw new Error('Could not find created contact with id: ' + createdId);
 
-    // Update
+    // Update (uses ContactUpdate partial struct, param name is contact_update)
     const updatedLastName = 'Updated Contact ' + Date.now();
     await invoke('update_contact', {
-      id: createdId,
-      contact: {
-        first_name: 'DELETE ME',
-        last_name: updatedLastName,
-        email: found.email || 'delete-me@example.com',
-        phone: '+971500000000',
-        position: 'Test',
-        company: stripTable(companyId)
-      }
+      id: stripTable(createdId),
+      contactUpdate: { last_name: updatedLastName }
     });
 
     // Verify update
