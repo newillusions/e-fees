@@ -257,7 +257,7 @@
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
-    statusSelected = new Set();
+    statusSelected = new SvelteSet();
     dateFrom = '';
     dateTo = '';
   }
@@ -329,7 +329,7 @@
         loadedItems={fees.length}
         hasMore={hasMore}
         inline={true}
-        on:clear-filters={clearFilters}
+        onclearfilters={clearFilters}
       />
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
@@ -501,6 +501,12 @@
           onedit={(proposal) => handleEditProposal(proposal)}
           onview={(proposal) => handleViewProposal(proposal)}
           onselect={() => toggleSelect(extractIdFromRelation(proposal.id || ''))}
+          onstatusclick={(status) => {
+            const next = new SvelteSet(statusSelected);
+            if (next.has(status)) next.delete(status);
+            else next.add(status);
+            statusSelected = next;
+          }}
         />
       {/each}
 

@@ -193,7 +193,7 @@
   
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
-    statusSelected = new Set();
+    statusSelected = new SvelteSet();
     dateFrom = '';
     dateTo = '';
   }
@@ -416,6 +416,12 @@
           onedit={(project) => handleEditProject(project)}
           onview={(project) => handleViewProject(project)}
           onselect={() => toggleSelect(extractIdFromRelation(project.id || ''))}
+          onstatusclick={(status) => {
+            const next = new SvelteSet(statusSelected);
+            if (next.has(status)) next.delete(status);
+            else next.add(status);
+            statusSelected = next;
+          }}
         />
       {/each}
 

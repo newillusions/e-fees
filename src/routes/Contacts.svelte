@@ -348,10 +348,13 @@
           {contact}
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(contact.id || ''))}
-          companyName={companyLookup.getCompanyName(contact.company)}
+          companyName={companyLookup.getCompanyShortName(contact.company)}
           onedit={(contact) => handleEditContact(contact)}
           onview={(contact) => handleViewContact(contact)}
           onselect={() => toggleSelect(extractIdFromRelation(contact.id || ''))}
+          oncompanyclick={(name) => {
+            filters.company = filters.company === name ? '' : name;
+          }}
         />
       {/each}
 
