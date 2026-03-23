@@ -3,7 +3,7 @@
   import ActionButton from './ActionButton.svelte';
   import type { Contact } from '../../types';
 
-  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview, onselect }: {
+  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview, onselect, oncompanyclick }: {
     contact: Contact;
     clickable?: boolean;
     companyName?: string;
@@ -12,6 +12,7 @@
     onedit?: (contact: Contact) => void;
     onview?: (contact: Contact) => void;
     onselect?: (selected: boolean) => void;
+    oncompanyclick?: (companyName: string) => void;
   } = $props();
 
   function handleCardClick() {
@@ -44,7 +45,16 @@
   <!-- Subtitle -->
   <svelte:fragment slot="subtitle">
     <p class="text-sm text-emittiv-lighter">
-      {#if companyName}
+      {#if companyName && oncompanyclick}
+        <button
+          type="button"
+          class="emittiv-badge--clickable text-sm text-emittiv-lighter"
+          onclick={(e) => { e.stopPropagation(); oncompanyclick?.(companyName); }}
+          style="text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px;"
+        >
+          {companyName}
+        </button>
+      {:else if companyName}
         {companyName}
       {/if}
     </p>

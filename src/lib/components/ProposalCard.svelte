@@ -5,7 +5,7 @@
   import type { Fee } from '../../types';
   import CurrencyAmount from './CurrencyAmount.svelte';
 
-  let { proposal, clickable = true, projectName = '', companyName = '', contactName = '', selectable = false, selected = false, onedit, onview, onselect }: {
+  let { proposal, clickable = true, projectName = '', companyName = '', contactName = '', selectable = false, selected = false, onedit, onview, onselect, onstatusclick }: {
     proposal: Fee;
     clickable?: boolean;
     projectName?: string;
@@ -16,6 +16,7 @@
     onedit?: (proposal: Fee) => void;
     onview?: (proposal: Fee) => void;
     onselect?: (selected: boolean) => void;
+    onstatusclick?: (status: string) => void;
   } = $props();
 
   function handleCardClick() {
@@ -55,7 +56,7 @@
   
   <!-- Badge -->
   <svelte:fragment slot="badge">
-    <StatusBadge status={proposal.status} type="proposal" />
+    <StatusBadge status={proposal.status} type="proposal" onclick={onstatusclick} />
   </svelte:fragment>
   
   <!-- Actions -->
