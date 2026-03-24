@@ -23,7 +23,7 @@
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import { createProjectFilterConfig } from '$lib/utils/search';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
-  import { PROJECT_STATUSES } from '$lib/constants';
+  import { PROJECT_STATUSES, ACTIVE_PROJECT_STATUSES } from '$lib/constants';
   import type { Project } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
@@ -355,7 +355,7 @@
 
   <!-- Status Chips -->
   <div class="mb-4">
-    <StatusChips statuses={PROJECT_STATUSES} bind:selected={statusSelected} />
+    <StatusChips statuses={PROJECT_STATUSES} bind:selected={statusSelected} activePreset={ACTIVE_PROJECT_STATUSES} />
   </div>
   
 

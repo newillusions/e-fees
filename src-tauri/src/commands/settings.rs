@@ -183,6 +183,16 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettingsPublic, St
 pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Result<String, String> {
     info!("Saving settings to .env file");
 
+    // Preserve existing password when frontend omits it (security: password never sent to frontend)
+    let settings = if settings.surrealdb_pass.is_none() {
+        let existing = get_settings_internal(&app_handle).await.ok();
+        let mut s = settings;
+        s.surrealdb_pass = existing.and_then(|e| e.surrealdb_pass);
+        s
+    } else {
+        settings
+    };
+
     // Use same filename logic as get_settings for consistency
     // In debug mode, use .env.dev to separate dev and production configs
     let env_filename = if cfg!(debug_assertions) {

@@ -20,7 +20,7 @@
   import { createThrottled } from '$lib/utils/crud';
   import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
   import { logApiError } from '$lib/services/logger';
-  import { PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
+  import { PROPOSAL_STATUSES, ACTIVE_PROPOSAL_STATUSES, getStatusColor } from '$lib/constants';
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import type { Fee, UnknownSurrealThing } from '../types';
@@ -420,7 +420,7 @@
 
   <!-- Status Chips -->
   <div class="mb-4">
-    <StatusChips statuses={PROPOSAL_STATUSES} bind:selected={statusSelected} counts={statusCounts} />
+    <StatusChips statuses={PROPOSAL_STATUSES} bind:selected={statusSelected} counts={statusCounts} activePreset={ACTIVE_PROPOSAL_STATUSES} />
   </div>
 
 <style>

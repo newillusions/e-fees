@@ -2553,6 +2553,18 @@ html {
     border-color: #ea580c;
   }
 
+  .emittiv-status-chip--preset {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .emittiv-status-chips__sep {
+    width: 1px;
+    height: 16px;
+    background: var(--emittiv-dark);
+    flex-shrink: 0;
+  }
+
   /* --- Date Range Filter --- */
   .emittiv-date-range {
     display: flex;
