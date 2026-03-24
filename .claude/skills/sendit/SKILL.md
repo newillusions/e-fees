@@ -1,11 +1,24 @@
 ---
 name: sendit
-description: Use when ready to ship staged changes for e-fees — runs full commit→cleanit→review→bump→tag→CI→verify pipeline autonomously in background. Handles code quality checks, Forgejo/GitHub push, CI polling with timed checkins, and update.json sync.
+description: Use when ready to ship changes for e-fees — runs review→test→bump→tag→CI→verify pipeline autonomously in background. Includes diff-based code review (haiku), auto-fix with test gate, full test suite (cargo test + svelte-check), CI polling, and update.json sync. Pre-requisite: run /smoke-test first (requires app running).
 ---
 
 # /sendit — E-Fees Ship It Pipeline
 
 Runs the complete e-fees release pipeline autonomously in the background. The main instance stays free while the pipeline executes. A final report is delivered on completion.
+
+## Pre-Requisite: Smoke Tests
+
+**Before running `/sendit`, ensure smoke tests have passed in the current session.**
+
+Smoke tests require the app running with Tauri MCP connected — they can't run inside the autonomous pipeline. Run `/smoke-test` first, then `/sendit`.
+
+```
+/smoke-test          ← requires app open, tests 40 checks via Tauri MCP
+/sendit              ← autonomous background pipeline
+```
+
+The pipeline checks for a smoke test timestamp (`.claude/last-smoke-test`) and warns if tests haven't run recently (>2 hours).
 
 ## Arguments
 
@@ -16,8 +29,8 @@ Runs the complete e-fees release pipeline autonomously in the background. The ma
 /sendit minor           — Minor version bump (feat: equivalent)
 /sendit major           — Major version bump (breaking change)
 /sendit --dry-run       — Show all steps without executing (safe to run anytime)
-/sendit --skip-review   — Skip cleanit + code review (for trivial/docs changes)
-/sendit --skip-publish  — Stop after merge (skip tag + CI + verification)
+/sendit --skip-review   — Skip code review (for trivial/docs changes)
+/sendit --skip-publish  — Stop after test gate (skip tag + CI + verification)
 ```
 
 Arguments can be combined: `/sendit fix --skip-review`
@@ -27,7 +40,7 @@ Arguments can be combined: `/sendit fix --skip-review`
 1. Parses args from the invocation
 2. Spawns a **background Task agent** with the full pipeline
 3. Main instance continues working immediately
-4. Agent delivers a completion report when done (15-25 min for full CI build)
+4. Agent delivers a completion report when done (~25 min for full CI build)
 
 ## Instructions to Claude
 
@@ -47,20 +60,33 @@ Agent tool:
   prompt: [agent-prompt.md content] + "\n\n## Args\n" + [parsed args or "none"]
 ```
 
-4. Tell the user: "Pipeline running in background — I'll notify you when it completes (expect ~20 min for full CI build)."
+4. Tell the user: "Pipeline running in background — I'll notify you when it completes (~25 min)."
 5. Continue with other work.
 
-## What the Pipeline Does
+## Pipeline Flow
 
 ```
-Pre-flight → Commit → Cleanit (review→simplify→guard) → Code Review
-    → Version bump → Push (Forgejo + GitHub)
-    → Tag → CI poll loop (every 60s)
-    → Pull update.json from Forgejo → Push to GitHub → Verify release
-    → Report
+Pre-flight (remotes, tools, smoke test recency)
+  → Commit staged changes (if any)
+  → Code Review (single pass, diff-only, haiku model)
+      → If BLOCK: auto-fix → test suite → pass? commit fix : revert + STOP
+      → If WARN/PASS: continue
+  → Test Gate (cargo test + npm run check — must pass)
+  → Version bump (patch/minor/major)
+  → Push (Forgejo + GitHub)
+  → Tag → CI poll loop (every 60s, ~20 min)
+  → Sync update.json (Forgejo → GitHub)
+  → Verify Forgejo release (8 assets)
+  → KB observation
+  → Final report
 ```
 
-CI checkins are logged at every poll interval and included in the final report so you can see exactly what happened and when.
+### Key design decisions
+
+- **Single review pass** — merged cleanit + code review into one haiku-model step. Diff-only, no full file reads. Budget: 8K tokens.
+- **Auto-fix with test safety net** — if review finds CRITICAL issues, the agent attempts fixes, then runs the full test suite. Tests fail → revert + stop. No broken code ships.
+- **Test gate always runs** — `cargo test` + `npm run check` regardless of whether review was skipped. Pre-existing errors (8 from Proposals.svelte legacy syntax) are tolerated; new errors block.
+- **Smoke tests are a pre-step** — they need the app running with Tauri MCP, which the background agent can't provide. Run `/smoke-test` before `/sendit`.
 
 ## Key Paths (Hardcoded)
 
@@ -72,4 +98,5 @@ CI checkins are logged at every poll interval and included in the final report s
 | GitHub remote | `github` → `github.com/newillusions/e-fees` |
 | GitHub Actions | `gh run list --repo newillusions/e-fees` |
 | Base branch | `main` |
-| Merge strategy | squash |
+| Smoke test timestamp | `.claude/last-smoke-test` |
+| Pre-existing type errors | 8 (Proposals.svelte legacy `on:` syntax) |
