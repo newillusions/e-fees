@@ -73,11 +73,10 @@ pub fn build_fee_json_paths(
     project: &Project,
 ) -> FeeJsonPaths {
     let project_number = clean_record_key(&project.number.id);
-    let project_name = &project.name;
 
     let project_dir = format!(
         "{}/01 RFPs/{} {}",
-        project_folder_path, project_number, project_name
+        project_folder_path, project_number, project.name_short
     );
     let old_json_path = format!(
         "{}/02 Proposal/{}-var Default Values.json",
