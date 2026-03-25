@@ -194,7 +194,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.13.12"
+version = "0.14.3"
 dependencies = [
  "argon2",
  "async-stream",
@@ -1832,10 +1832,12 @@ dependencies = [
  "chrono",
  "dotenvy",
  "e-fees-core",
+ "emittiv-container-utils",
  "regex",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "serde_yaml",
  "surrealdb",
  "surrealdb-types",
  "tokio",
