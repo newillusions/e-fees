@@ -7,10 +7,10 @@ use crate::db::{Fee, FeeCreate, FeeUpdate, PricingUpdate, PaginatedResponse};
 use crate::db::types::record_key_string;
 use crate::commands::utils::execute_with_manager;
 use crate::commands::fee_json;
+use crate::commands::settings::get_settings_internal;
 use crate::crud_command;
 use super::AppState;
 
-use std::fs;
 use std::path::Path;
 use tauri::{State, AppHandle, Manager};
 use log::{error, info, warn};
@@ -179,29 +179,16 @@ pub async fn write_fee_to_json(
             .map_err(|e| format!("Failed to fetch contact: {}", e))?
             .ok_or_else(|| "Contact not found for fee".to_string())?;
 
-        // Get project folder path from settings
-        let app_data_dir = app_handle.path().app_data_dir()
-            .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-        let settings_path = app_data_dir.join("settings.json");
-
-        let project_folder_path = if settings_path.exists() {
-            let settings_content = fs::read_to_string(&settings_path)
-                .map_err(|e| format!("Failed to read settings: {}", e))?;
-            let settings: serde_json::Value = serde_json::from_str(&settings_content)
-                .map_err(|e| format!("Failed to parse settings: {}", e))?;
-            settings.get("project_folder_path")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_default()
-        } else {
-            String::new()
-        };
+        // Get project folder path from settings (.env file)
+        let app_settings = get_settings_internal(&app_handle).await?;
+        let project_folder_path = app_settings.project_folder_path
+            .unwrap_or_default();
 
         (fee, project, company, contact, project_folder_path)
     };
 
     if project_folder_path.is_empty() {
-        return Err("Project folder path not configured in settings".to_string());
+        return Err("Configuration error: Project folder path not set. Please configure in Settings.".to_string());
     }
 
     // Build paths and JSON data
@@ -281,23 +268,10 @@ pub async fn write_fee_to_json_safe(
             "Data integrity error: The contact linked to this fee no longer exists.".to_string()
         })?;
 
-        // Get project folder path from settings
-        let app_data_dir = app_handle.path().app_data_dir()
-            .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-        let settings_path = app_data_dir.join("settings.json");
-
-        let project_folder_path = if settings_path.exists() {
-            let settings_content = fs::read_to_string(&settings_path)
-                .map_err(|e| format!("Failed to read settings: {}", e))?;
-            let settings: serde_json::Value = serde_json::from_str(&settings_content)
-                .map_err(|e| format!("Failed to parse settings: {}", e))?;
-            settings.get("project_folder_path")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_default()
-        } else {
-            String::new()
-        };
+        // Get project folder path from settings (.env file)
+        let app_settings = get_settings_internal(&app_handle).await?;
+        let project_folder_path = app_settings.project_folder_path
+            .unwrap_or_default();
 
         (fee, project, company, contact, project_folder_path)
     };
