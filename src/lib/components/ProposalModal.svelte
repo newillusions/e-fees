@@ -942,7 +942,7 @@
   onclose={closeModal}
 >
   <!-- Form -->
-  <form on:submit={handleSubmit} class="emittiv-form-section" style="gap: 16px;">
+  <form on:submit={handleSubmit} class="emittiv-form-section emittiv-form-section--wide">
 
     <!-- PROJECT & CLIENT INFORMATION SECTION - MOVED TO TOP -->
     <div class="emittiv-form-section">
@@ -952,7 +952,7 @@
       <div class="emittiv-form-section">
         
         <!-- Project Selection -->
-        <div class="flex relative" style="gap: 8px;">
+        <div class="emittiv-form-row">
           <div class="flex-1">
             <TypeaheadSelect
               label="Project"
@@ -986,7 +986,7 @@
         </div>
         
         <!-- Company Selection -->
-        <div class="flex relative" style="gap: 8px;">
+        <div class="emittiv-form-row">
           <div class="flex-1">
             <TypeaheadSelect
               label="Company"
@@ -1015,7 +1015,7 @@
         </div>
         
         <!-- Contact Selection -->
-        <div class="flex relative" style="gap: 8px;">
+        <div class="emittiv-form-row">
           <div class="flex-1">
             <TypeaheadSelect
               label="Contact"
@@ -1201,7 +1201,7 @@
         <h3 class="emittiv-form-section__title">
           Export Options
         </h3>
-        <div class="flex items-center" style="gap: 8px;">
+        <div class="emittiv-form-row items-center">
           <input
             type="checkbox"
             id="auto-export-json"
@@ -1234,7 +1234,7 @@
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit'}
       <div class="emittiv-alert emittiv-alert--sm emittiv-alert--error">
-        <p class="font-medium" style="margin-bottom: 4px;">Are you sure you want to delete this proposal?</p>
+        <p class="emittiv-alert__title">Are you sure you want to delete this proposal?</p>
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
     {/if}
@@ -1270,7 +1270,7 @@
     <!-- JSON Export Alert -->
     {#if showJsonExportAlert}
       <div class="emittiv-alert emittiv-alert--sm emittiv-alert--warning">
-        <p class="font-medium" style="margin-bottom: 4px;">Export to JSON?</p>
+        <p class="emittiv-alert__title">Export to JSON?</p>
         <div class="flex gap-2">
           <button
             type="button"
@@ -1295,8 +1295,8 @@
     <!-- Discard Unsaved Changes Confirmation -->
     {#if showDiscardConfirm}
       <div class="emittiv-alert emittiv-alert--warning">
-        <p class="font-medium" style="margin-bottom: 4px;">Discard unsaved changes?</p>
-        <p class="text-xs opacity-80" style="margin-bottom: 8px;">Your changes have not been saved.</p>
+        <p class="emittiv-alert__title">Discard unsaved changes?</p>
+        <p class="emittiv-alert__subtitle">Your changes have not been saved.</p>
         <div class="flex gap-2">
           <button
             type="button"
@@ -1317,10 +1317,10 @@
     {/if}
 
     <!-- Actions - Full Width Container -->
-    <div class="w-full" style="height: 40px;">
+    <div class="emittiv-modal__actions">
       {#if mode === 'edit' && !showDeleteConfirm}
         <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
-        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group emittiv-modal__actions-group--between">
           <Button
             variant="danger"
             size="sm"
@@ -1331,7 +1331,7 @@
             Delete
           </Button>
           
-          <div class="flex h-full" style="gap: 12px;">
+          <div class="emittiv-modal__actions-group">
             <Button
               variant="secondary"
               size="sm"
@@ -1352,7 +1352,6 @@
               {#if $operationState.saving}
                 <div 
                   class="emittiv-spinner-sm"
-                  style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
               Update
@@ -1361,7 +1360,7 @@
         </div>
       {:else if mode === 'edit' && showDeleteConfirm}
         <!-- Delete Confirmation Mode -->
-        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group emittiv-modal__actions-group--between">
           <Button
             variant="danger"
             size="sm"
@@ -1370,7 +1369,7 @@
             disabled={$operationState.deleting}
           >
             {#if $operationState.deleting}
-              <div class="emittiv-spinner-sm" style="border-color: white; border-top-color: transparent; margin-right: 6px;"></div>
+              <div class="emittiv-spinner-sm emittiv-spinner-sm--light"></div>
             {/if}
             Confirm Delete
           </Button>
@@ -1386,7 +1385,7 @@
         </div>
       {:else}
         <!-- Create Mode: Just Cancel/Create buttons -->
-        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group">
           <Button
             variant="secondary"
             size="sm"
@@ -1405,10 +1404,7 @@
             disabled={$operationState.saving || showProjectStatusSync || showJsonExportAlert}
           >
             {#if $operationState.saving}
-              <div 
-                class="emittiv-spinner-sm"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
+              <div class="emittiv-spinner-sm"></div>
             {/if}
             Create Proposal
           </Button>

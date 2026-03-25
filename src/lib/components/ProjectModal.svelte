@@ -291,14 +291,14 @@
   onclose={closeModal}
 >
   <!-- Form -->
-  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+  <form on:submit={handleSubmit} class="emittiv-form-section emittiv-form-section--wide">
     
     <!-- PROJECT INFORMATION SECTION -->
     <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+      <h3 class="emittiv-form-section__title">
         Project Information
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         
         <!-- Project Name -->
         <FormInput
@@ -319,7 +319,7 @@
         />
         
         <!-- Location: Country, City, Area -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Country"
             bind:value={formData.country}
@@ -346,7 +346,7 @@
         />
         
         <!-- Status and Folder -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormSelect
             label="Status"
             bind:value={formData.status}
@@ -387,10 +387,10 @@
     {/if}
     
     <!-- Actions - Full Width Container -->
-    <div class="w-full" style="height: 40px;">
+    <div class="emittiv-modal__actions">
       {#if mode === 'edit' && !showDeleteConfirm}
         <!-- Edit Mode: Delete button on left, Cancel/Update on right -->
-        <div class="flex justify-between items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group emittiv-modal__actions-group--between">
           <Button
             variant="danger"
             size="sm"
@@ -401,7 +401,7 @@
             Delete
           </Button>
           
-          <div class="flex h-full" style="gap: 12px;">
+          <div class="emittiv-modal__actions-group">
             <Button
               variant="secondary"
               size="sm"
@@ -422,7 +422,6 @@
               {#if $operationState.saving}
                 <div 
                   class="emittiv-spinner-sm"
-                  style="width: 14px; height: 14px; margin-right: 6px;"
                 ></div>
               {/if}
               Update
@@ -431,7 +430,7 @@
         </div>
       {:else if mode === 'edit' && showDeleteConfirm}
         <!-- Delete Confirmation: Confirm/Cancel delete buttons -->
-        <div class="flex justify-center items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group" style="justify-content: center;">
           <Button
             variant="danger"
             size="sm"
@@ -440,7 +439,7 @@
             disabled={$operationState.deleting}
           >
             {#if $operationState.deleting}
-              <div class="emittiv-spinner-sm" style="border-color: white; border-top-color: transparent; margin-right: 6px;"></div>
+              <div class="emittiv-spinner-sm emittiv-spinner-sm--light"></div>
             {/if}
             Confirm Delete
           </Button>
@@ -456,7 +455,7 @@
         </div>
       {:else}
         <!-- Create Mode: Just Cancel/Create buttons -->
-        <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+        <div class="emittiv-modal__actions-group">
           <Button
             variant="secondary"
             size="sm"
@@ -475,10 +474,7 @@
             disabled={$operationState.saving}
           >
             {#if $operationState.saving}
-              <div 
-                class="emittiv-spinner-sm"
-                style="width: 14px; height: 14px; margin-right: 6px;"
-              ></div>
+              <div class="emittiv-spinner-sm"></div>
             {/if}
             Create Project
           </Button>

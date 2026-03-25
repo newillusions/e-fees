@@ -431,13 +431,13 @@
 
 <BaseModal {isOpen} title="New Project" maxWidth="500px" {zIndex} onclose={closeModal}>
   <!-- Form -->
-  <form on:submit={handleSubmit} style="display: flex; flex-direction: column; gap: 16px;">
+  <form on:submit={handleSubmit} class="emittiv-form-section emittiv-form-section--wide">
     <!-- PROJECT INFORMATION SECTION -->
     <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+      <h3 class="emittiv-form-section__title">
         Project Information
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         <!-- Project Name -->
         <FormInput
           label="Project Name"
@@ -448,7 +448,7 @@
         />
 
         <!-- Short Name and Status -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <FormInput
             label="Short Name"
             bind:value={formData.name_short}
@@ -526,10 +526,10 @@
 
     <!-- LOCATION DETAILS SECTION -->
     <div>
-      <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">
+      <h3 class="emittiv-form-section__title">
         Location Details
       </h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="emittiv-form-section">
         <!-- Country Selection -->
         <TypeaheadSelect
           label="Country"
@@ -551,7 +551,7 @@
         </TypeaheadSelect>
 
         <!-- City and Area -->
-        <div class="grid grid-cols-2" style="gap: 12px;">
+        <div class="emittiv-form-grid">
           <TypeaheadSelect
             label="City"
             value=""
@@ -627,8 +627,8 @@
     {/if}
 
     <!-- Actions - Full Width Container -->
-    <div class="w-full" style="height: 40px;">
-      <div class="flex justify-end items-stretch h-full" style="gap: 12px;">
+    <div class="emittiv-modal__actions">
+      <div class="emittiv-modal__actions-group">
         <Button
           variant="secondary"
           size="sm"
@@ -647,10 +647,7 @@
           disabled={$operationState.saving || isGenerating || showFolderConfirm}
         >
           {#if $operationState.saving}
-            <div
-              class="emittiv-spinner-sm"
-              style="width: 14px; height: 14px; margin-right: 6px;"
-            ></div>
+            <div class="emittiv-spinner-sm"></div>
           {/if}
           Create Project
         </Button>

@@ -556,6 +556,54 @@
     grid-column: span 2;
   }
 
+  /* Form section with wider gap (e.g. top-level form) */
+  .emittiv-form-section--wide {
+    gap: 16px;
+  }
+
+  /* Inline row with small gap (typeahead + button pairs) */
+  .emittiv-form-row {
+    display: flex;
+    position: relative;
+    gap: 8px;
+  }
+
+  /* Modal action bar */
+  .emittiv-modal__actions {
+    height: 40px;
+    width: 100%;
+  }
+
+  .emittiv-modal__actions-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+    height: 100%;
+    gap: 12px;
+  }
+
+  .emittiv-modal__actions-group--between {
+    justify-content: space-between;
+  }
+
+  /* Alert text spacing */
+  .emittiv-alert__title {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .emittiv-alert__subtitle {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 8px;
+  }
+
+  /* Spinner variant for light backgrounds */
+  .emittiv-spinner-sm--light {
+    border-color: white;
+    border-top-color: transparent;
+  }
+
   /* Form field with suffix (e.g. input + "%" or input + "AED") */
   .emittiv-field-suffix {
     display: flex;
