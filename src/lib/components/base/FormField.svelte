@@ -8,7 +8,7 @@
   import FormInput from '../FormInput.svelte';
   import FormSelect from '../FormSelect.svelte';
   import TypeaheadSelect from '../TypeaheadSelect.svelte';
-  import type { FormFieldConfig, FieldChangeEvent } from './types';
+  import type { FormFieldConfig, FieldChangeEvent, TypeaheadOption } from './types';
   import { logger } from '$lib/services/logger';
 
   let { field, formData = $bindable({}), error = '', onfieldchange }: {
@@ -57,7 +57,7 @@
   function handleTypeaheadSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
     setValue(data.id);
     if (field.onSelect) {
-      field.onSelect(data);
+      field.onSelect(data.option as TypeaheadOption);
     }
   }
 

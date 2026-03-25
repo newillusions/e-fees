@@ -10,7 +10,7 @@ import { type Writable } from 'svelte/store';
 import type { CrudState } from './crudTypes';
 import type { UnknownSurrealThing } from '../../types';
 
-type IdExtractor = (id: UnknownSurrealThing | undefined) => string;
+type IdExtractor = (id: UnknownSurrealThing | undefined) => string | null;
 type FilterFn<T> = (items: T[], searchQuery: string, filters: Record<string, unknown>) => T[];
 type SortFn<T> = (items: T[], sort: CrudState<T>['sort']) => T[];
 
@@ -47,7 +47,7 @@ function recompute<T>(
 
 export function optimisticCreate<T extends { id?: UnknownSurrealThing }>(
   store: Writable<CrudState<T>>,
-  data: Partial<T>,
+  data: Omit<T, 'id'>,
   idExtractor: IdExtractor,
   filterAndSearch: FilterFn<T>,
   applySorting: SortFn<T>,

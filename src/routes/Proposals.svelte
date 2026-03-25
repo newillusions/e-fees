@@ -480,9 +480,9 @@
       selectedCount={selectedIds.size}
       entityType="proposals"
       statuses={[...PROPOSAL_STATUSES]}
-      on:delete={handleBulkDelete}
-      on:status-change={handleBulkStatusChange}
-      on:clear={clearSelection}
+      ondelete={handleBulkDelete}
+      onstatuschange={handleBulkStatusChange}
+      onclear={clearSelection}
     />
 
     <!-- Scrollable container for infinite scroll -->

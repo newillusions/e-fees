@@ -11,7 +11,7 @@ import { applySorting } from './crudPipeline';
 import type { CrudState, CrudApi } from './crudTypes';
 import type { UnknownSurrealThing } from '../../types';
 
-type IdExtractor = (id: UnknownSurrealThing | undefined) => string;
+type IdExtractor = (id: UnknownSurrealThing | undefined) => string | null;
 type FilterFn<T> = (items: T[], searchQuery: string, filters: Record<string, unknown>) => T[];
 type Logger = { info: (msg: string, ctx?: Record<string, unknown>) => void } | null;
 
