@@ -1,90 +1,51 @@
 # E-Fees Project Handover
 
 ## Current Status
-v0.13.12 on main. API v0.3.0 deployed with 4 new endpoints. SurrealDB migrated to surrealkv.
+v0.15.0 released. Scope UI integration + scope-pricing stage linkage merged to main and deployed. All platforms (macOS aarch64/x64, Windows).
 
-- **Version**: 0.13.12 (desktop app), 0.3.0 (API), 0.2.0 (Scope)
+- **Version**: 0.15.0 (desktop app)
 - **Branch**: main
 - **Database**: SurrealDB v3.0.4 surrealkv @ ws://10.0.23.11:8000 (emittiv/projects)
-- **Tests**: 18 core, 89 desktop (1 pre-existing xlsx fail), 21 API unit, 72 API integration
-- **API**: e-fees-api at 10.0.21.80:3200 (v0.3.0, 27 operations)
-- **Scope**: e-fees-scope at 10.0.21.81:3201 (v0.2.0)
+- **Dev Database**: SurrealDB v3.0.4 @ ws://10.0.23.12:8000
 
 ## Last Session
-**Date**: 2026-03-21
-**Summary**: API v0.3.0 — 4 new endpoints for PA integration, shared export logic extraction, SurrealDB surrealkv migration verification, DB schema migration re-applied.
-
-### Work Completed
-1. **Stale branch cleanup** — 6 remote + 3 local merged branches deleted
-2. **SurrealDB surrealkv verification** — confirmed app connects, 72/72 integration tests pass
-3. **DB schema migration re-applied** — surrealkv backup was pre-v0.13.0; re-ran migration 003 (project/fee status remapping + new ASSERTs)
-4. **API v0.3.0** — PR #6 (9 commits), brainstormed with PA via hub, staff-reviewed spec + plan:
-   - `e-fees-core/src/export.rs` — shared build_fee_json, format_issue_date, clean_record_key (18 unit tests)
-   - `e-fees-api/src/ssh.rs` — SshOps helper with shell quoting (6 unit tests)
-   - `POST /fees/{id}/json-export` — InDesign JSON export with archive
-   - `GET /fees/{id}/json-status` — field population check (23 fields)
-   - `GET /projects?search=...` — fuzzy search on name/name_short/number.id
-   - `POST /projects/{id}/documents` — multipart file upload (15 unit tests)
-   - Refactored folders.rs to use SshOps, added NC_BASE_PATH config
-   - Desktop app updated to use shared core exports, B3 path bug fixed (name_short → name)
-   - Fixed issue_date test format (YYYYMM → YYMMDD)
-5. **Container deployed** — rebuilt on AI server, v0.3.0 healthy, all tests pass
-6. **Wiki updated** — e-fees-api endpoints + environment sections updated for v0.3.0
-7. **PA notified** — endpoints ready for validation
-8. **SSH MCP removal acknowledged** — e-fees uses native SSH, no code impact
-9. **Type cleanup verified** — crudTypes.ts already consolidated, no action needed
+**Date**: 2026-03-27
+**Summary**: Implemented scope UI integration (ScopeViewer component tree) and scope-pricing stage linkage (bidirectional stage sync, revision history, stage dictionary). Brainstormed design with user, staff-reviewed spec, wrote 12-task plan, executed via subagent-driven development (4 parallel batches). Fixed multiple SurrealDB v3 issues (FLEXIBLE fields, DbValue serialization, SurrealValue i64). Fixed Tauri MCP stale socket cleanup. UI-tested via Tauri MCP (after socket fix). Released v0.15.0.
 
 ## Key Context
 | Resource | Value |
 |----------|-------|
 | Production DB | ws://10.0.23.11:8000 v3.0.4 surrealkv (ns: emittiv, db: projects) |
-| KB DB | ws://10.0.21.15:8000 v3.0.0 (ns: kb, db: knowledge) |
-| Dev DB | ws://10.0.23.12:8000 (may need migration 003 re-applied) |
-| API Container | 10.0.21.80:3200 v0.3.0 (br0, healthy, 27 ops) |
-| Scope Container | 10.0.21.81:3201 v0.2.0 (br0, healthy) |
-| Forgejo repo | forge.mms.name/emittiv/fee-prop |
-| Wiki pages | slugs: "e-fees", "e-fees-api", "e-fees-scope" |
-| PR #6 | Merged — API enhancements (export, search, upload, status) |
-
-## Deployment Notes
-
-### Config YAML Migration (2026-03-22)
-- e-fees-api and e-fees-scope now use `config.yaml` for non-secret runtime config
-- Secrets (SURREAL_PASS, API_KEY) remain in `.env`
-- Docker containers need config.yaml mounted: `-v /path/to/config.yaml:/app/config.yaml`
-- ConfigManager hot-reloads on file change (2s polling in Docker)
-- Container rebuild commands pending — needs config.yaml copied to AI server appdata dirs
+| Dev DB | ws://10.0.23.12:8000 v3.0.4 (scope tables + clauses seeded) |
+| API Container | 10.0.21.80:3200 (e-fees-api v0.3.0) |
+| Scope Container | 10.0.21.81:3201 (e-fees-scope v0.2.0 — NEEDS REDEPLOYMENT with new code) |
+| Scope-Pricing Spec | docs/superpowers/specs/2026-03-26-scope-pricing-linkage-design.md |
+| Scope-Pricing Plan | docs/superpowers/plans/2026-03-26-scope-pricing-linkage.md |
+| Forgejo Release | forge.mms.name/emittiv/fee-prop/releases/tag/v0.15.0 |
+| Local scope .env | e-fees-scope/.env (dev DB 10.0.23.12, Ollama 10.0.21.20) |
+| Ollama | 10.0.21.20:11434 (NOT 10.0.21.50 — config.yaml updated) |
 
 ## Next Steps
-1. **PA validation** — PA will test full flow (company → contact → project → folder → fee → json-export)
-2. **Config YAML migration** — Deferred; requires axum port of emittiv-container-utils Rust crate
-3. **Evaluate Playwright Test Agents** — `--loop=claude` option for UI smoke tests
-4. **Design review items** — H-2 (Scope Builder nav link), M-10 (ScopeBuilder breadcrumb)
-5. **InDesign automation** — table population, scope text insertion (JSON export now API-accessible)
-6. **Dev DB migration** — Verify 10.0.23.12 has migration 003 applied (status ASSERTs)
+1. **Deploy scope container** — rebuild e-fees-scope image with stage linkage + revision code, push to Forgejo registry, update Unraid container
+2. **Stage autocomplete UI** — wire searchStageDictionary into pricing stage name input
+3. **Markdown export wiring** — connect ScopeViewer handleSave to export_scope_markdown Tauri command (currently has TODO placeholders for fee_ref, project_name, project_folder)
+4. **InDesign export** — pricing tables (T0-T4) via UXP scripting
+5. **Advanced filtering** — date ranges, multi-field search improvements
 
 ## Architecture
-- **Desktop app** (Tauri): Full CRUD, filesystem ops, multi-currency display
-- **Shared core** (`crates/e-fees-core/`): Domain types + export logic shared between desktop, API & scope
-- **Standalone API** (`e-fees-api/`): Full CRUD, search, JSON export, document upload, OpenAPI — v0.3.0
-- **Scope service** (`e-fees-scope/`): Clause library, corpus ingestion, scope generation with LLM polish — v0.2.0
-- **InDesign MCP** (local): UXP bridge for Claude Code <-> InDesign DOM
+- **Desktop app** (Tauri): Full CRUD, filesystem ops, multi-currency, scope viewer with stage linkage
+- **Shared core** (`crates/e-fees-core/`): Domain types + export logic + `set_pricing_stages()`
+- **Standalone API** (`e-fees-api/`): Full CRUD, search, JSON export, OpenAPI — v0.3.0
+- **Scope service** (`e-fees-scope/`): Clause library, corpus ingestion, scope generation with stage context, revision history
+- **Container-utils** (`forge.mms.name/emittiv/container-utils`): Shared ConfigManager + health routes
 
 ## Critical Rules
-1. **SUPERPOWERS SKILLS MANDATORY**: Invoke relevant skill BEFORE any work
-2. **TDD NON-NEGOTIABLE**: Write failing tests FIRST, then implement
-3. **Always create PRs** (option 2) when finishing development branches — never ask, just do it
-4. **Screenshots**: Peekaboo MCP with `app_target: "app"` — NEVER browser tools
-5. **Dev command**: `npm run tauri:dev` (not `npm run dev`)
-6. **CSS**: Semantic `.emittiv-*` classes + `var(--color-*)` tokens, NOT utility strings > 50 chars
-7. **Fixed px values**: Desktop app with OS-level scaling, never use rem
-8. **Git**: Push to Forgejo (origin) for daily work. GitHub only for tagged releases
-9. **Releases**: Use /sendit (background agent). Includes cleanit quality gate.
-10. **SurrealDB v3 NULL**: Omit optional fields from SET clause entirely
-11. **SurrealDB SDK**: Pinned to 3.0.4 in all 4 Cargo.toml files
-12. **Unraid containers**: ALL must use XML templates hosted on Forgejo
-13. **Container standards**: /health, /api/health, /help, /openapi.json required for all API containers
-14. **SSH**: Use native `ssh` via Bash, NOT MCP SSH server (removed workspace-wide)
+1. **Tauri MCP socket**: Auto-cleans stale socket now (socket_server.rs fix). Use `rm -f /tmp/tauri-mcp.sock` if issues persist.
+2. **Dev scope testing**: Run local scope service: `cd e-fees-scope && cargo run` with `.env` pointing to dev DB (10.0.23.12) and Ollama at 10.0.21.20
+3. **SurrealValue i64**: Use `i64` not `Option<i64>` for fields with DEFAULT 0
+4. **scope_revision.clauses**: Stored as JSON string, not native array (avoids DbValue binding issues)
+5. **assembly_to_json**: Must include all new fields (stages_snapshot, current_revision) — easy to miss
+6. **generate_scope upsert**: DELETE+CREATE resets all fields — must explicitly include current_revision in CREATE SET
 
 ---
-*Updated: 2026-03-21*
+*Updated: 2026-03-27*

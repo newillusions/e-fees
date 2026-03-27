@@ -253,13 +253,20 @@ impl DatabaseClient {
     pub async fn create_new_project(&self, project: NewProject) -> Result<Option<Project>, Error> {
         let project_id = project.number.id.replace("-", "_");
 
+        // Normalize country name via fn::resolve_country; fall back to raw input if unresolved.
+        let resolved_country = self.resolve_country(&project.country).await
+            .ok()
+            .flatten()
+            .and_then(|v| v.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+            .unwrap_or_else(|| project.country.clone());
+
         let set_clauses = vec![
             format!("name = '{}'", project.name.replace("'", "''")),
             format!("name_short = '{}'", project.name_short.replace("'", "''")),
             format!("status = '{}'", project.status.replace("'", "''")),
             format!("area = '{}'", project.area.replace("'", "''")),
             format!("city = '{}'", project.city.replace("'", "''")),
-            format!("country = '{}'", project.country.replace("'", "''")),
+            format!("country = '{}'", resolved_country.replace("'", "''")),
             format!("folder = '{}'", project.folder.replace("'", "''")),
             format!("number = {{ year: {}, country: {}, seq: {}, id: '{}' }}",
                 project.number.year, project.number.country, project.number.seq,
@@ -323,6 +330,13 @@ impl DatabaseClient {
     // ==================== Company Operations ====================
 
     pub async fn create_company(&self, company: CompanyCreate) -> Result<Option<Company>, Error> {
+        // Normalize country name via fn::resolve_country; fall back to raw input if unresolved.
+        let resolved_country = self.resolve_country(&company.country).await
+            .ok()
+            .flatten()
+            .and_then(|v| v.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+            .unwrap_or_else(|| company.country.clone());
+
         let query = format!(
             "CREATE company:{} SET name = '{}', name_short = '{}', abbreviation = '{}', city = '{}', country = '{}', reg_no = {}, tax_no = {}, time = {{ created_at: time::now(), updated_at: time::now() }}",
             company.abbreviation,
@@ -330,7 +344,7 @@ impl DatabaseClient {
             company.name_short.replace("'", "''"),
             company.abbreviation.replace("'", "''"),
             company.city.replace("'", "''"),
-            company.country.replace("'", "''"),
+            resolved_country.replace("'", "''"),
             company.reg_no.map_or("NONE".to_string(), |v| format!("'{}'", v.replace("'", "''"))),
             company.tax_no.map_or("NONE".to_string(), |v| format!("'{}'", v.replace("'", "''")))
         );
@@ -684,6 +698,15 @@ impl DatabaseClient {
     }
 
     // ==================== Country/Reference Operations ====================
+
+    /// Resolve a country name/code/alias to its canonical record using the fn::resolve_country function.
+    /// Returns None if no match is found.
+    pub async fn resolve_country(&self, input: &str) -> Result<Option<serde_json::Value>, Error> {
+        let query = "RETURN fn::resolve_country($input);";
+        let mut response = self.query_bind(query, ("input", input.to_string())).await?;
+        let result: Option<serde_json::Value> = response.take(0)?;
+        Ok(result)
+    }
 
     pub async fn search_countries(&self, query_str: &str) -> Result<Vec<serde_json::Value>, Error> {
         // Validate input length

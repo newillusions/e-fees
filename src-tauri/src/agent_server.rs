@@ -355,6 +355,28 @@ async fn create_project_handler(
         )
     })?;
 
+    // Resolve country to canonical name via stored function
+    let canonical_country = {
+        let manager = state.db.read().await;
+        manager.resolve_country(&req.country).await.map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse { error: e.to_string() }),
+            )
+        })?
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: format!("Unknown country: {}", req.country),
+                }),
+            )
+        })?
+        .as_str()
+        .unwrap_or(&req.country)
+        .to_string()
+    };
+
     let project = Project {
         id: None,
         name: req.name,
@@ -362,7 +384,7 @@ async fn create_project_handler(
         status: req.status,
         area: req.area,
         city: req.city,
-        country: req.country,
+        country: canonical_country,
         folder: req.folder,
         number,
         time: TimeStamps {
@@ -595,12 +617,34 @@ async fn create_company_handler(
     State(state): State<AgentState>,
     Json(req): Json<CreateCompanyRequest>,
 ) -> Result<(StatusCode, Json<CompanyResponse>), (StatusCode, Json<ErrorResponse>)> {
+    // Resolve country to canonical name via stored function
+    let canonical_country = {
+        let manager = state.db.read().await;
+        manager.resolve_country(&req.country).await.map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse { error: e.to_string() }),
+            )
+        })?
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: format!("Unknown country: {}", req.country),
+                }),
+            )
+        })?
+        .as_str()
+        .unwrap_or(&req.country)
+        .to_string()
+    };
+
     let company = CompanyCreate {
         name: req.name,
         name_short: req.name_short,
         abbreviation: req.abbreviation,
         city: req.city,
-        country: req.country,
+        country: canonical_country,
         reg_no: req.reg_no,
         tax_no: req.tax_no,
     };

@@ -139,7 +139,7 @@ pub async fn get_next_number(
         (chrono::Utc::now().year() % 100) as u8
     });
 
-    let country_code = lookup_dial_code(&state.db, &params.country).await?;
+    let (_canonical_name, country_code) = resolve_country(&state.db, &params.country).await?;
     let seq = next_sequence(&state.db, country_code, year).await?;
     let number = format!("{:02}-{}{:02}", year, country_code, seq);
 
@@ -170,16 +170,19 @@ pub async fn create_project(
     require_non_empty(&body.name, "name")?;
     validate_status(&body.status, PROJECT_STATUSES, "project")?;
 
+    // Normalize the country name via the DB stored function before any path.
+    // dial_code is also returned here for use in auto-numbering (None branch below).
+    let (canonical_country, dial_code) = resolve_country(&state.db, &body.country).await?;
+
     let number = match body.number {
         Some(n) => n,
         None => {
             let year = (chrono::Utc::now().year() % 100) as u8;
-            let country_code = lookup_dial_code(&state.db, &body.country).await?;
-            let seq = next_sequence(&state.db, country_code, year).await?;
-            let id = format!("{:02}-{}{:02}", year, country_code, seq);
+            let seq = next_sequence(&state.db, dial_code, year).await?;
+            let id = format!("{:02}-{}{:02}", year, dial_code, seq);
             ProjectNumber {
                 year: year as i64,
-                country: country_code as i64,
+                country: dial_code as i64,
                 seq: seq as i64,
                 id,
             }
@@ -203,7 +206,7 @@ pub async fn create_project(
         .bind(("status", body.status))
         .bind(("area", body.area))
         .bind(("city", body.city))
-        .bind(("country", body.country))
+        .bind(("country", canonical_country))
         .bind(("folder", body.folder))
         .bind(("number", json!({
             "year": number.year,
@@ -220,36 +223,85 @@ pub async fn create_project(
     }
 }
 
-/// Look up a country's dial code from the reference data table.
-async fn lookup_dial_code(db: &Surreal<Client>, country_name: &str) -> Result<u16, ApiError> {
-    if country_name.is_empty() || country_name.len() > 100 {
+/*
+ * lookup_dial_code — replaced by resolve_country (uses fn::resolve_country stored function).
+ * Kept for reference only; do not use.
+ *
+ * async fn lookup_dial_code(db: &Surreal<Client>, country_name: &str) -> Result<u16, ApiError> {
+ *     if country_name.is_empty() || country_name.len() > 100 {
+ *         return Err(ApiError::bad_request("Invalid country name"));
+ *     }
+ *     let mut response = db
+ *         .query(
+ *             "SELECT dial_code FROM country \
+ *              WHERE name = $name \
+ *              OR string::lowercase(string::replace(name, '.', '')) \
+ *                 = string::lowercase(string::replace($name, '.', '')) \
+ *              LIMIT 1",
+ *         )
+ *         .bind(("name", country_name.to_string()))
+ *         .await?;
+ *     let results: Vec<serde_json::Value> = response.take(0)?;
+ *     let dial_code = results
+ *         .first()
+ *         .and_then(|r| r.get("dial_code").and_then(|v| v.as_u64()))
+ *         .ok_or_else(|| ApiError::bad_request(format!("Country not found: '{}'", country_name)))?;
+ *     u16::try_from(dial_code).map_err(|_| {
+ *         ApiError::bad_request(format!("Dial code {} out of range for '{}'", dial_code, country_name))
+ *     })
+ * }
+ */
+
+/// Resolve a country input string via the DB stored function `fn::resolve_country`.
+///
+/// Returns `(canonical_name, dial_code)`. Returns a 400 error if the country is
+/// not found in the reference table.
+pub(crate) async fn resolve_country(
+    db: &Surreal<Client>,
+    input: &str,
+) -> Result<(String, u16), ApiError> {
+    if input.is_empty() || input.len() > 100 {
         return Err(ApiError::bad_request("Invalid country name"));
     }
 
-    // Try exact match first, then fuzzy match stripping dots/periods
-    // (handles "UAE" matching "U.A.E.", "KSA" matching "K.S.A.")
     let mut response = db
-        .query(
-            "SELECT dial_code FROM country \
-             WHERE name = $name \
-             OR string::lowercase(string::replace(name, '.', '')) \
-                = string::lowercase(string::replace($name, '.', '')) \
-             LIMIT 1",
-        )
-        .bind(("name", country_name.to_string()))
+        .query("RETURN fn::resolve_country($input);")
+        .bind(("input", input.to_string()))
         .await?;
-    let results: Vec<serde_json::Value> = response.take(0)?;
 
-    let dial_code = results
-        .first()
-        .and_then(|r| r.get("dial_code").and_then(|v| v.as_u64()))
-        .ok_or_else(|| {
-            ApiError::bad_request(format!("Country not found: '{}'", country_name))
-        })?;
+    let result: Option<serde_json::Value> = response.take(0)?;
 
-    u16::try_from(dial_code).map_err(|_| {
-        ApiError::bad_request(format!("Dial code {} out of range for '{}'", dial_code, country_name))
-    })
+    match result {
+        None => Err(ApiError::bad_request(format!(
+            "Country not found: '{}'. Please provide a valid country name.",
+            input
+        ))),
+        Some(v) if v.is_null() => Err(ApiError::bad_request(format!(
+            "Country not found: '{}'. Please provide a valid country name.",
+            input
+        ))),
+        Some(v) => {
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or_else(|| ApiError::bad_request("resolve_country returned invalid data"))?
+                .to_string();
+
+            let dial_code_raw = v
+                .get("dial_code")
+                .and_then(|d| d.as_u64())
+                .ok_or_else(|| ApiError::bad_request("resolve_country returned invalid dial_code"))?;
+
+            let dial_code = u16::try_from(dial_code_raw).map_err(|_| {
+                ApiError::bad_request(format!(
+                    "Dial code {} out of range for '{}'",
+                    dial_code_raw, input
+                ))
+            })?;
+
+            Ok((name, dial_code))
+        }
+    }
 }
 
 /// Find the next available sequence number for a country/year combo.

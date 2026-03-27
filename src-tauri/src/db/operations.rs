@@ -406,27 +406,26 @@ impl DatabaseManager {
             return Err(self.invalid_request_error("Invalid country name"));
         }
 
-        // Look up dial code using parameterized query (SQL injection safe)
-        let country_lookup_query = "SELECT dial_code FROM country WHERE name = $name LIMIT 1";
-        let mut country_response = client.query_bind(country_lookup_query, ("name", country_name.to_string())).await?;
-        let country_result: Result<Vec<serde_json::Value>, _> = country_response.take(0);
+        // Resolve country via fn::resolve_country (handles aliases, iso2, partial matches).
+        // Falls back to exact-match lookup if resolve_country returns None.
+        // Old exact-match query (kept for reference):
+        // let country_lookup_query = "SELECT dial_code FROM country WHERE name = $name LIMIT 1";
+        let resolved = client.resolve_country(country_name).await?;
 
-        let country_code = match country_result {
-            Ok(records) => {
-                if let Some(first) = records.first() {
-                    if let Some(dial_code) = first.get("dial_code").and_then(|v| v.as_u64()) {
-                        // TYPE-M2: Use try_into with bounds checking instead of lossy cast
-                        u16::try_from(dial_code).map_err(|_| {
-                            self.invalid_request_error(&format!("Dial code {} out of valid range for country: {}", dial_code, country_name))
-                        })?
-                    } else {
-                        return Err(self.invalid_request_error(&format!("Dial code is not a number for country: {}", country_name)));
-                    }
+        let country_code = match resolved {
+            Some(record) => {
+                if let Some(dial_code) = record.get("dial_code").and_then(|v| v.as_u64()) {
+                    // TYPE-M2: Use try_into with bounds checking instead of lossy cast
+                    u16::try_from(dial_code).map_err(|_| {
+                        self.invalid_request_error(&format!("Dial code {} out of valid range for country: {}", dial_code, country_name))
+                    })?
                 } else {
-                    return Err(self.invalid_request_error(&format!("Country not found: {}", country_name)));
+                    return Err(self.invalid_request_error(&format!("Dial code is not a number for country: {}", country_name)));
                 }
             }
-            Err(e) => return Err(e),
+            None => {
+                return Err(self.invalid_request_error(&format!("Country not found: {}", country_name)));
+            }
         };
 
         info!("Found country code {} for country {}", country_code, country_name);
@@ -737,6 +736,40 @@ impl DatabaseManager {
         }
 
         Ok(results)
+    }
+
+    // ==================== Country Operations ====================
+
+    /// Resolve a country input string (name, ISO2, ISO3, dial code) to its canonical name
+    /// using the `fn::resolve_country` stored function.
+    ///
+    /// Returns the canonical country name, or an error if the input is not recognised.
+    pub async fn resolve_country_name(&self, input: &str) -> Result<String, Error> {
+        if input.is_empty() || input.len() > 100 {
+            return Err(self.invalid_request_error("Invalid country name length"));
+        }
+
+        let client = self.get_client()?;
+        let mut response = client
+            .query_bind("RETURN fn::resolve_country($input);", ("input", input.to_string()))
+            .await?;
+
+        let result: Option<serde_json::Value> = response.take(0)?;
+
+        match result {
+            None | Some(serde_json::Value::Null) => Err(self.invalid_request_error(&format!(
+                "Country not found: '{}'. Accepted formats: full name, ISO2, ISO3, or dial code.",
+                input
+            ))),
+            Some(v) => {
+                let name = v
+                    .get("name")
+                    .and_then(|n| n.as_str())
+                    .ok_or_else(|| self.invalid_request_error("resolve_country returned invalid data"))?
+                    .to_string();
+                Ok(name)
+            }
+        }
     }
 
     // ==================== Batch Operations ====================

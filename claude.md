@@ -204,6 +204,14 @@ When user says "/release", "/release patch", "/release minor", "/release major",
    - Frontend: ProjectModal.svelte + NewProjectModal.svelte fully functional
    - Status change workflow and folder management integrated
 
+### Country Resolution - COMPLETED ✅ (March 2026)
+- **Schema**: `country` table with `dial_code` normalization (dial_code uniqueness, case-insensitive lookups)
+- **API**: `GET /country?name=<query>` endpoint in e-fees-api (BM25 full-text search + exact match priority)
+- **Desktop app**: `resolve_country()` in database client + Tauri command + `src/lib/api/country.ts` wrapper
+- **Integration**: Ready for project numbering system (YY-CCCNN format using country dial codes)
+- **Verification**: cargo check --lib passed, code review requirements met
+- **Documentation**: KB observation saved (entity:fgrpy58jqix6b8zdn6us)
+
 ### Priority 2: Enhanced UI Features
 3. **Detail views with slide-in panels** - Rich data display
 4. **Bulk operations** - Multi-select and batch actions

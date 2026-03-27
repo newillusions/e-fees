@@ -10,6 +10,7 @@ use e_fees_core::models::{record_id_string, Company, CompanyCreate};
 
 use crate::error::ApiError;
 use crate::pagination::{db_paginate_filtered, paginated_json_raw, FilterClause};
+use crate::routes::projects::resolve_country;
 use crate::schemas;
 use crate::validation::{require_non_empty, validate_id};
 use crate::AppState;
@@ -103,6 +104,13 @@ pub async fn create_company(
 ) -> Result<Json<Value>, ApiError> {
     require_non_empty(&body.name, "name")?;
 
+    // Normalize country name via the DB stored function. Fall back to raw input
+    // if the country is not found — companies don't strictly require a dial code.
+    let canonical_country = match resolve_country(&state.db, &body.country).await {
+        Ok((name, _dial_code)) => name,
+        Err(_) => body.country.clone(),
+    };
+
     let mut response = state
         .db
         .query("CREATE company SET name = $name, name_short = $name_short, abbreviation = $abbreviation, city = $city, country = $country, reg_no = $reg_no, tax_no = $tax_no, time = { created_at: time::now(), updated_at: time::now() }")
@@ -110,7 +118,7 @@ pub async fn create_company(
         .bind(("name_short", body.name_short))
         .bind(("abbreviation", body.abbreviation))
         .bind(("city", body.city))
-        .bind(("country", body.country))
+        .bind(("country", canonical_country))
         .bind(("reg_no", body.reg_no))
         .bind(("tax_no", body.tax_no))
         .await?;

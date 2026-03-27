@@ -334,6 +334,11 @@ impl DatabaseManager {
         Ok(PaginatedResponse::new(items, total, page, page_size))
     }
 
+    pub async fn resolve_country(&self, input: &str) -> Result<Option<serde_json::Value>, Error> {
+        let client = self.get_client()?;
+        client.resolve_country(input).await
+    }
+
     async fn get_by_id<T>(&self, table: &str, id: &str) -> Result<Option<T>, Error>
     where
         T: serde::de::DeserializeOwned + surrealdb::types::SurrealValue,
