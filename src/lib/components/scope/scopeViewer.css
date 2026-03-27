@@ -1,0 +1,254 @@
+/* =============================================================================
+ * Scope Viewer — Clause-based scope display/edit CSS
+ * Fixed px values for desktop app (OS handles DPI scaling)
+ * ========================================================================== */
+
+/* Section ----------------------------------------------------------------- */
+
+.emittiv-scope-section {
+  border: 1px solid var(--emittiv-dark);
+  border-radius: 6px;
+  background: var(--emittiv-darker);
+  overflow: hidden;
+}
+
+.emittiv-scope-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.emittiv-scope-section__header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.emittiv-scope-section__chevron {
+  font-size: 10px;
+  color: var(--emittiv-light);
+  transition: transform 0.2s;
+}
+
+.emittiv-scope-section__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.emittiv-scope-section__number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--emittiv-splash);
+  min-width: 28px;
+}
+
+.emittiv-scope-section__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--emittiv-white);
+  flex: 1;
+}
+
+.emittiv-scope-section__count {
+  font-size: 11px;
+  color: var(--emittiv-light);
+  background: var(--emittiv-dark);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.emittiv-scope-section__body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emittiv-scope-section__empty {
+  font-size: 12px;
+  color: var(--emittiv-light);
+  padding: 8px 0;
+  margin: 0;
+}
+
+/* Clause ------------------------------------------------------------------ */
+
+.emittiv-scope-clause {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.emittiv-scope-clause:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.emittiv-scope-clause__number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--emittiv-splash);
+  min-width: 28px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.emittiv-scope-clause__content {
+  font-size: 12px;
+  color: var(--emittiv-lighter);
+  line-height: 1.5;
+}
+
+.emittiv-scope-clause__title {
+  font-weight: 600;
+  color: var(--emittiv-white);
+}
+
+.emittiv-scope-clause__separator {
+  color: var(--emittiv-light);
+}
+
+.emittiv-scope-clause__body {
+  color: var(--emittiv-lighter);
+}
+
+/* Clause — Editing state ------------------------------------------------- */
+
+.emittiv-scope-clause--editing {
+  background: var(--emittiv-black);
+  border: 1px solid var(--emittiv-splash);
+  padding: 10px;
+  cursor: default;
+}
+
+.emittiv-scope-clause--editing:hover {
+  background: var(--emittiv-black);
+}
+
+.emittiv-scope-clause__edit-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emittiv-scope-clause__body-input {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.emittiv-scope-clause__edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Advanced Controls ------------------------------------------------------- */
+
+.emittiv-scope-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--emittiv-darker);
+  border: 1px solid var(--emittiv-dark);
+  border-radius: 6px;
+}
+
+.emittiv-scope-advanced__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emittiv-scope-advanced__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--emittiv-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.emittiv-scope-advanced__checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emittiv-scope-advanced__checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--emittiv-lighter);
+  cursor: pointer;
+}
+
+/* Viewer Layout ----------------------------------------------------------- */
+
+.emittiv-scope-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.emittiv-scope-viewer__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emittiv-scope-viewer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--emittiv-dark);
+}
+
+.emittiv-scope-viewer__actions-spacer {
+  flex: 1;
+}
+
+.emittiv-scope-viewer__status {
+  font-size: 11px;
+  color: var(--emittiv-light);
+}
+
+.emittiv-scope-viewer__empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--emittiv-light);
+  font-size: 14px;
+}
+
+.emittiv-scope-viewer__advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--emittiv-light);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 0;
+}
+
+.emittiv-scope-viewer__advanced-toggle:hover {
+  color: var(--emittiv-splash);
+}
+
+.emittiv-scope-viewer__generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px;
+  color: var(--emittiv-light);
+  font-size: 14px;
+}

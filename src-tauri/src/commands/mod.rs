@@ -158,3 +158,15 @@ pub use export::{export_fee_excel, export_fee_template};
 // Batch operations (multi-select)
 pub mod batch_ops;
 pub use batch_ops::{batch_delete_entities, batch_update_status};
+
+// Fee stage access (scope–pricing linkage)
+pub mod fee_stages;
+pub use fee_stages::{get_fee_stages, add_stage_to_fee};
+
+// Stage dictionary (autocomplete for stage names)
+pub mod stage_dictionary;
+pub use stage_dictionary::{search_stage_dictionary, add_stage_to_dictionary};
+
+// Scope markdown export
+pub mod scope_export;
+pub use scope_export::export_scope_markdown;

@@ -36,6 +36,10 @@ fn assembly_to_json(a: &ScopeAssembly) -> Value {
     if let Some(ref model) = a.llm_model {
         obj["llm_model"] = json!(model);
     }
+    if let Some(ref snapshot) = a.stages_snapshot {
+        obj["stages_snapshot"] = json!(snapshot);
+    }
+    obj["current_revision"] = json!(a.current_revision);
 
     obj
 }
@@ -155,6 +159,63 @@ async fn fetch_corpus_examples(
         .collect()
 }
 
+/// Create a revision record from the current scope_assembly state before updating.
+async fn create_revision(
+    db: &surrealdb::Surreal<surrealdb::engine::remote::ws::Client>,
+    fee_key: &str,
+    trigger: &str,
+) -> Result<i64, ApiError> {
+    // Get current assembly
+    let mut res = db
+        .query("SELECT * FROM scope_assembly WHERE fee_id = type::record('fee', $fee_key)")
+        .bind(("fee_key", fee_key.to_string()))
+        .await?;
+    let assemblies: Vec<ScopeAssembly> = res.take(0)?;
+
+    let Some(assembly) = assemblies.into_iter().next() else {
+        return Ok(0); // No existing assembly to revision
+    };
+
+    let next_rev = assembly.current_revision + 1;
+
+    // Store clauses as JSON string (audit snapshot — not queried by field)
+    let clauses_json = serde_json::to_string(&dbvalue_to_json(&assembly.clauses))
+        .unwrap_or_else(|_| "[]".to_string());
+
+    let rev_result = db.query(
+        "CREATE scope_revision SET \
+         fee_id = type::record('fee', $fee_key), \
+         revision = $revision, \
+         clauses = $clauses_str, \
+         generated_text = $generated_text, \
+         stages_at_time = $stages, \
+         trigger = $trigger;",
+    )
+    .bind(("fee_key", fee_key.to_string()))
+    .bind(("revision", next_rev))
+    .bind(("clauses_str", clauses_json))
+    .bind(("generated_text", assembly.generated_text.clone()))
+    .bind(("stages", assembly.stages_snapshot.clone().unwrap_or_default()))
+    .bind(("trigger", trigger.to_string()))
+    .await;
+
+    if let Err(ref e) = rev_result {
+        tracing::warn!("Failed to create scope revision: {}", e);
+    }
+    rev_result?;
+
+    // Update current_revision counter
+    db.query(
+        "UPDATE scope_assembly SET current_revision = $rev \
+         WHERE fee_id = type::record('fee', $fee_key);",
+    )
+    .bind(("fee_key", fee_key.to_string()))
+    .bind(("rev", next_rev))
+    .await?;
+
+    Ok(next_rev)
+}
+
 /// Generate scope assembly from clause library for a fee.
 #[utoipa::path(
     post,
@@ -212,7 +273,34 @@ pub async fn generate_scope(
     // 3. Auto-number by category
     let (sections_json, raw_text, numbering_map) = auto_number_clauses(&clauses);
 
-    // 4. Optionally polish with LLM (using corpus examples if available)
+    // 4. Build stage context string for LLM
+    let stage_context = if let Some(ref stages) = body.stages {
+        let design: Vec<String> = stages
+            .iter()
+            .filter(|s| !s.is_post_contract)
+            .map(|s| format!("{} ({})", s.name, s.code))
+            .collect();
+        let post: Vec<String> = stages
+            .iter()
+            .filter(|s| s.is_post_contract)
+            .map(|s| format!("{} ({})", s.name, s.code))
+            .collect();
+        let mut ctx = String::new();
+        if !design.is_empty() {
+            ctx.push_str(&format!("Design stages: {}", design.join(", ")));
+        }
+        if !post.is_empty() {
+            if !ctx.is_empty() {
+                ctx.push_str(". ");
+            }
+            ctx.push_str(&format!("Post-contract stages: {}", post.join(", ")));
+        }
+        Some(ctx)
+    } else {
+        None
+    };
+
+    // 5. Optionally polish with LLM (using corpus examples if available)
     let (generated_text, llm_polished, llm_model) = if body.polish {
         // Fetch similar proposal texts from corpus for context
         let corpus_examples = fetch_corpus_examples(&state.db, fee_key).await;
@@ -224,6 +312,7 @@ pub async fn generate_scope(
             &fee,
             &raw_text,
             &corpus_examples,
+            stage_context.as_deref(),
         )
         .await?;
         (polished, true, Some(state.ollama_model.clone()))
@@ -231,7 +320,17 @@ pub async fn generate_scope(
         (raw_text, false, None)
     };
 
-    // 5. Upsert into scope_assembly
+    // 6. Build stages snapshot for storage
+    let stages_snapshot: Vec<String> = body
+        .stages
+        .as_ref()
+        .map(|s| s.iter().map(|st| st.name.clone()).collect())
+        .unwrap_or_default();
+
+    // 7. Save current state as a revision before overwriting
+    let revision_num = create_revision(&state.db, fee_key, "regeneration").await?;
+
+    // 8. Upsert into scope_assembly (preserve current_revision from create_revision)
     let mut optional_sets = String::new();
     if llm_model.is_some() {
         optional_sets.push_str(", llm_model = $llm_model");
@@ -245,6 +344,8 @@ pub async fn generate_scope(
          generated_text = $generated_text, \
          numbering = $numbering, \
          llm_polished = $llm_polished, \
+         stages_snapshot = $stages_snapshot, \
+         current_revision = $current_revision, \
          created_at = time::now(), \
          updated_at = time::now(){optional_sets};"
     );
@@ -256,7 +357,9 @@ pub async fn generate_scope(
         .bind(("clauses", sections_json))
         .bind(("generated_text", generated_text.clone()))
         .bind(("numbering", numbering_map))
-        .bind(("llm_polished", llm_polished));
+        .bind(("llm_polished", llm_polished))
+        .bind(("stages_snapshot", stages_snapshot))
+        .bind(("current_revision", revision_num));
 
     if let Some(ref model) = llm_model {
         q = q.bind(("llm_model", model.clone()));
@@ -339,6 +442,9 @@ pub async fn update_scope(
             "At least one of generated_text or clauses must be provided",
         ));
     }
+
+    // Save current state as a revision before overwriting
+    let _revision = create_revision(&state.db, fee_key, "manual_edit").await?;
 
     // Manual edit clears the LLM polish flag
     sets.push("llm_polished = false".into());
@@ -423,8 +529,12 @@ pub async fn regenerate_scope(
         &fee,
         &assembly.generated_text,
         &corpus_examples,
+        None,
     )
     .await?;
+
+    // Save current state as a revision before overwriting
+    let _revision = create_revision(&state.db, fee_key, "regeneration").await?;
 
     // Update record
     let update_query =

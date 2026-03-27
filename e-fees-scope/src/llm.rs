@@ -14,6 +14,7 @@ pub async fn polish_scope(
     project_context: &Value,
     raw_scope: &str,
     similar_examples: &[String],
+    stage_context: Option<&str>,
 ) -> Result<String, ApiError> {
     let examples_text = if similar_examples.is_empty() {
         String::new()
@@ -24,13 +25,19 @@ pub async fn polish_scope(
         )
     };
 
+    let stage_text = match stage_context {
+        Some(ctx) if !ctx.is_empty() => format!("\n\nProject stages: {}", ctx),
+        _ => String::new(),
+    };
+
     let prompt = format!(
-        "Given this project context:\n{}\n\n\
+        "Given this project context:\n{}{}\n\n\
          Refine these scope of services clauses for professional tone and project specificity. \
          Maintain the exact structure, numbering, and deliverables. Do not add or remove items. \
          Only improve language, specificity, and professionalism.\n\n\
          Scope text:\n{}\n{}",
         serde_json::to_string_pretty(project_context).unwrap_or_default(),
+        stage_text,
         raw_scope,
         examples_text
     );

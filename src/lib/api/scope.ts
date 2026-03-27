@@ -40,7 +40,10 @@ async function scopeRequest<T>(path: string, options: RequestInit = {}): Promise
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || `Scope API error: ${response.status}`);
+    const message = error.message || `Scope API error: ${response.status}`;
+    const err = new Error(message);
+    (err as any).status = response.status;
+    throw err;
   }
   return response.json();
 }
@@ -133,16 +136,24 @@ export async function getScopeDeliverables(feeId: string): Promise<ScopeDelivera
 // =============================================================================
 
 /** Generate scope text from clauses (LLM-powered). */
-export async function generateScope(data: GenerateScopeRequest): Promise<ScopeAssembly> {
+export async function generateScope(data: GenerateScopeRequest, signal?: AbortSignal): Promise<ScopeAssembly> {
   return scopeRequest<ScopeAssembly>('/scope/generate', {
     method: 'POST',
     body: JSON.stringify(data),
+    signal,
   });
 }
 
-/** Get scope for a fee proposal. */
-export async function getScope(feeId: string): Promise<ScopeAssembly> {
-  return scopeRequest<ScopeAssembly>(`/scope/${feeId}`);
+/** Get scope for a fee proposal. Returns null if no scope exists (404). */
+export async function getScope(feeId: string): Promise<ScopeAssembly | null> {
+  try {
+    return await scopeRequest<ScopeAssembly>(`/scope/${feeId}`);
+  } catch (err: any) {
+    if (err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /** Update scope for a fee proposal. */

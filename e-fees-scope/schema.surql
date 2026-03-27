@@ -28,8 +28,10 @@ DEFINE INDEX idx_clause_status   ON clause FIELDS status;
 DEFINE TABLE scope_assembly SCHEMAFULL;
 
 DEFINE FIELD fee_id         ON scope_assembly TYPE record<fee>;
-DEFINE FIELD clauses        ON scope_assembly TYPE array<object> FLEXIBLE;
-DEFINE FIELD clauses.*      ON scope_assembly TYPE object FLEXIBLE;
+DEFINE FIELD clauses          ON scope_assembly TYPE array<object> FLEXIBLE;
+DEFINE FIELD clauses.*        ON scope_assembly TYPE object FLEXIBLE;
+DEFINE FIELD clauses.*.clauses   ON scope_assembly TYPE option<array<object>> FLEXIBLE;
+DEFINE FIELD clauses.*.clauses.* ON scope_assembly TYPE object FLEXIBLE;
 DEFINE FIELD generated_text ON scope_assembly TYPE string;
 DEFINE FIELD numbering      ON scope_assembly TYPE option<object> FLEXIBLE;
 DEFINE FIELD llm_model      ON scope_assembly TYPE option<string>;
@@ -106,3 +108,31 @@ DEFINE FIELD deliverables_used.* ON scope_assembly TYPE object FLEXIBLE;  -- FLE
 DEFINE FIELD stage_labels        ON scope_assembly TYPE option<object> FLEXIBLE;
 DEFINE FIELD manual_items        ON scope_assembly TYPE option<array<object>> FLEXIBLE;
 DEFINE FIELD manual_items.*      ON scope_assembly TYPE object FLEXIBLE;  -- FLEXIBLE required for nested fields
+
+-- ============================================================
+-- Extend stage_config for dictionary/autocomplete
+-- ============================================================
+DEFINE FIELD code             ON stage_config TYPE option<string>;
+DEFINE FIELD usage_count      ON stage_config TYPE int DEFAULT 0;
+DEFINE FIELD is_post_contract ON stage_config TYPE bool DEFAULT false;
+
+-- ============================================================
+-- Scope revision history (separate table to avoid record bloat)
+-- ============================================================
+DEFINE TABLE scope_revision SCHEMAFULL;
+
+DEFINE FIELD fee_id         ON scope_revision TYPE record<fee>;
+DEFINE FIELD revision       ON scope_revision TYPE int;
+DEFINE FIELD clauses        ON scope_revision TYPE string;  -- JSON string snapshot (audit, not queried by field)
+DEFINE FIELD generated_text ON scope_revision TYPE string;
+DEFINE FIELD stages_at_time ON scope_revision TYPE option<array<string>>;
+DEFINE FIELD saved_at       ON scope_revision TYPE datetime DEFAULT time::now();
+DEFINE FIELD trigger        ON scope_revision TYPE string;
+
+DEFINE INDEX idx_scope_rev_fee ON scope_revision FIELDS fee_id, revision;
+
+-- ============================================================
+-- Extend scope_assembly for revision tracking and stage snapshot
+-- ============================================================
+DEFINE FIELD current_revision ON scope_assembly TYPE int DEFAULT 0;
+DEFINE FIELD stages_snapshot  ON scope_assembly TYPE option<array<string>>;

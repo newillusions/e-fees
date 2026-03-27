@@ -25,6 +25,7 @@
   import type { PricingBreakdown } from '../../types/database';
   import FeePricingModal from './pricing/FeePricingModal.svelte';
   import CurrencyAmount from './CurrencyAmount.svelte';
+  import ScopeViewer from './scope/ScopeViewer.svelte';
   
   let { isOpen = $bindable(false), proposal = null, mode = 'create', onclose }: {
     isOpen?: boolean;
@@ -114,6 +115,8 @@
   let showCompanyModal = $state(false);
   let showContactModal = $state(false);
   let showPricingModal = $state(false);
+  let showScopeModal = $state(false);
+  let scopeDirty = $state(false);
   let companyModalMode: 'create' | 'edit' = $state('create');
   let contactModalMode: 'create' | 'edit' = $state('create');
   let selectedCompany: Company | null = $state(null);
@@ -1195,6 +1198,27 @@
       </div>
     {/if}
 
+    <!-- Scope Section (Edit Mode Only) -->
+    {#if mode === 'edit'}
+      <div class="emittiv-form-section">
+        <h3 class="emittiv-form-section__title">
+          Proposal Scope
+        </h3>
+        <div class="flex items-center justify-between">
+          <p class="text-emittiv-light text-sm">
+            Generate and edit scope text for this proposal
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            on:click={() => showScopeModal = true}
+          >
+            Generate Scope
+          </Button>
+        </div>
+      </div>
+    {/if}
+
     <!-- Auto-Export Options (Create Mode Only) -->
     {#if mode === 'create'}
       <div class="emittiv-form-section">
@@ -1455,6 +1479,27 @@
     showPricingModal = false;
   }}
 />
+
+<!-- Scope Viewer Modal -->
+{#if showScopeModal}
+  <BaseModal
+    isOpen={showScopeModal}
+    title="Proposal Scope"
+    size="xl"
+    zIndex={200}
+    onclose={() => {
+      if (scopeDirty && !confirm('Discard unsaved scope changes?')) return;
+      showScopeModal = false;
+      scopeDirty = false;
+    }}
+  >
+    <ScopeViewer
+      feeId={getEntityId(proposal)}
+      stages={proposal?.pricing?.stages ?? []}
+      ondirtychange={(d) => scopeDirty = d}
+    />
+  </BaseModal>
+{/if}
 
 <style>
   /* z-index for nested modals is now handled via props (zIndex={200}) */

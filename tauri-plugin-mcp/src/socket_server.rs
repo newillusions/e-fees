@@ -160,6 +160,22 @@ impl<R: Runtime> SocketServer<R> {
                 // Create a name for our socket based on the platform
                 let socket_name = self.get_socket_name(path)?;
 
+                // Remove stale socket file before binding (Unix only).
+                // If a previous session crashed without clean shutdown, the Drop
+                // impl never fires and the socket file is left on disk.
+                #[cfg(unix)]
+                {
+                    let socket_path = if let Some(p) = path {
+                        p.clone()
+                    } else {
+                        std::env::temp_dir().join("tauri-mcp.sock")
+                    };
+                    if socket_path.exists() {
+                        info!("[TAURI_MCP] Removing stale socket file: {:?}", socket_path);
+                        let _ = std::fs::remove_file(&socket_path);
+                    }
+                }
+
                 // Configure and create the IPC listener
                 let opts = ListenerOptions::new().name(socket_name);
                 let ipc_listener = opts.create_sync()

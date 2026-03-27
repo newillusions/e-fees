@@ -97,6 +97,14 @@ use commands::{
     // Batch operations
     batch_delete_entities,
     batch_update_status,
+    // Fee stage access (scope–pricing linkage)
+    get_fee_stages,
+    add_stage_to_fee,
+    // Stage dictionary (autocomplete for stage names)
+    search_stage_dictionary,
+    add_stage_to_dictionary,
+    // Scope markdown export
+    export_scope_markdown,
 };
 
 /// Load database configuration from the settings system.
@@ -372,7 +380,15 @@ pub fn run() {
             export_fee_template,
             // Batch operations
             batch_delete_entities,
-            batch_update_status
+            batch_update_status,
+            // Fee stage access (scope–pricing linkage)
+            get_fee_stages,
+            add_stage_to_fee,
+            // Stage dictionary (autocomplete for stage names)
+            search_stage_dictionary,
+            add_stage_to_dictionary,
+            // Scope markdown export
+            export_scope_markdown
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

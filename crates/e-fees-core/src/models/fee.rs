@@ -119,6 +119,16 @@ impl Fee {
             serde_json::from_value(json).ok()
         })
     }
+
+    /// Replace the stages in the pricing breakdown, preserving all other pricing data.
+    /// If pricing is None, creates a default PricingBreakdown with the given stages.
+    pub fn set_pricing_stages(&mut self, stages: Vec<Stage>) {
+        let mut breakdown = self.pricing_typed().unwrap_or_default();
+        breakdown.stages = stages;
+        if let Ok(json) = serde_json::to_value(&breakdown) {
+            self.pricing = Some(json_to_dbvalue(&json));
+        }
+    }
 }
 
 /// Fee creation struct.
@@ -385,4 +395,95 @@ pub struct PricingRevision {
     pub is_client_release: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_number: Option<i64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use surrealdb::types::RecordId;
+    use surrealdb_types::Datetime;
+    use crate::models::common::TimeStamps;
+
+    fn make_fee() -> Fee {
+        Fee {
+            id: None,
+            name: String::new(),
+            number: "25-97101-1".to_string(),
+            rev: 0,
+            status: "Draft".to_string(),
+            issue_date: "202601".to_string(),
+            activity: "Test".to_string(),
+            package: String::new(),
+            project_id: RecordId::new("projects", "test"),
+            company_id: RecordId::new("company", "test"),
+            contact_id: RecordId::new("contacts", "test"),
+            staff_name: String::new(),
+            staff_email: String::new(),
+            staff_phone: String::new(),
+            staff_position: String::new(),
+            strap_line: String::new(),
+            revisions: vec![],
+            time: TimeStamps {
+                created_at: Datetime::default(),
+                updated_at: Datetime::default(),
+            },
+            pricing: None,
+            post_contract_items: None,
+            reimbursable_costs: None,
+            payment_schedule: None,
+            pricing_revisions: None,
+            current_revision_number: None,
+            current_release_number: None,
+            import_source: None,
+        }
+    }
+
+    #[test]
+    fn test_set_pricing_stages_on_empty_pricing() {
+        let mut fee = make_fee();
+        assert!(fee.pricing.is_none());
+
+        let stages = vec![Stage {
+            id: "sd-01".to_string(),
+            name: "Schematic Design".to_string(),
+            code: "SD".to_string(),
+            percentage: 25.0,
+            order: 1,
+            is_post_contract: false,
+        }];
+
+        fee.set_pricing_stages(stages);
+
+        let breakdown = fee.pricing_typed().expect("pricing should be set");
+        assert_eq!(breakdown.stages.len(), 1);
+        assert_eq!(breakdown.stages[0].name, "Schematic Design");
+    }
+
+    #[test]
+    fn test_set_pricing_stages_preserves_existing_pricing() {
+        let mut fee = make_fee();
+
+        let mut breakdown = PricingBreakdown::default();
+        breakdown.config.quoted_fee = 50000.0;
+        breakdown.stages = vec![Stage {
+            id: "sd-01".to_string(),
+            name: "Schematic Design".to_string(),
+            code: "SD".to_string(),
+            percentage: 25.0,
+            order: 1,
+            is_post_contract: false,
+        }];
+        let json = serde_json::to_value(&breakdown).unwrap();
+        fee.pricing = Some(json_to_dbvalue(&json));
+
+        let new_stages = vec![
+            Stage { id: "sd-01".to_string(), name: "Schematic Design".to_string(), code: "SD".to_string(), percentage: 25.0, order: 1, is_post_contract: false },
+            Stage { id: "bim-01".to_string(), name: "BIM Coordination".to_string(), code: "BC".to_string(), percentage: 0.0, order: 2, is_post_contract: false },
+        ];
+        fee.set_pricing_stages(new_stages);
+
+        let result = fee.pricing_typed().unwrap();
+        assert_eq!(result.stages.len(), 2);
+        assert_eq!(result.config.quoted_fee, 50000.0); // preserved
+    }
 }

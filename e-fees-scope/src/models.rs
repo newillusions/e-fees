@@ -112,8 +112,21 @@ pub struct ScopeAssembly {
     pub numbering: Option<surrealdb_types::Value>,
     pub llm_model: Option<String>,
     pub llm_polished: bool,
+    #[serde(default)]
+    pub current_revision: i64,
+    #[serde(default)]
+    pub stages_snapshot: Option<Vec<String>>,
     pub created_at: Datetime,
     pub updated_at: Datetime,
+}
+
+/// Stage input from the fee's pricing data, passed by the frontend.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StageInput {
+    pub name: String,
+    pub code: String,
+    pub is_post_contract: bool,
+    pub order: i64,
 }
 
 /// Payload for generating a scope assembly.
@@ -122,6 +135,8 @@ pub struct GenerateScopeRequest {
     pub fee_id: String,
     #[serde(default)]
     pub polish: bool,
+    #[serde(default)]
+    pub stages: Option<Vec<StageInput>>,
 }
 
 /// Payload for manually updating a scope assembly.
