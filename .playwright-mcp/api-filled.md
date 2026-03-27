@@ -1,0 +1,549 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - link "Visit Unraid website" [ref=e5] [cursor=pointer]:
+        - /url: https://unraid.net
+        - img "Unraid Logo" [ref=e6]
+      - button "7.2.4" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+        - text: 7.2.4
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic "Server Up Since Tue, 3 March 2026 10:17" [ref=e13]: Uptime 16 days 5 hours 53 minutes
+        - generic [ref=e14]: •
+        - button "Unraid OS Basic" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]:
+            - text: Unraid OS
+            - emphasis [ref=e18]:
+              - strong [ref=e19]: Basic
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: AI Systems
+          - generic [ref=e23]: •
+          - generic [ref=e24]: ai
+        - button "Open notifications" [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: Open notifications
+          - generic [ref=e27]:
+            - img [ref=e28]
+            - img [ref=e486]
+        - button "Open Dropdown" [ref=e30] [cursor=pointer]:
+          - img [ref=e31]
+          - figure [ref=e33]:
+            - img [ref=e34]
+  - generic [ref=e36]:
+    - generic [ref=e37]:
+      - link "Dashboard" [ref=e39] [cursor=pointer]:
+        - /url: /Dashboard
+      - link "Main" [ref=e41] [cursor=pointer]:
+        - /url: /Main
+      - link "Shares" [ref=e43] [cursor=pointer]:
+        - /url: /Shares
+      - link "Users" [ref=e45] [cursor=pointer]:
+        - /url: /Users
+      - link "Settings" [ref=e47] [cursor=pointer]:
+        - /url: /Settings
+      - link "Plugins" [ref=e49] [cursor=pointer]:
+        - /url: /Plugins
+      - link "Docker" [ref=e51] [cursor=pointer]:
+        - /url: /Docker
+      - link "Apps" [ref=e53] [cursor=pointer]:
+        - /url: /Apps
+      - link "Tools" [ref=e55] [cursor=pointer]:
+        - /url: /Tools
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic: 0%
+      - text: 
+      - link "" [ref=e59] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e60]: 
+      - link "" [ref=e62] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e63]: 
+      - link "" [ref=e65] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e66]: 
+      - link "" [ref=e68] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e69]: 
+      - link "" [ref=e71] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e72]: 
+      - link "" [ref=e74] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e75]: 
+      - link "" [ref=e77] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e78]: 
+      - link "" [ref=e80] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e81]: 
+      - link [ref=e83] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e84]
+  - generic [ref=e86]:
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - generic [ref=e89]: 
+        - text: Add Container
+      - generic [ref=e92] [cursor=pointer]: Advanced View
+    - paragraph
+    - paragraph
+    - generic [ref=e96]:
+      - paragraph
+      - generic [ref=e98]:
+        - term [ref=e99]: "Name:"
+        - definition [ref=e100]:
+          - textbox [ref=e101]: e-fees-api
+      - generic [ref=e103]:
+        - term [ref=e104]: "Overview:"
+        - definition [ref=e105]:
+          - textbox [ref=e106]: "E-Fees REST API — Full CRUD for projects, companies, contacts, and fee proposals with OpenAPI/Swagger docs. Built from source on the AI server: cd /mnt/user/appdata/e-fees-api/source && docker build -t e-fees-api:latest . Network: br0 ipvlan L2 (10.0.21.80:3200) Swagger UI: http://10.0.21.80:3200/docs/ Depends on: SurrealDB (10.0.23.11:8000, ns:emittiv, db:projects) Config: /config/app.env contains DB credentials, API key, SSH keys for Nextcloud folder creation. Generate API key: openssl rand -hex 16"
+      - generic [ref=e108]:
+        - term [ref=e109]: "Additional Requirements:"
+        - definition [ref=e110]:
+          - textbox [ref=e111]: surrealdb-ailx
+      - generic [ref=e113]:
+        - term [ref=e114]: "Repository:"
+        - definition [ref=e115]:
+          - textbox [ref=e116]: e-fees-api:latest
+      - generic [ref=e117]:
+        - generic [ref=e118]:
+          - term [ref=e119]: "Categories:"
+          - definition [ref=e120]:
+            - generic "Productivity" [ref=e123] [cursor=pointer]
+            - generic [ref=e125] [cursor=pointer]:
+              - generic [ref=e126]: Categories
+              - generic [ref=e127]:
+                - checkbox [disabled] [ref=e128]
+                - text: AI
+              - generic [ref=e129]:
+                - checkbox [disabled] [ref=e130]
+                - text: Backup
+              - generic [ref=e131]:
+                - checkbox [disabled] [ref=e132]
+                - text: Cloud
+              - generic [ref=e133]:
+                - checkbox [disabled] [ref=e134]
+                - text: Crypto Currency
+              - generic [ref=e135]:
+                - checkbox [disabled] [ref=e136]
+                - text: Downloaders
+              - generic [ref=e137]:
+                - checkbox [disabled] [ref=e138]
+                - text: Drivers
+              - generic [ref=e139]:
+                - checkbox [disabled] [ref=e140]
+                - text: Game Servers
+              - generic [ref=e141]:
+                - checkbox [disabled] [ref=e142]
+                - text: Home Automation
+              - generic [ref=e143]:
+                - checkbox [checked] [disabled] [ref=e144]
+                - text: Productivity
+              - generic [ref=e145]:
+                - checkbox [disabled] [ref=e146]
+                - text: Security
+              - generic [ref=e147]:
+                - checkbox [disabled] [ref=e148]
+                - text: Tools
+              - generic [ref=e149]:
+                - checkbox [disabled] [ref=e150]
+                - text: Other
+              - generic [ref=e151]: MediaApp
+              - generic [ref=e152]:
+                - checkbox [disabled] [ref=e153]
+                - text: MediaApp:Video
+              - generic [ref=e154]:
+                - checkbox [disabled] [ref=e155]
+                - text: MediaApp:Music
+              - generic [ref=e156]:
+                - checkbox [disabled] [ref=e157]
+                - text: MediaApp:Books
+              - generic [ref=e158]:
+                - checkbox [disabled] [ref=e159]
+                - text: MediaApp:Photos
+              - generic [ref=e160]:
+                - checkbox [disabled] [ref=e161]
+                - text: MediaApp:Other
+              - generic [ref=e162]: MediaServer
+              - generic [ref=e163]:
+                - checkbox [disabled] [ref=e164]
+                - text: MediaServer:Video
+              - generic [ref=e165]:
+                - checkbox [disabled] [ref=e166]
+                - text: MediaServer:Music
+              - generic [ref=e167]:
+                - checkbox [disabled] [ref=e168]
+                - text: MediaServer:Books
+              - generic [ref=e169]:
+                - checkbox [disabled] [ref=e170]
+                - text: MediaServer:Photos
+              - generic [ref=e171]:
+                - checkbox [disabled] [ref=e172]
+                - text: MediaServer:Other
+              - generic [ref=e173]: Network
+              - generic [ref=e174]:
+                - checkbox [disabled] [ref=e175]
+                - text: Network:Web
+              - generic [ref=e176]:
+                - checkbox [disabled] [ref=e177]
+                - text: Network:DNS
+              - generic [ref=e178]:
+                - checkbox [disabled] [ref=e179]
+                - text: Network:FTP
+              - generic [ref=e180]:
+                - checkbox [disabled] [ref=e181]
+                - text: Network:Proxy
+              - generic [ref=e182]:
+                - checkbox [disabled] [ref=e183]
+                - text: Network:Voip
+              - generic [ref=e184]:
+                - checkbox [disabled] [ref=e185]
+                - text: Network:Management
+              - generic [ref=e186]:
+                - checkbox [disabled] [ref=e187]
+                - text: Network:Messenger
+              - generic [ref=e188]:
+                - checkbox [disabled] [ref=e189]
+                - text: Network:VPN
+              - generic [ref=e190]:
+                - checkbox [disabled] [ref=e191]
+                - text: Network:Privacy
+              - generic [ref=e192]:
+                - checkbox [disabled] [ref=e193]
+                - text: Network:Other
+              - generic [ref=e194]: Development Status
+              - generic [ref=e195]:
+                - checkbox [disabled] [ref=e196]
+                - text: Status:Stable
+              - generic [ref=e197]:
+                - checkbox [disabled] [ref=e198]
+                - text: Status:Beta
+              - generic [ref=e199]: ...close
+          - term [ref=e200]: "Support Thread:"
+          - definition [ref=e201]:
+            - textbox [ref=e202]: https://forge.mms.name/emittiv/fee-prop/issues
+        - generic [ref=e203]:
+          - term [ref=e204]: "Project Page:"
+          - definition [ref=e205]:
+            - textbox [ref=e206]: https://forge.mms.name/emittiv/fee-prop
+        - generic [ref=e207]:
+          - term [ref=e208]: "Read Me First:"
+          - definition [ref=e209]:
+            - textbox [ref=e210]: https://forge.mms.name/emittiv/fee-prop
+      - generic [ref=e212]:
+        - term [ref=e213]: "Registry URL:"
+        - definition [ref=e214]:
+          - textbox [ref=e215]: https://forge.mms.name/emittiv/fee-prop
+      - generic [ref=e216]:
+        - generic [ref=e217]:
+          - term [ref=e218]: "Icon URL:"
+          - definition [ref=e219]:
+            - textbox [ref=e220]: https://forge.mms.name/emittiv/docker-icons/raw/branch/main/e-fees-api.png
+        - generic [ref=e221]:
+          - term [ref=e222]: "WebUI:"
+          - definition [ref=e223]:
+            - textbox [ref=e224]: http://10.0.21.80:3200/docs/
+        - generic [ref=e225]:
+          - term [ref=e226]: "Extra Parameters:"
+          - definition [ref=e227]:
+            - textbox [ref=e228]
+        - generic [ref=e229]:
+          - term [ref=e230]: "Post Arguments:"
+          - definition [ref=e231]:
+            - textbox [ref=e232]
+        - generic [ref=e233]:
+          - term [ref=e234]: "CPU Pinning:"
+          - definition [ref=e235]:
+            - generic [ref=e236]:
+              - generic [ref=e237]: "CPU:"
+              - generic [ref=e238] [cursor=pointer]:
+                - text: "0"
+                - checkbox "0" [ref=e239]
+              - generic [ref=e241] [cursor=pointer]:
+                - text: "1"
+                - checkbox "1" [ref=e242]
+              - generic [ref=e244] [cursor=pointer]:
+                - text: "2"
+                - checkbox "2" [ref=e245]
+              - generic [ref=e247] [cursor=pointer]:
+                - text: "3"
+                - checkbox "3" [ref=e248]
+              - generic [ref=e250] [cursor=pointer]:
+                - text: "4"
+                - checkbox "4" [ref=e251]
+              - generic [ref=e253] [cursor=pointer]:
+                - text: "5"
+                - checkbox "5" [ref=e254]
+              - generic [ref=e256] [cursor=pointer]:
+                - text: "6"
+                - checkbox "6" [ref=e257]
+              - generic [ref=e259] [cursor=pointer]:
+                - text: "7"
+                - checkbox "7" [ref=e260]
+              - generic [ref=e262]: "HT:"
+              - generic [ref=e263] [cursor=pointer]:
+                - text: "8"
+                - checkbox "8" [ref=e264]
+              - generic [ref=e266] [cursor=pointer]:
+                - text: "9"
+                - checkbox "9" [ref=e267]
+              - generic [ref=e269] [cursor=pointer]:
+                - text: "10"
+                - checkbox "10" [ref=e270]
+              - generic [ref=e272] [cursor=pointer]:
+                - text: "11"
+                - checkbox "11" [ref=e273]
+              - generic [ref=e275] [cursor=pointer]:
+                - text: "12"
+                - checkbox "12" [ref=e276]
+              - generic [ref=e278] [cursor=pointer]:
+                - text: "13"
+                - checkbox "13" [ref=e279]
+              - generic [ref=e281] [cursor=pointer]:
+                - text: "14"
+                - checkbox "14" [ref=e282]
+              - generic [ref=e284] [cursor=pointer]:
+                - text: "15"
+                - checkbox "15" [ref=e285]
+      - generic [ref=e287]:
+        - term [ref=e288]: "Network Type:"
+        - definition [ref=e289]:
+          - combobox [ref=e290] [cursor=pointer]:
+            - option "Bridge"
+            - option "Host"
+            - option "Container"
+            - option "None"
+            - 'option "Custom : br0" [selected]'
+      - generic [ref=e292]:
+        - term [ref=e293]: "Fixed IP address (optional):"
+        - definition [ref=e294]:
+          - textbox [ref=e295]: 10.0.21.80
+          - generic [ref=e296]: "Subnet: 10.0.16.0/21"
+      - generic [ref=e298]:
+        - term [ref=e299]: "Use Tailscale:"
+        - definition [ref=e300]:
+          - generic [ref=e304] [cursor=pointer]: "Off"
+      - generic [ref=e305]:
+        - term [ref=e306]: "Console shell command:"
+        - definition [ref=e307]:
+          - combobox [ref=e308] [cursor=pointer]:
+            - option "Shell" [selected]
+            - option "Bash"
+        - term [ref=e309]: "Privileged:"
+        - definition [ref=e310]:
+          - generic [ref=e314] [cursor=pointer]: "Off"
+      - generic [ref=e315]:
+        - generic [ref=e316]:
+          - paragraph
+          - generic [ref=e317]:
+            - term [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e320]: 
+                - text: "Port: *"
+            - definition [ref=e321]:
+              - generic [ref=e322]:
+                - generic [ref=e323]:
+                  - textbox [ref=e324]: "3200"
+                  - generic [ref=e325]:
+                    - button "Edit" [ref=e326] [cursor=pointer]
+                    - button "Remove" [ref=e327] [cursor=pointer]
+                - generic [ref=e328]:
+                  - generic [ref=e329]: "Container Port: 3200"
+                  - generic [ref=e330]: REST API port
+        - generic [ref=e331]:
+          - paragraph
+          - generic [ref=e332]:
+            - term [ref=e333]:
+              - generic [ref=e334]:
+                - generic [ref=e335]: 
+                - text: "Appdata: *"
+            - definition [ref=e336]:
+              - generic [ref=e337]:
+                - generic [ref=e338]:
+                  - textbox [ref=e339]: /mnt/user/appdata/e-fees-api
+                  - generic [ref=e340]:
+                    - button "Edit" [ref=e341] [cursor=pointer]
+                    - button "Remove" [ref=e342] [cursor=pointer]
+                - generic [ref=e343]:
+                  - generic [ref=e344]: "Container Path: /config"
+                  - generic [ref=e345]: Persistent config and data
+        - generic [ref=e346]:
+          - paragraph
+          - generic [ref=e347]:
+            - term [ref=e348]:
+              - generic [ref=e349]:
+                - generic [ref=e350]: 
+                - text: "Application Config: *"
+            - definition [ref=e351]:
+              - generic [ref=e352]:
+                - generic [ref=e353]:
+                  - textbox [ref=e354]: /mnt/user/appdata/e-fees-api/app.env
+                  - generic [ref=e355]:
+                    - button "Edit" [ref=e356] [cursor=pointer]
+                    - button "Remove" [ref=e357] [cursor=pointer]
+                - generic [ref=e358]:
+                  - generic [ref=e359]: "Container Path: /config/app.env"
+                  - generic [ref=e360]: Hot-reloadable application config. Contains DB credentials, API key, SSH config for Nextcloud.
+        - generic [ref=e361]:
+          - paragraph
+          - generic [ref=e362]:
+            - term [ref=e363]:
+              - generic [ref=e364]:
+                - generic [ref=e365]: 
+                - text: "SURREAL_URL: *"
+            - definition [ref=e366]:
+              - generic [ref=e367]:
+                - generic [ref=e368]:
+                  - textbox [ref=e369]: ws://10.0.23.11:8000
+                  - generic [ref=e370]:
+                    - button "Edit" [ref=e371] [cursor=pointer]
+                    - button "Remove" [ref=e372] [cursor=pointer]
+                - generic [ref=e373]:
+                  - generic [ref=e374]: "Container Variable: SURREAL_URL"
+                  - generic [ref=e375]: SurrealDB WebSocket URL
+        - generic [ref=e376]:
+          - paragraph
+          - generic [ref=e377]:
+            - term [ref=e378]:
+              - generic [ref=e379]:
+                - generic [ref=e380]: 
+                - text: "SURREAL_NS: *"
+            - definition [ref=e381]:
+              - generic [ref=e382]:
+                - generic [ref=e383]:
+                  - textbox [ref=e384]: emittiv
+                  - generic [ref=e385]:
+                    - button "Edit" [ref=e386] [cursor=pointer]
+                    - button "Remove" [ref=e387] [cursor=pointer]
+                - generic [ref=e388]:
+                  - generic [ref=e389]: "Container Variable: SURREAL_NS"
+                  - generic [ref=e390]: SurrealDB namespace
+        - generic [ref=e391]:
+          - paragraph
+          - generic [ref=e392]:
+            - term [ref=e393]:
+              - generic [ref=e394]:
+                - generic [ref=e395]: 
+                - text: "SURREAL_DB: *"
+            - definition [ref=e396]:
+              - generic [ref=e397]:
+                - generic [ref=e398]:
+                  - textbox [ref=e399]: projects
+                  - generic [ref=e400]:
+                    - button "Edit" [ref=e401] [cursor=pointer]
+                    - button "Remove" [ref=e402] [cursor=pointer]
+                - generic [ref=e403]:
+                  - generic [ref=e404]: "Container Variable: SURREAL_DB"
+                  - generic [ref=e405]: SurrealDB database
+        - generic [ref=e406]:
+          - paragraph
+          - generic [ref=e407]:
+            - term [ref=e408]:
+              - generic [ref=e409]:
+                - generic [ref=e410]: 
+                - text: "SURREAL_USER: *"
+            - definition [ref=e411]:
+              - generic [ref=e412]:
+                - generic [ref=e413]:
+                  - textbox [ref=e414]: martin
+                  - generic [ref=e415]:
+                    - button "Edit" [ref=e416] [cursor=pointer]
+                    - button "Remove" [ref=e417] [cursor=pointer]
+                - generic [ref=e418]:
+                  - generic [ref=e419]: "Container Variable: SURREAL_USER"
+                  - generic [ref=e420]: SurrealDB username
+        - generic [ref=e421]:
+          - paragraph
+          - generic [ref=e422]:
+            - term [ref=e423]:
+              - generic [ref=e424]:
+                - generic [ref=e425]: 
+                - text: "SURREAL_PASS: *"
+            - definition [ref=e426]:
+              - generic [ref=e427]:
+                - generic [ref=e428]:
+                  - textbox [ref=e429]: th38ret3ch
+                  - generic [ref=e430]:
+                    - button "Edit" [ref=e431] [cursor=pointer]
+                    - button "Remove" [ref=e432] [cursor=pointer]
+                - generic [ref=e433]:
+                  - generic [ref=e434]: "Container Variable: SURREAL_PASS"
+                  - generic [ref=e435]: SurrealDB password
+        - generic [ref=e436]:
+          - paragraph
+          - generic [ref=e437]:
+            - term [ref=e438]:
+              - generic [ref=e439]:
+                - generic [ref=e440]: 
+                - text: "API_KEY: *"
+            - definition [ref=e441]:
+              - generic [ref=e442]:
+                - generic [ref=e443]:
+                  - textbox [active] [ref=e444]: efees-api-2026-k8x9m4pq
+                  - generic [ref=e445]:
+                    - button "Edit" [ref=e446] [cursor=pointer]
+                    - button "Remove" [ref=e447] [cursor=pointer]
+                - generic [ref=e448]:
+                  - generic [ref=e449]: "Container Variable: API_KEY"
+                  - generic [ref=e450]: "API authentication key. Generate with: openssl rand -hex 16"
+      - generic [ref=e451]:
+        - term [ref=e452]
+        - definition [ref=e453]:
+          - generic [ref=e455] [cursor=pointer]:
+            - generic [ref=e456]: 
+            - text: Show more settings ...
+      - text:  *      
+      - generic [ref=e457]:
+        - term [ref=e458]
+        - definition [ref=e459]:
+          - generic [ref=e461] [cursor=pointer]:
+            - generic [ref=e462]: 
+            - text: Show docker allocations ...
+      - generic [ref=e463]:
+        - term [ref=e464]
+        - definition [ref=e465]:
+          - link " Add another Path, Port, Variable, Label or Device" [ref=e466] [cursor=pointer]:
+            - /url: javascript:addConfigPopup()
+            - generic [ref=e467]: 
+            - text: Add another Path, Port, Variable, Label or Device
+        - term [ref=e468]
+        - definition [ref=e469]:
+          - generic [ref=e470]:
+            - button "Apply" [ref=e471] [cursor=pointer]
+            - button "Reset" [ref=e488] [cursor=pointer]
+            - button "Save" [ref=e473] [cursor=pointer]
+  - contentinfo [ref=e474]:
+    - generic [ref=e478]:
+      - generic [ref=e479]: 
+      - text: Array Started
+    - generic [ref=e481]:
+      - generic [ref=e482]: Unraid® webGui ©2025, Lime Technology, Inc.
+      - link " manual" [ref=e483] [cursor=pointer]:
+        - /url: https://docs.unraid.net/go/manual/
+        - generic [ref=e484]: 
+        - text: manual
+  - link "" [ref=e489] [cursor=pointer]:
+    - /url: "#"
+    - generic [ref=e490]: 
+  - link "" [ref=e491] [cursor=pointer]:
+    - /url: "#"
+    - generic [ref=e492]: 
+  - iframe [ref=e485]:
+    
+  - generic:
+    - region "Notifications alt+T":
+      - list
+  - generic:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications (F8)":
+      - list
+  - text:   

@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <!-- Identity -->
+  <Name>e-fees-scope</Name>
+  <Repository>e-fees-scope:latest</Repository>
+  <Registry>https://forge.mms.name/emittiv/fee-prop</Registry>
+
+  <!-- Networking -->
+  <Network>br0</Network>
+  <MyIP>10.0.21.81</MyIP>
+  <Privileged>false</Privileged>
+
+  <!-- Metadata -->
+  <Support>https://forge.mms.name/emittiv/fee-prop/issues</Support>
+  <Project>https://forge.mms.name/emittiv/fee-prop</Project>
+  <ReadMe>https://forge.mms.name/emittiv/fee-prop</ReadMe>
+  <Overview>E-Fees Scope Service — Clause library, proposal corpus ingestion (vision + docling pipelines), and LLM-powered scope generation.&#xD;
+&#xD;
+Built from source on the AI server: cd /mnt/user/appdata/e-fees-scope/source &amp;&amp; docker build -t e-fees-scope:latest .&#xD;
+&#xD;
+Network: br0 ipvlan L2 (10.0.21.81:3201)&#xD;
+Swagger UI: http://10.0.21.81:3201/docs/&#xD;
+&#xD;
+Depends on: SurrealDB (10.0.23.11:8000), Ollama (10.0.21.20:11434), Docling (10.0.21.42:5001), Stirling PDF (10.0.21.41:8080)&#xD;
+&#xD;
+Config: /config/app.env contains DB credentials, API key, Ollama/Docling/Stirling URLs.&#xD;
+Generate API key: openssl rand -hex 16</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://10.0.21.81:3201/docs/</WebUI>
+  <TemplateURL>https://forge.mms.name/emittiv/docker-templates/raw/branch/main/martin/e-fees-scope.xml</TemplateURL>
+  <Icon>https://forge.mms.name/emittiv/docker-icons/raw/branch/main/e-fees.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <Requires>surrealdb-ailx ollama Docling-Serve StirlingPDF</Requires>
+
+  <!-- Infrastructure Config (Tier 1) -->
+  <Config Name="Port" Target="3201" Default="3201" Mode="tcp"
+    Description="Scope service port" Type="Port" Display="always"
+    Required="true" Mask="false">3201</Config>
+
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/e-fees-scope"
+    Mode="rw" Description="Persistent config and data"
+    Type="Path" Display="always" Required="true"
+    Mask="false">/mnt/user/appdata/e-fees-scope</Config>
+
+  <!-- Hot-Reloadable Config (Tier 2) -->
+  <Config Name="Application Config" Target="/config/app.env" Default="/mnt/user/appdata/e-fees-scope/app.env"
+    Mode="ro" Description="Hot-reloadable application config. Contains DB credentials, API key, Ollama/Docling/Stirling URLs."
+    Type="Path" Display="always" Required="true"
+    Mask="false">/mnt/user/appdata/e-fees-scope/app.env</Config>
+
+  <!-- Application Environment Variables -->
+  <Config Name="SURREAL_URL" Target="SURREAL_URL" Default="ws://10.0.23.11:8000" Mode=""
+    Description="SurrealDB WebSocket URL" Type="Variable" Display="always"
+    Required="true" Mask="false">ws://10.0.23.11:8000</Config>
+
+  <Config Name="SURREAL_USER" Target="SURREAL_USER" Default="" Mode=""
+    Description="SurrealDB username" Type="Variable" Display="always"
+    Required="true" Mask="false">martin</Config>
+
+  <Config Name="SURREAL_PASS" Target="SURREAL_PASS" Default="" Mode=""
+    Description="SurrealDB password" Type="Variable" Display="always"
+    Required="true" Mask="true"></Config>
+
+  <Config Name="SURREAL_NS" Target="SURREAL_NS" Default="emittiv" Mode=""
+    Description="SurrealDB namespace" Type="Variable" Display="always"
+    Required="true" Mask="false">emittiv</Config>
+
+  <Config Name="SURREAL_DB" Target="SURREAL_DB" Default="projects" Mode=""
+    Description="SurrealDB database" Type="Variable" Display="always"
+    Required="true" Mask="false">projects</Config>
+
+  <Config Name="API_KEY" Target="API_KEY" Default="" Mode=""
+    Description="API authentication key. Generate with: openssl rand -hex 16" Type="Variable" Display="always"
+    Required="true" Mask="true"></Config>
+
+  <Config Name="API_PORT" Target="API_PORT" Default="3201" Mode=""
+    Description="Port the scope service listens on" Type="Variable" Display="advanced"
+    Required="true" Mask="false">3201</Config>
+
+  <Config Name="OLLAMA_URL" Target="OLLAMA_URL" Default="http://10.0.21.20:11434" Mode=""
+    Description="Ollama API URL for LLM scope generation" Type="Variable" Display="always"
+    Required="true" Mask="false">http://10.0.21.20:11434</Config>
+
+  <Config Name="OLLAMA_MODEL" Target="OLLAMA_MODEL" Default="qwen3.5:9b" Mode=""
+    Description="Ollama model for scope text generation" Type="Variable" Display="always"
+    Required="true" Mask="false">qwen3.5:9b</Config>
+
+  <Config Name="DOCLING_URL" Target="DOCLING_URL" Default="http://10.0.21.42:5001" Mode=""
+    Description="Docling document processing URL" Type="Variable" Display="always"
+    Required="true" Mask="false">http://10.0.21.42:5001</Config>
+
+  <Config Name="CORPUS_PATH" Target="CORPUS_PATH" Default="/data/rfps" Mode=""
+    Description="Path to RFP corpus inside container" Type="Variable" Display="advanced"
+    Required="true" Mask="false">/data/rfps</Config>
+
+  <Config Name="STIRLING_URL" Target="STIRLING_URL" Default="http://10.0.21.41:8080" Mode=""
+    Description="Stirling PDF conversion URL" Type="Variable" Display="always"
+    Required="true" Mask="false">http://10.0.21.41:8080</Config>
+
+  <!-- RFP corpus data -->
+  <Config Name="RFP Data" Target="/data/rfps" Default="/mnt/user/appdata/e-fees-scope/rfps"
+    Mode="ro" Description="Fee proposal PDF corpus for ingestion pipeline"
+    Type="Path" Display="always" Required="true"
+    Mask="false">/mnt/user/appdata/e-fees-scope/rfps</Config>
+
+  <!-- Source code mount for local builds -->
+  <Config Name="Source" Target="/app/source" Default="/mnt/user/appdata/e-fees-scope/source"
+    Mode="ro" Description="Source code for local builds (not used at runtime)"
+    Type="Path" Display="advanced" Required="false"
+    Mask="false">/mnt/user/appdata/e-fees-scope/source</Config>
+</Container>

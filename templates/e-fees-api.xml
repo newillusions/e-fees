@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <!-- Identity -->
+  <Name>e-fees-api</Name>
+  <Repository>e-fees-api:latest</Repository>
+  <Registry>https://forge.mms.name/emittiv/fee-prop</Registry>
+
+  <!-- Networking -->
+  <Network>br0</Network>
+  <MyIP>10.0.21.80</MyIP>
+  <Privileged>false</Privileged>
+
+  <!-- Metadata -->
+  <Support>https://forge.mms.name/emittiv/fee-prop/issues</Support>
+  <Project>https://forge.mms.name/emittiv/fee-prop</Project>
+  <ReadMe>https://forge.mms.name/emittiv/fee-prop</ReadMe>
+  <Overview>E-Fees REST API — Full CRUD for projects, companies, contacts, and fee proposals with OpenAPI/Swagger docs.&#xD;
+&#xD;
+Built from source on the AI server: cd /mnt/user/appdata/e-fees-api/source &amp;&amp; docker build -t e-fees-api:latest .&#xD;
+&#xD;
+Network: br0 ipvlan L2 (10.0.21.80:3200)&#xD;
+Swagger UI: http://10.0.21.80:3200/docs/&#xD;
+&#xD;
+Depends on: SurrealDB (10.0.23.11:8000, ns:emittiv, db:projects)&#xD;
+&#xD;
+Config: /config/app.env contains DB credentials, API key, SSH keys for Nextcloud folder creation.&#xD;
+Generate API key: openssl rand -hex 16</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://10.0.21.80:3200/docs/</WebUI>
+  <TemplateURL>https://forge.mms.name/emittiv/docker-templates/raw/branch/main/martin/e-fees-api.xml</TemplateURL>
+  <Icon>https://forge.mms.name/emittiv/docker-icons/raw/branch/main/e-fees.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <Requires>surrealdb-ailx</Requires>
+
+  <!-- Infrastructure Config (Tier 1) -->
+  <Config Name="Port" Target="3200" Default="3200" Mode="tcp"
+    Description="REST API port" Type="Port" Display="always"
+    Required="true" Mask="false">3200</Config>
+
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/e-fees-api"
+    Mode="rw" Description="Persistent config and data"
+    Type="Path" Display="always" Required="true"
+    Mask="false">/mnt/user/appdata/e-fees-api</Config>
+
+  <!-- Hot-Reloadable Config (Tier 2) -->
+  <Config Name="Application Config" Target="/config/app.env" Default="/mnt/user/appdata/e-fees-api/app.env"
+    Mode="ro" Description="Hot-reloadable application config. Contains DB credentials, API key, SSH config for Nextcloud."
+    Type="Path" Display="always" Required="true"
+    Mask="false">/mnt/user/appdata/e-fees-api/app.env</Config>
+
+  <!-- Application Environment Variables (Tier 2 — from app.env) -->
+  <Config Name="SURREAL_URL" Target="SURREAL_URL" Default="ws://10.0.23.11:8000" Mode=""
+    Description="SurrealDB WebSocket URL" Type="Variable" Display="always"
+    Required="true" Mask="false">ws://10.0.23.11:8000</Config>
+
+  <Config Name="SURREAL_NS" Target="SURREAL_NS" Default="emittiv" Mode=""
+    Description="SurrealDB namespace" Type="Variable" Display="always"
+    Required="true" Mask="false">emittiv</Config>
+
+  <Config Name="SURREAL_DB" Target="SURREAL_DB" Default="projects" Mode=""
+    Description="SurrealDB database" Type="Variable" Display="always"
+    Required="true" Mask="false">projects</Config>
+
+  <Config Name="SURREAL_USER" Target="SURREAL_USER" Default="" Mode=""
+    Description="SurrealDB username" Type="Variable" Display="always"
+    Required="true" Mask="false">martin</Config>
+
+  <Config Name="SURREAL_PASS" Target="SURREAL_PASS" Default="" Mode=""
+    Description="SurrealDB password" Type="Variable" Display="always"
+    Required="true" Mask="true"></Config>
+
+  <Config Name="API_KEY" Target="API_KEY" Default="" Mode=""
+    Description="API authentication key. Generate with: openssl rand -hex 16" Type="Variable" Display="always"
+    Required="true" Mask="true"></Config>
+
+  <Config Name="API_PORT" Target="API_PORT" Default="3200" Mode=""
+    Description="Port the API listens on inside the container" Type="Variable" Display="advanced"
+    Required="true" Mask="false">3200</Config>
+
+  <Config Name="NC_SSH_HOST" Target="NC_SSH_HOST" Default="10.0.20.12" Mode=""
+    Description="Primary server SSH host for Nextcloud folder creation" Type="Variable" Display="advanced"
+    Required="false" Mask="false">10.0.20.12</Config>
+
+  <Config Name="NC_SSH_USER" Target="NC_SSH_USER" Default="root" Mode=""
+    Description="SSH username for Nextcloud folder creation" Type="Variable" Display="advanced"
+    Required="false" Mask="false">root</Config>
+
+  <Config Name="NC_SSH_KEY_PATH" Target="NC_SSH_KEY_PATH" Default="/root/.ssh/id_ed25519" Mode=""
+    Description="SSH private key path inside container" Type="Variable" Display="advanced"
+    Required="false" Mask="false">/root/.ssh/id_ed25519</Config>
+
+  <Config Name="NC_SCRIPT_PATH" Target="NC_SCRIPT_PATH" Default="/mnt/user/appdata/scripts/nc-project-create.sh" Mode=""
+    Description="Remote script path for Nextcloud folder creation" Type="Variable" Display="advanced"
+    Required="false" Mask="false">/mnt/user/appdata/scripts/nc-project-create.sh</Config>
+
+  <!-- SSH key mount for Nextcloud folder creation -->
+  <Config Name="SSH Keys" Target="/root/.ssh" Default="/mnt/user/appdata/e-fees-api/ssh"
+    Mode="ro" Description="SSH keys for Nextcloud folder creation on Primary server"
+    Type="Path" Display="advanced" Required="false"
+    Mask="false">/mnt/user/appdata/e-fees-api/ssh</Config>
+
+  <!-- Source code mount for local builds -->
+  <Config Name="Source" Target="/app/source" Default="/mnt/user/appdata/e-fees-api/source"
+    Mode="ro" Description="Source code for local builds (not used at runtime)"
+    Type="Path" Display="advanced" Required="false"
+    Mask="false">/mnt/user/appdata/e-fees-api/source</Config>
+</Container>
