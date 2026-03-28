@@ -3,16 +3,15 @@
 //! This module contains impl blocks for database entity operations,
 //! extracted from mod.rs to reduce file size and improve organization.
 
-use surrealdb::{Error, types::Value};
-use log::{error, info};
-use chrono::Datelike;
 use crate::db::types::record_key_string;
+use chrono::Datelike;
+use log::{error, info};
+use surrealdb::{types::Value, Error};
 
 use super::{
-    DatabaseManager, PaginatedResponse,
-    Project, NewProject, Company, CompanyCreate,
-    Contact, ContactCreate, Fee, FeeCreate, FeeUpdate, PricingUpdate,
-    EntityCounts, ActivityLog, ActivityLogCreate,
+    ActivityLog, ActivityLogCreate, Company, CompanyCreate, Contact, ContactCreate,
+    DatabaseManager, EntityCounts, Fee, FeeCreate, FeeUpdate, NewProject, PaginatedResponse,
+    PricingUpdate, Project,
 };
 use crate::commands::{CompanyUpdate, ProjectUpdate};
 
@@ -21,13 +20,19 @@ use crate::commands::{CompanyUpdate, ProjectUpdate};
 impl DatabaseManager {
     pub async fn get_projects(&self) -> Result<Vec<Project>, Error> {
         let client = self.get_client()?;
-        let mut response = client.query("SELECT * FROM projects ORDER BY time.created_at DESC").await?;
+        let mut response = client
+            .query("SELECT * FROM projects ORDER BY time.created_at DESC")
+            .await?;
         let projects: Vec<Project> = response.take(0)?;
         info!("Fetched {} projects", projects.len());
         Ok(projects)
     }
 
-    pub async fn get_projects_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Project>, Error> {
+    pub async fn get_projects_page(
+        &self,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PaginatedResponse<Project>, Error> {
         self.paginate("projects", page, page_size).await
     }
 
@@ -42,25 +47,37 @@ impl DatabaseManager {
 
     pub async fn create_project(&self, project: Project) -> Result<Project, Error> {
         let client = self.get_client()?;
-        client.create_project(project).await?
+        client
+            .create_project(project)
+            .await?
             .ok_or_else(|| self.not_found_error("create project"))
     }
 
     pub async fn create_new_project(&self, project: NewProject) -> Result<Project, Error> {
         let client = self.get_client()?;
-        client.create_new_project(project).await?
+        client
+            .create_new_project(project)
+            .await?
             .ok_or_else(|| self.not_found_error("create project"))
     }
 
-    pub async fn update_project(&self, id: &str, project_update: ProjectUpdate) -> Result<Project, Error> {
+    pub async fn update_project(
+        &self,
+        id: &str,
+        project_update: ProjectUpdate,
+    ) -> Result<Project, Error> {
         let client = self.get_client()?;
-        client.update_project(id, project_update).await?
+        client
+            .update_project(id, project_update)
+            .await?
             .ok_or_else(|| self.not_found_error("update project"))
     }
 
     pub async fn delete_project(&self, id: &str) -> Result<Project, Error> {
         let client = self.get_client()?;
-        client.delete_project(id).await?
+        client
+            .delete_project(id)
+            .await?
             .ok_or_else(|| self.not_found_error("delete project"))
     }
 }
@@ -70,13 +87,19 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn get_companies(&self) -> Result<Vec<Company>, Error> {
         let client = self.get_client()?;
-        let mut response = client.query("SELECT * FROM company ORDER BY time.created_at DESC").await?;
+        let mut response = client
+            .query("SELECT * FROM company ORDER BY time.created_at DESC")
+            .await?;
         let companies: Vec<Company> = response.take(0)?;
         info!("Fetched {} companies", companies.len());
         Ok(companies)
     }
 
-    pub async fn get_companies_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Company>, Error> {
+    pub async fn get_companies_page(
+        &self,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PaginatedResponse<Company>, Error> {
         self.paginate("company", page, page_size).await
     }
 
@@ -86,19 +109,29 @@ impl DatabaseManager {
 
     pub async fn create_company(&self, company: CompanyCreate) -> Result<Company, Error> {
         let client = self.get_client()?;
-        client.create_company(company).await?
+        client
+            .create_company(company)
+            .await?
             .ok_or_else(|| self.not_found_error("create company"))
     }
 
-    pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Company, Error> {
+    pub async fn update_company_partial(
+        &self,
+        id: &str,
+        company_update: CompanyUpdate,
+    ) -> Result<Company, Error> {
         let client = self.get_client()?;
-        client.update_company_partial(id, company_update).await?
+        client
+            .update_company_partial(id, company_update)
+            .await?
             .ok_or_else(|| self.not_found_error("update company"))
     }
 
     pub async fn delete_company(&self, id: &str) -> Result<Company, Error> {
         let client = self.get_client()?;
-        client.delete_company(id).await?
+        client
+            .delete_company(id)
+            .await?
             .ok_or_else(|| self.not_found_error("delete company"))
     }
 }
@@ -129,7 +162,11 @@ impl DatabaseManager {
         Ok(contacts)
     }
 
-    pub async fn get_contacts_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Contact>, Error> {
+    pub async fn get_contacts_page(
+        &self,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PaginatedResponse<Contact>, Error> {
         self.paginate("contacts", page, page_size).await
     }
 
@@ -139,19 +176,29 @@ impl DatabaseManager {
 
     pub async fn create_contact(&self, contact: ContactCreate) -> Result<Contact, Error> {
         let client = self.get_client()?;
-        client.create_contact(contact).await?
+        client
+            .create_contact(contact)
+            .await?
             .ok_or_else(|| self.not_found_error("create contact"))
     }
 
-    pub async fn update_contact_partial(&self, id: &str, contact_update: crate::commands::ContactUpdate) -> Result<Contact, Error> {
+    pub async fn update_contact_partial(
+        &self,
+        id: &str,
+        contact_update: crate::commands::ContactUpdate,
+    ) -> Result<Contact, Error> {
         let client = self.get_client()?;
-        client.update_contact_partial(id, contact_update).await?
+        client
+            .update_contact_partial(id, contact_update)
+            .await?
             .ok_or_else(|| self.not_found_error("update contact"))
     }
 
     pub async fn delete_contact(&self, id: &str) -> Result<Contact, Error> {
         let client = self.get_client()?;
-        client.delete_contact(id).await?
+        client
+            .delete_contact(id)
+            .await?
             .ok_or_else(|| self.not_found_error("delete contact"))
     }
 }
@@ -162,7 +209,9 @@ impl DatabaseManager {
     pub async fn get_fees(&self) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
         // OMIT import_source: not needed in list view, reduces response size.
-        let mut response = client.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC").await?;
+        let mut response = client
+            .query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
+            .await?;
         let result: Result<Vec<Fee>, _> = response.take(0);
         match result {
             Ok(fees) => {
@@ -176,7 +225,11 @@ impl DatabaseManager {
         }
     }
 
-    pub async fn get_fees_page(&self, page: usize, page_size: usize) -> Result<PaginatedResponse<Fee>, Error> {
+    pub async fn get_fees_page(
+        &self,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PaginatedResponse<Fee>, Error> {
         // Custom pagination instead of generic paginate: OMIT import_source.
         let client = self.get_client()?;
         let offset = (page - 1) * page_size;
@@ -197,7 +250,12 @@ impl DatabaseManager {
         // Custom query instead of generic get_by_id: OMIT import_source which may
         // contain native datetime fields incompatible with serde_json::Value.
         let client = self.get_client()?;
-        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        if id.is_empty()
+            || id.len() > 100
+            || !id
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        {
             return Err(self.invalid_request_error("Invalid record ID format"));
         }
         info!("Fetching fee by ID: {}", id);
@@ -209,25 +267,33 @@ impl DatabaseManager {
 
     pub async fn create_fee(&self, fee: FeeCreate) -> Result<Fee, Error> {
         let client = self.get_client()?;
-        client.create_fee(fee).await?
+        client
+            .create_fee(fee)
+            .await?
             .ok_or_else(|| self.not_found_error("create fee"))
     }
 
     pub async fn update_fee(&self, id: &str, fee: FeeUpdate) -> Result<Fee, Error> {
         let client = self.get_client()?;
-        client.update_fee(id, fee).await?
+        client
+            .update_fee(id, fee)
+            .await?
             .ok_or_else(|| self.not_found_error("update fee"))
     }
 
     pub async fn delete_fee(&self, id: &str) -> Result<Fee, Error> {
         let client = self.get_client()?;
-        client.delete_fee(id).await?
+        client
+            .delete_fee(id)
+            .await?
             .ok_or_else(|| self.not_found_error("delete fee"))
     }
 
     pub async fn update_fee_pricing(&self, id: &str, pricing: PricingUpdate) -> Result<Fee, Error> {
         let client = self.get_client()?;
-        client.update_fee_pricing(id, pricing).await?
+        client
+            .update_fee_pricing(id, pricing)
+            .await?
             .ok_or_else(|| self.not_found_error("update fee pricing"))
     }
 
@@ -310,14 +376,20 @@ impl DatabaseManager {
         // Use parameterized query to prevent SQL injection
         let query = "SELECT area FROM projects WHERE country = $country AND area IS NOT NONE GROUP BY area ORDER BY area ASC LIMIT 20";
 
-        let mut response = client.query_bind(query, ("country", country.to_string())).await?;
+        let mut response = client
+            .query_bind(query, ("country", country.to_string()))
+            .await?;
         let result: Result<Vec<serde_json::Value>, _> = response.take(0);
 
         match result {
             Ok(areas) => {
                 let area_strings: Vec<String> = areas
                     .into_iter()
-                    .filter_map(|area| area.get("area").and_then(|a| a.as_str()).map(|s| s.to_string()))
+                    .filter_map(|area| {
+                        area.get("area")
+                            .and_then(|a| a.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect();
                 info!("Found {} area suggestions", area_strings.len());
                 Ok(area_strings)
@@ -336,14 +408,20 @@ impl DatabaseManager {
         // Use parameterized query to prevent SQL injection
         let query = "SELECT city FROM projects WHERE country = $country AND city IS NOT NONE GROUP BY city ORDER BY city ASC LIMIT 20";
 
-        let mut response = client.query_bind(query, ("country", country.to_string())).await?;
+        let mut response = client
+            .query_bind(query, ("country", country.to_string()))
+            .await?;
         let result: Result<Vec<serde_json::Value>, _> = response.take(0);
 
         match result {
             Ok(cities) => {
                 let city_strings: Vec<String> = cities
                     .into_iter()
-                    .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                    .filter_map(|city| {
+                        city.get("city")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect();
                 info!("Found {} city suggestions", city_strings.len());
                 Ok(city_strings)
@@ -362,24 +440,34 @@ impl DatabaseManager {
         let mut all_cities = Vec::new();
 
         // Get cities from projects
-        let projects_query = "SELECT city FROM projects WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
+        let projects_query =
+            "SELECT city FROM projects WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
         if let Ok(mut response) = client.query(projects_query).await {
             if let Ok(cities) = response.take::<Vec<serde_json::Value>>(0) {
                 let project_cities: Vec<String> = cities
                     .into_iter()
-                    .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                    .filter_map(|city| {
+                        city.get("city")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect();
                 all_cities.extend(project_cities);
             }
         }
 
         // Get cities from companies
-        let companies_query = "SELECT city FROM company WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
+        let companies_query =
+            "SELECT city FROM company WHERE city IS NOT NONE GROUP BY city ORDER BY city ASC";
         if let Ok(mut response) = client.query(companies_query).await {
             if let Ok(cities) = response.take::<Vec<serde_json::Value>>(0) {
                 let company_cities: Vec<String> = cities
                     .into_iter()
-                    .filter_map(|city| city.get("city").and_then(|c| c.as_str()).map(|s| s.to_string()))
+                    .filter_map(|city| {
+                        city.get("city")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect();
                 all_cities.extend(company_cities);
             }
@@ -397,9 +485,16 @@ impl DatabaseManager {
 // ==================== Project Number Operations ====================
 
 impl DatabaseManager {
-    pub async fn generate_next_project_number(&self, country_name: &str, year: Option<u8>) -> Result<String, Error> {
+    pub async fn generate_next_project_number(
+        &self,
+        country_name: &str,
+        year: Option<u8>,
+    ) -> Result<String, Error> {
         let client = self.get_client()?;
-        info!("Generating next project number for country: {}", country_name);
+        info!(
+            "Generating next project number for country: {}",
+            country_name
+        );
 
         // Validate country_name length
         if country_name.is_empty() || country_name.len() > 100 {
@@ -417,18 +512,29 @@ impl DatabaseManager {
                 if let Some(dial_code) = record.get("dial_code").and_then(|v| v.as_u64()) {
                     // TYPE-M2: Use try_into with bounds checking instead of lossy cast
                     u16::try_from(dial_code).map_err(|_| {
-                        self.invalid_request_error(&format!("Dial code {} out of valid range for country: {}", dial_code, country_name))
+                        self.invalid_request_error(&format!(
+                            "Dial code {} out of valid range for country: {}",
+                            dial_code, country_name
+                        ))
                     })?
                 } else {
-                    return Err(self.invalid_request_error(&format!("Dial code is not a number for country: {}", country_name)));
+                    return Err(self.invalid_request_error(&format!(
+                        "Dial code is not a number for country: {}",
+                        country_name
+                    )));
                 }
             }
             None => {
-                return Err(self.invalid_request_error(&format!("Country not found: {}", country_name)));
+                return Err(
+                    self.invalid_request_error(&format!("Country not found: {}", country_name))
+                );
             }
         };
 
-        info!("Found country code {} for country {}", country_code, country_name);
+        info!(
+            "Found country code {} for country {}",
+            country_code, country_name
+        );
 
         // TYPE-M2: year % 100 is always 0-99, safe for u8, but use explicit conversion
         let year = year.unwrap_or_else(|| {
@@ -439,13 +545,19 @@ impl DatabaseManager {
 
         // Find max sequence using parameterized query
         let query = "SELECT number.seq FROM projects WHERE number.year = $year AND number.country = $country AND number.seq >= 1 AND number.seq <= 99 ORDER BY number.seq DESC LIMIT 1";
-        let mut response = client.query_bind(query, (("year", year), ("country", country_code))).await?;
+        let mut response = client
+            .query_bind(query, (("year", year), ("country", country_code)))
+            .await?;
         let result: Result<Vec<serde_json::Value>, _> = response.take(0);
 
         let next_seq = match result {
             Ok(records) => {
                 if let Some(first) = records.first() {
-                    if let Some(seq) = first.get("number").and_then(|n| n.get("seq")).and_then(|s| s.as_u64()) {
+                    if let Some(seq) = first
+                        .get("number")
+                        .and_then(|n| n.get("seq"))
+                        .and_then(|s| s.as_u64())
+                    {
                         // TYPE-M2: Use checked arithmetic and try_from for safe conversion
                         let next = seq.saturating_add(1);
                         u8::try_from(next).unwrap_or(u8::MAX)
@@ -481,25 +593,39 @@ impl DatabaseManager {
             return Ok(false);
         }
 
-        let year = parts[0].parse::<u8>().map_err(|_| self.invalid_request_error("Invalid year format"))?;
-        let country = parts[1][..3].parse::<u16>().map_err(|_| self.invalid_request_error("Invalid country code"))?;
-        let seq = parts[1][3..].parse::<u8>().map_err(|_| self.invalid_request_error("Invalid sequence number"))?;
+        let year = parts[0]
+            .parse::<u8>()
+            .map_err(|_| self.invalid_request_error("Invalid year format"))?;
+        let country = parts[1][..3]
+            .parse::<u16>()
+            .map_err(|_| self.invalid_request_error("Invalid country code"))?;
+        let seq = parts[1][3..]
+            .parse::<u8>()
+            .map_err(|_| self.invalid_request_error("Invalid sequence number"))?;
 
         // Use parameterized query to prevent SQL injection
         let query = "SELECT count() FROM projects WHERE number.year = $year AND number.country = $country AND number.seq = $seq";
 
-        let mut response = client.query_bind(query, (("year", year), ("country", country), ("seq", seq))).await?;
+        let mut response = client
+            .query_bind(query, (("year", year), ("country", country), ("seq", seq)))
+            .await?;
         let result: Result<Value, _> = response.take(0);
 
         match result {
             Ok(value) => {
-                let json_value = serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
-                let count = json_value.as_u64()
-                    .or_else(|| json_value.as_object().and_then(|o| o.get("count").and_then(|v| v.as_u64())))
+                let json_value =
+                    serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
+                let count = json_value
+                    .as_u64()
+                    .or_else(|| {
+                        json_value
+                            .as_object()
+                            .and_then(|o| o.get("count").and_then(|v| v.as_u64()))
+                    })
                     .unwrap_or(0);
                 Ok(count == 0)
             }
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
 }
@@ -520,7 +646,9 @@ impl DatabaseManager {
         "#;
 
         let extract_count = |result: Option<serde_json::Value>| -> usize {
-            result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize
+            result
+                .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+                .unwrap_or(0) as usize
         };
 
         let mut response = client.query(count_query).await?;
@@ -545,7 +673,10 @@ impl DatabaseManager {
 impl DatabaseManager {
     pub async fn create_activity_log(&self, log: ActivityLogCreate) -> Result<ActivityLog, Error> {
         let client = self.get_client()?;
-        info!("Creating activity log: {} {} on {}", log.action, log.entity_type, log.entity_name);
+        info!(
+            "Creating activity log: {} {} on {}",
+            log.action, log.entity_type, log.entity_name
+        );
 
         let action = log.action.clone();
         let entity_type = log.entity_type.clone();
@@ -555,7 +686,10 @@ impl DatabaseManager {
         let old_value = log.old_value.clone();
         let new_value = log.new_value.clone();
         let user = log.user.unwrap_or_else(|| "system".to_string());
-        let metadata_json = log.metadata.map(|m| m.to_string()).unwrap_or_else(|| "null".to_string());
+        let metadata_json = log
+            .metadata
+            .map(|m| m.to_string())
+            .unwrap_or_else(|| "null".to_string());
 
         let query = format!(
             r#"CREATE activity_log CONTENT {{
@@ -581,12 +715,20 @@ impl DatabaseManager {
         result.ok_or_else(|| self.not_found_error("create activity log"))
     }
 
-    pub async fn get_activity_logs(&self, limit: Option<usize>, entity_type: Option<String>, offset: Option<usize>) -> Result<Vec<ActivityLog>, Error> {
+    pub async fn get_activity_logs(
+        &self,
+        limit: Option<usize>,
+        entity_type: Option<String>,
+        offset: Option<usize>,
+    ) -> Result<Vec<ActivityLog>, Error> {
         let client = self.get_client()?;
 
         let limit_val = limit.unwrap_or(50);
         let offset_val = offset.unwrap_or(0);
-        info!("Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})", limit_val, entity_type, offset_val);
+        info!(
+            "Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})",
+            limit_val, entity_type, offset_val
+        );
 
         // LIMIT and START are safe to interpolate as integers (no SQL injection risk)
         // Parameterized bindings with nested tuples don't work reliably in SurrealDB SDK
@@ -595,7 +737,9 @@ impl DatabaseManager {
                 "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT {} START {}",
                 limit_val, offset_val
             );
-            client.query_bind(&query, ("entity_type", et.clone())).await?
+            client
+                .query_bind(&query, ("entity_type", et.clone()))
+                .await?
         } else {
             let query = format!(
                 "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT {} START {}",
@@ -617,7 +761,11 @@ impl DatabaseManager {
     ///
     /// This replaces the dangerous `execute_raw_query` function with a safe,
     /// purpose-built method that validates inputs and uses parameterized queries.
-    pub async fn update_project_status(&self, project_id: &str, new_status: &str) -> Result<(), Error> {
+    pub async fn update_project_status(
+        &self,
+        project_id: &str,
+        new_status: &str,
+    ) -> Result<(), Error> {
         let client = self.get_client()?;
 
         // Validate project_id format (should be like "25-97101" or "25_97101")
@@ -625,14 +773,27 @@ impl DatabaseManager {
         if project_id.is_empty() || project_id.len() > 20 {
             return Err(self.invalid_request_error("Invalid project ID length"));
         }
-        if !project_id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+        if !project_id
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        {
             return Err(self.invalid_request_error("Invalid project ID format"));
         }
 
         // Validate status against known values
         let valid_statuses = [
-            "Lead", "RFP", "Submitted", "Awarded", "Design", "Construction",
-            "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"
+            "Lead",
+            "RFP",
+            "Submitted",
+            "Awarded",
+            "Design",
+            "Construction",
+            "Completed",
+            "Lost",
+            "No Response",
+            "Cancelled",
+            "On Hold",
+            "Superseded",
         ];
         if !valid_statuses.contains(&new_status) {
             return Err(self.invalid_request_error(&format!("Invalid status: {}", new_status)));
@@ -643,9 +804,14 @@ impl DatabaseManager {
             "UPDATE projects:`{}` SET status = $status, time.updated_at = time::now()",
             project_id
         );
-        client.query_bind(&query, ("status", new_status.to_string())).await?;
+        client
+            .query_bind(&query, ("status", new_status.to_string()))
+            .await?;
 
-        info!("Successfully updated project {} status to {}", project_id, new_status);
+        info!(
+            "Successfully updated project {} status to {}",
+            project_id, new_status
+        );
         Ok(())
     }
 
@@ -669,7 +835,10 @@ impl DatabaseManager {
 
         // Validate record_id format to prevent SQL injection
         // Only allow alphanumeric, underscores, and colons (for table:id format)
-        if !record_id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == ':') {
+        if !record_id
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == ':')
+        {
             return Err(self.invalid_request_error("Invalid record ID format"));
         }
 
@@ -711,22 +880,23 @@ impl DatabaseManager {
                     let result: Result<Value, _> = response.take(0);
                     match result {
                         Ok(value) => {
-                            let json_value = serde_json::to_value(&value).unwrap_or_else(|_| serde_json::json!(null));
+                            let json_value = serde_json::to_value(&value)
+                                .unwrap_or_else(|_| serde_json::json!(null));
                             serde_json::json!({
                                 "status": "success",
                                 "data": json_value
                             })
-                        },
+                        }
                         Err(e) => serde_json::json!({
                             "status": "error",
                             "error": e.to_string()
-                        })
+                        }),
                     }
-                },
+                }
                 Err(e) => serde_json::json!({
                     "status": "error",
                     "error": e.to_string()
-                })
+                }),
             };
 
             results["investigation"][format!("query_{}", i + 1)] = serde_json::json!({
@@ -751,7 +921,10 @@ impl DatabaseManager {
 
         let client = self.get_client()?;
         let mut response = client
-            .query_bind("RETURN fn::resolve_country($input);", ("input", input.to_string()))
+            .query_bind(
+                "RETURN fn::resolve_country($input);",
+                ("input", input.to_string()),
+            )
             .await?;
 
         let result: Option<serde_json::Value> = response.take(0)?;
@@ -765,7 +938,9 @@ impl DatabaseManager {
                 let name = v
                     .get("name")
                     .and_then(|n| n.as_str())
-                    .ok_or_else(|| self.invalid_request_error("resolve_country returned invalid data"))?
+                    .ok_or_else(|| {
+                        self.invalid_request_error("resolve_country returned invalid data")
+                    })?
                     .to_string();
                 Ok(name)
             }
@@ -774,12 +949,21 @@ impl DatabaseManager {
 
     // ==================== Batch Operations ====================
 
-    pub async fn batch_delete(&self, table: &str, ids: &[String]) -> Result<Vec<serde_json::Value>, Error> {
+    pub async fn batch_delete(
+        &self,
+        table: &str,
+        ids: &[String],
+    ) -> Result<Vec<serde_json::Value>, Error> {
         let client = self.get_client()?;
         client.batch_delete(table, ids).await
     }
 
-    pub async fn batch_update_status(&self, table: &str, ids: &[String], status: &str) -> Result<usize, Error> {
+    pub async fn batch_update_status(
+        &self,
+        table: &str,
+        ids: &[String],
+        status: &str,
+    ) -> Result<usize, Error> {
         let client = self.get_client()?;
         client.batch_update_status(table, ids, status).await
     }

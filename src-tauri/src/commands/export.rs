@@ -1,9 +1,9 @@
 //! Excel export Tauri commands.
 
-use tauri::{AppHandle, State};
-use log::{info, warn, error};
-use std::path::{Path, PathBuf};
+use log::{error, info, warn};
 use regex::Regex;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, State};
 
 use super::AppState;
 use crate::commands::folder_management::get_project_folder_location;
@@ -13,13 +13,20 @@ use crate::excel_export::{generate_fee_excel, generate_fee_template};
 fn reveal_in_file_manager(path: &str) {
     #[cfg(target_os = "macos")]
     {
-        if let Err(e) = std::process::Command::new("open").arg("-R").arg(path).spawn() {
+        if let Err(e) = std::process::Command::new("open")
+            .arg("-R")
+            .arg(path)
+            .spawn()
+        {
             warn!("Failed to reveal file in Finder: {}", e);
         }
     }
     #[cfg(target_os = "windows")]
     {
-        if let Err(e) = std::process::Command::new("explorer").arg(format!("/select,{}", path)).spawn() {
+        if let Err(e) = std::process::Command::new("explorer")
+            .arg(format!("/select,{}", path))
+            .spawn()
+        {
             warn!("Failed to reveal file in Explorer: {}", e);
         }
     }
@@ -51,7 +58,9 @@ pub async fn export_fee_excel(
     let resolved_path = match output_path {
         Some(p) => PathBuf::from(p),
         None => {
-            let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+            let safe_number = fee
+                .number
+                .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
             let filename = format!("fee-{}-rev{}.xlsx", safe_number, fee.rev);
             std::env::temp_dir().join(&filename)
         }
@@ -81,7 +90,10 @@ pub async fn export_fee_template(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    info!("export_fee_template called for id: {}, output_path: {:?}", fee_id, output_path);
+    info!(
+        "export_fee_template called for id: {}, output_path: {:?}",
+        fee_id, output_path
+    );
 
     let record_id = fee_id.strip_prefix("fee:").unwrap_or(&fee_id).to_string();
 
@@ -93,14 +105,14 @@ pub async fn export_fee_template(
     let fee = fee.ok_or_else(|| "Fee not found".to_string())?;
 
     // Extract project number from fee number (e.g. "25-97105-R1" → "25-97105")
-    let project_number = fee.number
+    let project_number = fee
+        .number
         .split("-R")
         .next()
         .unwrap_or(&fee.number)
         .to_string();
 
-    let safe_number = project_number
-        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+    let safe_number = project_number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
 
     // Find the project's proposal directory and scan for existing PRI files
     let proposal_dir = find_proposal_dir(&app_handle, &project_number).await;
@@ -127,11 +139,7 @@ pub async fn export_fee_template(
         }
     };
 
-    let path = generate_fee_template(
-        &fee,
-        &resolved_path,
-        source_path.as_deref(),
-    )?;
+    let path = generate_fee_template(&fee, &resolved_path, source_path.as_deref())?;
 
     info!("Template export saved to: {}", path);
     reveal_in_file_manager(&path);
@@ -139,16 +147,16 @@ pub async fn export_fee_template(
 }
 
 /// Locate the project's `02 Proposal` directory via `find_project_folder()`.
-async fn find_proposal_dir(
-    app_handle: &AppHandle,
-    project_number: &str,
-) -> Option<PathBuf> {
+async fn find_proposal_dir(app_handle: &AppHandle, project_number: &str) -> Option<PathBuf> {
     let folder_info = get_project_folder_location(app_handle.clone(), project_number.to_string())
         .await
         .ok()?;
 
     if !folder_info.exists {
-        info!("Project folder not found for {}, will use embedded template", project_number);
+        info!(
+            "Project folder not found for {}, will use embedded template",
+            project_number
+        );
         return None;
     }
 
@@ -166,11 +174,11 @@ async fn find_proposal_dir(
 ///
 /// Pattern: `{project_number}-PRI-{NN} Pricing.xlsx`
 /// Also matches legacy `{project_number}-FP-{NN} Pricing.xlsx` files as sources.
-fn find_latest_pri_file(
-    proposal_dir: &Path,
-    safe_number: &str,
-) -> (Option<PathBuf>, i32) {
-    let pattern = format!(r"^{}-(?:PRI|FP)-(\d+)\s+Pricing\.xlsx$", regex::escape(safe_number));
+fn find_latest_pri_file(proposal_dir: &Path, safe_number: &str) -> (Option<PathBuf>, i32) {
+    let pattern = format!(
+        r"^{}-(?:PRI|FP)-(\d+)\s+Pricing\.xlsx$",
+        regex::escape(safe_number)
+    );
     let re = match Regex::new(&pattern) {
         Ok(r) => r,
         Err(_) => return (None, 1),
@@ -195,7 +203,10 @@ fn find_latest_pri_file(
     }
 
     if let Some(ref p) = best_path {
-        info!("Found latest pricing file: {:?} (version {})", p, best_version);
+        info!(
+            "Found latest pricing file: {:?} (version {})",
+            p, best_version
+        );
     } else {
         info!("No existing PRI/FP files found in {:?}", proposal_dir);
     }

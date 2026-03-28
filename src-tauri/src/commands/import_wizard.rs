@@ -4,10 +4,10 @@
 //! - Custom milestones (e.g., Hittin: M1-M4)
 //! - Standard phased stages (e.g., Thakher: 4 phases x 6 stages)
 
-use serde::{Deserialize, Serialize};
-use tauri::State;
 use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
+use tauri::State;
 
 use super::AppState;
 use crate::db::types::record_key_string;
@@ -260,7 +260,9 @@ pub async fn import_scan_directory(directory: String) -> Result<ImportPreview, S
                     roles: data.rates.iter().map(|r| r.role.clone()).collect(),
                 });
             }
-            Err(e) => preview.warnings.push(format!("Failed to parse staff-rates.json: {}", e)),
+            Err(e) => preview
+                .warnings
+                .push(format!("Failed to parse staff-rates.json: {}", e)),
         }
     }
 
@@ -276,7 +278,9 @@ pub async fn import_scan_directory(directory: String) -> Result<ImportPreview, S
                     default_stage_count: data.methodology.default_stages.len(),
                 });
             }
-            Err(e) => preview.warnings.push(format!("Failed to parse fee-methodology.json: {}", e)),
+            Err(e) => preview
+                .warnings
+                .push(format!("Failed to parse fee-methodology.json: {}", e)),
         }
     }
 
@@ -284,13 +288,19 @@ pub async fn import_scan_directory(directory: String) -> Result<ImportPreview, S
     if clients_path.exists() {
         match parse_json_file::<ClientsExport>(&clients_path) {
             Ok(data) => {
-                preview.clients = data.clients.iter().map(|c| ClientPreview {
-                    name: c.name.clone(),
-                    client_type: c.client_type.clone(),
-                    project_count: c.projects.len(),
-                }).collect();
+                preview.clients = data
+                    .clients
+                    .iter()
+                    .map(|c| ClientPreview {
+                        name: c.name.clone(),
+                        client_type: c.client_type.clone(),
+                        project_count: c.projects.len(),
+                    })
+                    .collect();
             }
-            Err(e) => preview.warnings.push(format!("Failed to parse clients-consultants.json: {}", e)),
+            Err(e) => preview
+                .warnings
+                .push(format!("Failed to parse clients-consultants.json: {}", e)),
         }
     }
 
@@ -299,7 +309,11 @@ pub async fn import_scan_directory(directory: String) -> Result<ImportPreview, S
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "json") {
-                let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let filename = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 // Skip known non-proposal files
                 if filename == "staff-rates.json"
                     || filename == "fee-methodology.json"
@@ -311,11 +325,15 @@ pub async fn import_scan_directory(directory: String) -> Result<ImportPreview, S
                 match parse_json_file::<ProposalExport>(&path) {
                     Ok(data) => {
                         let proposal = &data.proposal;
-                        let (stage_type, stage_count, phase_count) = if !proposal.phases.is_empty() {
-                            let total_stages: usize = proposal.phases.iter()
-                                .map(|p| p.stages.len())
-                                .sum();
-                            ("phased_stages".to_string(), total_stages, proposal.phases.len())
+                        let (stage_type, stage_count, phase_count) = if !proposal.phases.is_empty()
+                        {
+                            let total_stages: usize =
+                                proposal.phases.iter().map(|p| p.stages.len()).sum();
+                            (
+                                "phased_stages".to_string(),
+                                total_stages,
+                                proposal.phases.len(),
+                            )
                         } else {
                             ("custom_milestones".to_string(), proposal.stages.len(), 0)
                         };
@@ -391,7 +409,9 @@ pub async fn import_execute(
                     import_companies_from_json(&data, &state, &mut result).await;
                 }
                 Err(e) => {
-                    result.errors.push(format!("Failed to parse clients: {}", e));
+                    result
+                        .errors
+                        .push(format!("Failed to parse clients: {}", e));
                     result.success = false;
                 }
             }
@@ -413,7 +433,11 @@ pub async fn import_execute(
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.extension().map_or(false, |ext| ext == "json") {
-                    let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                    let filename = path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
                     if filename == "staff-rates.json"
                         || filename == "fee-methodology.json"
                         || filename == "clients-consultants.json"
@@ -422,12 +446,8 @@ pub async fn import_execute(
                     }
 
                     if let Ok(data) = parse_json_file::<ProposalExport>(&path) {
-                        import_proposal_from_json(
-                            &data,
-                            methodology.as_ref(),
-                            &state,
-                            &mut result,
-                        ).await;
+                        import_proposal_from_json(&data, methodology.as_ref(), &state, &mut result)
+                            .await;
                     }
                 }
             }
@@ -435,8 +455,10 @@ pub async fn import_execute(
     }
 
     if result.errors.is_empty() {
-        info!("Import completed successfully: {} projects, {} fees, {} companies",
-            result.projects_created, result.fees_created, result.companies_created);
+        info!(
+            "Import completed successfully: {} projects, {} fees, {} companies",
+            result.projects_created, result.fees_created, result.companies_created
+        );
     } else {
         warn!("Import completed with {} errors", result.errors.len());
         result.success = result.projects_created > 0 || result.companies_created > 0;
@@ -453,8 +475,7 @@ pub async fn import_execute(
 fn parse_json_file<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-    serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
+    serde_json::from_str(&content).map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
 }
 
 /// Import companies from clients-consultants.json into SurrealDB.
@@ -469,12 +490,15 @@ async fn import_companies_from_json(
     let existing_companies = match manager.get_companies().await {
         Ok(companies) => companies,
         Err(e) => {
-            result.errors.push(format!("Failed to fetch existing companies: {}", e));
+            result
+                .errors
+                .push(format!("Failed to fetch existing companies: {}", e));
             return;
         }
     };
 
-    let existing_names: Vec<String> = existing_companies.iter()
+    let existing_names: Vec<String> = existing_companies
+        .iter()
         .map(|c| c.name.to_lowercase())
         .collect();
 
@@ -482,12 +506,17 @@ async fn import_companies_from_json(
         // Skip if company already exists (case-insensitive match)
         if existing_names.contains(&client.name.to_lowercase()) {
             result.companies_skipped += 1;
-            result.warnings.push(format!("Company '{}' already exists, skipping", client.name));
+            result.warnings.push(format!(
+                "Company '{}' already exists, skipping",
+                client.name
+            ));
             continue;
         }
 
         // Create abbreviation from name (first 3 chars uppercase)
-        let abbreviation = client.name.chars()
+        let abbreviation = client
+            .name
+            .chars()
             .filter(|c| c.is_alphanumeric())
             .take(3)
             .collect::<String>()
@@ -522,7 +551,9 @@ async fn import_companies_from_json(
                 info!("Created company: {}", client.name);
             }
             Err(e) => {
-                result.errors.push(format!("Failed to create company '{}': {}", client.name, e));
+                result
+                    .errors
+                    .push(format!("Failed to create company '{}': {}", client.name, e));
             }
         }
     }
@@ -585,7 +616,10 @@ async fn import_proposal_from_json(
             match manager.create_new_project(new_project).await {
                 Ok(_) => {
                     result.projects_created += 1;
-                    info!("Created project: {} ({})", proposal.project_name, project_id);
+                    info!(
+                        "Created project: {} ({})",
+                        proposal.project_name, project_id
+                    );
                 }
                 Err(e) => {
                     result.errors.push(format!(
@@ -597,7 +631,9 @@ async fn import_proposal_from_json(
             }
         }
         Err(e) => {
-            result.errors.push(format!("Failed to check existing project: {}", e));
+            result
+                .errors
+                .push(format!("Failed to check existing project: {}", e));
             return;
         }
     }
@@ -606,7 +642,8 @@ async fn import_proposal_from_json(
     let pricing = build_pricing_from_proposal(proposal, methodology);
 
     // Find or create the company for this proposal
-    let company_id = find_company_id(&manager, &proposal.client).await
+    let company_id = find_company_id(&manager, &proposal.client)
+        .await
         .unwrap_or_else(|| "EMT".to_string());
 
     // Create the fee record
@@ -669,7 +706,9 @@ fn build_pricing_from_proposal(
         if let Some(first_phase) = proposal.phases.first() {
             for (i, stage) in first_phase.stages.iter().enumerate() {
                 let stage_id = format!("stage_{}_{}", chrono::Utc::now().timestamp_millis(), i);
-                let code = stage.name.chars()
+                let code = stage
+                    .name
+                    .chars()
                     .filter(|c| c.is_uppercase())
                     .take(2)
                     .collect::<String>();
@@ -677,14 +716,20 @@ fn build_pricing_from_proposal(
                 stages.push(crate::db::Stage {
                     id: stage_id.clone(),
                     name: stage.name.clone(),
-                    code: if code.is_empty() { format!("S{}", i + 1) } else { code },
+                    code: if code.is_empty() {
+                        format!("S{}", i + 1)
+                    } else {
+                        code
+                    },
                     percentage: stage.percentage * 100.0,
                     order: (i + 1) as i64,
                     is_post_contract: false,
                 });
 
                 // Calculate total fee across all phases for this stage position
-                let stage_total: f64 = proposal.phases.iter()
+                let stage_total: f64 = proposal
+                    .phases
+                    .iter()
                     .filter_map(|p| p.stages.get(i))
                     .map(|s| s.fee)
                     .sum();
@@ -721,16 +766,17 @@ fn build_pricing_from_proposal(
         }
     }
 
-    let disciplines = vec![
-        crate::db::Discipline {
-            id: discipline_id,
-            name: "Lighting Design".to_string(),
-            percentage: 100.0,
-            order: 1,
-        },
-    ];
+    let disciplines = vec![crate::db::Discipline {
+        id: discipline_id,
+        name: "Lighting Design".to_string(),
+        percentage: 100.0,
+        order: 1,
+    }];
 
-    let design_total: f64 = cells.iter().map(|c| c.override_amount.unwrap_or(c.amount)).sum();
+    let design_total: f64 = cells
+        .iter()
+        .map(|c| c.override_amount.unwrap_or(c.amount))
+        .sum();
 
     // Determine tax type: SAR proposals typically use withholding tax
     let tax_type_str = if is_sar { "withholding" } else { "vat" };
@@ -766,9 +812,12 @@ async fn find_company_id(
     match manager.get_companies().await {
         Ok(companies) => {
             let lower_name = client_name.to_lowercase();
-            companies.iter()
-                .find(|c| c.name.to_lowercase().contains(&lower_name)
-                    || lower_name.contains(&c.name.to_lowercase()))
+            companies
+                .iter()
+                .find(|c| {
+                    c.name.to_lowercase().contains(&lower_name)
+                        || lower_name.contains(&c.name.to_lowercase())
+                })
                 .and_then(|c| c.id.as_ref())
                 .map(|id| record_key_string(&id.key))
         }

@@ -6,7 +6,7 @@
     generateScope,
     updateScope,
     regenerateScope,
-    assembleDeliverables,
+    assembleDeliverables
   } from '$lib/api/scope';
   import { logApiError } from '$lib/services/logger';
   import type { ScopeAssembly, ScopeSection, AssembleRequest } from '$lib/types/scope';
@@ -19,7 +19,7 @@
     stages = [],
     projectName = '',
     projectNumber = '',
-    ondirtychange,
+    ondirtychange
   }: {
     feeId: string;
     stages?: import('$lib/api/feeStages').FeeStage[];
@@ -70,16 +70,19 @@
     const timeout = setTimeout(() => controller.abort(), 90_000);
 
     try {
-      const result = await generateScope({
-        fee_id: feeId,
-        polish: true,
-        stages: stages.map(s => ({
-          name: s.name,
-          code: s.code,
-          is_post_contract: s.is_post_contract,
-          order: s.order,
-        })),
-      }, controller.signal);
+      const result = await generateScope(
+        {
+          fee_id: feeId,
+          polish: true,
+          stages: stages.map(s => ({
+            name: s.name,
+            code: s.code,
+            is_post_contract: s.is_post_contract,
+            order: s.order
+          }))
+        },
+        controller.signal
+      );
       scope = result;
       sections = Array.isArray(result.clauses) ? JSON.parse(JSON.stringify(result.clauses)) : [];
       dirty = false;
@@ -87,7 +90,8 @@
       setTimeout(() => (message = null), 3000);
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        error = 'Generation timed out — the scope service may still be processing. Try again in a minute.';
+        error =
+          'Generation timed out — the scope service may still be processing. Try again in a minute.';
       } else {
         error = err.message || 'Failed to generate scope';
         logApiError('ScopeViewer generate', err as Error);
@@ -132,7 +136,10 @@
       // Export markdown to project folder if configured
       if (projectNumber) {
         try {
-          const folderInfo = await invoke<{ full_path: string; exists: boolean }>('get_project_folder_location', { projectNumber });
+          const folderInfo = await invoke<{ full_path: string; exists: boolean }>(
+            'get_project_folder_location',
+            { projectNumber }
+          );
           if (folderInfo.exists) {
             const revision = scope?.current_revision ?? 1;
             const stageNames = stages.map(s => s.name);
@@ -142,7 +149,7 @@
               projectFolder: folderInfo.full_path,
               revision,
               stages: stageNames,
-              scopeText: generatedText,
+              scopeText: generatedText
             });
             if (result) {
               message = 'Scope saved and exported to project folder';
@@ -174,9 +181,16 @@
     }
   }
 
-  function handleClauseUpdate(sectionIndex: number, clauseId: string, field: 'title' | 'body', value: string) {
+  function handleClauseUpdate(
+    sectionIndex: number,
+    clauseId: string,
+    field: 'title' | 'body',
+    value: string
+  ) {
     const updated = JSON.parse(JSON.stringify(sections));
-    const clause = updated[sectionIndex].clauses.find((c: { clause_id: string }) => c.clause_id === clauseId);
+    const clause = updated[sectionIndex].clauses.find(
+      (c: { clause_id: string }) => c.clause_id === clauseId
+    );
     if (clause) {
       clause[field] = value;
       sections = updated;
@@ -234,10 +248,7 @@
     <!-- No existing scope — show generate controls -->
     <div class="emittiv-scope-viewer__empty">
       <p>No scope generated yet for this proposal.</p>
-      <button
-        class="emittiv-btn emittiv-btn--primary emittiv-btn--sm"
-        onclick={handleGenerate}
-      >
+      <button class="emittiv-btn emittiv-btn--primary emittiv-btn--sm" onclick={handleGenerate}>
         Generate Scope
       </button>
 

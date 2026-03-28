@@ -1,8 +1,8 @@
 //! Database configuration and connection status types.
 
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::env;
-use log::info;
 
 /// Interval for database connection health checks (30 seconds)
 pub const HEARTBEAT_INTERVAL_SECS: u64 = 30;
@@ -22,8 +22,9 @@ pub struct DatabaseConfig {
 impl DatabaseConfig {
     /// Creates a new DatabaseConfig from environment variables.
     pub fn from_env() -> Result<Self, String> {
-        let url = env::var("SURREALDB_URL")
-            .map_err(|_| "SURREALDB_URL environment variable is required but not set".to_string())?;
+        let url = env::var("SURREALDB_URL").map_err(|_| {
+            "SURREALDB_URL environment variable is required but not set".to_string()
+        })?;
 
         let verify_certificates = env::var("SURREALDB_VERIFY_CERTS")
             .map(|v| v.parse().unwrap_or(true))
@@ -37,10 +38,12 @@ impl DatabaseConfig {
             .map_err(|_| "SURREALDB_NS environment variable is required but not set".to_string())?;
         let database = env::var("SURREALDB_DB")
             .map_err(|_| "SURREALDB_DB environment variable is required but not set".to_string())?;
-        let username = env::var("SURREALDB_USER")
-            .map_err(|_| "SURREALDB_USER environment variable is required but not set".to_string())?;
-        let password = env::var("SURREALDB_PASS")
-            .map_err(|_| "SURREALDB_PASS environment variable is required but not set".to_string())?;
+        let username = env::var("SURREALDB_USER").map_err(|_| {
+            "SURREALDB_USER environment variable is required but not set".to_string()
+        })?;
+        let password = env::var("SURREALDB_PASS").map_err(|_| {
+            "SURREALDB_PASS environment variable is required but not set".to_string()
+        })?;
 
         Ok(DatabaseConfig {
             url,
@@ -55,23 +58,33 @@ impl DatabaseConfig {
 
     /// Creates a DatabaseConfig from AppSettings (for production builds).
     pub fn from_settings(settings: &crate::commands::AppSettings) -> Result<Self, String> {
-        let url = settings.surrealdb_url.as_ref()
+        let url = settings
+            .surrealdb_url
+            .as_ref()
             .ok_or("SurrealDB URL not configured in settings".to_string())?
             .clone();
 
-        let namespace = settings.surrealdb_ns.as_ref()
+        let namespace = settings
+            .surrealdb_ns
+            .as_ref()
             .ok_or("SurrealDB namespace not configured in settings".to_string())?
             .clone();
 
-        let database = settings.surrealdb_db.as_ref()
+        let database = settings
+            .surrealdb_db
+            .as_ref()
             .ok_or("SurrealDB database not configured in settings".to_string())?
             .clone();
 
-        let username = settings.surrealdb_user.as_ref()
+        let username = settings
+            .surrealdb_user
+            .as_ref()
             .ok_or("SurrealDB username not configured in settings".to_string())?
             .clone();
 
-        let password = settings.surrealdb_pass.as_ref()
+        let password = settings
+            .surrealdb_pass
+            .as_ref()
             .ok_or("SurrealDB password not configured in settings".to_string())?
             .clone();
 
@@ -101,17 +114,19 @@ impl DatabaseConfig {
 
     /// Logs the configuration (without password).
     pub fn log_info(&self) {
-        info!("Database config - URL: {}, NS: {}, DB: {}, User: {}",
-              self.url, self.namespace, self.database, self.username);
+        info!(
+            "Database config - URL: {}, NS: {}, DB: {}, User: {}",
+            self.url, self.namespace, self.database, self.username
+        );
     }
 
     /// Checks if all required fields are populated.
     pub fn is_configured(&self) -> bool {
-        !self.url.is_empty() &&
-        !self.namespace.is_empty() &&
-        !self.database.is_empty() &&
-        !self.username.is_empty() &&
-        !self.password.is_empty()
+        !self.url.is_empty()
+            && !self.namespace.is_empty()
+            && !self.database.is_empty()
+            && !self.username.is_empty()
+            && !self.password.is_empty()
     }
 }
 

@@ -3,16 +3,16 @@
 //! This module provides Tauri commands for managing project templates,
 //! copying folder structures, and checking file existence.
 
-use crate::db::{Project, NewProject};
-use crate::db::types::{record_key_string, record_id_string};
-use crate::commands::settings::get_settings;
 use super::AppState;
+use crate::commands::settings::get_settings;
+use crate::db::types::{record_id_string, record_key_string};
+use crate::db::{NewProject, Project};
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::{State, AppHandle};
 use log::{error, info, warn};
 use serde_json::Value;
+use std::fs;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, State};
 
 // ============================================================================
 // PROJECT CREATION WITH TEMPLATE
@@ -26,7 +26,7 @@ use serde_json::Value;
 pub async fn create_project_with_template(
     project: NewProject,
     state: State<'_, AppState>,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<Project, String> {
     info!("Creating project with template: {}", project.name);
     info!("Project data: {:?}", project);
@@ -40,13 +40,21 @@ pub async fn create_project_with_template(
     info!("About to create project in database...");
     match manager_clone.create_new_project(project.clone()).await {
         Ok(created_project) => {
-            info!("Successfully created project in database: {:?}", created_project.id);
+            info!(
+                "Successfully created project in database: {:?}",
+                created_project.id
+            );
 
             // Get project folder path from settings
             info!("Getting settings for project folder path...");
-            let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
+            let settings = get_settings(app_handle)
+                .await
+                .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-            info!("Settings loaded - project_folder_path: {:?}", settings.project_folder_path);
+            info!(
+                "Settings loaded - project_folder_path: {:?}",
+                settings.project_folder_path
+            );
 
             if let Some(base_path) = settings.project_folder_path {
                 // Copy template folder - use cross-platform paths
@@ -56,7 +64,10 @@ pub async fn create_project_with_template(
                 let dest_folder_name = format!("{} {}", project_number, created_project.name_short);
                 let dest_path = base_path_buf.join("01 RFPs").join(&dest_folder_name);
 
-                info!("Copying template from {:?} to {:?}", template_path, dest_path);
+                info!(
+                    "Copying template from {:?} to {:?}",
+                    template_path, dest_path
+                );
 
                 // Use cross-platform folder copying
                 if template_path.exists() {
@@ -65,7 +76,11 @@ pub async fn create_project_with_template(
                             info!("Successfully copied template folder");
 
                             // Rename files within the copied folder
-                            if let Err(e) = rename_template_files_cross_platform(&dest_path, "yy-cccnn", &project_number) {
+                            if let Err(e) = rename_template_files_cross_platform(
+                                &dest_path,
+                                "yy-cccnn",
+                                &project_number,
+                            ) {
                                 error!("Failed to rename template files: {}", e);
                                 // Don't fail the entire operation just because rename failed
                             }
@@ -99,14 +114,20 @@ pub async fn create_project_with_template(
 pub async fn copy_project_template(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("Copying project template for number: {}, short name: {}", project_number, project_short_name);
+    info!(
+        "Copying project template for number: {}, short name: {}",
+        project_number, project_short_name
+    );
 
     // Get project folder path from settings
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-    let base_path = settings.project_folder_path
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     // Normalize paths for cross-platform compatibility
@@ -125,7 +146,10 @@ pub async fn copy_project_template(
 
     // Check if destination already exists
     if dest_path.exists() {
-        return Err(format!("Destination folder already exists: {:?}", dest_path));
+        return Err(format!(
+            "Destination folder already exists: {:?}",
+            dest_path
+        ));
     }
 
     // Copy template folder using cross-platform approach
@@ -138,7 +162,10 @@ pub async fn copy_project_template(
 
     info!("Successfully renamed template files");
 
-    Ok(format!("Template copied successfully to: {}", dest_path.display()))
+    Ok(format!(
+        "Template copied successfully to: {}",
+        dest_path.display()
+    ))
 }
 
 /// Populate project data from fee proposal record.
@@ -148,9 +175,12 @@ pub async fn populate_project_data(
     project_number: String,
     project_short_name: String,
     state: State<'_, AppState>,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("Populating project data for FP: {}, Project: {} {}", fp_id, project_number, project_short_name);
+    info!(
+        "Populating project data for FP: {}, Project: {} {}",
+        fp_id, project_number, project_short_name
+    );
 
     // Fetch FP record data from database
     info!("Fetching FP record data for ID: {}", fp_id);
@@ -160,30 +190,37 @@ pub async fn populate_project_data(
     };
 
     // Get FP data
-    let fps = manager_clone.get_fees().await
+    let fps = manager_clone
+        .get_fees()
+        .await
         .map_err(|e| format!("Failed to fetch FPs: {}", e))?;
 
     // Find the specific FP
     info!("Looking for FP ID: {}", fp_id);
-    let fp = fps.iter().find(|f| {
-        if let Some(id) = &f.id {
-            let db_id_clean = record_key_string(&id.key)
-                .trim_start_matches('⟨')
-                .trim_end_matches('⟩')
-                .to_string();
-            let input_id_clean = fp_id.trim_start_matches("fee:").to_string();
-            db_id_clean == input_id_clean || record_id_string(id).contains(&fp_id)
-        } else {
-            false
-        }
-    }).ok_or_else(|| format!("FP record not found with ID: {}", fp_id))?;
+    let fp = fps
+        .iter()
+        .find(|f| {
+            if let Some(id) = &f.id {
+                let db_id_clean = record_key_string(&id.key)
+                    .trim_start_matches('⟨')
+                    .trim_end_matches('⟩')
+                    .to_string();
+                let input_id_clean = fp_id.trim_start_matches("fee:").to_string();
+                db_id_clean == input_id_clean || record_id_string(id).contains(&fp_id)
+            } else {
+                false
+            }
+        })
+        .ok_or_else(|| format!("FP record not found with ID: {}", fp_id))?;
 
     info!("Found FP record: {}", fp.name);
 
     // Get settings for file paths
-    let settings = get_settings(app_handle.clone()).await
+    let settings = get_settings(app_handle.clone())
+        .await
         .map_err(|e| format!("Failed to get settings: {}", e))?;
-    let base_path = settings.project_folder_path
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     // Construct file path
@@ -210,18 +247,28 @@ pub async fn populate_project_data(
     // Read and parse JSON
     let json_content = fs::read_to_string(&json_file_path)
         .map_err(|e| format!("Failed to read JSON file: {}", e))?;
-    let mut json_data: Value = serde_json::from_str(&json_content)
-        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    let mut json_data: Value =
+        serde_json::from_str(&json_content).map_err(|e| format!("Failed to parse JSON: {}", e))?;
 
     // Update JSON fields with FP data
     if let Some(map) = json_data.as_object_mut() {
-        map.insert("02 Document Number".to_string(), Value::String(format!("{}-FP", project_number)));
-        map.insert("06 Project Name".to_string(), Value::String(fp.name.clone()));
+        map.insert(
+            "02 Document Number".to_string(),
+            Value::String(format!("{}-FP", project_number)),
+        );
+        map.insert(
+            "06 Project Name".to_string(),
+            Value::String(fp.name.clone()),
+        );
 
         let status_str = format!("{:?}", fp.status);
         map.insert("09 Project Stage".to_string(), Value::String(status_str));
 
-        info!("Successfully populated {} JSON fields with FP data: {}", map.len(), fp.name);
+        info!(
+            "Successfully populated {} JSON fields with FP data: {}",
+            map.len(),
+            fp.name
+        );
     }
 
     // Write updated JSON back to file
@@ -232,7 +279,10 @@ pub async fn populate_project_data(
         .map_err(|e| format!("Failed to write JSON file: {}", e))?;
 
     info!("Successfully updated JSON file with RFP data");
-    Ok(format!("JSON file updated: {:?}", json_file_path.file_name().unwrap_or_default()))
+    Ok(format!(
+        "JSON file updated: {:?}",
+        json_file_path.file_name().unwrap_or_default()
+    ))
 }
 
 // ============================================================================
@@ -244,13 +294,19 @@ pub async fn populate_project_data(
 pub async fn check_project_folder_exists(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<bool, String> {
-    info!("Checking if project folder exists for: {} {}", project_number, project_short_name);
+    info!(
+        "Checking if project folder exists for: {} {}",
+        project_number, project_short_name
+    );
 
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-    let base_path = settings.project_folder_path
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     let base_path_buf = PathBuf::from(&base_path);
@@ -258,7 +314,11 @@ pub async fn check_project_folder_exists(
     let dest_path = base_path_buf.join("01 RFPs").join(&dest_folder_name);
 
     let exists = dest_path.exists();
-    info!("Project folder '{}' exists: {}", dest_path.display(), exists);
+    info!(
+        "Project folder '{}' exists: {}",
+        dest_path.display(),
+        exists
+    );
 
     Ok(exists)
 }
@@ -268,13 +328,19 @@ pub async fn check_project_folder_exists(
 pub async fn check_var_json_exists(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<bool, String> {
-    info!("Checking if var.json exists for: {} {}", project_number, project_short_name);
+    info!(
+        "Checking if var.json exists for: {} {}",
+        project_number, project_short_name
+    );
 
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-    let base_path = settings.project_folder_path
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     let base_path_buf = PathBuf::from(&base_path);
@@ -285,7 +351,11 @@ pub async fn check_var_json_exists(
     let json_file_path = project_dir.join(format!("{}-var.json", project_number));
 
     let exists = json_file_path.exists();
-    info!("var.json file '{}' exists: {}", json_file_path.display(), exists);
+    info!(
+        "var.json file '{}' exists: {}",
+        json_file_path.display(),
+        exists
+    );
 
     Ok(exists)
 }
@@ -295,13 +365,19 @@ pub async fn check_var_json_exists(
 pub async fn check_var_json_template_exists(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<bool, String> {
-    info!("Checking if var template (Default Values) exists for: {} {}", project_number, project_short_name);
+    info!(
+        "Checking if var template (Default Values) exists for: {} {}",
+        project_number, project_short_name
+    );
 
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-    let base_path = settings.project_folder_path
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     let base_path_buf = PathBuf::from(&base_path);
@@ -309,10 +385,15 @@ pub async fn check_var_json_template_exists(
         .join("01 RFPs")
         .join(format!("{} {}", project_number, project_short_name))
         .join("02 Proposal");
-    let json_template_path = project_dir.join(format!("{}-var Default Values.json", project_number));
+    let json_template_path =
+        project_dir.join(format!("{}-var Default Values.json", project_number));
 
     let exists = json_template_path.exists();
-    info!("var template file '{}' exists: {}", json_template_path.display(), exists);
+    info!(
+        "var template file '{}' exists: {}",
+        json_template_path.display(),
+        exists
+    );
 
     Ok(exists)
 }
@@ -326,12 +407,18 @@ pub async fn check_var_json_template_exists(
 pub async fn rename_folder_with_old_suffix(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("Renaming folder with _old suffix: {} {}", project_number, project_short_name);
+    info!(
+        "Renaming folder with _old suffix: {} {}",
+        project_number, project_short_name
+    );
 
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
-    let base_path = settings.project_folder_path
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     let base_path_buf = PathBuf::from(&base_path);
@@ -353,7 +440,10 @@ pub async fn rename_folder_with_old_suffix(
             fs::rename(&original_path, &old_path)
                 .map_err(|e| format!("Failed to rename folder: {}", e))?;
 
-            info!("Renamed folder from '{}' to '{}'", original_folder_name, old_folder_name);
+            info!(
+                "Renamed folder from '{}' to '{}'",
+                original_folder_name, old_folder_name
+            );
             return Ok(format!("Folder renamed to: {}", old_folder_name));
         }
 
@@ -367,12 +457,18 @@ pub async fn rename_folder_with_old_suffix(
 pub async fn rename_var_json_with_old_suffix(
     project_number: String,
     project_short_name: String,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("Renaming var.json with _old suffix: {} {}", project_number, project_short_name);
+    info!(
+        "Renaming var.json with _old suffix: {} {}",
+        project_number, project_short_name
+    );
 
-    let settings = get_settings(app_handle).await.map_err(|e| format!("Failed to get settings: {}", e))?;
-    let base_path = settings.project_folder_path
+    let settings = get_settings(app_handle)
+        .await
+        .map_err(|e| format!("Failed to get settings: {}", e))?;
+    let base_path = settings
+        .project_folder_path
         .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings".to_string())?;
 
     let base_path_buf = PathBuf::from(&base_path);
@@ -399,7 +495,10 @@ pub async fn rename_var_json_with_old_suffix(
             fs::rename(&original_json_path, &old_json_path)
                 .map_err(|e| format!("Failed to rename file: {}", e))?;
 
-            info!("Renamed file from '{}' to '{}'", original_json_name, old_json_name);
+            info!(
+                "Renamed file from '{}' to '{}'",
+                original_json_name, old_json_name
+            );
             return Ok(format!("File renamed to: {}", old_json_name));
         }
 
@@ -423,7 +522,10 @@ fn copy_folder_recursive(src: &Path, dest: &Path) -> Result<(), String> {
             .args(&[
                 src.to_string_lossy().as_ref(),
                 dest.to_string_lossy().as_ref(),
-                "/E", "/I", "/Q", "/Y"
+                "/E",
+                "/I",
+                "/Q",
+                "/Y",
             ])
             .output()
     } else {
@@ -431,7 +533,7 @@ fn copy_folder_recursive(src: &Path, dest: &Path) -> Result<(), String> {
             .args(&[
                 "-R",
                 src.to_string_lossy().as_ref(),
-                dest.to_string_lossy().as_ref()
+                dest.to_string_lossy().as_ref(),
             ])
             .output()
     };
@@ -455,8 +557,15 @@ fn copy_folder_recursive(src: &Path, dest: &Path) -> Result<(), String> {
 }
 
 /// Cross-platform file renaming with pattern replacement.
-fn rename_template_files_cross_platform(dir_path: &Path, old_pattern: &str, new_pattern: &str) -> Result<(), String> {
-    info!("Renaming template files in {:?}, replacing '{}' with '{}'", dir_path, old_pattern, new_pattern);
+fn rename_template_files_cross_platform(
+    dir_path: &Path,
+    old_pattern: &str,
+    new_pattern: &str,
+) -> Result<(), String> {
+    info!(
+        "Renaming template files in {:?}, replacing '{}' with '{}'",
+        dir_path, old_pattern, new_pattern
+    );
 
     if !dir_path.exists() {
         return Err(format!("Directory does not exist: {:?}", dir_path));
@@ -473,9 +582,13 @@ fn rename_template_files_cross_platform(dir_path: &Path, old_pattern: &str, new_
 }
 
 /// Recursive directory visitor for file renaming.
-fn visit_dirs_cross_platform(dir: &Path, old_pattern: &str, new_pattern: &str) -> Result<(), String> {
-    let entries = fs::read_dir(dir)
-        .map_err(|e| format!("Failed to read directory {:?}: {}", dir, e))?;
+fn visit_dirs_cross_platform(
+    dir: &Path,
+    old_pattern: &str,
+    new_pattern: &str,
+) -> Result<(), String> {
+    let entries =
+        fs::read_dir(dir).map_err(|e| format!("Failed to read directory {:?}: {}", dir, e))?;
 
     let mut entries_to_rename = Vec::new();
 

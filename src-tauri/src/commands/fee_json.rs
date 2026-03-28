@@ -3,13 +3,13 @@
 //! This module provides helper functions for exporting fee proposal data to JSON files.
 //! Extracted from mod.rs to improve code organization and testability.
 
+use log::{error, info};
 use std::fs;
 use std::path::Path;
-use log::{info, error};
 use surrealdb::types::RecordId;
 
-use crate::db::{Fee, Project, Company, Contact};
 use crate::db::types::record_key_string;
+use crate::db::{Company, Contact, Fee, Project};
 pub use e_fees_core::export::build_fee_json;
 use e_fees_core::export::clean_record_key;
 
@@ -68,10 +68,7 @@ pub struct FeeJsonPaths {
 }
 
 /// Calculate the file paths for fee JSON export.
-pub fn build_fee_json_paths(
-    project_folder_path: &str,
-    project: &Project,
-) -> FeeJsonPaths {
+pub fn build_fee_json_paths(project_folder_path: &str, project: &Project) -> FeeJsonPaths {
     let project_number = clean_record_key(&project.number.id);
 
     let project_dir = format!(
@@ -82,10 +79,7 @@ pub fn build_fee_json_paths(
         "{}/02 Proposal/{}-var Default Values.json",
         project_dir, project_number
     );
-    let new_json_path = format!(
-        "{}/02 Proposal/{}-var.json",
-        project_dir, project_number
-    );
+    let new_json_path = format!("{}/02 Proposal/{}-var.json", project_dir, project_number);
 
     FeeJsonPaths {
         project_dir,
@@ -97,12 +91,12 @@ pub fn build_fee_json_paths(
 /// Rename template file if needed (removes "Default Values" from filename).
 ///
 /// Returns Ok(()) if rename succeeded or wasn't needed, Err on failure.
-pub fn rename_template_file_if_needed(
-    old_path: &str,
-    new_path: &str,
-) -> Result<(), String> {
+pub fn rename_template_file_if_needed(old_path: &str, new_path: &str) -> Result<(), String> {
     if Path::new(old_path).exists() && !Path::new(new_path).exists() {
-        info!("Renaming template file from '{}' to '{}'", old_path, new_path);
+        info!(
+            "Renaming template file from '{}' to '{}'",
+            old_path, new_path
+        );
 
         // Check if file might be syncing
         if let Ok(metadata) = fs::metadata(old_path) {
@@ -118,7 +112,10 @@ pub fn rename_template_file_if_needed(
 
         fs::rename(old_path, new_path).map_err(|e| {
             error!("Failed to rename file: {}", e);
-            format!("Failed to rename file from '{}' to '{}': {}", old_path, new_path, e)
+            format!(
+                "Failed to rename file from '{}' to '{}': {}",
+                old_path, new_path, e
+            )
         })?;
     }
     Ok(())

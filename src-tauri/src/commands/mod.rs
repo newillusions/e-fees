@@ -56,7 +56,7 @@ pub mod types;
 pub mod utils;
 
 // Re-export shared types for use in other modules
-pub use types::{CompanyUpdate, ContactUpdate, ProjectUpdate, AppSettings, AppSettingsPublic};
+pub use types::{AppSettings, AppSettingsPublic, CompanyUpdate, ContactUpdate, ProjectUpdate};
 
 // ============================================================================
 // DOMAIN-SPECIFIC COMMAND MODULES
@@ -65,38 +65,36 @@ pub use types::{CompanyUpdate, ContactUpdate, ProjectUpdate, AppSettings, AppSet
 // Project management
 pub mod projects;
 pub use projects::{
-    get_projects, get_projects_page, get_project_by_id,
-    create_project, update_project, delete_project,
-    search_projects, generate_next_project_number, validate_project_number,
+    create_project, delete_project, generate_next_project_number, get_project_by_id, get_projects,
+    get_projects_page, search_projects, update_project, validate_project_number,
 };
 
 // Fee proposal management
 pub mod fees;
 pub use fees::{
-    get_fees, get_fees_page, create_fee, update_fee, update_fee_pricing, delete_fee,
-    write_fee_to_json, write_fee_to_json_safe,
-    clone_fee_revision, get_fees_for_project,
+    clone_fee_revision, create_fee, delete_fee, get_fees, get_fees_for_project, get_fees_page,
+    update_fee, update_fee_pricing, write_fee_to_json, write_fee_to_json_safe,
 };
 
 // Company management
 pub mod companies;
 pub use companies::{
-    get_companies, get_companies_page, get_company_by_id,
-    create_company, update_company, delete_company,
+    create_company, delete_company, get_companies, get_companies_page, get_company_by_id,
+    update_company,
 };
 
 // Contact management
 pub mod contacts;
 pub use contacts::{
-    get_contacts, get_contacts_page, get_contact_by_id,
-    create_contact, update_contact, delete_contact,
+    create_contact, delete_contact, get_contact_by_id, get_contacts, get_contacts_page,
+    update_contact,
 };
 
 // Template and folder operations
 pub mod template_ops;
 pub use template_ops::{
-    create_project_with_template, copy_project_template, populate_project_data,
     check_project_folder_exists, check_var_json_exists, check_var_json_template_exists,
+    copy_project_template, create_project_with_template, populate_project_data,
     rename_folder_with_old_suffix, rename_var_json_with_old_suffix,
 };
 
@@ -114,41 +112,36 @@ pub mod fee_json;
 // Folder management
 pub mod folder_management;
 pub use folder_management::{
-    get_project_folder_location, move_project_folder, move_project_from_rfp,
-    move_project_to_archive, list_projects_in_folder, validate_project_base_path,
+    get_project_folder_location, list_projects_in_folder, move_project_folder,
+    move_project_from_rfp, move_project_to_archive, validate_project_base_path,
 };
 
 // Folder sync
 pub mod folder_sync;
-pub use folder_sync::{
-    scan_folder_sync, resolve_folder_inconsistency,
-};
+pub use folder_sync::{resolve_folder_inconsistency, scan_folder_sync};
 
 // Import wizard
 pub mod import_wizard;
-pub use import_wizard::{
-    import_scan_directory, import_execute,
-};
+pub use import_wizard::{import_execute, import_scan_directory};
 
 // Reference data
 pub mod reference_data;
 pub use reference_data::{
-    search_countries, get_area_suggestions, get_all_cities, get_city_suggestions,
+    get_all_cities, get_area_suggestions, get_city_suggestions, search_countries,
 };
 
 // Settings management
 pub mod settings;
 pub use settings::{
-    get_settings, save_settings, get_dev_mode, reload_database_config,
-    select_folder, open_folder_in_explorer,
+    get_dev_mode, get_settings, open_folder_in_explorer, reload_database_config, save_settings,
+    select_folder,
 };
 
 // System commands
 pub mod system;
 pub use system::{
-    health_check, get_db_info, get_stats, get_table_schema,
-    position_window_4k, investigate_record, log_message,
-    set_log_level, get_log_level,
+    get_db_info, get_log_level, get_stats, get_table_schema, health_check, investigate_record,
+    log_message, position_window_4k, set_log_level,
 };
 
 // Excel export
@@ -161,11 +154,11 @@ pub use batch_ops::{batch_delete_entities, batch_update_status};
 
 // Fee stage access (scope–pricing linkage)
 pub mod fee_stages;
-pub use fee_stages::{get_fee_stages, add_stage_to_fee, get_stage_dictionary};
+pub use fee_stages::{add_stage_to_fee, get_fee_stages, get_stage_dictionary};
 
 // Stage dictionary (autocomplete for stage names)
 pub mod stage_dictionary;
-pub use stage_dictionary::{search_stage_dictionary, add_stage_to_dictionary};
+pub use stage_dictionary::{add_stage_to_dictionary, search_stage_dictionary};
 
 // Scope markdown export
 pub mod scope_export;

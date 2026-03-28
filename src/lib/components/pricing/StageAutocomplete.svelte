@@ -24,7 +24,7 @@
     concept: 25,
     schematic: 30,
     detailed: 30,
-    ift: 10,
+    ift: 10
   };
 
   onMount(async () => {
@@ -55,7 +55,7 @@
     onselect({
       name: entry.default_label,
       code: generateStageCode(entry.default_label),
-      percentage,
+      percentage
     });
     showDropdown = false;
     highlightIndex = -1;
@@ -80,7 +80,9 @@
 
   function handleBlur() {
     // Delay to allow click on dropdown item
-    setTimeout(() => { showDropdown = false; }, 150);
+    setTimeout(() => {
+      showDropdown = false;
+    }, 150);
   }
 </script>
 

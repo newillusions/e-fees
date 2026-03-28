@@ -1,5 +1,5 @@
-use crate::db::DatabaseManager;
 use crate::commands::AppState;
+use crate::db::DatabaseManager;
 use log::{error, info};
 use std::future::Future;
 use tauri::State;
@@ -46,7 +46,7 @@ where
 }
 
 /// Macro for generating standard CRUD command functions
-/// 
+///
 /// This macro eliminates the boilerplate of creating similar command functions
 /// by generating them with consistent patterns for:
 /// - State management
@@ -67,19 +67,18 @@ macro_rules! crud_command {
         #[tauri::command]
         pub async fn $fn_name(
             id: String,
-            state: State<'_, AppState>
+            state: State<'_, AppState>,
         ) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move { 
-                    manager.$manager_method(&id).await 
-                }),
+                |manager| Box::pin(async move { manager.$manager_method(&id).await }),
                 $action,
-                $entity_name
-            ).await
+                $entity_name,
+            )
+            .await
         }
     };
-    
+
     // Command with data parameter (create, update)
     (
         $fn_name:ident,
@@ -93,19 +92,18 @@ macro_rules! crud_command {
         #[tauri::command]
         pub async fn $fn_name(
             $data_param: $data_type,
-            state: State<'_, AppState>
+            state: State<'_, AppState>,
         ) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move { 
-                    manager.$manager_method($data_param).await 
-                }),
+                |manager| Box::pin(async move { manager.$manager_method($data_param).await }),
                 $action,
-                $entity_name
-            ).await
+                $entity_name,
+            )
+            .await
         }
     };
-    
+
     // Command with ID and data parameters (update)
     (
         $fn_name:ident,
@@ -121,19 +119,18 @@ macro_rules! crud_command {
         pub async fn $fn_name(
             id: String,
             $data_param: $data_type,
-            state: State<'_, AppState>
+            state: State<'_, AppState>,
         ) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move { 
-                    manager.$manager_method(&id, $data_param).await 
-                }),
+                |manager| Box::pin(async move { manager.$manager_method(&id, $data_param).await }),
                 $action,
-                $entity_name
-            ).await
+                $entity_name,
+            )
+            .await
         }
     };
-    
+
     // Command with no parameters (get_all)
     (
         $fn_name:ident,
@@ -143,17 +140,14 @@ macro_rules! crud_command {
         $entity_name:literal
     ) => {
         #[tauri::command]
-        pub async fn $fn_name(
-            state: State<'_, AppState>
-        ) -> Result<$return_type, String> {
+        pub async fn $fn_name(state: State<'_, AppState>) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move {
-                    manager.$manager_method().await
-                }),
+                |manager| Box::pin(async move { manager.$manager_method().await }),
                 $action,
-                $entity_name
-            ).await
+                $entity_name,
+            )
+            .await
         }
     };
 
@@ -170,16 +164,15 @@ macro_rules! crud_command {
         pub async fn $fn_name(
             page: usize,
             page_size: usize,
-            state: State<'_, AppState>
+            state: State<'_, AppState>,
         ) -> Result<$return_type, String> {
             $crate::commands::utils::execute_with_manager(
                 &state,
-                |manager| Box::pin(async move {
-                    manager.$manager_method(page, page_size).await
-                }),
+                |manager| Box::pin(async move { manager.$manager_method(page, page_size).await }),
                 $action,
-                $entity_name
-            ).await
+                $entity_name,
+            )
+            .await
         }
     };
 }

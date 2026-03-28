@@ -5,7 +5,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { ProjectStatus } from '../../types';
-  import { feesStore, feesActions, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
+  import {
+    feesStore,
+    feesActions,
+    projectsActions,
+    projectsStore,
+    companiesStore,
+    contactsStore
+  } from '$lib/stores';
   import { settingsStore } from '$lib/stores/settings';
   import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
@@ -26,17 +33,22 @@
   import FeePricingModal from './pricing/FeePricingModal.svelte';
   import CurrencyAmount from './CurrencyAmount.svelte';
   import ScopeViewer from './scope/ScopeViewer.svelte';
-  
-  let { isOpen = $bindable(false), proposal = null, mode = 'create', onclose }: {
+
+  let {
+    isOpen = $bindable(false),
+    proposal = null,
+    mode = 'create',
+    onclose
+  }: {
     isOpen?: boolean;
     proposal?: Fee | null;
     mode?: 'create' | 'edit';
     onclose?: () => void;
   } = $props();
-  
+
   // Use the new operation state utility
   const { store: operationState, actions: operationActions } = useOperationState();
-  
+
   // Form data with better typing
   interface ProposalFormData {
     number: string;
@@ -55,7 +67,7 @@
     staff_phone: string;
     staff_position: string;
   }
-  
+
   let formData: ProposalFormData = $state({
     number: '',
     name: 'Fee Proposal',
@@ -73,7 +85,6 @@
     staff_phone: '',
     staff_position: ''
   });
-
 
   // Validation setup
   const validationRules = [
@@ -100,8 +111,7 @@
   // Unsaved changes guard
   let initialFormData: ProposalFormData | null = $state(null);
   const isDirty = $derived(
-    initialFormData !== null &&
-    JSON.stringify(formData) !== JSON.stringify(initialFormData)
+    initialFormData !== null && JSON.stringify(formData) !== JSON.stringify(initialFormData)
   );
 
   // Failsafe: Store original proposal data when modal opens
@@ -128,47 +138,68 @@
   let contactSearchText = $state('');
 
   // Filtered options for typeahead dropdowns (projectOptions is mutable, others are $derived below)
-  let projectOptions: Array<{ id: string; name: string; name_short: string | undefined; number: string; country: string; city: string; area: string | undefined; updated_at: string }> = $state([]);
-  
+  let projectOptions: Array<{
+    id: string;
+    name: string;
+    name_short: string | undefined;
+    number: string;
+    country: string;
+    city: string;
+    area: string | undefined;
+    updated_at: string;
+  }> = $state([]);
+
   // Helper function to extract ID from various formats
   function extractId(value: UnknownSurrealThing): string {
     return extractSurrealId(value) || '';
   }
-  
+
   // All dropdown options for typeahead - sorted by update date (newest first)
-  const allProjectOptions = $derived($projectsStore
-    .map(project => ({
-      id: extractId(project.id),
-      name: project.name,
-      name_short: project.name_short,
-      number: project.number?.id || `${project.number?.year || ''}-${project.number?.country || ''}-${project.number?.seq || ''}`.replace(/^-+|-+$/g, '') || 'No Number',
-      country: project.country,
-      city: project.city,
-      area: project.area,
-      updated_at: project.time?.updated_at || ''
-    }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+  const allProjectOptions = $derived(
+    $projectsStore
+      .map(project => ({
+        id: extractId(project.id),
+        name: project.name,
+        name_short: project.name_short,
+        number:
+          project.number?.id ||
+          `${project.number?.year || ''}-${project.number?.country || ''}-${project.number?.seq || ''}`.replace(
+            /^-+|-+$/g,
+            ''
+          ) ||
+          'No Number',
+        country: project.country,
+        city: project.city,
+        area: project.area,
+        updated_at: project.time?.updated_at || ''
+      }))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  );
 
   // All company options - sorted by update date (newest first)
-  const allCompanyOptions = $derived($companiesStore
-    .map(company => ({
-      id: extractId(company.id),
-      name: company.name,
-      name_short: company.name_short,
-      abbreviation: company.abbreviation,
-      updated_at: company.time?.updated_at || ''
-    }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+  const allCompanyOptions = $derived(
+    $companiesStore
+      .map(company => ({
+        id: extractId(company.id),
+        name: company.name,
+        name_short: company.name_short,
+        abbreviation: company.abbreviation,
+        updated_at: company.time?.updated_at || ''
+      }))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  );
 
   // All contact options - sorted by update date (newest first)
-  const allContactOptions = $derived($contactsStore
-    .map(contact => ({
-      id: extractId(contact.id),
-      full_name: contact.full_name,
-      company: extractId(contact.company),
-      updated_at: contact.time?.updated_at || ''
-    }))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
+  const allContactOptions = $derived(
+    $contactsStore
+      .map(contact => ({
+        id: extractId(contact.id),
+        full_name: contact.full_name,
+        company: extractId(contact.company),
+        updated_at: contact.time?.updated_at || ''
+      }))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  );
 
   // PERF-C2: O(1) lookup maps instead of O(n) .find() calls
   const projectOptionsMap = $derived(new Map(allProjectOptions.map(p => [p.id, p])));
@@ -179,79 +210,97 @@
   const projectsWithFees = $derived(new Set($feesStore.map(fee => extractId(fee.project_id))));
 
   // Filtered options based on selections
-  const filteredCompanyOptions = $derived(formData.contact_id
-    ? allCompanyOptions.filter(company => {
-        const selectedContact = contactOptionsMap.get(formData.contact_id);
-        return selectedContact ? company.id === selectedContact.company : true;
-      })
-    : allCompanyOptions);
+  const filteredCompanyOptions = $derived(
+    formData.contact_id
+      ? allCompanyOptions.filter(company => {
+          const selectedContact = contactOptionsMap.get(formData.contact_id);
+          return selectedContact ? company.id === selectedContact.company : true;
+        })
+      : allCompanyOptions
+  );
 
   // Fix reactivity by explicitly depending on formData.company_id
-  const filteredContactOptions = $derived(formData.company_id
-    ? allContactOptions.filter(contact => contact.company === formData.company_id)
-    : allContactOptions);
-  
+  const filteredContactOptions = $derived(
+    formData.company_id
+      ? allContactOptions.filter(contact => contact.company === formData.company_id)
+      : allContactOptions
+  );
+
   // Project search handler with fuzzy search
   function handleProjectSearch(searchText: string) {
     if (!searchText || searchText.length < 1) {
-      projectOptions = allProjectOptions.filter(project =>
-        // Don't show projects that already have an RFP
-        !projectsWithFees.has(project.id)
-      ).slice(0, 10);
+      projectOptions = allProjectOptions
+        .filter(
+          project =>
+            // Don't show projects that already have an RFP
+            !projectsWithFees.has(project.id)
+        )
+        .slice(0, 10);
       return;
     }
 
     const search = searchText.toLowerCase();
-    projectOptions = allProjectOptions.filter(project => {
-      // Don't show projects that already have an RFP
-      if (projectsWithFees.has(project.id)) {
-        return false;
-      }
-      
-      // Fuzzy search across multiple fields
-      return (
-        project.name?.toLowerCase().includes(search) ||
-        project.name_short?.toLowerCase().includes(search) ||
-        project.number?.toLowerCase().includes(search) ||
-        project.country?.toLowerCase().includes(search) ||
-        project.city?.toLowerCase().includes(search) ||
-        project.area?.toLowerCase().includes(search)
-      );
-    }).slice(0, 20);
+    projectOptions = allProjectOptions
+      .filter(project => {
+        // Don't show projects that already have an RFP
+        if (projectsWithFees.has(project.id)) {
+          return false;
+        }
+
+        // Fuzzy search across multiple fields
+        return (
+          project.name?.toLowerCase().includes(search) ||
+          project.name_short?.toLowerCase().includes(search) ||
+          project.number?.toLowerCase().includes(search) ||
+          project.country?.toLowerCase().includes(search) ||
+          project.city?.toLowerCase().includes(search) ||
+          project.area?.toLowerCase().includes(search)
+        );
+      })
+      .slice(0, 20);
   }
-  
+
   // Initialize project options
   $effect(() => {
     if (!projectSearchText) {
       handleProjectSearch('');
     }
   });
-  
+
   // Filtered company options for search (use filtered options as base)
-  const companyOptions = $derived(filteredCompanyOptions.filter(company => {
-    if (!companySearchText) return true;
+  const companyOptions = $derived(
+    filteredCompanyOptions
+      .filter(company => {
+        if (!companySearchText) return true;
 
-    const searchLower = companySearchText.toLowerCase().trim();
-    const nameMatch = company.name && company.name.toLowerCase().includes(searchLower);
-    const shortNameMatch = company.name_short && company.name_short.toLowerCase().includes(searchLower);
+        const searchLower = companySearchText.toLowerCase().trim();
+        const nameMatch = company.name && company.name.toLowerCase().includes(searchLower);
+        const shortNameMatch =
+          company.name_short && company.name_short.toLowerCase().includes(searchLower);
 
-    // Handle abbreviation search
-    let abbreviationMatch = false;
-    if (company.abbreviation) {
-      const abbrev = String(company.abbreviation).toLowerCase().trim();
-      abbreviationMatch = abbrev.includes(searchLower);
-    }
+        // Handle abbreviation search
+        let abbreviationMatch = false;
+        if (company.abbreviation) {
+          const abbrev = String(company.abbreviation).toLowerCase().trim();
+          abbreviationMatch = abbrev.includes(searchLower);
+        }
 
-    return nameMatch || shortNameMatch || abbreviationMatch;
-  }).slice(0, 20));
+        return nameMatch || shortNameMatch || abbreviationMatch;
+      })
+      .slice(0, 20)
+  );
 
   // Filtered contact options for search (use filtered options as base)
-  const contactOptions = $derived(filteredContactOptions.filter(contact =>
-    !contactSearchText ||
-    (contact.full_name || '').toLowerCase().includes(contactSearchText.toLowerCase())
-  ).slice(0, 20));
-  
-  
+  const contactOptions = $derived(
+    filteredContactOptions
+      .filter(
+        contact =>
+          !contactSearchText ||
+          (contact.full_name || '').toLowerCase().includes(contactSearchText.toLowerCase())
+      )
+      .slice(0, 20)
+  );
+
   // Helper to format today's date in YYMMDD format
   function getTodayFormatted(): string {
     const today = new Date();
@@ -260,7 +309,7 @@
     const day = today.getDate().toString().padStart(2, '0');
     return `${year}${month}${day}`;
   }
-  
+
   // Auto-generate proposal number
   function generateProposalNumber() {
     if (!formData.number && formData.project_id) {
@@ -270,17 +319,17 @@
       }
     }
   }
-  
+
   // Check if proposal status is compatible with project status
   function isCompatibleProjectStatus(proposalStatus: string): boolean {
     const proposalToProjectMapping: Record<string, string> = {
-      'Draft': 'Lead',
-      'Sent': 'RFP',
-      'Negotiation': 'Submitted',
-      'Accepted': 'Awarded',
-      'Rejected': 'Lost',
+      Draft: 'Lead',
+      Sent: 'RFP',
+      Negotiation: 'Submitted',
+      Accepted: 'Awarded',
+      Rejected: 'Lost',
       'No Response': 'No Response',
-      'Superseded': 'Superseded'
+      Superseded: 'Superseded'
     };
     return proposalStatus in proposalToProjectMapping;
   }
@@ -288,124 +337,137 @@
   // Get the mapped project status for a proposal status
   function getProjectStatusFromProposalStatus(proposalStatus: string): ProjectStatus {
     const proposalToProjectMapping: Record<string, ProjectStatus> = {
-      'Draft': 'Lead',
-      'Sent': 'RFP',
-      'Negotiation': 'Submitted',
-      'Accepted': 'Awarded',
-      'Rejected': 'Lost',
+      Draft: 'Lead',
+      Sent: 'RFP',
+      Negotiation: 'Submitted',
+      Accepted: 'Awarded',
+      Rejected: 'Lost',
       'No Response': 'No Response',
-      'Superseded': 'Superseded'
+      Superseded: 'Superseded'
     };
     return proposalToProjectMapping[proposalStatus] || (proposalStatus as ProjectStatus);
   }
-  
+
   // Form submission handler
   function handleSubmit(event: Event) {
     event.preventDefault();
 
     // If user typed in the project field but didn't select from dropdown, try to find a match
     if (projectSearchText && !formData.project_id) {
-      const exactMatch = allProjectOptions.find(project => 
-        project.name.toLowerCase() === projectSearchText.toLowerCase() ||
-        project.number.toLowerCase() === projectSearchText.toLowerCase()
+      const exactMatch = allProjectOptions.find(
+        project =>
+          project.name.toLowerCase() === projectSearchText.toLowerCase() ||
+          project.number.toLowerCase() === projectSearchText.toLowerCase()
       );
       if (exactMatch) {
         formData.project_id = exactMatch.id;
       }
     }
-    
+
     // Custom validation for date format
     const errors = validateForm(formData, validationRules);
-    
+
     // Additional validation for issue date format (YYMMDD)
     if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
       errors.issue_date = 'Issue date must be in YYMMDD format';
     }
-    
+
     formErrors = errors;
-    
+
     if (hasValidationErrors(errors)) {
       operationActions.setError('Please fix the validation errors above.');
       return;
     }
-    
+
     if (mode === 'create') {
       handleCreate();
     } else {
       handleUpdate();
     }
   }
-  
+
   // Create proposal with loading state
   async function handleCreate() {
-    await withLoadingState(async () => {
-      // Send clean IDs - backend SQL now properly adds table prefixes
-      const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
-      const companyId = formData.company_id || '';
-      const contactId = formData.contact_id || '';
+    await withLoadingState(
+      async () => {
+        // Send clean IDs - backend SQL now properly adds table prefixes
+        const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
+        const companyId = formData.company_id || '';
+        const contactId = formData.contact_id || '';
 
-      // QUAL-L6: Create timestamp once for consistency
-      const timestamp = new Date().toISOString();
+        // QUAL-L6: Create timestamp once for consistency
+        const timestamp = new Date().toISOString();
 
-      const proposalData = {
-        ...formData,
-        rev: parseInt(formData.rev) || 1,
-        project_id: projectId,
-        company_id: companyId,
-        contact_id: contactId,
-        revisions: [],
-        time: {
-          created_at: timestamp,
-          updated_at: timestamp
-        }
-      };
-      
-      const result = await feesActions.create(proposalData);
-      
-      // Auto-export to JSON if enabled
-      if (autoExportToJson && result?.id) {
-        try {
-          const feeId = getEntityId(result);
-          if (feeId) {
-            const exportResult = await writeFeeToJsonSafe(feeId);
-            if (exportResult) {
-              // Parse export result for user feedback
-              const lines = exportResult.split('\n');
-              const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
-              
-              let message = 'Proposal created successfully and exported to JSON!';
-              
-              // Add safety actions if present
-              const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
-              if (safetyIndex !== -1) {
-                const safetyActions = lines.slice(safetyIndex + 1).filter(line => line.trim().startsWith('•'));
-                if (safetyActions.length > 0) {
-                  message += '\n\nJSON Export Details:';
-                  safetyActions.forEach(action => {
-                    message += `\n${action.trim()}`;
-                  });
-                }
-              }
-              
-              operationActions.setMessage(message);
-            } else {
-              operationActions.setMessage('Proposal created successfully, but JSON export failed');
-            }
-          } else {
-            operationActions.setMessage('Proposal created successfully, but could not extract ID for JSON export');
+        const proposalData = {
+          ...formData,
+          rev: parseInt(formData.rev) || 1,
+          project_id: projectId,
+          company_id: companyId,
+          contact_id: contactId,
+          revisions: [],
+          time: {
+            created_at: timestamp,
+            updated_at: timestamp
           }
-        } catch (error) {
-          logApiError('auto-export proposal', error as Error);
-          operationActions.setMessage(`Proposal created successfully, but JSON export failed: ${error}`);
+        };
+
+        const result = await feesActions.create(proposalData);
+
+        // Auto-export to JSON if enabled
+        if (autoExportToJson && result?.id) {
+          try {
+            const feeId = getEntityId(result);
+            if (feeId) {
+              const exportResult = await writeFeeToJsonSafe(feeId);
+              if (exportResult) {
+                // Parse export result for user feedback
+                const lines = exportResult.split('\n');
+                const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
+
+                let message = 'Proposal created successfully and exported to JSON!';
+
+                // Add safety actions if present
+                const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
+                if (safetyIndex !== -1) {
+                  const safetyActions = lines
+                    .slice(safetyIndex + 1)
+                    .filter(line => line.trim().startsWith('•'));
+                  if (safetyActions.length > 0) {
+                    message += '\n\nJSON Export Details:';
+                    safetyActions.forEach(action => {
+                      message += `\n${action.trim()}`;
+                    });
+                  }
+                }
+
+                operationActions.setMessage(message);
+              } else {
+                operationActions.setMessage(
+                  'Proposal created successfully, but JSON export failed'
+                );
+              }
+            } else {
+              operationActions.setMessage(
+                'Proposal created successfully, but could not extract ID for JSON export'
+              );
+            }
+          } catch (error) {
+            logApiError('auto-export proposal', error as Error);
+            operationActions.setMessage(
+              `Proposal created successfully, but JSON export failed: ${error}`
+            );
+          }
+        } else {
+          operationActions.setMessage('Proposal created successfully');
         }
-      } else {
-        operationActions.setMessage('Proposal created successfully');
-      }
-      
-      resetForm();
-      doClose();
-      return result;
-    }, operationActions, 'saving');
+
+        resetForm();
+        doClose();
+        return result;
+      },
+      operationActions,
+      'saving'
+    );
   }
 
   // Update proposal with loading state
@@ -422,12 +484,12 @@
       operationActions.setError('Invalid proposal ID');
       return;
     }
-    
+
     // Send clean IDs - backend SQL now properly adds table prefixes
     const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
     const companyId = formData.company_id || '';
     const contactId = formData.contact_id || '';
-    
+
     const updateData = {
       ...formData,
       rev: parseInt(formData.rev) || 1,
@@ -436,146 +498,166 @@
       contact_id: contactId,
       revisions: activeProposal?.revisions || []
     };
-    
+
     // Check if status has changed and would result in different project status
     const originalProjectStatus = getProjectStatusFromProposalStatus(originalStatus);
     const newProjectStatus = getProjectStatusFromProposalStatus(formData.status);
     const projectStatusWouldChange = originalProjectStatus !== newProjectStatus;
-    
-    if (originalStatus !== formData.status && isCompatibleProjectStatus(formData.status) && projectStatusWouldChange) {
+
+    if (
+      originalStatus !== formData.status &&
+      isCompatibleProjectStatus(formData.status) &&
+      projectStatusWouldChange
+    ) {
       // Store the update data and show confirmation dialog
       pendingUpdateData = updateData;
       showProjectStatusSync = true;
       return;
     }
-    
-    // If no project status sync needed, proceed with normal update
-    await withLoadingState(async () => {
-      const result = await feesActions.update(proposalId, updateData);
-      
-      operationActions.setMessage('Proposal updated successfully');
-      doClose();
 
-      return result;
-    }, operationActions, 'saving');
+    // If no project status sync needed, proceed with normal update
+    await withLoadingState(
+      async () => {
+        const result = await feesActions.update(proposalId, updateData);
+
+        operationActions.setMessage('Proposal updated successfully');
+        doClose();
+
+        return result;
+      },
+      operationActions,
+      'saving'
+    );
   }
 
   // Delete proposal with loading state
   async function handleDelete() {
     const activeProposal = proposal || originalProposal;
     if (!activeProposal || !showDeleteConfirm) return;
-    
-    await withLoadingState(async () => {
-      const proposalId = getEntityId(activeProposal);
-      if (!proposalId) throw new Error('Invalid proposal ID');
 
-      const result = await feesActions.delete(proposalId);
-      operationActions.setMessage('Proposal deleted successfully');
-      doClose();
-      return result;
-    }, operationActions, 'deleting');
+    await withLoadingState(
+      async () => {
+        const proposalId = getEntityId(activeProposal);
+        if (!proposalId) throw new Error('Invalid proposal ID');
+
+        const result = await feesActions.delete(proposalId);
+        operationActions.setMessage('Proposal deleted successfully');
+        doClose();
+        return result;
+      },
+      operationActions,
+      'deleting'
+    );
   }
-  
+
   // Handle project status sync confirmation
   async function handleProjectStatusSync(syncStatus: boolean) {
     showProjectStatusSync = false;
 
-    await withLoadingState(async () => {
-      // Use failsafe: try current proposal first, then fall back to originalProposal
-      const activeProposal = proposal || originalProposal;
+    await withLoadingState(
+      async () => {
+        // Use failsafe: try current proposal first, then fall back to originalProposal
+        const activeProposal = proposal || originalProposal;
 
-      if (!activeProposal) {
-        logger.error('ProposalModal: No proposal data available');
-        throw new Error('No proposal data available for update');
-      }
+        if (!activeProposal) {
+          logger.error('ProposalModal: No proposal data available');
+          throw new Error('No proposal data available for update');
+        }
 
-      const proposalId = getEntityId(activeProposal);
-      if (!proposalId) {
-        logger.error('ProposalModal: Failed to extract proposal ID');
-        throw new Error('Invalid proposal ID');
-      }
+        const proposalId = getEntityId(activeProposal);
+        if (!proposalId) {
+          logger.error('ProposalModal: Failed to extract proposal ID');
+          throw new Error('Invalid proposal ID');
+        }
 
-      let updateData = pendingUpdateData;
-      if (!updateData) {
-        // Recreate updateData from current form
-        const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
-        const companyId = formData.company_id || '';
-        const contactId = formData.contact_id || '';
-        
-        updateData = {
-          ...formData,
-          rev: parseInt(formData.rev) || 1,
-          project_id: projectId,
-          company_id: companyId,
-          contact_id: contactId,
-          revisions: activeProposal?.revisions || []
-        };
-      }
-      
-      // Update the proposal first
-      await feesActions.update(proposalId, updateData);
-      
-      // If user confirmed, also update the project status
-      if (syncStatus && formData.project_id) {
-        const projectId = extractId(formData.project_id);
-        if (projectId) {
-          const projectStatus = getProjectStatusFromProposalStatus(formData.status);
-          
-          // Get the current project data from the store and update only the status
-          const currentProject = projectStoreMap.get(projectId);
-          if (currentProject) {
-            const fullUpdateData = {
-              name: currentProject.name,
-              name_short: currentProject.name_short,
-              status: projectStatus,
-              area: currentProject.area,
-              city: currentProject.city,
-              country: currentProject.country,
-              folder: currentProject.folder
-            };
-            
-            await projectsActions.update(projectId, fullUpdateData);
+        let updateData = pendingUpdateData;
+        if (!updateData) {
+          // Recreate updateData from current form
+          const projectId = formData.project_id ? formData.project_id.replace('-', '_') : '';
+          const companyId = formData.company_id || '';
+          const contactId = formData.contact_id || '';
+
+          updateData = {
+            ...formData,
+            rev: parseInt(formData.rev) || 1,
+            project_id: projectId,
+            company_id: companyId,
+            contact_id: contactId,
+            revisions: activeProposal?.revisions || []
+          };
+        }
+
+        // Update the proposal first
+        await feesActions.update(proposalId, updateData);
+
+        // If user confirmed, also update the project status
+        if (syncStatus && formData.project_id) {
+          const projectId = extractId(formData.project_id);
+          if (projectId) {
+            const projectStatus = getProjectStatusFromProposalStatus(formData.status);
+
+            // Get the current project data from the store and update only the status
+            const currentProject = projectStoreMap.get(projectId);
+            if (currentProject) {
+              const fullUpdateData = {
+                name: currentProject.name,
+                name_short: currentProject.name_short,
+                status: projectStatus,
+                area: currentProject.area,
+                city: currentProject.city,
+                country: currentProject.country,
+                folder: currentProject.folder
+              };
+
+              await projectsActions.update(projectId, fullUpdateData);
+            }
           }
         }
-      }
-      
-      operationActions.setMessage(syncStatus 
-        ? 'Proposal and project status updated successfully!' 
-        : 'Proposal updated successfully!');
 
-      doClose();
-      return true;
-    }, operationActions, 'saving');
-    
+        operationActions.setMessage(
+          syncStatus
+            ? 'Proposal and project status updated successfully!'
+            : 'Proposal updated successfully!'
+        );
+
+        doClose();
+        return true;
+      },
+      operationActions,
+      'saving'
+    );
+
     pendingUpdateData = null;
   }
-  
+
   // Handle JSON export from alert
   async function handleJsonExportFromAlert() {
     const activeProposal = proposal || originalProposal;
     if (!activeProposal) return;
-    
+
     showJsonExportAlert = false;
-    
+
     try {
       const proposalId = getEntityId(activeProposal);
       if (!proposalId) {
         operationActions.setError('Could not extract proposal ID for JSON export');
         return;
       }
-      
+
       const exportResult = await writeFeeToJsonSafe(proposalId);
       if (exportResult) {
         // Parse export result for user feedback
         const lines = exportResult.split('\n');
         const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
-        
+
         let message = 'Proposal updated and exported to JSON successfully!';
-        
+
         // Add safety actions if present
         const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
         if (safetyIndex !== -1) {
-          const safetyActions = lines.slice(safetyIndex + 1).filter(line => line.trim().startsWith('•'));
+          const safetyActions = lines
+            .slice(safetyIndex + 1)
+            .filter(line => line.trim().startsWith('•'));
           if (safetyActions.length > 0) {
             message += '\n\nJSON Export Details:';
             safetyActions.forEach(action => {
@@ -583,7 +665,7 @@
             });
           }
         }
-        
+
         operationActions.setMessage(message);
         doClose();
       } else {
@@ -594,17 +676,17 @@
       operationActions.setError(`JSON export failed: ${error}`);
     }
   }
-  
+
   // Handle dismissing the JSON export alert
   function handleJsonExportDismiss() {
     showJsonExportAlert = false;
     doClose();
   }
-  
+
   // Form management
   function resetForm() {
     const todayFormatted = getTodayFormatted();
-    
+
     formData = {
       number: '',
       name: 'Fee Proposal',
@@ -622,7 +704,7 @@
       staff_phone: $settingsStore.staff_phone || '',
       staff_position: $settingsStore.staff_position || ''
     };
-    
+
     formErrors = {};
     showDeleteConfirm = false;
     showProjectStatusSync = false;
@@ -632,16 +714,16 @@
     pendingUpdateData = null;
     formInitialized = false;
     dataLoaded = false;
-    
+
     // Reset auto-export checkbox to default (enabled)
     autoExportToJson = true;
-    
+
     // Clear search texts
     projectSearchText = '';
     companySearchText = '';
     contactSearchText = '';
   }
-  
+
   function closeModal() {
     if (isDirty) {
       showDiscardConfirm = true;
@@ -656,20 +738,26 @@
     operationActions.reset();
     onclose?.();
   }
-  
+
   // Typeahead handlers
-  function handleProjectSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+  function handleProjectSelect(data: {
+    id: string;
+    option: { id: string; [key: string]: unknown };
+  }) {
     formData.project_id = data.id;
     projectSearchText = data.option.name as string; // Keep search text in sync
     generateProposalNumber();
   }
-  
+
   function handleProjectClear() {
     formData.project_id = '';
     projectSearchText = '';
   }
-  
-  function handleCompanySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+
+  function handleCompanySelect(data: {
+    id: string;
+    option: { id: string; [key: string]: unknown };
+  }) {
     formData.company_id = data.id;
     companySearchText = data.option.name as string;
     // Clear contact when company changes
@@ -677,7 +765,10 @@
     contactSearchText = '';
   }
 
-  function handleContactSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+  function handleContactSelect(data: {
+    id: string;
+    option: { id: string; [key: string]: unknown };
+  }) {
     formData.contact_id = data.id;
     contactSearchText = data.option.full_name as string;
 
@@ -713,45 +804,45 @@
     formData.company_id = '';
     companySearchText = '';
   }
-  
+
   // Nested modal handlers
   function handleNewProject() {
     showNewProjectModal = true;
   }
-  
+
   function handleNewProjectClosed() {
     showNewProjectModal = false;
     // Refresh project list to include the newly created project
     projectsActions.load();
   }
-  
+
   function handleNewCompany() {
     selectedCompany = null;
     companyModalMode = 'create';
     showCompanyModal = true;
   }
-  
+
   function handleCompanyModalClosed() {
     showCompanyModal = false;
     selectedCompany = null;
   }
-  
+
   function handleNewContact() {
     selectedContact = null;
     contactModalMode = 'create';
     showContactModal = true;
   }
-  
+
   function handleContactModalClosed() {
     showContactModal = false;
     selectedContact = null;
   }
-  
+
   // Keep track of store lengths to detect new entities
   let previousProjectCount = $state(0);
   let previousCompanyCount = $state(0);
   let previousContactCount = $state(0);
-  
+
   // Handle successful creation from nested modals
   $effect(() => {
     if ($projectsStore.length > previousProjectCount && !showNewProjectModal) {
@@ -821,7 +912,7 @@
       previousContactCount = $contactsStore.length;
     }
   });
-  
+
   // Capture original proposal when modal opens (failsafe)
   $effect(() => {
     if (proposal && isOpen && !originalProposal) {
@@ -849,10 +940,10 @@
   function loadProposalForEdit() {
     if (!proposal || dataLoaded) return;
     dataLoaded = true;
-    
+
     // Capture original status when modal first opens for editing
     originalStatus = proposal.status || 'Draft';
-    
+
     formData = {
       number: proposal.number || '',
       name: proposal.name || '',
@@ -870,7 +961,7 @@
       staff_phone: proposal.staff_phone || '',
       staff_position: proposal.staff_position || ''
     };
-    
+
     // Set search texts for selected items
     const selectedProject = projectOptionsMap.get(formData.project_id);
     if (selectedProject) {
@@ -938,22 +1029,18 @@
   });
 </script>
 
-<BaseModal 
-  {isOpen} 
+<BaseModal
+  {isOpen}
   title={mode === 'create' ? 'Create New Fee Proposal' : 'Edit Fee Proposal'}
   size="lg"
   onclose={closeModal}
 >
   <!-- Form -->
   <form on:submit={handleSubmit} class="emittiv-form-section emittiv-form-section--wide">
-
     <!-- PROJECT & CLIENT INFORMATION SECTION - MOVED TO TOP -->
     <div class="emittiv-form-section">
-      <h3 class="emittiv-form-section__title">
-        Project & Client Information
-      </h3>
+      <h3 class="emittiv-form-section__title">Project & Client Information</h3>
       <div class="emittiv-form-section">
-        
         <!-- Project Selection -->
         <div class="emittiv-form-row">
           <div class="flex-1">
@@ -971,7 +1058,8 @@
               onclear={handleProjectClear}
             >
               <svelte:fragment slot="option" let:option>
-                <span class="font-medium">{option.number}</span> - <span class="truncate">{option.name}</span>
+                <span class="font-medium">{option.number}</span> -
+                <span class="truncate">{option.name}</span>
               </svelte:fragment>
             </TypeaheadSelect>
           </div>
@@ -983,11 +1071,16 @@
             title="Add new project"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
             </svg>
           </button>
         </div>
-        
+
         <!-- Company Selection -->
         <div class="emittiv-form-row">
           <div class="flex-1">
@@ -1012,11 +1105,16 @@
             title="Add new company"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
             </svg>
           </button>
         </div>
-        
+
         <!-- Contact Selection -->
         <div class="emittiv-form-row">
           <div class="flex-1">
@@ -1039,20 +1137,22 @@
             title="Add new contact"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
             </svg>
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- BASIC INFORMATION SECTION -->
     <div class="emittiv-form-section">
-      <h3 class="emittiv-form-section__title">
-        Basic Information
-      </h3>
+      <h3 class="emittiv-form-section__title">Basic Information</h3>
       <div class="emittiv-form-section">
-        
         <!-- Number and Name -->
         <div class="emittiv-form-grid">
           <FormInput
@@ -1062,7 +1162,7 @@
             required
             error={formErrors.number}
           />
-          
+
           <FormInput
             label="Proposal Name"
             bind:value={formData.name}
@@ -1071,7 +1171,7 @@
             error={formErrors.name}
           />
         </div>
-        
+
         <!-- Issue Date and Revision -->
         <div class="emittiv-form-grid">
           <FormInput
@@ -1092,14 +1192,9 @@
             }}
           />
 
-          <FormInput
-            label="Release"
-            bind:value={formData.rev}
-            placeholder="1"
-            min={1}
-          />
+          <FormInput label="Release" bind:value={formData.rev} placeholder="1" min={1} />
         </div>
-        
+
         <!-- Status and Package -->
         <div class="emittiv-form-grid">
           <FormSelect
@@ -1107,14 +1202,14 @@
             bind:value={formData.status}
             options={PROPOSAL_STATUS_OPTIONS}
           />
-          
+
           <FormInput
             label="Package"
             bind:value={formData.package}
             placeholder="Package description"
           />
         </div>
-        
+
         <!-- Activity and Strap Line -->
         <div class="emittiv-form-grid">
           <FormInput
@@ -1122,7 +1217,7 @@
             bind:value={formData.activity}
             placeholder="Design and Consultancy"
           />
-          
+
           <FormInput
             label="Strap Line"
             bind:value={formData.strap_line}
@@ -1131,14 +1226,11 @@
         </div>
       </div>
     </div>
-    
+
     <!-- STAFF INFORMATION SECTION -->
     <div class="emittiv-form-section">
-      <h3 class="emittiv-form-section__title">
-        Staff Information
-      </h3>
+      <h3 class="emittiv-form-section__title">Staff Information</h3>
       <div class="emittiv-form-section">
-        
         <!-- Staff Name and Email -->
         <div class="emittiv-form-grid">
           <FormInput
@@ -1146,7 +1238,7 @@
             bind:value={formData.staff_name}
             placeholder="Staff member name"
           />
-          
+
           <FormInput
             label="Staff Email"
             type="email"
@@ -1154,7 +1246,7 @@
             placeholder="staff@emittiv.com"
           />
         </div>
-        
+
         <!-- Staff Phone and Position -->
         <div class="emittiv-form-grid">
           <FormInput
@@ -1163,7 +1255,7 @@
             bind:value={formData.staff_phone}
             placeholder="+971 50 123 4567"
           />
-          
+
           <FormInput
             label="Staff Position"
             bind:value={formData.staff_position}
@@ -1172,26 +1264,23 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Pricing Section (Edit Mode Only) -->
     {#if mode === 'edit'}
       <div class="emittiv-form-section">
-        <h3 class="emittiv-form-section__title">
-          Fee Pricing
-        </h3>
+        <h3 class="emittiv-form-section__title">Fee Pricing</h3>
         <div class="flex items-center justify-between">
           <p class="text-emittiv-light text-sm">
             {#if proposal?.pricing}
-              Pricing configured: <CurrencyAmount amount={proposal.pricing.grand_total || 0} config={proposal.pricing.config} />
+              Pricing configured: <CurrencyAmount
+                amount={proposal.pricing.grand_total || 0}
+                config={proposal.pricing.config}
+              />
             {:else}
               No pricing configured yet
             {/if}
           </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            on:click={() => showPricingModal = true}
-          >
+          <Button variant="secondary" size="sm" on:click={() => (showPricingModal = true)}>
             {proposal?.pricing ? 'Edit Pricing' : 'Configure Pricing'}
           </Button>
         </div>
@@ -1201,18 +1290,10 @@
     <!-- Scope Section (Edit Mode Only) -->
     {#if mode === 'edit'}
       <div class="emittiv-form-section">
-        <h3 class="emittiv-form-section__title">
-          Proposal Scope
-        </h3>
+        <h3 class="emittiv-form-section__title">Proposal Scope</h3>
         <div class="flex items-center justify-between">
-          <p class="text-emittiv-light text-sm">
-            Generate and edit scope text for this proposal
-          </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            on:click={() => showScopeModal = true}
-          >
+          <p class="text-emittiv-light text-sm">Generate and edit scope text for this proposal</p>
+          <Button variant="secondary" size="sm" on:click={() => (showScopeModal = true)}>
             Generate Scope
           </Button>
         </div>
@@ -1222,9 +1303,7 @@
     <!-- Auto-Export Options (Create Mode Only) -->
     {#if mode === 'create'}
       <div class="emittiv-form-section">
-        <h3 class="emittiv-form-section__title">
-          Export Options
-        </h3>
+        <h3 class="emittiv-form-section__title">Export Options</h3>
         <div class="emittiv-form-row items-center">
           <input
             type="checkbox"
@@ -1237,24 +1316,25 @@
           </label>
         </div>
         <p class="text-emittiv-light text-xs mt-2">
-          When enabled, the proposal data will be safely exported to the project's JSON file with automatic backup of existing data.
+          When enabled, the proposal data will be safely exported to the project's JSON file with
+          automatic backup of existing data.
         </p>
       </div>
     {/if}
-    
+
     <!-- Error/Success Messages -->
     {#if $operationState.error}
       <div class="emittiv-alert emittiv-alert--error">
         {$operationState.error}
       </div>
     {/if}
-    
+
     {#if $operationState.message}
       <div class="emittiv-alert emittiv-alert--success">
         {$operationState.message}
       </div>
     {/if}
-    
+
     <!-- Delete Confirmation -->
     {#if showDeleteConfirm && mode === 'edit'}
       <div class="emittiv-alert emittiv-alert--sm emittiv-alert--error">
@@ -1262,13 +1342,15 @@
         <p class="text-xs opacity-80">This action cannot be undone.</p>
       </div>
     {/if}
-    
+
     <!-- Project Status Sync Confirmation -->
     {#if showProjectStatusSync}
       <div class="emittiv-alert emittiv-alert--info">
         <p class="font-medium mb-2">Also update the project status?</p>
         <p class="text-xs opacity-80 mb-3">
-          Changing the proposal to "{formData.status}" would set the project to "{getProjectStatusFromProposalStatus(formData.status)}". Update both, or the proposal only?
+          Changing the proposal to "{formData.status}" would set the project to "{getProjectStatusFromProposalStatus(
+            formData.status
+          )}". Update both, or the proposal only?
         </p>
         <div class="flex gap-2">
           <button
@@ -1290,7 +1372,7 @@
         </div>
       </div>
     {/if}
-    
+
     <!-- JSON Export Alert -->
     {#if showJsonExportAlert}
       <div class="emittiv-alert emittiv-alert--sm emittiv-alert--warning">
@@ -1315,7 +1397,7 @@
         </div>
       </div>
     {/if}
-    
+
     <!-- Discard Unsaved Changes Confirmation -->
     {#if showDiscardConfirm}
       <div class="emittiv-alert emittiv-alert--warning">
@@ -1331,7 +1413,7 @@
           </button>
           <button
             type="button"
-            on:click={() => showDiscardConfirm = false}
+            on:click={() => (showDiscardConfirm = false)}
             class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-orange"
           >
             Keep Editing
@@ -1349,12 +1431,15 @@
             variant="danger"
             size="sm"
             className="h-full"
-            on:click={() => showDeleteConfirm = true}
-            disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
+            on:click={() => (showDeleteConfirm = true)}
+            disabled={$operationState.saving ||
+              $operationState.deleting ||
+              showProjectStatusSync ||
+              showJsonExportAlert}
           >
             Delete
           </Button>
-          
+
           <div class="emittiv-modal__actions-group">
             <Button
               variant="secondary"
@@ -1365,18 +1450,19 @@
             >
               Cancel
             </Button>
-            
+
             <Button
               type="submit"
               variant="primary"
               size="sm"
               className=""
-              disabled={$operationState.saving || $operationState.deleting || showProjectStatusSync || showJsonExportAlert}
+              disabled={$operationState.saving ||
+                $operationState.deleting ||
+                showProjectStatusSync ||
+                showJsonExportAlert}
             >
               {#if $operationState.saving}
-                <div 
-                  class="emittiv-spinner-sm"
-                ></div>
+                <div class="emittiv-spinner-sm"></div>
               {/if}
               Update
             </Button>
@@ -1401,7 +1487,7 @@
             variant="secondary"
             size="sm"
             className=""
-            on:click={() => showDeleteConfirm = false}
+            on:click={() => (showDeleteConfirm = false)}
             disabled={$operationState.deleting}
           >
             Cancel
@@ -1419,7 +1505,7 @@
           >
             Cancel
           </Button>
-          
+
           <Button
             type="submit"
             variant="primary"
@@ -1440,11 +1526,7 @@
 
 <!-- Nested Modals with higher z-index (200 to appear above ProposalModal at 100) -->
 <!-- New Project Modal -->
-<NewProjectModal
-  bind:isOpen={showNewProjectModal}
-  zIndex={200}
-  onclose={handleNewProjectClosed}
-/>
+<NewProjectModal bind:isOpen={showNewProjectModal} zIndex={200} onclose={handleNewProjectClosed} />
 
 <!-- Company Modal -->
 <CompanyModal
@@ -1467,7 +1549,7 @@
 <FeePricingModal
   bind:isOpen={showPricingModal}
   fee={proposal}
-  onclose={() => showPricingModal = false}
+  onclose={() => (showPricingModal = false)}
   onsave={async () => {
     await feesActions.load();
     // Refresh local proposal from store so pricing data persists
@@ -1499,7 +1581,7 @@
       stages={proposal?.pricing?.stages ?? []}
       projectName={scopeProject?.name || ''}
       projectNumber={scopeProject?.project_number || ''}
-      ondirtychange={(d) => scopeDirty = d}
+      ondirtychange={d => (scopeDirty = d)}
     />
   </BaseModal>
 {/if}

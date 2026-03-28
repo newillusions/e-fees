@@ -3,13 +3,13 @@
 //! This module provides Tauri commands for managing projects including
 //! CRUD operations, search, pagination, and project number generation.
 
-use crate::db::{Project, PaginatedResponse};
+use super::AppState;
 use crate::commands::types::ProjectUpdate;
 use crate::crud_command;
-use super::AppState;
+use crate::db::{PaginatedResponse, Project};
 
-use tauri::State;
 use log::{error, info};
+use tauri::State;
 
 // ============================================================================
 // PROJECT CRUD COMMANDS
@@ -67,7 +67,10 @@ crud_command!(
 
 /// Search projects using fuzzy matching across multiple fields.
 #[tauri::command]
-pub async fn search_projects(query: String, state: State<'_, AppState>) -> Result<Vec<Project>, String> {
+pub async fn search_projects(
+    query: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Project>, String> {
     info!("Searching projects with query: {}", query);
 
     let manager_clone = {
@@ -89,7 +92,11 @@ pub async fn search_projects(query: String, state: State<'_, AppState>) -> Resul
 
 /// Update an existing project in the database.
 #[tauri::command]
-pub async fn update_project(id: String, project_update: ProjectUpdate, state: State<'_, AppState>) -> Result<Project, String> {
+pub async fn update_project(
+    id: String,
+    project_update: ProjectUpdate,
+    state: State<'_, AppState>,
+) -> Result<Project, String> {
     info!("Updating project with ID: {}", id);
 
     let manager_clone = {
@@ -123,16 +130,22 @@ pub async fn update_project(id: String, project_update: ProjectUpdate, state: St
 pub async fn generate_next_project_number(
     country_name: String,
     year: Option<u8>,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<String, String> {
-    info!("Generating next project number for country: {}, year: {:?}", country_name, year);
+    info!(
+        "Generating next project number for country: {}, year: {:?}",
+        country_name, year
+    );
 
     let manager_clone = {
         let manager = state.read().await;
         manager.clone()
     };
 
-    match manager_clone.generate_next_project_number(&country_name, year).await {
+    match manager_clone
+        .generate_next_project_number(&country_name, year)
+        .await
+    {
         Ok(number) => {
             info!("Generated project number: {}", number);
             Ok(number)
@@ -148,7 +161,7 @@ pub async fn generate_next_project_number(
 #[tauri::command]
 pub async fn validate_project_number(
     project_number: String,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<bool, String> {
     info!("Validating project number: {}", project_number);
 

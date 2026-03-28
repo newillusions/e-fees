@@ -13,11 +13,11 @@
 //! Paths are read from the app settings (`.env` / `.env.dev` file):
 //! - `PROJECT_FOLDER_PATH`: Base path for all project folders
 
-use tauri::{command, AppHandle};
+use crate::commands::get_settings;
+use log::{error, info, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
-use log::{info, error, warn};
-use crate::commands::get_settings;
+use tauri::{command, AppHandle};
 
 #[derive(Debug, serde::Serialize)]
 pub struct FolderOperationResult {
@@ -47,11 +47,14 @@ pub struct ProjectFolderInfo {
 /// * `Ok(PathBuf)` - The configured project base path
 /// * `Err(String)` - Error message if path is not configured or doesn't exist
 async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
-    let settings = get_settings(app_handle.clone()).await
+    let settings = get_settings(app_handle.clone())
+        .await
         .map_err(|e| format!("Failed to get settings: {}", e))?;
 
-    let base_path = settings.project_folder_path
-        .ok_or_else(|| "PROJECT_FOLDER_PATH not configured in settings. Please set it in the .env file.".to_string())?;
+    let base_path = settings.project_folder_path.ok_or_else(|| {
+        "PROJECT_FOLDER_PATH not configured in settings. Please set it in the .env file."
+            .to_string()
+    })?;
 
     let path = PathBuf::from(&base_path);
 
@@ -79,7 +82,7 @@ fn get_folder_for_status(status: &str) -> Result<&str, String> {
         "awarded" | "design" | "construction" | "practical completion" => Ok("11 Current"),
         "completed" | "superseded" => Ok("99 Completed"),
         "cancelled" | "lost" | "no response" | "on hold" => Ok("00 Inactive"),
-        _ => Err(format!("Unknown status: {}", status))
+        _ => Err(format!("Unknown status: {}", status)),
     }
 }
 
@@ -87,7 +90,10 @@ fn get_folder_for_status(status: &str) -> Result<&str, String> {
 ///
 /// Searches through all status folders (00 Inactive, 01 RFPs, 11 Current, 99 Completed)
 /// to locate a project folder that starts with the given project number.
-async fn find_project_folder(app_handle: &AppHandle, project_number: &str) -> Result<ProjectFolderInfo, String> {
+async fn find_project_folder(
+    app_handle: &AppHandle,
+    project_number: &str,
+) -> Result<ProjectFolderInfo, String> {
     let base_path = get_projects_base_path(app_handle).await?;
 
     let status_dirs = ["00 Inactive", "01 RFPs", "11 Current", "99 Completed"];
@@ -96,7 +102,10 @@ async fn find_project_folder(app_handle: &AppHandle, project_number: &str) -> Re
         let search_path = base_path.join(status_dir);
 
         if !search_path.exists() {
-            info!("Status directory does not exist, skipping: {:?}", search_path);
+            info!(
+                "Status directory does not exist, skipping: {:?}",
+                search_path
+            );
             continue;
         }
 
@@ -162,9 +171,10 @@ fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
         Err(e) => {
             // Check if this is a cross-device link error (common when moving across filesystems)
             let error_kind = e.kind();
-            if error_kind == std::io::ErrorKind::CrossesDevices ||
-               error_kind == std::io::ErrorKind::Other ||
-               error_kind == std::io::ErrorKind::PermissionDenied {
+            if error_kind == std::io::ErrorKind::CrossesDevices
+                || error_kind == std::io::ErrorKind::Other
+                || error_kind == std::io::ErrorKind::PermissionDenied
+            {
                 info!("fs::rename failed ({}), falling back to copy+delete", e);
             } else {
                 // For other errors, return immediately
@@ -187,7 +197,8 @@ fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
     };
 
     // Get the parent directory of the destination
-    let dest_parent = to.parent()
+    let dest_parent = to
+        .parent()
         .ok_or_else(|| "Could not get destination parent directory".to_string())?;
 
     // Copy the folder to the destination
@@ -198,12 +209,16 @@ fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
             // Verify the copy was successful by checking destination exists
             if !to.exists() {
                 // fs_extra::dir::copy preserves the folder name, so check with original name
-                let folder_name = from.file_name()
+                let folder_name = from
+                    .file_name()
                     .ok_or_else(|| "Could not get folder name".to_string())?;
                 let actual_dest = dest_parent.join(folder_name);
 
                 if !actual_dest.exists() {
-                    return Err(format!("Copy appeared successful but destination doesn't exist: {:?}", to));
+                    return Err(format!(
+                        "Copy appeared successful but destination doesn't exist: {:?}",
+                        to
+                    ));
                 }
             }
 
@@ -228,7 +243,10 @@ fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
 }
 
 #[command]
-pub async fn get_project_folder_location(app_handle: AppHandle, project_number: String) -> Result<ProjectFolderInfo, String> {
+pub async fn get_project_folder_location(
+    app_handle: AppHandle,
+    project_number: String,
+) -> Result<ProjectFolderInfo, String> {
     info!("Getting folder location for project: {}", project_number);
     find_project_folder(&app_handle, &project_number).await
 }
@@ -239,7 +257,10 @@ pub async fn move_project_folder(
     project_number: String,
     new_status: String,
 ) -> Result<FolderOperationResult, String> {
-    info!("Moving project {} to status: {}", project_number, new_status);
+    info!(
+        "Moving project {} to status: {}",
+        project_number, new_status
+    );
 
     // Find current location
     let current_info = find_project_folder(&app_handle, &project_number).await?;
@@ -275,12 +296,16 @@ pub async fn move_project_folder(
     // Ensure destination directory exists
     if !dest_dir.exists() {
         error!("Destination directory does not exist: {:?}", dest_dir);
-        return Err(format!("Destination directory {} does not exist", dest_dir.display()));
+        return Err(format!(
+            "Destination directory {} does not exist",
+            dest_dir.display()
+        ));
     }
 
     // Get the folder name from current path
     let current_path = Path::new(&current_info.full_path);
-    let folder_name = current_path.file_name()
+    let folder_name = current_path
+        .file_name()
         .ok_or("Could not get folder name")?;
 
     let new_path = dest_dir.join(folder_name);
@@ -290,10 +315,7 @@ pub async fn move_project_folder(
         warn!("Destination folder already exists: {:?}", new_path);
         return Ok(FolderOperationResult {
             success: false,
-            message: format!(
-                "Destination folder already exists: {}",
-                new_path.display()
-            ),
+            message: format!("Destination folder already exists: {}", new_path.display()),
             old_path: Some(current_info.full_path),
             new_path: Some(new_path.to_string_lossy().to_string()),
         });
@@ -304,19 +326,19 @@ pub async fn move_project_folder(
         Ok(_) => {
             let mut success_message = format!(
                 "Successfully moved {} from {} to {}",
-                project_number,
-                current_info.current_location,
-                dest_folder
+                project_number, current_info.current_location, dest_folder
             );
 
             // If moving to Current from any other folder, copy awarded project templates
             if current_info.current_location != "11 Current" && dest_folder == "11 Current" {
                 match copy_awarded_templates(&app_handle, &new_path).await {
                     Ok(_) => {
-                        success_message.push_str(". Awarded project templates copied successfully.");
-                    },
+                        success_message
+                            .push_str(". Awarded project templates copied successfully.");
+                    }
                     Err(e) => {
-                        success_message.push_str(&format!(". Warning: Failed to copy some templates: {}", e));
+                        success_message
+                            .push_str(&format!(". Warning: Failed to copy some templates: {}", e));
                     }
                 }
             }
@@ -328,7 +350,7 @@ pub async fn move_project_folder(
                 old_path: Some(current_info.full_path),
                 new_path: Some(new_path.to_string_lossy().to_string()),
             })
-        },
+        }
         Err(e) => {
             error!("Failed to move project folder: {}", e);
             Ok(FolderOperationResult {
@@ -337,7 +359,7 @@ pub async fn move_project_folder(
                 old_path: Some(current_info.full_path),
                 new_path: Some(new_path.to_string_lossy().to_string()),
             })
-        },
+        }
     }
 }
 
@@ -347,24 +369,38 @@ pub async fn move_project_from_rfp(
     project_number: String,
     destination: String,
 ) -> Result<FolderOperationResult, String> {
-    info!("Moving project {} from RFP to: {}", project_number, destination);
+    info!(
+        "Moving project {} from RFP to: {}",
+        project_number, destination
+    );
     // Validate destination — uses new domain model statuses
     match destination.as_str() {
         "current" => move_project_folder(app_handle, project_number, "awarded".to_string()).await,
         "archive" => move_project_folder(app_handle, project_number, "completed".to_string()).await,
-        "inactive" => move_project_folder(app_handle, project_number, "cancelled".to_string()).await,
-        _ => Err(format!("Invalid destination: {}. Use 'current', 'archive', or 'inactive'", destination))
+        "inactive" => {
+            move_project_folder(app_handle, project_number, "cancelled".to_string()).await
+        }
+        _ => Err(format!(
+            "Invalid destination: {}. Use 'current', 'archive', or 'inactive'",
+            destination
+        )),
     }
 }
 
 #[command]
-pub async fn move_project_to_archive(app_handle: AppHandle, project_number: String) -> Result<FolderOperationResult, String> {
+pub async fn move_project_to_archive(
+    app_handle: AppHandle,
+    project_number: String,
+) -> Result<FolderOperationResult, String> {
     info!("Moving project {} to archive", project_number);
     move_project_folder(app_handle, project_number, "completed".to_string()).await
 }
 
 #[command]
-pub async fn list_projects_in_folder(app_handle: AppHandle, folder_path: String) -> Result<Vec<String>, String> {
+pub async fn list_projects_in_folder(
+    app_handle: AppHandle,
+    folder_path: String,
+) -> Result<Vec<String>, String> {
     // Security: reject path traversal in subfolder name
     if folder_path.contains("..") {
         return Err("Invalid path: path traversal not allowed".to_string());
@@ -411,12 +447,22 @@ async fn copy_awarded_templates(app_handle: &AppHandle, project_path: &Path) -> 
     let template_path = base_path.join("11 Current").join("00 Additional Folders");
 
     if !template_path.exists() {
-        warn!("Awarded project template folder not found: {:?}", template_path);
+        warn!(
+            "Awarded project template folder not found: {:?}",
+            template_path
+        );
         return Err("Awarded project template folder not found".to_string());
     }
 
     // Copy each template folder to the project
-    let template_folders = ["03 Contract", "04 Deliverables", "05 Submittals", "11 SubContractors", "98 Outgoing", "99 Temp"];
+    let template_folders = [
+        "03 Contract",
+        "04 Deliverables",
+        "05 Submittals",
+        "11 SubContractors",
+        "98 Outgoing",
+        "99 Temp",
+    ];
 
     let options = fs_extra::dir::CopyOptions {
         overwrite: false,
@@ -486,7 +532,10 @@ pub async fn validate_project_base_path(app_handle: AppHandle) -> Result<String,
             }
 
             if missing_dirs.is_empty() {
-                Ok(format!("Project base path is valid: {}\nAll required directories exist.", path.display()))
+                Ok(format!(
+                    "Project base path is valid: {}\nAll required directories exist.",
+                    path.display()
+                ))
             } else {
                 Ok(format!(
                     "Project base path exists: {}\nWarning: Missing directories: {}",
@@ -495,6 +544,6 @@ pub async fn validate_project_base_path(app_handle: AppHandle) -> Result<String,
                 ))
             }
         }
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }

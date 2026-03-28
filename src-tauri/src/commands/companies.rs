@@ -2,9 +2,9 @@
 //!
 //! This module handles CRUD operations for companies.
 
+use crate::commands::utils::execute_with_manager;
 use crate::crud_command;
 use crate::db::{Company, CompanyCreate, PaginatedResponse};
-use crate::commands::utils::execute_with_manager;
 use tauri::State;
 
 use super::{AppState, CompanyUpdate};
@@ -133,19 +133,26 @@ crud_command!(
 /// });
 /// ```
 #[tauri::command]
-pub async fn update_company(id: String, company_update: CompanyUpdate, state: State<'_, AppState>) -> Result<Company, String> {
+pub async fn update_company(
+    id: String,
+    company_update: CompanyUpdate,
+    state: State<'_, AppState>,
+) -> Result<Company, String> {
     let company_name = format!("company '{}'", id);
     execute_with_manager(
         &state,
         |manager| {
             let id_clone = id.clone();
             Box::pin(async move {
-                manager.update_company_partial(&id_clone, company_update).await
+                manager
+                    .update_company_partial(&id_clone, company_update)
+                    .await
             })
         },
         "update",
-        &company_name
-    ).await
+        &company_name,
+    )
+    .await
 }
 
 /// Delete a company from the database.

@@ -3,9 +3,9 @@
 //! This module provides Tauri commands for reading and writing pricing stages
 //! on fee records. Used by the scope module to link scope sections to pricing stages.
 
+use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use log::info;
 
 use super::AppState;
 
@@ -61,11 +61,16 @@ pub async fn get_fee_stages(
     info!("Fetching fee stages for fee '{}'", fee_id);
 
     let manager = state.read().await;
-    let client = manager.client.as_ref()
+    let client = manager
+        .client
+        .as_ref()
         .ok_or_else(|| "DB not connected".to_string())?;
 
     let mut bindings = serde_json::Map::new();
-    bindings.insert("fee_key".to_string(), serde_json::Value::String(fee_id.clone()));
+    bindings.insert(
+        "fee_key".to_string(),
+        serde_json::Value::String(fee_id.clone()),
+    );
 
     let mut res = client
         .query_bind_map(
@@ -103,12 +108,17 @@ pub async fn add_stage_to_fee(
     info!("Adding stage '{}' to fee '{}'", stage.id, fee_id);
 
     let manager = state.read().await;
-    let client = manager.client.as_ref()
+    let client = manager
+        .client
+        .as_ref()
         .ok_or_else(|| "DB not connected".to_string())?;
 
     // Fetch current pricing blob
     let mut fetch_bindings = serde_json::Map::new();
-    fetch_bindings.insert("fee_key".to_string(), serde_json::Value::String(fee_id.clone()));
+    fetch_bindings.insert(
+        "fee_key".to_string(),
+        serde_json::Value::String(fee_id.clone()),
+    );
 
     let mut res = client
         .query_bind_map(
@@ -140,12 +150,15 @@ pub async fn add_stage_to_fee(
 
     // Merge stages back into the pricing blob
     let mut pricing: serde_json::Value = current_pricing.unwrap_or_else(|| serde_json::json!({}));
-    pricing["stages"] = serde_json::to_value(&stages)
-        .map_err(|e| format!("Failed to serialize stages: {}", e))?;
+    pricing["stages"] =
+        serde_json::to_value(&stages).map_err(|e| format!("Failed to serialize stages: {}", e))?;
 
     // Write back
     let mut update_bindings = serde_json::Map::new();
-    update_bindings.insert("fee_key".to_string(), serde_json::Value::String(fee_id.clone()));
+    update_bindings.insert(
+        "fee_key".to_string(),
+        serde_json::Value::String(fee_id.clone()),
+    );
     update_bindings.insert("pricing".to_string(), pricing);
 
     client
@@ -156,7 +169,11 @@ pub async fn add_stage_to_fee(
         .await
         .map_err(|e| format!("Failed to update fee stages: {}", e))?;
 
-    info!("Successfully updated stages for fee '{}' ({} total)", fee_id, stages.len());
+    info!(
+        "Successfully updated stages for fee '{}' ({} total)",
+        fee_id,
+        stages.len()
+    );
     Ok(stages)
 }
 
@@ -170,9 +187,11 @@ pub async fn get_stage_dictionary(
         .await
         .map_err(|e| format!("Failed to read settings: {}", e))?;
 
-    let base_url = settings.scope_api_url
+    let base_url = settings
+        .scope_api_url
         .ok_or_else(|| "SCOPE_API_URL not configured in settings".to_string())?;
-    let api_key = settings.scope_api_key
+    let api_key = settings
+        .scope_api_key
         .ok_or_else(|| "SCOPE_API_KEY not configured in settings".to_string())?;
 
     let url = format!("{}/stages", base_url.trim_end_matches('/'));
@@ -195,13 +214,20 @@ pub async fn get_stage_dictionary(
         .await
         .map_err(|e| format!("Failed to parse scope response: {}", e))?;
 
-    let entries: Vec<StageDictEntry> = body.data.into_iter().map(|raw| StageDictEntry {
-        canonical_name: raw.canonical_name,
-        default_label: raw.default_label,
-        aliases: raw.aliases,
-        sort_order: raw.sort_order,
-    }).collect();
+    let entries: Vec<StageDictEntry> = body
+        .data
+        .into_iter()
+        .map(|raw| StageDictEntry {
+            canonical_name: raw.canonical_name,
+            default_label: raw.default_label,
+            aliases: raw.aliases,
+            sort_order: raw.sort_order,
+        })
+        .collect();
 
-    info!("Fetched {} stage dictionary entries from scope service", entries.len());
+    info!(
+        "Fetched {} stage dictionary entries from scope service",
+        entries.len()
+    );
     Ok(entries)
 }

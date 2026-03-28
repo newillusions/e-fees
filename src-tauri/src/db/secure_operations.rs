@@ -1,30 +1,51 @@
 //! # Secure Database Operations
-//! 
+//!
 //! This module provides secure implementations using input validation
 //! to prevent SQL injection attacks.
 
-use crate::db::client::DatabaseClient;
-use crate::db::types::{NewProject, Project, Company, CompanyCreate, Contact, ContactCreate};
-use crate::db::security::{InputValidator, ValidationError};
 use crate::commands::ContactUpdate;
-use surrealdb::Error;
+use crate::db::client::DatabaseClient;
+use crate::db::security::{InputValidator, ValidationError};
+use crate::db::types::{Company, CompanyCreate, Contact, ContactCreate, NewProject, Project};
 use log::info;
+use surrealdb::Error;
 
 impl DatabaseClient {
     /// Securely create a new project with input validation
-    pub async fn secure_create_project(&self, project: NewProject) -> Result<Option<Project>, Error> {
+    pub async fn secure_create_project(
+        &self,
+        project: NewProject,
+    ) -> Result<Option<Project>, Error> {
         info!("Creating project with secure validation");
-        
+
         // Validate all input fields
         if let Err(e) = InputValidator::validate_project_name(&project.name) {
             return Err(Error::thrown(format!("Invalid project name: {}", e)));
         }
 
-        if let Err(e) = InputValidator::validate_text_field("name_short", &project.name_short, 1, 50) {
+        if let Err(e) =
+            InputValidator::validate_text_field("name_short", &project.name_short, 1, 50)
+        {
             return Err(Error::thrown(format!("Invalid project short name: {}", e)));
         }
 
-        if let Err(e) = InputValidator::validate_status(&project.status, &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"]) {
+        if let Err(e) = InputValidator::validate_status(
+            &project.status,
+            &[
+                "Lead",
+                "RFP",
+                "Submitted",
+                "Awarded",
+                "Design",
+                "Construction",
+                "Completed",
+                "Lost",
+                "No Response",
+                "Cancelled",
+                "On Hold",
+                "Superseded",
+            ],
+        ) {
             return Err(Error::thrown(format!("Invalid project status: {}", e)));
         }
 
@@ -37,7 +58,10 @@ impl DatabaseClient {
     }
 
     /// Securely create a new company with validation
-    pub async fn secure_create_company(&self, company: CompanyCreate) -> Result<Option<Company>, Error> {
+    pub async fn secure_create_company(
+        &self,
+        company: CompanyCreate,
+    ) -> Result<Option<Company>, Error> {
         info!("Creating company with secure validation");
 
         // Validate input fields
@@ -45,7 +69,9 @@ impl DatabaseClient {
             return Err(Error::thrown(format!("Invalid company name: {}", e)));
         }
 
-        if let Err(e) = InputValidator::validate_text_field("abbreviation", &company.abbreviation, 1, 10) {
+        if let Err(e) =
+            InputValidator::validate_text_field("abbreviation", &company.abbreviation, 1, 10)
+        {
             return Err(Error::thrown(format!("Invalid abbreviation: {}", e)));
         }
 
@@ -58,15 +84,21 @@ impl DatabaseClient {
     }
 
     /// Securely create a new contact with validation
-    pub async fn secure_create_contact(&self, contact: ContactCreate) -> Result<Option<Contact>, Error> {
+    pub async fn secure_create_contact(
+        &self,
+        contact: ContactCreate,
+    ) -> Result<Option<Contact>, Error> {
         info!("Creating contact with secure validation");
 
         // Validate input fields
-        if let Err(e) = InputValidator::validate_text_field("first_name", &contact.first_name, 1, 50) {
+        if let Err(e) =
+            InputValidator::validate_text_field("first_name", &contact.first_name, 1, 50)
+        {
             return Err(Error::thrown(format!("Invalid first name: {}", e)));
         }
 
-        if let Err(e) = InputValidator::validate_text_field("last_name", &contact.last_name, 1, 50) {
+        if let Err(e) = InputValidator::validate_text_field("last_name", &contact.last_name, 1, 50)
+        {
             return Err(Error::thrown(format!("Invalid last name: {}", e)));
         }
 
@@ -87,7 +119,11 @@ impl DatabaseClient {
     }
 
     /// Securely update a contact with validation
-    pub async fn secure_update_contact(&self, id: &str, contact_update: ContactUpdate) -> Result<Option<Contact>, Error> {
+    pub async fn secure_update_contact(
+        &self,
+        id: &str,
+        contact_update: ContactUpdate,
+    ) -> Result<Option<Contact>, Error> {
         info!("Updating contact with secure validation: {}", id);
 
         // Validate ID
@@ -148,7 +184,10 @@ impl DatabaseClient {
         // Sanitize search query - remove any SQL injection attempts
         let safe_query = InputValidator::sanitize_for_display(query);
         if safe_query != query {
-            info!("Search query was sanitized from '{}' to '{}'", query, safe_query);
+            info!(
+                "Search query was sanitized from '{}' to '{}'",
+                query, safe_query
+            );
         }
 
         // Use the existing search_projects with sanitized input
@@ -156,7 +195,10 @@ impl DatabaseClient {
     }
 
     /// Securely search countries with validation
-    pub async fn secure_search_countries(&self, query: &str) -> Result<Vec<serde_json::Value>, Error> {
+    pub async fn secure_search_countries(
+        &self,
+        query: &str,
+    ) -> Result<Vec<serde_json::Value>, Error> {
         info!("Searching countries with secure query: {}", query);
 
         // Validate and sanitize search query
@@ -165,7 +207,7 @@ impl DatabaseClient {
         }
 
         let safe_query = InputValidator::sanitize_for_display(query);
-        
+
         // Use the existing search_countries with sanitized input
         self.search_countries(&safe_query).await
     }

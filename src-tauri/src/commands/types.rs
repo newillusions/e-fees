@@ -150,7 +150,10 @@ impl From<&AppSettings> for AppSettingsPublic {
             surrealdb_ns: settings.surrealdb_ns.clone(),
             surrealdb_db: settings.surrealdb_db.clone(),
             surrealdb_user: settings.surrealdb_user.clone(),
-            has_password: settings.surrealdb_pass.as_ref().map_or(false, |p| !p.is_empty()),
+            has_password: settings
+                .surrealdb_pass
+                .as_ref()
+                .map_or(false, |p| !p.is_empty()),
             staff_name: settings.staff_name.clone(),
             staff_email: settings.staff_email.clone(),
             staff_phone: settings.staff_phone.clone(),

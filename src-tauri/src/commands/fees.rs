@@ -3,30 +3,24 @@
 //! This module provides Tauri commands for managing fee proposals (RFPs)
 //! including CRUD operations, pagination, and JSON export for InDesign.
 
-use crate::db::{Fee, FeeCreate, FeeUpdate, PricingUpdate, PaginatedResponse};
-use crate::db::types::record_key_string;
-use crate::commands::utils::execute_with_manager;
+use super::AppState;
 use crate::commands::fee_json;
 use crate::commands::settings::get_settings_internal;
+use crate::commands::utils::execute_with_manager;
 use crate::crud_command;
-use super::AppState;
+use crate::db::types::record_key_string;
+use crate::db::{Fee, FeeCreate, FeeUpdate, PaginatedResponse, PricingUpdate};
 
-use std::path::Path;
-use tauri::{State, AppHandle, Manager};
 use log::{error, info, warn};
+use std::path::Path;
+use tauri::{AppHandle, Manager, State};
 
 // ============================================================================
 // FEE CRUD COMMANDS
 // ============================================================================
 
 /// Retrieve all fee proposals from the database.
-crud_command!(
-    get_fees,
-    Vec<Fee>,
-    get_fees,
-    "fetch",
-    "fee proposals"
-);
+crud_command!(get_fees, Vec<Fee>, get_fees, "fetch", "fee proposals");
 
 /// Retrieve a paginated page of fees.
 crud_command!(
@@ -61,37 +55,43 @@ crud_command!(
 
 /// Update an existing fee proposal in the database.
 #[tauri::command]
-pub async fn update_fee(id: String, fee: FeeUpdate, state: State<'_, AppState>) -> Result<Fee, String> {
+pub async fn update_fee(
+    id: String,
+    fee: FeeUpdate,
+    state: State<'_, AppState>,
+) -> Result<Fee, String> {
     let fee_name = format!("fee proposal '{}'", id);
     execute_with_manager(
         &state,
         |manager| {
             let id_clone = id.clone();
-            Box::pin(async move {
-                manager.update_fee(&id_clone, fee).await
-            })
+            Box::pin(async move { manager.update_fee(&id_clone, fee).await })
         },
         "update",
-        &fee_name
-    ).await
+        &fee_name,
+    )
+    .await
 }
 
 /// Update only the pricing-related fields of a fee proposal.
 /// This is more efficient than update_fee when only pricing data changes.
 #[tauri::command]
-pub async fn update_fee_pricing(id: String, pricing: PricingUpdate, state: State<'_, AppState>) -> Result<Fee, String> {
+pub async fn update_fee_pricing(
+    id: String,
+    pricing: PricingUpdate,
+    state: State<'_, AppState>,
+) -> Result<Fee, String> {
     let fee_name = format!("fee pricing for '{}'", id);
     execute_with_manager(
         &state,
         |manager| {
             let id_clone = id.clone();
-            Box::pin(async move {
-                manager.update_fee_pricing(&id_clone, pricing).await
-            })
+            Box::pin(async move { manager.update_fee_pricing(&id_clone, pricing).await })
         },
         "update",
-        &fee_name
-    ).await
+        &fee_name,
+    )
+    .await
 }
 
 // ============================================================================
@@ -106,30 +106,31 @@ pub async fn clone_fee_revision(fee_id: String, state: State<'_, AppState>) -> R
         &state,
         |manager| {
             let id = fee_id.clone();
-            Box::pin(async move {
-                manager.clone_fee_as_revision(&id).await
-            })
+            Box::pin(async move { manager.clone_fee_as_revision(&id).await })
         },
         "clone revision",
-        &fee_name
-    ).await
+        &fee_name,
+    )
+    .await
 }
 
 /// Get all fee revisions for a specific project.
 #[tauri::command]
-pub async fn get_fees_for_project(project_id: String, state: State<'_, AppState>) -> Result<Vec<Fee>, String> {
+pub async fn get_fees_for_project(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Fee>, String> {
     let desc = format!("fees for project '{}'", project_id);
     execute_with_manager(
         &state,
         |manager| {
             let pid = project_id.clone();
-            Box::pin(async move {
-                manager.get_fees_for_project(&pid).await
-            })
+            Box::pin(async move { manager.get_fees_for_project(&pid).await })
         },
         "fetch",
-        &desc
-    ).await
+        &desc,
+    )
+    .await
 }
 
 // ============================================================================
@@ -145,10 +146,10 @@ pub async fn get_fees_for_project(project_id: String, state: State<'_, AppState>
 pub async fn write_fee_to_json(
     rfp_id: String,
     state: State<'_, AppState>,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
     use fee_json::{
-        build_fee_json_paths, build_fee_json, rename_template_file_if_needed, write_json_to_file
+        build_fee_json, build_fee_json_paths, rename_template_file_if_needed, write_json_to_file,
     };
 
     info!("Writing fee {} to JSON file", rfp_id);
@@ -158,7 +159,9 @@ pub async fn write_fee_to_json(
         let manager = state.read().await;
 
         // Get the fee by ID directly
-        let fee = manager.get_fee_by_id(&rfp_id).await
+        let fee = manager
+            .get_fee_by_id(&rfp_id)
+            .await
             .map_err(|e| format!("Failed to fetch fee: {}", e))?
             .ok_or_else(|| format!("Fee not found: {}", rfp_id))?;
 
@@ -167,28 +170,36 @@ pub async fn write_fee_to_json(
         let company_id = record_key_string(&fee.company_id.key);
         let contact_id = record_key_string(&fee.contact_id.key);
 
-        let project = manager.get_project_by_id(&project_id).await
+        let project = manager
+            .get_project_by_id(&project_id)
+            .await
             .map_err(|e| format!("Failed to fetch project: {}", e))?
             .ok_or_else(|| "Project not found for fee".to_string())?;
 
-        let company = manager.get_company_by_id(&company_id).await
+        let company = manager
+            .get_company_by_id(&company_id)
+            .await
             .map_err(|e| format!("Failed to fetch company: {}", e))?
             .ok_or_else(|| "Company not found for fee".to_string())?;
 
-        let contact = manager.get_contact_by_id(&contact_id).await
+        let contact = manager
+            .get_contact_by_id(&contact_id)
+            .await
             .map_err(|e| format!("Failed to fetch contact: {}", e))?
             .ok_or_else(|| "Contact not found for fee".to_string())?;
 
         // Get project folder path from settings (.env file)
         let app_settings = get_settings_internal(&app_handle).await?;
-        let project_folder_path = app_settings.project_folder_path
-            .unwrap_or_default();
+        let project_folder_path = app_settings.project_folder_path.unwrap_or_default();
 
         (fee, project, company, contact, project_folder_path)
     };
 
     if project_folder_path.is_empty() {
-        return Err("Configuration error: Project folder path not set. Please configure in Settings.".to_string());
+        return Err(
+            "Configuration error: Project folder path not set. Please configure in Settings."
+                .to_string(),
+        );
     }
 
     // Build paths and JSON data
@@ -201,7 +212,10 @@ pub async fn write_fee_to_json(
     // Write JSON file
     write_json_to_file(&paths.new_json_path, &json_data)?;
 
-    Ok(format!("Successfully wrote fee data to: {}", paths.new_json_path))
+    Ok(format!(
+        "Successfully wrote fee data to: {}",
+        paths.new_json_path
+    ))
 }
 
 /// Write fee proposal data to JSON file with enhanced error handling.
@@ -213,10 +227,10 @@ pub async fn write_fee_to_json(
 pub async fn write_fee_to_json_safe(
     fee_id: String,
     state: State<'_, AppState>,
-    app_handle: AppHandle
+    app_handle: AppHandle,
 ) -> Result<String, String> {
     use fee_json::{
-        build_fee_json_paths, build_fee_json, rename_template_file_if_needed, write_json_to_file
+        build_fee_json, build_fee_json_paths, rename_template_file_if_needed, write_json_to_file,
     };
 
     info!("Writing fee {} to JSON file (safe mode)", fee_id);
@@ -231,53 +245,74 @@ pub async fn write_fee_to_json_safe(
         let manager = state.read().await;
 
         // Get the fee by ID directly
-        let fee = manager.get_fee_by_id(&fee_id).await.map_err(|e| {
-            error!("Failed to fetch fee: {}", e);
-            format!("Database error: Failed to fetch fee - {}", e)
-        })?.ok_or_else(|| {
-            error!("Fee not found: {}", fee_id);
-            format!("Fee not found with ID: {}. It may have been deleted.", fee_id)
-        })?;
+        let fee = manager
+            .get_fee_by_id(&fee_id)
+            .await
+            .map_err(|e| {
+                error!("Failed to fetch fee: {}", e);
+                format!("Database error: Failed to fetch fee - {}", e)
+            })?
+            .ok_or_else(|| {
+                error!("Fee not found: {}", fee_id);
+                format!(
+                    "Fee not found with ID: {}. It may have been deleted.",
+                    fee_id
+                )
+            })?;
 
         // Extract IDs from fee and fetch related records directly
         let project_id = record_key_string(&fee.project_id.key);
         let company_id = record_key_string(&fee.company_id.key);
         let contact_id = record_key_string(&fee.contact_id.key);
 
-        let project = manager.get_project_by_id(&project_id).await.map_err(|e| {
-            error!("Failed to fetch project: {}", e);
-            format!("Database error: Failed to fetch project - {}", e)
-        })?.ok_or_else(|| {
-            error!("Project not found for fee: {}", fee_id);
-            "Data integrity error: The project linked to this fee no longer exists.".to_string()
-        })?;
+        let project = manager
+            .get_project_by_id(&project_id)
+            .await
+            .map_err(|e| {
+                error!("Failed to fetch project: {}", e);
+                format!("Database error: Failed to fetch project - {}", e)
+            })?
+            .ok_or_else(|| {
+                error!("Project not found for fee: {}", fee_id);
+                "Data integrity error: The project linked to this fee no longer exists.".to_string()
+            })?;
 
-        let company = manager.get_company_by_id(&company_id).await.map_err(|e| {
-            error!("Failed to fetch company: {}", e);
-            format!("Database error: Failed to fetch company - {}", e)
-        })?.ok_or_else(|| {
-            error!("Company not found for fee: {}", fee_id);
-            "Data integrity error: The company linked to this fee no longer exists.".to_string()
-        })?;
+        let company = manager
+            .get_company_by_id(&company_id)
+            .await
+            .map_err(|e| {
+                error!("Failed to fetch company: {}", e);
+                format!("Database error: Failed to fetch company - {}", e)
+            })?
+            .ok_or_else(|| {
+                error!("Company not found for fee: {}", fee_id);
+                "Data integrity error: The company linked to this fee no longer exists.".to_string()
+            })?;
 
-        let contact = manager.get_contact_by_id(&contact_id).await.map_err(|e| {
-            error!("Failed to fetch contact: {}", e);
-            format!("Database error: Failed to fetch contact - {}", e)
-        })?.ok_or_else(|| {
-            error!("Contact not found for fee: {}", fee_id);
-            "Data integrity error: The contact linked to this fee no longer exists.".to_string()
-        })?;
+        let contact = manager
+            .get_contact_by_id(&contact_id)
+            .await
+            .map_err(|e| {
+                error!("Failed to fetch contact: {}", e);
+                format!("Database error: Failed to fetch contact - {}", e)
+            })?
+            .ok_or_else(|| {
+                error!("Contact not found for fee: {}", fee_id);
+                "Data integrity error: The contact linked to this fee no longer exists.".to_string()
+            })?;
 
         // Get project folder path from settings (.env file)
         let app_settings = get_settings_internal(&app_handle).await?;
-        let project_folder_path = app_settings.project_folder_path
-            .unwrap_or_default();
+        let project_folder_path = app_settings.project_folder_path.unwrap_or_default();
 
         (fee, project, company, contact, project_folder_path)
     };
 
     if project_folder_path.is_empty() {
-        return Err("Configuration error: Project folder path not set. Please configure in Settings.".to_string());
+        return Err(
+            "Configuration error: Project folder path not set. Please configure in Settings."
+                .to_string(),
+        );
     }
 
     // Verify project folder exists
@@ -292,8 +327,15 @@ pub async fn write_fee_to_json_safe(
     let paths = build_fee_json_paths(&project_folder_path, &project);
 
     // Check if project directory exists
-    if !Path::new(&paths.old_json_path).parent().map(|p| p.exists()).unwrap_or(false) {
-        warn!("Project directory does not exist, attempting to create: {}", paths.old_json_path);
+    if !Path::new(&paths.old_json_path)
+        .parent()
+        .map(|p| p.exists())
+        .unwrap_or(false)
+    {
+        warn!(
+            "Project directory does not exist, attempting to create: {}",
+            paths.old_json_path
+        );
     }
 
     // Build JSON data
@@ -313,14 +355,23 @@ pub async fn write_fee_to_json_safe(
     write_json_to_file(&paths.new_json_path, &json_data)?;
 
     info!("Successfully wrote fee data to: {}", paths.new_json_path);
-    Ok(format!("Fee data exported successfully to:\n{}", paths.new_json_path))
+    Ok(format!(
+        "Fee data exported successfully to:\n{}",
+        paths.new_json_path
+    ))
 }
 
 /// Check if JSON data contains placeholder content that should be updated.
 fn check_placeholder_content(data: &serde_json::Value) -> bool {
     let placeholder_indicators = [
-        "TBD", "TBC", "XXX", "TODO", "PLACEHOLDER",
-        "[Project Name]", "[Company]", "[Contact]",
+        "TBD",
+        "TBC",
+        "XXX",
+        "TODO",
+        "PLACEHOLDER",
+        "[Project Name]",
+        "[Company]",
+        "[Contact]",
     ];
 
     if let Some(obj) = data.as_object() {

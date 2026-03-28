@@ -43,9 +43,9 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::RwLock;
 
-use crate::db::{DatabaseManager, CompanyCreate, ContactCreate, FeeCreate};
-use crate::db::types::{record_key_string, record_id_string};
 use crate::commands::AppState;
+use crate::db::types::{record_id_string, record_key_string};
+use crate::db::{CompanyCreate, ContactCreate, DatabaseManager, FeeCreate};
 
 // ============================================================================
 // SERVER STATE
@@ -344,37 +344,38 @@ async fn create_project_handler(
     State(state): State<AgentState>,
     Json(req): Json<CreateProjectRequest>,
 ) -> Result<(StatusCode, Json<ProjectResponse>), (StatusCode, Json<ErrorResponse>)> {
-    use crate::db::Project;
     use crate::db::types::{ProjectNumber, TimeStamps};
+    use crate::db::Project;
 
     // Parse number string (e.g., "26-97101") into ProjectNumber
-    let number = parse_project_number(&req.number).map_err(|e| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse { error: e }),
-        )
-    })?;
+    let number = parse_project_number(&req.number)
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: e })))?;
 
     // Resolve country to canonical name via stored function
     let canonical_country = {
         let manager = state.db.read().await;
-        manager.resolve_country(&req.country).await.map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse { error: e.to_string() }),
-            )
-        })?
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("Unknown country: {}", req.country),
-                }),
-            )
-        })?
-        .as_str()
-        .unwrap_or(&req.country)
-        .to_string()
+        manager
+            .resolve_country(&req.country)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: e.to_string(),
+                    }),
+                )
+            })?
+            .ok_or_else(|| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: format!("Unknown country: {}", req.country),
+                    }),
+                )
+            })?
+            .as_str()
+            .unwrap_or(&req.country)
+            .to_string()
     };
 
     let project = Project {
@@ -448,7 +449,10 @@ async fn list_fees_handler(
         .map(|f| {
             let pricing = f.pricing_typed();
             let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-            let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+            let currency = pricing
+                .as_ref()
+                .map(|p| p.config.currency.clone())
+                .unwrap_or_else(|| "AED".to_string());
             FeeResponse {
                 id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
@@ -490,7 +494,10 @@ async fn get_fee_handler(
         Some(f) => {
             let pricing = f.pricing_typed();
             let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-            let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+            let currency = pricing
+                .as_ref()
+                .map(|p| p.config.currency.clone())
+                .unwrap_or_else(|| "AED".to_string());
             Ok(Json(FeeResponse {
                 id: f.id.map(|t| record_id_string(&t)).unwrap_or_default(),
                 name: f.name,
@@ -517,13 +524,25 @@ async fn create_fee_handler(
     Json(req): Json<CreateFeeRequest>,
 ) -> Result<(StatusCode, Json<FeeResponse>), (StatusCode, Json<ErrorResponse>)> {
     // Strip table prefixes from IDs if present
-    let project_id = req.project_id.strip_prefix("projects:").unwrap_or(&req.project_id).to_string();
-    let company_id = req.company_id.strip_prefix("company:").unwrap_or(&req.company_id).to_string();
-    let contact_id = req.contact_id.strip_prefix("contacts:").unwrap_or(&req.contact_id).to_string();
+    let project_id = req
+        .project_id
+        .strip_prefix("projects:")
+        .unwrap_or(&req.project_id)
+        .to_string();
+    let company_id = req
+        .company_id
+        .strip_prefix("company:")
+        .unwrap_or(&req.company_id)
+        .to_string();
+    let contact_id = req
+        .contact_id
+        .strip_prefix("contacts:")
+        .unwrap_or(&req.contact_id)
+        .to_string();
 
-    let issue_date = req.issue_date.unwrap_or_else(|| {
-        chrono::Utc::now().format("%y%m%d").to_string()
-    });
+    let issue_date = req
+        .issue_date
+        .unwrap_or_else(|| chrono::Utc::now().format("%y%m%d").to_string());
 
     let fee_create = FeeCreate {
         name: req.name,
@@ -531,7 +550,9 @@ async fn create_fee_handler(
         rev: 1,
         status: req.status,
         issue_date,
-        activity: req.activity.unwrap_or_else(|| "Design and Consultancy".to_string()),
+        activity: req
+            .activity
+            .unwrap_or_else(|| "Design and Consultancy".to_string()),
         package: req.package.unwrap_or_else(|| "Lighting".to_string()),
         project_id,
         company_id,
@@ -565,7 +586,10 @@ async fn create_fee_handler(
 
     let pricing = created.pricing_typed();
     let total_fee = pricing.as_ref().map(|p| p.config.quoted_fee).unwrap_or(0.0);
-    let currency = pricing.as_ref().map(|p| p.config.currency.clone()).unwrap_or_else(|| "AED".to_string());
+    let currency = pricing
+        .as_ref()
+        .map(|p| p.config.currency.clone())
+        .unwrap_or_else(|| "AED".to_string());
 
     Ok((
         StatusCode::CREATED,
@@ -620,23 +644,28 @@ async fn create_company_handler(
     // Resolve country to canonical name via stored function
     let canonical_country = {
         let manager = state.db.read().await;
-        manager.resolve_country(&req.country).await.map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse { error: e.to_string() }),
-            )
-        })?
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("Unknown country: {}", req.country),
-                }),
-            )
-        })?
-        .as_str()
-        .unwrap_or(&req.country)
-        .to_string()
+        manager
+            .resolve_country(&req.country)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: e.to_string(),
+                    }),
+                )
+            })?
+            .ok_or_else(|| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: format!("Unknown country: {}", req.country),
+                    }),
+                )
+            })?
+            .as_str()
+            .unwrap_or(&req.country)
+            .to_string()
     };
 
     let company = CompanyCreate {
@@ -767,7 +796,11 @@ async fn create_contact_handler(
     Json(req): Json<CreateContactRequest>,
 ) -> Result<(StatusCode, Json<ContactResponse>), (StatusCode, Json<ErrorResponse>)> {
     // Strip table prefix from company_id if present
-    let company = req.company_id.strip_prefix("company:").unwrap_or(&req.company_id).to_string();
+    let company = req
+        .company_id
+        .strip_prefix("company:")
+        .unwrap_or(&req.company_id)
+        .to_string();
 
     let contact = ContactCreate {
         first_name: req.first_name,
@@ -789,7 +822,10 @@ async fn create_contact_handler(
         )
     })?;
 
-    let company_id = created.company.map(|t| record_id_string(&t)).unwrap_or_default();
+    let company_id = created
+        .company
+        .map(|t| record_id_string(&t))
+        .unwrap_or_default();
 
     Ok((
         StatusCode::CREATED,
@@ -833,7 +869,9 @@ async fn export_fee_handler(
         )
     })?;
 
-    let safe_number = fee.number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+    let safe_number = fee
+        .number
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
     let filename = format!("fee-{}-rev{}.xlsx", safe_number, fee.rev);
     let output_path = std::env::temp_dir().join(&filename);
 
@@ -988,12 +1026,24 @@ async fn set_log_level_handler(
 fn parse_project_number(number_str: &str) -> Result<crate::db::types::ProjectNumber, String> {
     let parts: Vec<&str> = number_str.split('-').collect();
     if parts.len() != 2 || parts[0].len() != 2 || parts[1].len() != 5 {
-        return Err(format!("Invalid project number format: '{}'. Expected YY-CCCNN (e.g., 26-97101)", number_str));
+        return Err(format!(
+            "Invalid project number format: '{}'. Expected YY-CCCNN (e.g., 26-97101)",
+            number_str
+        ));
     }
 
-    let year: i64 = parts[0].parse().map_err(|_| format!("Invalid year in project number: '{}'", parts[0]))?;
-    let country: i64 = parts[1][..3].parse().map_err(|_| format!("Invalid country code in project number: '{}'", &parts[1][..3]))?;
-    let seq: i64 = parts[1][3..].parse().map_err(|_| format!("Invalid sequence in project number: '{}'", &parts[1][3..]))?;
+    let year: i64 = parts[0]
+        .parse()
+        .map_err(|_| format!("Invalid year in project number: '{}'", parts[0]))?;
+    let country: i64 = parts[1][..3].parse().map_err(|_| {
+        format!(
+            "Invalid country code in project number: '{}'",
+            &parts[1][..3]
+        )
+    })?;
+    let seq: i64 = parts[1][3..]
+        .parse()
+        .map_err(|_| format!("Invalid sequence in project number: '{}'", &parts[1][3..]))?;
 
     Ok(crate::db::types::ProjectNumber {
         year,
@@ -1011,11 +1061,7 @@ fn parse_project_number(number_str: &str) -> Result<crate::db::types::ProjectNum
 ///
 /// If no API key is configured (api_key is None), all requests are allowed.
 /// The /api/health endpoint is exempt (handled on a separate router layer).
-async fn api_key_auth(
-    State(state): State<AgentState>,
-    request: Request,
-    next: Next,
-) -> Response {
+async fn api_key_auth(State(state): State<AgentState>, request: Request, next: Next) -> Response {
     let api_key = match &state.api_key {
         Some(key) => key,
         None => return next.run(request).await,
@@ -1052,15 +1098,27 @@ pub fn build_router(state: AgentState) -> Router {
     // All other endpoints — protected by API key middleware
     let protected = Router::new()
         .route("/api/stats", get(stats_handler))
-        .route("/api/projects", get(list_projects_handler).post(create_project_handler))
+        .route(
+            "/api/projects",
+            get(list_projects_handler).post(create_project_handler),
+        )
         .route("/api/projects/{id}", get(get_project_handler))
         .route("/api/fees", get(list_fees_handler).post(create_fee_handler))
         .route("/api/fees/{id}", get(get_fee_handler))
-        .route("/api/companies", get(list_companies_handler).post(create_company_handler))
-        .route("/api/contacts", get(list_contacts_handler).post(create_contact_handler))
+        .route(
+            "/api/companies",
+            get(list_companies_handler).post(create_company_handler),
+        )
+        .route(
+            "/api/contacts",
+            get(list_contacts_handler).post(create_contact_handler),
+        )
         .route("/api/contacts/{id}", get(get_contact_handler))
         .route("/api/fees/{id}/export", post(export_fee_handler))
-        .route("/api/logs/level", get(get_log_level_handler).post(set_log_level_handler))
+        .route(
+            "/api/logs/level",
+            get(get_log_level_handler).post(set_log_level_handler),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), api_key_auth))
         .with_state(state);
 
@@ -1088,9 +1146,7 @@ mod tests {
     }
 
     fn request(method: &str, uri: &str, api_key: Option<&str>) -> axum::http::Request<Body> {
-        let mut builder = axum::http::Request::builder()
-            .method(method)
-            .uri(uri);
+        let mut builder = axum::http::Request::builder().method(method).uri(uri);
         if let Some(key) = api_key {
             builder = builder.header("X-API-Key", key);
         }
@@ -1100,21 +1156,30 @@ mod tests {
     #[tokio::test]
     async fn auth_rejects_missing_key() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/stats", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/stats", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn auth_rejects_wrong_key() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/stats", Some("wrong-key"))).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/stats", Some("wrong-key")))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn auth_allows_correct_key() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/stats", Some("secret-key"))).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/stats", Some("secret-key")))
+            .await
+            .unwrap();
         // Should pass auth — will get 500 (no DB) rather than 401
         assert_ne!(resp.status(), StatusCode::UNAUTHORIZED);
     }
@@ -1122,14 +1187,20 @@ mod tests {
     #[tokio::test]
     async fn health_exempt_from_auth() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/health", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/health", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[tokio::test]
     async fn no_key_configured_allows_all() {
         let app = build_router(test_state(None));
-        let resp = app.oneshot(request("GET", "/api/stats", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/stats", None))
+            .await
+            .unwrap();
         // No API key configured — should pass auth (will get 500 from DB, not 401)
         assert_ne!(resp.status(), StatusCode::UNAUTHORIZED);
     }
@@ -1137,7 +1208,10 @@ mod tests {
     #[tokio::test]
     async fn auth_401_body_is_json_error() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/stats", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/stats", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
         let body = resp.into_body().collect().await.unwrap().to_bytes();
@@ -1160,7 +1234,10 @@ mod tests {
     #[tokio::test]
     async fn contacts_list_returns_500_without_db() {
         let app = build_router(test_state(None));
-        let resp = app.oneshot(request("GET", "/api/contacts", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/contacts", None))
+            .await
+            .unwrap();
         // No DB connected — should get 500, not a panic
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         let body = resp.into_body().collect().await.unwrap().to_bytes();
@@ -1171,21 +1248,30 @@ mod tests {
     #[tokio::test]
     async fn contacts_list_requires_auth() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/contacts", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/contacts", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn contacts_get_returns_500_without_db() {
         let app = build_router(test_state(None));
-        let resp = app.oneshot(request("GET", "/api/contacts/abc123", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/contacts/abc123", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     #[tokio::test]
     async fn contacts_get_requires_auth() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(request("GET", "/api/contacts/abc123", None)).await.unwrap();
+        let resp = app
+            .oneshot(request("GET", "/api/contacts/abc123", None))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
@@ -1193,7 +1279,14 @@ mod tests {
     async fn contacts_create_rejects_missing_fields() {
         let app = build_router(test_state(None));
         // Missing required fields — should get 422 (Unprocessable Entity)
-        let resp = app.oneshot(json_request("POST", "/api/contacts", r#"{"first_name":"John"}"#)).await.unwrap();
+        let resp = app
+            .oneshot(json_request(
+                "POST",
+                "/api/contacts",
+                r#"{"first_name":"John"}"#,
+            ))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
     }
 
@@ -1208,7 +1301,10 @@ mod tests {
             "position": "Project Manager",
             "company_id": "company:xyz789"
         }"#;
-        let resp = app.oneshot(json_request("POST", "/api/contacts", body)).await.unwrap();
+        let resp = app
+            .oneshot(json_request("POST", "/api/contacts", body))
+            .await
+            .unwrap();
         // Valid payload but no DB — should get 500
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -1218,7 +1314,10 @@ mod tests {
     #[tokio::test]
     async fn export_fee_returns_500_without_db() {
         let app = build_router(test_state(None));
-        let resp = app.oneshot(json_request("POST", "/api/fees/test123/export", "")).await.unwrap();
+        let resp = app
+            .oneshot(json_request("POST", "/api/fees/test123/export", ""))
+            .await
+            .unwrap();
         // No DB connected — should get 500
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         let body = resp.into_body().collect().await.unwrap().to_bytes();
@@ -1229,7 +1328,10 @@ mod tests {
     #[tokio::test]
     async fn export_fee_requires_auth() {
         let app = build_router(test_state(Some("secret-key")));
-        let resp = app.oneshot(json_request("POST", "/api/fees/test123/export", "")).await.unwrap();
+        let resp = app
+            .oneshot(json_request("POST", "/api/fees/test123/export", ""))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 
@@ -1237,7 +1339,10 @@ mod tests {
     async fn export_fee_strips_prefix() {
         // Both "fee:abc" and "abc" should be accepted (both hit DB, get 500 without DB)
         let app = build_router(test_state(None));
-        let resp = app.oneshot(json_request("POST", "/api/fees/fee:abc/export", "")).await.unwrap();
+        let resp = app
+            .oneshot(json_request("POST", "/api/fees/fee:abc/export", ""))
+            .await
+            .unwrap();
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 }
@@ -1265,8 +1370,7 @@ pub async fn start_agent_server(db_state: AppState, port: u16) {
 
     let app = build_router(state);
 
-    let addr = std::env::var("EFEES_AGENT_BIND")
-        .unwrap_or_else(|_| format!("0.0.0.0:{}", port));
+    let addr = std::env::var("EFEES_AGENT_BIND").unwrap_or_else(|_| format!("0.0.0.0:{}", port));
     info!("Agent API server starting on http://{}", addr);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {

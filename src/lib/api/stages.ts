@@ -31,15 +31,13 @@ export async function getStageDictionary(): Promise<StageDictEntry[]> {
  * Filter dictionary entries by query string.
  * Matches against default_label and aliases (case-insensitive, substring).
  */
-export function filterStageDictionary(
-  entries: StageDictEntry[],
-  query: string
-): StageDictEntry[] {
+export function filterStageDictionary(entries: StageDictEntry[], query: string): StageDictEntry[] {
   if (!query.trim()) return entries;
   const q = query.toLowerCase();
-  return entries.filter(entry =>
-    entry.default_label.toLowerCase().includes(q) ||
-    entry.aliases.some(alias => alias.toLowerCase().includes(q))
+  return entries.filter(
+    entry =>
+      entry.default_label.toLowerCase().includes(q) ||
+      entry.aliases.some(alias => alias.toLowerCase().includes(q))
   );
 }
 
@@ -48,5 +46,11 @@ export function filterStageDictionary(
  * Takes the first letter of each word, uppercase, max 4 chars.
  */
 export function generateStageCode(name: string): string {
-  return name.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 4) || 'NS';
+  return (
+    name
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 4) || 'NS'
+  );
 }

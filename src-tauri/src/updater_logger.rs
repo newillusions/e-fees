@@ -11,11 +11,11 @@
 //! - Detailed progress tracking for update checks and downloads
 //! - Error logging that's always enabled regardless of dev_mode
 
-use log::{info, warn, error, debug};
+use chrono::Local;
+use log::{debug, error, info, warn};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use chrono::Local;
 
 /// Log file path for updater diagnostics
 const UPDATER_LOG_PATH: &str = "/tmp/e-fees-updater.log";
@@ -56,7 +56,10 @@ impl UpdaterLogger {
 
         if dev_mode {
             logger.write_log("========================================");
-            logger.write_log(&format!("Updater logger initialized at {}", Local::now().format("%Y-%m-%d %H:%M:%S")));
+            logger.write_log(&format!(
+                "Updater logger initialized at {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S")
+            ));
             logger.write_log(&format!("Dev mode: {}", dev_mode));
             logger.write_log("========================================");
         }

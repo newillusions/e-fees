@@ -1,6 +1,6 @@
+use chrono::Local;
 use std::fs;
 use std::path::PathBuf;
-use chrono::Local;
 
 /// Export scope as markdown to the project folder.
 /// Returns the file path on success, or None if folder not found.

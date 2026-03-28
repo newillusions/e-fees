@@ -1,138 +1,138 @@
+use log::{error, info};
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use log::{info, error};
 use tauri::Manager;
+use tokio::sync::RwLock;
 
 // v0.10.18 - lowercase branding, passive Windows installer (with dev mode and enhanced logging)
-mod db;
-mod commands;
-mod updater_logger;
 mod agent_server;
+mod commands;
+mod db;
 mod excel_export;
+mod updater_logger;
 
-use db::{DatabaseManager, DatabaseConfig};
 use commands::{
-    check_db_connection,
-    get_connection_status,
-    reconnect_database,
-    get_projects,
-    search_projects,
-    get_companies,
-    get_contacts,
-    get_fees,
-    create_project,
-    update_project,
-    delete_project,
-    create_company,
-    update_company,
-    delete_company,
-    create_contact,
-    update_contact,
-    delete_contact,
-    create_fee,
-    update_fee,
-    update_fee_pricing,
-    delete_fee,
-    clone_fee_revision,
-    get_fees_for_project,
-    // Pagination commands
-    get_projects_page,
-    get_companies_page,
-    get_contacts_page,
-    get_fees_page,
-    // Single entity fetch (for on-demand loading)
-    get_project_by_id,
-    get_company_by_id,
-    get_contact_by_id,
-    health_check,
-    get_stats,
-    get_db_info,
-    get_table_schema,
-    position_window_4k,
-    get_settings,
-    save_settings,
-    get_dev_mode,
-    reload_database_config,
-    select_folder,
-    open_folder_in_explorer,
-    investigate_record,
-    search_countries,
-    generate_next_project_number,
-    validate_project_number,
-    create_project_with_template,
-    copy_project_template,
-    get_area_suggestions,
-    get_all_cities,
-    get_city_suggestions,
-    write_fee_to_json,
-    write_fee_to_json_safe,
-    // Activity log commands
-    create_activity_log,
-    get_activity_logs,
-    check_project_folder_exists,
-    check_var_json_exists,
-    check_var_json_template_exists,
-    rename_folder_with_old_suffix,
-    rename_var_json_with_old_suffix,
-    populate_project_data,
-    get_project_folder_location,
-    move_project_folder,
-    move_project_from_rfp,
-    move_project_to_archive,
-    list_projects_in_folder,
-    validate_project_base_path,
-    // Folder sync commands
-    scan_folder_sync,
-    resolve_folder_inconsistency,
-    log_message,
-    // Log level control
-    set_log_level,
-    get_log_level,
-    // Import wizard commands
-    import_scan_directory,
-    import_execute,
-    // Excel export
-    export_fee_excel,
-    export_fee_template,
+    add_stage_to_dictionary,
+    add_stage_to_fee,
     // Batch operations
     batch_delete_entities,
     batch_update_status,
-    // Fee stage access (scope–pricing linkage)
-    get_fee_stages,
-    add_stage_to_fee,
-    get_stage_dictionary,
-    // Stage dictionary (autocomplete for stage names)
-    search_stage_dictionary,
-    add_stage_to_dictionary,
+    check_db_connection,
+    check_project_folder_exists,
+    check_var_json_exists,
+    check_var_json_template_exists,
+    clone_fee_revision,
+    copy_project_template,
+    // Activity log commands
+    create_activity_log,
+    create_company,
+    create_contact,
+    create_fee,
+    create_project,
+    create_project_with_template,
+    delete_company,
+    delete_contact,
+    delete_fee,
+    delete_project,
+    // Excel export
+    export_fee_excel,
+    export_fee_template,
     // Scope markdown export
     export_scope_markdown,
+    generate_next_project_number,
+    get_activity_logs,
+    get_all_cities,
+    get_area_suggestions,
+    get_city_suggestions,
+    get_companies,
+    get_companies_page,
+    get_company_by_id,
+    get_connection_status,
+    get_contact_by_id,
+    get_contacts,
+    get_contacts_page,
+    get_db_info,
+    get_dev_mode,
+    // Fee stage access (scope–pricing linkage)
+    get_fee_stages,
+    get_fees,
+    get_fees_for_project,
+    get_fees_page,
+    get_log_level,
+    // Single entity fetch (for on-demand loading)
+    get_project_by_id,
+    get_project_folder_location,
+    get_projects,
+    // Pagination commands
+    get_projects_page,
+    get_settings,
+    get_stage_dictionary,
+    get_stats,
+    get_table_schema,
+    health_check,
+    import_execute,
+    // Import wizard commands
+    import_scan_directory,
+    investigate_record,
+    list_projects_in_folder,
+    log_message,
+    move_project_folder,
+    move_project_from_rfp,
+    move_project_to_archive,
+    open_folder_in_explorer,
+    populate_project_data,
+    position_window_4k,
+    reconnect_database,
+    reload_database_config,
+    rename_folder_with_old_suffix,
+    rename_var_json_with_old_suffix,
+    resolve_folder_inconsistency,
+    save_settings,
+    // Folder sync commands
+    scan_folder_sync,
+    search_countries,
+    search_projects,
+    // Stage dictionary (autocomplete for stage names)
+    search_stage_dictionary,
+    select_folder,
+    // Log level control
+    set_log_level,
+    update_company,
+    update_contact,
+    update_fee,
+    update_fee_pricing,
+    update_project,
+    validate_project_base_path,
+    validate_project_number,
+    write_fee_to_json,
+    write_fee_to_json_safe,
 };
+use db::{DatabaseConfig, DatabaseManager};
 
 /// Load database configuration from the settings system.
-/// 
+///
 /// This function attempts to load database configuration from the application settings
 /// stored in the app data directory, which is essential for production builds where
 /// environment variables are not available.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `app_handle` - Tauri application handle for accessing settings
-/// 
+///
 /// # Returns
-/// 
+///
 /// - `Ok(DatabaseConfig)`: Successfully loaded and parsed configuration
 /// - `Err(String)`: Configuration not found or invalid
-async fn load_database_config_from_settings(app_handle: &tauri::AppHandle) -> Result<DatabaseConfig, String> {
+async fn load_database_config_from_settings(
+    app_handle: &tauri::AppHandle,
+) -> Result<DatabaseConfig, String> {
     // Try to load settings from the app data directory
     // Use internal function to get full settings including password (not exposed to frontend)
     match commands::settings::get_settings_internal(app_handle).await {
         Ok(settings) => {
             // Convert settings to database configuration
             DatabaseConfig::from_settings(&settings)
-        },
-        Err(e) => {
-            Err(format!("Failed to load settings: {}", e))
         }
+        Err(e) => Err(format!("Failed to load settings: {}", e)),
     }
 }
 
@@ -164,7 +164,7 @@ pub fn run() {
             )?;
             // Default runtime filter to Info (user can change via Settings)
             log::set_max_level(log::LevelFilter::Info);
-            
+
             // Setup MCP plugin - don't crash app if it fails
             info!("Attempting to initialize MCP plugin with socket server");
             match app.handle().plugin(
@@ -183,7 +183,7 @@ pub fn run() {
             }
 
             info!("Initializing Fee Proposal Management Application");
-            
+
             // Load environment variables as fallback for development
             if let Err(e) = dotenvy::dotenv() {
                 info!("No .env file found or error loading it: {}", e);
@@ -203,14 +203,14 @@ pub fn run() {
                 let manager = app_state.try_read().expect("Failed to read newly created state");
                 manager.status.clone()
             };
-            
+
             // Set up the application state
             app.manage(app_state.clone());
 
             // Initialize database connection in async context using Tauri's runtime
             let init_state = app_state.clone();
             let app_handle_clone = app.handle().clone();
-            
+
             tauri::async_runtime::spawn(async move {
                 info!("Starting database initialization");
 
@@ -238,7 +238,7 @@ pub fn run() {
                     },
                     Err(settings_err) => {
                         info!("Settings configuration not available ({}), trying environment variables", settings_err);
-                        
+
                         match DatabaseManager::new() {
                             Ok(manager) => {
                                 info!("Database configuration loaded from environment variables");
@@ -252,7 +252,7 @@ pub fn run() {
                         }
                     }
                 };
-                
+
                 let initialized = if let Some(mut manager) = configured_manager {
                     // We have a configured manager, try to initialize it
                     match manager.initialize().await {
@@ -272,7 +272,7 @@ pub fn run() {
                     info!("Database manager remains unconfigured, skipping initialization");
                     false
                 };
-                
+
                 if initialized {
                     // Start heartbeat monitoring
                     info!("Starting database heartbeat monitoring");
@@ -289,7 +289,7 @@ pub fn run() {
                     });
                 }
             });
-            
+
             info!("Application setup completed successfully");
             Ok(())
         })

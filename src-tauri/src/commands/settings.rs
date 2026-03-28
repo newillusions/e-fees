@@ -10,7 +10,7 @@ use std::process::Command;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
-use super::{AppState, AppSettings, AppSettingsPublic};
+use super::{AppSettings, AppSettingsPublic, AppState};
 
 /// Internal function to read full application settings from .env file.
 ///
@@ -74,7 +74,10 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         info!(".env file found, reading contents");
         match fs::read_to_string(&env_path) {
             Ok(content) => {
-                info!("Successfully read .env file, parsing {} lines", content.lines().count());
+                info!(
+                    "Successfully read .env file, parsing {} lines",
+                    content.lines().count()
+                );
                 // Parse .env file line by line
                 for line in content.lines() {
                     let line = line.trim();
@@ -97,7 +100,9 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
                             "STAFF_EMAIL" => settings.staff_email = Some(value.to_string()),
                             "STAFF_PHONE" => settings.staff_phone = Some(value.to_string()),
                             "STAFF_POSITION" => settings.staff_position = Some(value.to_string()),
-                            "PROJECT_FOLDER_PATH" => settings.project_folder_path = Some(value.to_string()),
+                            "PROJECT_FOLDER_PATH" => {
+                                settings.project_folder_path = Some(value.to_string())
+                            }
                             "DEV_MODE" => settings.dev_mode = Some(value.to_lowercase() == "true"),
                             "LOG_LEVEL" => settings.log_level = Some(value.to_lowercase()),
                             "SCOPE_API_URL" => settings.scope_api_url = Some(value.to_string()),
@@ -239,11 +244,11 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                     // Skip our managed section headers to avoid duplicates
                     if line.starts_with('#') {
                         match line {
-                            "# SurrealDB Configuration" |
-                            "# TLS Configuration" |
-                            "# Staff Information" |
-                            "# Project Configuration" |
-                            "# Developer Options" => continue,
+                            "# SurrealDB Configuration"
+                            | "# TLS Configuration"
+                            | "# Staff Information"
+                            | "# Project Configuration"
+                            | "# Developer Options" => continue,
                             _ => {
                                 lines.push(line.to_string());
                                 continue;
@@ -256,12 +261,22 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
 
                         // Skip our managed settings - we'll add them back
                         match key {
-                            "SURREALDB_URL" | "SURREALDB_NS" | "SURREALDB_DB" |
-                            "SURREALDB_USER" | "SURREALDB_PASS" |
-                            "SURREALDB_VERIFY_CERTS" | "SURREALDB_ACCEPT_INVALID_HOSTNAMES" |
-                            "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
-                            "PROJECT_FOLDER_PATH" | "DEV_MODE" | "LOG_LEVEL" |
-                            "SCOPE_API_URL" | "SCOPE_API_KEY" => continue,
+                            "SURREALDB_URL"
+                            | "SURREALDB_NS"
+                            | "SURREALDB_DB"
+                            | "SURREALDB_USER"
+                            | "SURREALDB_PASS"
+                            | "SURREALDB_VERIFY_CERTS"
+                            | "SURREALDB_ACCEPT_INVALID_HOSTNAMES"
+                            | "STAFF_NAME"
+                            | "STAFF_EMAIL"
+                            | "STAFF_PHONE"
+                            | "STAFF_POSITION"
+                            | "PROJECT_FOLDER_PATH"
+                            | "DEV_MODE"
+                            | "LOG_LEVEL"
+                            | "SCOPE_API_URL"
+                            | "SCOPE_API_KEY" => continue,
                             _ => lines.push(line.to_string()),
                         }
                     } else {
@@ -404,23 +419,38 @@ pub async fn get_dev_mode(app_handle: AppHandle) -> Result<bool, String> {
 /// }
 /// ```
 #[tauri::command]
-pub async fn reload_database_config(state: State<'_, AppState>, app_handle: AppHandle) -> Result<String, String> {
+pub async fn reload_database_config(
+    state: State<'_, AppState>,
+    app_handle: AppHandle,
+) -> Result<String, String> {
     info!("Reloading database configuration from .env file");
 
     // Load fresh settings from the .env file (using internal function for password access)
     let settings = get_settings_internal(&app_handle).await?;
 
     // Extract database configuration
-    let url = settings.surrealdb_url.ok_or("Missing SurrealDB URL in settings")?;
-    let namespace = settings.surrealdb_ns.ok_or("Missing SurrealDB namespace in settings")?;
-    let database = settings.surrealdb_db.ok_or("Missing SurrealDB database in settings")?;
-    let username = settings.surrealdb_user.ok_or("Missing SurrealDB username in settings")?;
-    let password = settings.surrealdb_pass.ok_or("Missing SurrealDB password in settings")?;
+    let url = settings
+        .surrealdb_url
+        .ok_or("Missing SurrealDB URL in settings")?;
+    let namespace = settings
+        .surrealdb_ns
+        .ok_or("Missing SurrealDB namespace in settings")?;
+    let database = settings
+        .surrealdb_db
+        .ok_or("Missing SurrealDB database in settings")?;
+    let username = settings
+        .surrealdb_user
+        .ok_or("Missing SurrealDB username in settings")?;
+    let password = settings
+        .surrealdb_pass
+        .ok_or("Missing SurrealDB password in settings")?;
 
     // Reconfigure the database manager
     {
         let mut manager = state.write().await;
-        manager.reconfigure(url, namespace, database, username, password).await?;
+        manager
+            .reconfigure(url, namespace, database, username, password)
+            .await?;
     }
 
     // Test the new connection
@@ -436,7 +466,10 @@ pub async fn reload_database_config(state: State<'_, AppState>, app_handle: AppH
         Ok("Database configuration reloaded and connected successfully".to_string())
     } else {
         warn!("Database reconfiguration completed but connection test failed");
-        Ok("Database configuration reloaded but connection test failed - check settings".to_string())
+        Ok(
+            "Database configuration reloaded but connection test failed - check settings"
+                .to_string(),
+        )
     }
 }
 
@@ -478,7 +511,8 @@ pub async fn select_folder(app_handle: tauri::AppHandle) -> Result<Option<String
     let (tx, rx) = mpsc::channel();
 
     // Open native folder picker dialog
-    app_handle.dialog()
+    app_handle
+        .dialog()
         .file()
         .set_title("Select Project Folder")
         .pick_folder(move |folder_path| {
@@ -560,7 +594,8 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, Stri
     }
 
     // Security: Canonicalize path to resolve any symlinks and normalize
-    let canonical_path = path.canonicalize()
+    let canonical_path = path
+        .canonicalize()
         .map_err(|e| format!("Failed to resolve path: {}", e))?;
 
     // Ensure it's still a directory after canonicalization
@@ -574,18 +609,12 @@ pub async fn open_folder_in_explorer(folder_path: String) -> Result<String, Stri
 
     // Use platform-specific command to open folder
     let result = if cfg!(target_os = "windows") {
-        Command::new("explorer")
-            .arg(&canonical_str)
-            .spawn()
+        Command::new("explorer").arg(&canonical_str).spawn()
     } else if cfg!(target_os = "macos") {
-        Command::new("open")
-            .arg(&canonical_str)
-            .spawn()
+        Command::new("open").arg(&canonical_str).spawn()
     } else {
         // Linux and other Unix-like systems
-        Command::new("xdg-open")
-            .arg(&canonical_str)
-            .spawn()
+        Command::new("xdg-open").arg(&canonical_str).spawn()
     };
 
     match result {

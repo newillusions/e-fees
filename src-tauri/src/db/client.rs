@@ -1,14 +1,13 @@
 //! Database client abstraction for HTTP and WebSocket connections.
 
-use surrealdb::engine::remote::ws::{Client, Ws};
+use log::{error, info, warn};
 use surrealdb::engine::remote::http::{Client as HttpClient, Http};
-use surrealdb::opt::auth::{Root, Namespace, Database};
+use surrealdb::engine::remote::ws::{Client, Ws};
+use surrealdb::opt::auth::{Database, Namespace, Root};
 use surrealdb::{Error, Surreal};
-use log::{info, warn, error};
 
 use super::types::{
-    Project, NewProject, Company, CompanyCreate, Contact, ContactCreate,
-    Fee, FeeCreate, FeeUpdate,
+    Company, CompanyCreate, Contact, ContactCreate, Fee, FeeCreate, FeeUpdate, NewProject, Project,
 };
 use crate::commands::{CompanyUpdate, ContactUpdate, ProjectUpdate};
 
@@ -29,9 +28,13 @@ fn validate_record_id(id: &str, field_name: &str) -> Result<(), Error> {
     if id.is_empty() || id.len() > 100 {
         return Err(Error::thrown(format!("Invalid {} length", field_name)));
     }
-    if !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+    if !id
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
         return Err(Error::thrown(format!(
-            "Invalid {} format: only alphanumeric, underscores, hyphens allowed", field_name
+            "Invalid {} format: only alphanumeric, underscores, hyphens allowed",
+            field_name
         )));
     }
     Ok(())
@@ -85,11 +88,21 @@ impl DatabaseClient {
 
             let normalized_url = normalize_ws_url(url);
             if normalized_url != url {
-                warn!("SURREALDB_URL missing /rpc suffix — auto-corrected to: {}", normalized_url);
+                warn!(
+                    "SURREALDB_URL missing /rpc suffix — auto-corrected to: {}",
+                    normalized_url
+                );
             }
 
-            info!("Attempting {} WebSocket connection to {}",
-                  if is_secure { "secure (WSS)" } else { "unencrypted (WS)" }, normalized_url);
+            info!(
+                "Attempting {} WebSocket connection to {}",
+                if is_secure {
+                    "secure (WSS)"
+                } else {
+                    "unencrypted (WS)"
+                },
+                normalized_url
+            );
 
             let connection_address = normalized_url
                 .strip_prefix("ws://")
@@ -106,7 +119,10 @@ impl DatabaseClient {
                     Ok(DatabaseClient::WebSocket(connection))
                 }
                 Err(ws_err) => {
-                    warn!("WebSocket connection failed: {}, attempting HTTP fallback", ws_err);
+                    warn!(
+                        "WebSocket connection failed: {}, attempting HTTP fallback",
+                        ws_err
+                    );
 
                     let http_url = if normalized_url.starts_with("ws://") {
                         normalized_url.replace("ws://", "http://")
@@ -156,54 +172,97 @@ impl DatabaseClient {
             DatabaseClient::Http(client) => {
                 client.signin(Root { username, password }).await?;
                 Ok(())
-            },
+            }
             DatabaseClient::WebSocket(client) => {
                 client.signin(Root { username, password }).await?;
                 Ok(())
-            },
+            }
         }
     }
 
     /// Sign in with namespace credentials.
-    pub async fn signin_namespace(&self, namespace: &str, username: &str, password: &str) -> Result<(), Error> {
+    pub async fn signin_namespace(
+        &self,
+        namespace: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<(), Error> {
         let namespace = namespace.to_string();
         let username = username.to_string();
         let password = password.to_string();
         match self {
             DatabaseClient::Http(client) => {
-                client.signin(Namespace { namespace, username, password }).await?;
+                client
+                    .signin(Namespace {
+                        namespace,
+                        username,
+                        password,
+                    })
+                    .await?;
                 Ok(())
-            },
+            }
             DatabaseClient::WebSocket(client) => {
-                client.signin(Namespace { namespace, username, password }).await?;
+                client
+                    .signin(Namespace {
+                        namespace,
+                        username,
+                        password,
+                    })
+                    .await?;
                 Ok(())
-            },
+            }
         }
     }
 
     /// Sign in with database credentials.
-    pub async fn signin_database(&self, namespace: &str, database: &str, username: &str, password: &str) -> Result<(), Error> {
+    pub async fn signin_database(
+        &self,
+        namespace: &str,
+        database: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<(), Error> {
         let namespace = namespace.to_string();
         let database = database.to_string();
         let username = username.to_string();
         let password = password.to_string();
         match self {
             DatabaseClient::Http(client) => {
-                client.signin(Database { namespace, database, username, password }).await?;
+                client
+                    .signin(Database {
+                        namespace,
+                        database,
+                        username,
+                        password,
+                    })
+                    .await?;
                 Ok(())
-            },
+            }
             DatabaseClient::WebSocket(client) => {
-                client.signin(Database { namespace, database, username, password }).await?;
+                client
+                    .signin(Database {
+                        namespace,
+                        database,
+                        username,
+                        password,
+                    })
+                    .await?;
                 Ok(())
-            },
+            }
         }
     }
 
     /// Select namespace and database.
     pub async fn use_ns_db(&self, namespace: &str, database: &str) -> Result<(), Error> {
         match self {
-            DatabaseClient::Http(client) => { client.use_ns(namespace).use_db(database).await?; Ok(()) },
-            DatabaseClient::WebSocket(client) => { client.use_ns(namespace).use_db(database).await?; Ok(()) },
+            DatabaseClient::Http(client) => {
+                client.use_ns(namespace).use_db(database).await?;
+                Ok(())
+            }
+            DatabaseClient::WebSocket(client) => {
+                client.use_ns(namespace).use_db(database).await?;
+                Ok(())
+            }
         }
     }
 
@@ -213,7 +272,11 @@ impl DatabaseClient {
     }
 
     /// Execute a parameterized query with bindings (SQL injection safe).
-    pub async fn query_bind<T: surrealdb::types::SurrealValue + 'static>(&self, query: &str, bindings: T) -> Result<surrealdb::IndexedResults, Error> {
+    pub async fn query_bind<T: surrealdb::types::SurrealValue + 'static>(
+        &self,
+        query: &str,
+        bindings: T,
+    ) -> Result<surrealdb::IndexedResults, Error> {
         match self {
             DatabaseClient::Http(client) => client.query(query).bind(bindings).await,
             DatabaseClient::WebSocket(client) => client.query(query).bind(bindings).await,
@@ -222,7 +285,11 @@ impl DatabaseClient {
 
     /// Execute a parameterized query with multiple named bindings.
     /// Each map entry becomes a `$key` parameter in the query.
-    pub async fn query_bind_map(&self, query: &str, bindings: serde_json::Map<String, serde_json::Value>) -> Result<surrealdb::IndexedResults, Error> {
+    pub async fn query_bind_map(
+        &self,
+        query: &str,
+        bindings: serde_json::Map<String, serde_json::Value>,
+    ) -> Result<surrealdb::IndexedResults, Error> {
         match self {
             DatabaseClient::Http(client) => {
                 let mut q = client.query(query);
@@ -230,14 +297,14 @@ impl DatabaseClient {
                     q = q.bind((key, value));
                 }
                 q.await
-            },
+            }
             DatabaseClient::WebSocket(client) => {
                 let mut q = client.query(query);
                 for (key, value) in bindings {
                     q = q.bind((key, value));
                 }
                 q.await
-            },
+            }
         }
     }
 
@@ -254,10 +321,16 @@ impl DatabaseClient {
         let project_id = project.number.id.replace("-", "_");
 
         // Normalize country name via fn::resolve_country; fall back to raw input if unresolved.
-        let resolved_country = self.resolve_country(&project.country).await
+        let resolved_country = self
+            .resolve_country(&project.country)
+            .await
             .ok()
             .flatten()
-            .and_then(|v| v.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+            .and_then(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            })
             .unwrap_or_else(|| project.country.clone());
 
         let set_clauses = vec![
@@ -268,12 +341,20 @@ impl DatabaseClient {
             format!("city = '{}'", project.city.replace("'", "''")),
             format!("country = '{}'", resolved_country.replace("'", "''")),
             format!("folder = '{}'", project.folder.replace("'", "''")),
-            format!("number = {{ year: {}, country: {}, seq: {}, id: '{}' }}",
-                project.number.year, project.number.country, project.number.seq,
-                project.number.id.replace("'", "''"))
+            format!(
+                "number = {{ year: {}, country: {}, seq: {}, id: '{}' }}",
+                project.number.year,
+                project.number.country,
+                project.number.seq,
+                project.number.id.replace("'", "''")
+            ),
         ];
 
-        let query = format!("CREATE projects:{} SET {}", project_id, set_clauses.join(", "));
+        let query = format!(
+            "CREATE projects:{} SET {}",
+            project_id,
+            set_clauses.join(", ")
+        );
         info!("Executing project creation query");
 
         let mut response = self.query(&query).await?;
@@ -284,7 +365,11 @@ impl DatabaseClient {
         }
     }
 
-    pub async fn update_project(&self, id: &str, project_data: ProjectUpdate) -> Result<Option<Project>, Error> {
+    pub async fn update_project(
+        &self,
+        id: &str,
+        project_data: ProjectUpdate,
+    ) -> Result<Option<Project>, Error> {
         delegate_update_merge!(self, "projects", id, project_data)
     }
 
@@ -319,8 +404,13 @@ impl DatabaseClient {
                string::lower(country) CONTAINS string::lower('{}') OR
                string::lower(folder) CONTAINS string::lower('{}')
                ORDER BY time.created_at DESC"#,
-            escaped_query, escaped_query, escaped_query, escaped_query,
-            escaped_query, escaped_query, escaped_query
+            escaped_query,
+            escaped_query,
+            escaped_query,
+            escaped_query,
+            escaped_query,
+            escaped_query,
+            escaped_query
         );
 
         let mut response = self.query(&search_query).await?;
@@ -331,10 +421,16 @@ impl DatabaseClient {
 
     pub async fn create_company(&self, company: CompanyCreate) -> Result<Option<Company>, Error> {
         // Normalize country name via fn::resolve_country; fall back to raw input if unresolved.
-        let resolved_country = self.resolve_country(&company.country).await
+        let resolved_country = self
+            .resolve_country(&company.country)
+            .await
             .ok()
             .flatten()
-            .and_then(|v| v.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+            .and_then(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            })
             .unwrap_or_else(|| company.country.clone());
 
         let query = format!(
@@ -357,7 +453,11 @@ impl DatabaseClient {
         }
     }
 
-    pub async fn update_company_partial(&self, id: &str, company_update: CompanyUpdate) -> Result<Option<Company>, Error> {
+    pub async fn update_company_partial(
+        &self,
+        id: &str,
+        company_update: CompanyUpdate,
+    ) -> Result<Option<Company>, Error> {
         delegate_update_merge!(self, "company", id, company_update)
     }
 
@@ -392,7 +492,11 @@ impl DatabaseClient {
         }
     }
 
-    pub async fn update_contact_partial(&self, id: &str, contact_update: ContactUpdate) -> Result<Option<Contact>, Error> {
+    pub async fn update_contact_partial(
+        &self,
+        id: &str,
+        contact_update: ContactUpdate,
+    ) -> Result<Option<Contact>, Error> {
         let mut set_clauses = Vec::new();
 
         if let Some(first_name) = &contact_update.first_name {
@@ -437,11 +541,11 @@ impl DatabaseClient {
             Ok(mut contacts) => {
                 info!("Update query returned {} contacts", contacts.len());
                 Ok(contacts.pop())
-            },
+            }
             Err(e) => {
                 info!("Update query failed with error: {:?}", e);
                 Err(e)
-            },
+            }
         }
     }
 
@@ -491,18 +595,45 @@ impl DatabaseClient {
         bindings.insert("number".into(), serde_json::Value::String(fee.number));
         bindings.insert("rev".into(), serde_json::json!(fee.rev));
         bindings.insert("status".into(), serde_json::Value::String(fee.status));
-        bindings.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
+        bindings.insert(
+            "issue_date".into(),
+            serde_json::Value::String(fee.issue_date),
+        );
         bindings.insert("activity".into(), serde_json::Value::String(fee.activity));
         bindings.insert("package".into(), serde_json::Value::String(fee.package));
-        bindings.insert("strap_line".into(), serde_json::Value::String(fee.strap_line));
-        bindings.insert("staff_name".into(), serde_json::Value::String(fee.staff_name));
-        bindings.insert("staff_email".into(), serde_json::Value::String(fee.staff_email));
-        bindings.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone));
-        bindings.insert("staff_position".into(), serde_json::Value::String(fee.staff_position));
-        bindings.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
+        bindings.insert(
+            "strap_line".into(),
+            serde_json::Value::String(fee.strap_line),
+        );
+        bindings.insert(
+            "staff_name".into(),
+            serde_json::Value::String(fee.staff_name),
+        );
+        bindings.insert(
+            "staff_email".into(),
+            serde_json::Value::String(fee.staff_email),
+        );
+        bindings.insert(
+            "staff_phone".into(),
+            serde_json::Value::String(fee.staff_phone),
+        );
+        bindings.insert(
+            "staff_position".into(),
+            serde_json::Value::String(fee.staff_position),
+        );
+        bindings.insert(
+            "revisions".into(),
+            serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])),
+        );
         bindings.insert("project_key".into(), serde_json::Value::String(project_key));
-        bindings.insert("company_id".into(), serde_json::Value::String(fee.company_id));
-        bindings.insert("contact_id".into(), serde_json::Value::String(fee.contact_id));
+        bindings.insert(
+            "company_id".into(),
+            serde_json::Value::String(fee.company_id),
+        );
+        bindings.insert(
+            "contact_id".into(),
+            serde_json::Value::String(fee.contact_id),
+        );
 
         info!("Executing Fee creation query (parameterized)");
 
@@ -529,15 +660,42 @@ impl DatabaseClient {
         data.insert("number".into(), serde_json::Value::String(fee.number));
         data.insert("rev".into(), serde_json::json!(fee.rev));
         data.insert("status".into(), serde_json::Value::String(fee.status));
-        data.insert("issue_date".into(), serde_json::Value::String(fee.issue_date));
-        data.insert("activity".into(), serde_json::Value::String(fee.activity.unwrap_or_default()));
-        data.insert("package".into(), serde_json::Value::String(fee.package.unwrap_or_default()));
-        data.insert("strap_line".into(), serde_json::Value::String(fee.strap_line.unwrap_or_default()));
-        data.insert("staff_name".into(), serde_json::Value::String(fee.staff_name.unwrap_or_default()));
-        data.insert("staff_email".into(), serde_json::Value::String(fee.staff_email.unwrap_or_default()));
-        data.insert("staff_phone".into(), serde_json::Value::String(fee.staff_phone.unwrap_or_default()));
-        data.insert("staff_position".into(), serde_json::Value::String(fee.staff_position.unwrap_or_default()));
-        data.insert("revisions".into(), serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])));
+        data.insert(
+            "issue_date".into(),
+            serde_json::Value::String(fee.issue_date),
+        );
+        data.insert(
+            "activity".into(),
+            serde_json::Value::String(fee.activity.unwrap_or_default()),
+        );
+        data.insert(
+            "package".into(),
+            serde_json::Value::String(fee.package.unwrap_or_default()),
+        );
+        data.insert(
+            "strap_line".into(),
+            serde_json::Value::String(fee.strap_line.unwrap_or_default()),
+        );
+        data.insert(
+            "staff_name".into(),
+            serde_json::Value::String(fee.staff_name.unwrap_or_default()),
+        );
+        data.insert(
+            "staff_email".into(),
+            serde_json::Value::String(fee.staff_email.unwrap_or_default()),
+        );
+        data.insert(
+            "staff_phone".into(),
+            serde_json::Value::String(fee.staff_phone.unwrap_or_default()),
+        );
+        data.insert(
+            "staff_position".into(),
+            serde_json::Value::String(fee.staff_position.unwrap_or_default()),
+        );
+        data.insert(
+            "revisions".into(),
+            serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])),
+        );
 
         let data_value = serde_json::Value::Object(data);
 
@@ -558,8 +716,14 @@ impl DatabaseClient {
         let mut bindings = serde_json::Map::new();
         bindings.insert("data".into(), data_value);
         bindings.insert("project_key".into(), serde_json::Value::String(project_key));
-        bindings.insert("company_id".into(), serde_json::Value::String(fee.company_id));
-        bindings.insert("contact_id".into(), serde_json::Value::String(fee.contact_id));
+        bindings.insert(
+            "company_id".into(),
+            serde_json::Value::String(fee.company_id),
+        );
+        bindings.insert(
+            "contact_id".into(),
+            serde_json::Value::String(fee.contact_id),
+        );
 
         info!("Executing fee update query (parameterized)");
 
@@ -572,11 +736,11 @@ impl DatabaseClient {
                     warn!("Update query returned empty result set");
                 }
                 Ok(fees.pop())
-            },
+            }
             Err(e) => {
                 error!("Failed to parse update response: {}", e);
                 Err(e)
-            },
+            }
         }
     }
 
@@ -596,23 +760,42 @@ impl DatabaseClient {
 
     /// Update only the pricing-related fields of a fee.
     /// Uses MERGE to update only specified fields without affecting others.
-    pub async fn update_fee_pricing(&self, id: &str, pricing: super::PricingUpdate) -> Result<Option<Fee>, Error> {
-        info!("DatabaseClient::update_fee_pricing called with id: '{}'", id);
+    pub async fn update_fee_pricing(
+        &self,
+        id: &str,
+        pricing: super::PricingUpdate,
+    ) -> Result<Option<Fee>, Error> {
+        info!(
+            "DatabaseClient::update_fee_pricing called with id: '{}'",
+            id
+        );
 
         // Build a dynamic update object with only non-None fields
         let mut update_obj = serde_json::Map::new();
 
         if let Some(ref p) = pricing.pricing {
-            update_obj.insert("pricing".to_string(), serde_json::to_value(p).unwrap_or(serde_json::Value::Null));
+            update_obj.insert(
+                "pricing".to_string(),
+                serde_json::to_value(p).unwrap_or(serde_json::Value::Null),
+            );
         }
         if let Some(ref items) = pricing.post_contract_items {
-            update_obj.insert("post_contract_items".to_string(), serde_json::to_value(items).unwrap_or(serde_json::Value::Null));
+            update_obj.insert(
+                "post_contract_items".to_string(),
+                serde_json::to_value(items).unwrap_or(serde_json::Value::Null),
+            );
         }
         if let Some(ref costs) = pricing.reimbursable_costs {
-            update_obj.insert("reimbursable_costs".to_string(), serde_json::to_value(costs).unwrap_or(serde_json::Value::Null));
+            update_obj.insert(
+                "reimbursable_costs".to_string(),
+                serde_json::to_value(costs).unwrap_or(serde_json::Value::Null),
+            );
         }
         if let Some(ref schedule) = pricing.payment_schedule {
-            update_obj.insert("payment_schedule".to_string(), serde_json::to_value(schedule).unwrap_or(serde_json::Value::Null));
+            update_obj.insert(
+                "payment_schedule".to_string(),
+                serde_json::to_value(schedule).unwrap_or(serde_json::Value::Null),
+            );
         }
 
         let update_value = serde_json::Value::Object(update_obj);
@@ -634,11 +817,11 @@ impl DatabaseClient {
             Ok(mut fees) => {
                 info!("Pricing update returned {} records", fees.len());
                 Ok(fees.pop())
-            },
+            }
             Err(e) => {
                 error!("Failed to parse pricing update response: {}", e);
                 Err(e)
-            },
+            }
         }
     }
 
@@ -646,13 +829,21 @@ impl DatabaseClient {
 
     /// Delete multiple records from a table by their IDs.
     /// Table name is validated against an allowlist. IDs are parameterized.
-    pub async fn batch_delete(&self, table: &str, ids: &[String]) -> Result<Vec<serde_json::Value>, Error> {
+    pub async fn batch_delete(
+        &self,
+        table: &str,
+        ids: &[String],
+    ) -> Result<Vec<serde_json::Value>, Error> {
         Self::validate_table_name(table)?;
         if ids.is_empty() {
             return Ok(vec![]);
         }
 
-        let omit_clause = if table == "fee" { " OMIT import_source" } else { "" };
+        let omit_clause = if table == "fee" {
+            " OMIT import_source"
+        } else {
+            ""
+        };
         let query = format!(
             "SELECT *{omit_clause} FROM {table} WHERE meta::id(id) IN $ids; \
              DELETE FROM {table} WHERE meta::id(id) IN $ids;",
@@ -668,7 +859,12 @@ impl DatabaseClient {
 
     /// Update the status field of multiple records in a table.
     /// Table name is validated against an allowlist. Status is parameterized.
-    pub async fn batch_update_status(&self, table: &str, ids: &[String], status: &str) -> Result<usize, Error> {
+    pub async fn batch_update_status(
+        &self,
+        table: &str,
+        ids: &[String],
+        status: &str,
+    ) -> Result<usize, Error> {
         Self::validate_table_name(table)?;
         if ids.is_empty() {
             return Ok(0);
@@ -681,8 +877,14 @@ impl DatabaseClient {
         );
 
         let mut bindings = serde_json::Map::new();
-        bindings.insert("status".into(), serde_json::Value::String(status.to_string()));
-        bindings.insert("ids".into(), serde_json::to_value(ids).unwrap_or(serde_json::json!([])));
+        bindings.insert(
+            "status".into(),
+            serde_json::Value::String(status.to_string()),
+        );
+        bindings.insert(
+            "ids".into(),
+            serde_json::to_value(ids).unwrap_or(serde_json::json!([])),
+        );
 
         let mut response = self.query_bind_map(&query, bindings).await?;
         let result: Vec<serde_json::Value> = response.take(0)?;
@@ -731,7 +933,9 @@ impl DatabaseClient {
 
         info!("Executing country search query with parameterized binding");
 
-        let mut response = self.query_bind(search_query, ("search", query_str.to_string())).await?;
+        let mut response = self
+            .query_bind(search_query, ("search", query_str.to_string()))
+            .await?;
         response.take(0)
     }
 }

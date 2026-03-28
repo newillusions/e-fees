@@ -41,7 +41,10 @@ use super::AppState;
 /// // Same result - searches dial_code field too
 /// ```
 #[tauri::command]
-pub async fn search_countries(query: String, state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+pub async fn search_countries(
+    query: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<serde_json::Value>, String> {
     info!("Searching countries with query: {}", query);
 
     let manager_clone = {
@@ -86,7 +89,10 @@ pub async fn search_countries(query: String, state: State<'_, AppState>) -> Resu
 /// // Returns: ["Dubai Marina", "Downtown Dubai", "Business Bay", ...]
 /// ```
 #[tauri::command]
-pub async fn get_area_suggestions(country: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+pub async fn get_area_suggestions(
+    country: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
     info!("Getting area suggestions for country: {}", country);
 
     let manager_clone = {
@@ -166,7 +172,10 @@ pub async fn get_all_cities(state: State<'_, AppState>) -> Result<Vec<String>, S
 /// // Returns: ["Dubai", "Abu Dhabi", "Sharjah", ...]
 /// ```
 #[tauri::command]
-pub async fn get_city_suggestions(country: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+pub async fn get_city_suggestions(
+    country: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
     info!("Getting city suggestions for country: {}", country);
 
     let manager_clone = {

@@ -117,7 +117,9 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
     }; // Lock is automatically dropped here when manager goes out of scope
 
     // Use efficient COUNT queries instead of loading all records
-    let counts = manager_clone.get_entity_counts().await
+    let counts = manager_clone
+        .get_entity_counts()
+        .await
         .map_err(|e| format!("Failed to get entity counts: {}", e))?;
 
     let stats = serde_json::json!({
@@ -157,7 +159,10 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
 /// console.log('Project fields:', schema.fields);
 /// ```
 #[tauri::command]
-pub async fn get_table_schema(table_name: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn get_table_schema(
+    table_name: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     info!("Getting schema for table: {}", table_name);
 
     let manager_clone = {
@@ -172,7 +177,10 @@ pub async fn get_table_schema(table_name: String, state: State<'_, AppState>) ->
         }
         Err(e) => {
             error!("Failed to get schema for table {}: {}", table_name, e);
-            Err(format!("Failed to get schema for table {}: {}", table_name, e))
+            Err(format!(
+                "Failed to get schema for table {}: {}",
+                table_name, e
+            ))
         }
     }
 }
@@ -205,11 +213,19 @@ pub async fn position_window_4k(window: tauri::Window) -> Result<String, String>
     info!("Positioning window for 4K monitor");
 
     // Set position to right half of 4K screen
-    window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x: 1920, y: 0 }))
+    window
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+            x: 1920,
+            y: 0,
+        }))
         .map_err(|e| format!("Failed to set position: {}", e))?;
 
     // Set size to half width, full height
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 1920, height: 2160 }))
+    window
+        .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: 1920,
+            height: 2160,
+        }))
         .map_err(|e| format!("Failed to set size: {}", e))?;
 
     info!("Window positioned successfully on right half of 4K monitor");
@@ -243,7 +259,10 @@ pub async fn position_window_4k(window: tauri::Window) -> Result<String, String>
 /// console.log('Record data:', record);
 /// ```
 #[tauri::command]
-pub async fn investigate_record(record_id: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn investigate_record(
+    record_id: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     info!("Investigating record: {}", record_id);
 
     let manager_clone = {
@@ -323,7 +342,7 @@ pub async fn log_message(
     level: String,
     target: String,
     message: String,
-    context: Option<String>
+    context: Option<String>,
 ) -> Result<(), String> {
     // Parse log level
     let log_level = match level.to_lowercase().as_str() {
@@ -378,7 +397,13 @@ fn write_updater_log(level: &str, message: &str) -> Result<(), std::io::Error> {
         .open(log_path)?;
 
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-    writeln!(file, "[{}] [{}] {}", timestamp, level.to_uppercase(), message)?;
+    writeln!(
+        file,
+        "[{}] [{}] {}",
+        timestamp,
+        level.to_uppercase(),
+        message
+    )?;
     file.flush()?;
 
     Ok(())

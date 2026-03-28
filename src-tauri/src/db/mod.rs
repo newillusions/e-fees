@@ -3,36 +3,51 @@
 //! This module provides comprehensive database connectivity and operations for the
 //! Fee Proposal Management System using SurrealDB as the backend database.
 
-pub mod config;
 pub mod client;
-pub mod types;
-pub mod utils;
-pub mod security;
-pub mod secure_operations;
+pub mod config;
 pub mod operations;
+pub mod secure_operations;
+pub mod security;
 #[cfg(test)]
 mod tests;
+pub mod types;
+pub mod utils;
 
 // Re-export public types
-pub use config::{DatabaseConfig, ConnectionStatus, HEARTBEAT_INTERVAL_SECS};
 pub use client::DatabaseClient;
+pub use config::{ConnectionStatus, DatabaseConfig, HEARTBEAT_INTERVAL_SECS};
 pub use types::{
-    Project, ProjectNumber, TimeStamps, NewProject,
-    Company, CompanyCreate,
-    Contact, ContactCreate,
-    Fee, FeeCreate, FeeUpdate, Revision, PricingUpdate,
-    PaginatedResponse, EntityCounts,
-    ActivityLog, ActivityLogCreate,
+    ActivityLog,
+    ActivityLogCreate,
+    Company,
+    CompanyCreate,
+    Contact,
+    ContactCreate,
+    Discipline,
+    EntityCounts,
+    Fee,
+    FeeCreate,
+    FeeUpdate,
+    NewProject,
+    PaginatedResponse,
     // Pricing types (used by import wizard)
-    PricingBreakdown, PricingConfig, Discipline, Stage, PricingCell,
+    PricingBreakdown,
+    PricingCell,
+    PricingConfig,
+    PricingUpdate,
+    Project,
+    ProjectNumber,
+    Revision,
+    Stage,
+    TimeStamps,
 };
 
+use log::{error, info, warn};
 use std::sync::Arc;
 use std::time::Duration;
 use surrealdb::Error;
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use log::{error, info, warn};
 
 /// Database manager handling connection lifecycle and operations.
 #[derive(Clone)]
@@ -71,8 +86,20 @@ impl DatabaseManager {
         }
     }
 
-    pub async fn reconfigure(&mut self, url: String, namespace: String, database: String, username: String, password: String) -> Result<(), String> {
-        if url.is_empty() || namespace.is_empty() || database.is_empty() || username.is_empty() || password.is_empty() {
+    pub async fn reconfigure(
+        &mut self,
+        url: String,
+        namespace: String,
+        database: String,
+        username: String,
+        password: String,
+    ) -> Result<(), String> {
+        if url.is_empty()
+            || namespace.is_empty()
+            || database.is_empty()
+            || username.is_empty()
+            || password.is_empty()
+        {
             return Err("All database configuration fields are required".to_string());
         }
 
@@ -87,7 +114,11 @@ impl DatabaseManager {
         };
 
         self.client = None;
-        self.update_status(false, Some("Database reconfigured. Connection will be attempted automatically.".to_string())).await;
+        self.update_status(
+            false,
+            Some("Database reconfigured. Connection will be attempted automatically.".to_string()),
+        )
+        .await;
         self.config.log_info();
 
         Ok(())
@@ -100,7 +131,8 @@ impl DatabaseManager {
 
         // Close existing connection
         self.client = None;
-        self.update_status(false, Some("Reconnecting...".to_string())).await;
+        self.update_status(false, Some("Reconnecting...".to_string()))
+            .await;
 
         // Attempt to reconnect
         match self.initialize().await {
@@ -130,7 +162,8 @@ impl DatabaseManager {
                         }
                         Err(e) => {
                             warn!("Database health check failed: {}", e);
-                            self.update_status(false, Some(format!("Health check failed: {}", e))).await;
+                            self.update_status(false, Some(format!("Health check failed: {}", e)))
+                                .await;
                         }
                     }
                 }
@@ -141,7 +174,8 @@ impl DatabaseManager {
                 error!("{}", error_msg);
 
                 let user_friendly_error = self.get_user_friendly_error(&e);
-                self.update_status(false, Some(user_friendly_error.clone())).await;
+                self.update_status(false, Some(user_friendly_error.clone()))
+                    .await;
                 Err(e)
             }
         }
@@ -154,9 +188,15 @@ impl DatabaseManager {
         } else if error_str.contains("Connection refused") {
             format!("Connection refused by SurrealDB server at {}. Please check if SurrealDB is running.", self.config.url)
         } else if error_str.contains("Authentication failed") {
-            format!("Authentication failed. Please check username '{}' and password are correct.", self.config.username)
+            format!(
+                "Authentication failed. Please check username '{}' and password are correct.",
+                self.config.username
+            )
         } else if error_str.contains("Namespace") || error_str.contains("Database") {
-            format!("Failed to select namespace '{}' or database '{}'. Please check if they exist.", self.config.namespace, self.config.database)
+            format!(
+                "Failed to select namespace '{}' or database '{}'. Please check if they exist.",
+                self.config.namespace, self.config.database
+            )
         } else {
             format!("Failed to establish database connection: {}", e)
         }
@@ -170,26 +210,39 @@ impl DatabaseManager {
         // Try different authentication methods
         info!("Authenticating with username: {}", self.config.username);
 
-        let db_auth_result = db.signin_database(
-            &self.config.namespace,
-            &self.config.database,
-            &self.config.username,
-            &self.config.password
-        ).await;
+        let db_auth_result = db
+            .signin_database(
+                &self.config.namespace,
+                &self.config.database,
+                &self.config.username,
+                &self.config.password,
+            )
+            .await;
 
         if let Err(db_err) = db_auth_result {
-            warn!("Database authentication failed: {}, trying namespace authentication", db_err);
+            warn!(
+                "Database authentication failed: {}, trying namespace authentication",
+                db_err
+            );
 
-            let ns_auth_result = db.signin_namespace(
-                &self.config.namespace,
-                &self.config.username,
-                &self.config.password
-            ).await;
+            let ns_auth_result = db
+                .signin_namespace(
+                    &self.config.namespace,
+                    &self.config.username,
+                    &self.config.password,
+                )
+                .await;
 
             if let Err(ns_err) = ns_auth_result {
-                warn!("Namespace authentication failed: {}, trying root authentication", ns_err);
+                warn!(
+                    "Namespace authentication failed: {}, trying root authentication",
+                    ns_err
+                );
 
-                match db.signin_root(&self.config.username, &self.config.password).await {
+                match db
+                    .signin_root(&self.config.username, &self.config.password)
+                    .await
+                {
                     Ok(_) => info!("Successfully authenticated with root-level credentials"),
                     Err(root_err) => {
                         error!("All authentication methods failed. Database: {}, Namespace: {}, Root: {}",
@@ -205,8 +258,12 @@ impl DatabaseManager {
         }
 
         // Select namespace and database
-        info!("Selecting namespace '{}' and database '{}'", self.config.namespace, self.config.database);
-        db.use_ns_db(&self.config.namespace, &self.config.database).await?;
+        info!(
+            "Selecting namespace '{}' and database '{}'",
+            self.config.namespace, self.config.database
+        );
+        db.use_ns_db(&self.config.namespace, &self.config.database)
+            .await?;
 
         // Debug: Check permissions
         self.check_database_info(&db).await;
@@ -229,10 +286,10 @@ impl DatabaseManager {
                                 info!("Available tables: {}", tables);
                             }
                         }
-                    },
+                    }
                     Err(e) => error!("Failed to parse database info: {}", e),
                 }
-            },
+            }
             Err(e) => error!("INFO FOR DB query failed: {}", e),
         }
     }
@@ -261,16 +318,17 @@ impl DatabaseManager {
         self.status.read().await.clone()
     }
 
-    pub async fn start_heartbeat(status: Arc<RwLock<ConnectionStatus>>, manager: Arc<RwLock<DatabaseManager>>) {
+    pub async fn start_heartbeat(
+        status: Arc<RwLock<ConnectionStatus>>,
+        manager: Arc<RwLock<DatabaseManager>>,
+    ) {
         let mut interval = interval(Duration::from_secs(HEARTBEAT_INTERVAL_SECS));
 
         tauri::async_runtime::spawn(async move {
             loop {
                 interval.tick().await;
 
-                let manager_clone = {
-                    manager.read().await.clone()
-                };
+                let manager_clone = { manager.read().await.clone() };
 
                 let is_connected = manager_clone.check_connection().await;
 
@@ -295,7 +353,9 @@ impl DatabaseManager {
     /// Get a reference to the database client, returning an error if not connected.
     /// This is the safe way to access the client without using .unwrap().
     fn get_client(&self) -> Result<&DatabaseClient, Error> {
-        self.client.as_ref().ok_or_else(|| self.invalid_request_error("No database connection"))
+        self.client
+            .as_ref()
+            .ok_or_else(|| self.invalid_request_error("No database connection"))
     }
 
     fn invalid_request_error(&self, message: &str) -> Error {
@@ -306,14 +366,22 @@ impl DatabaseManager {
         Error::thrown(format!("Failed to {}", operation))
     }
 
-    async fn paginate<T>(&self, table: &str, page: usize, page_size: usize) -> Result<PaginatedResponse<T>, Error>
+    async fn paginate<T>(
+        &self,
+        table: &str,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PaginatedResponse<T>, Error>
     where
         T: serde::de::DeserializeOwned + Clone + surrealdb::types::SurrealValue,
     {
         let client = self.get_client()?;
 
         let offset = (page - 1) * page_size;
-        info!("Fetching {} page {} (offset: {}, limit: {})", table, page, offset, page_size);
+        info!(
+            "Fetching {} page {} (offset: {}, limit: {})",
+            table, page, offset, page_size
+        );
 
         // Execute count and data fetch in a single query for better performance
         // Statement 0: count, Statement 1: paginated data
@@ -325,12 +393,20 @@ impl DatabaseManager {
 
         // Extract count from statement 0
         let count_result: Option<serde_json::Value> = response.take(0)?;
-        let total = count_result.and_then(|v| v.get("count").and_then(|c| c.as_u64())).unwrap_or(0) as usize;
+        let total = count_result
+            .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+            .unwrap_or(0) as usize;
 
         // Extract items from statement 1
         let items: Vec<T> = response.take(1)?;
 
-        info!("Fetched {} {} for page {} (total: {})", items.len(), table, page, total);
+        info!(
+            "Fetched {} {} for page {} (total: {})",
+            items.len(),
+            table,
+            page,
+            total
+        );
         Ok(PaginatedResponse::new(items, total, page, page_size))
     }
 
@@ -346,7 +422,12 @@ impl DatabaseManager {
         let client = self.get_client()?;
 
         // SEC-C1: Validate ID to prevent injection (table is always hardcoded internally)
-        if id.is_empty() || id.len() > 100 || !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        if id.is_empty()
+            || id.len() > 100
+            || !id
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        {
             return Err(self.invalid_request_error("Invalid record ID format"));
         }
 

@@ -10,8 +10,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::db::DatabaseConfig;
     use crate::db::security::InputValidator;
+    use crate::db::DatabaseConfig;
     use serial_test::serial;
     use std::env;
 
@@ -114,7 +114,10 @@ mod tests {
         let cases = vec![
             ("O'Brien", "O''Brien"),
             ("Test ' OR '1'='1", "Test '' OR ''1''=''1"),
-            ("Robert'); DROP TABLE students;--", "Robert''); DROP TABLE students;--"),
+            (
+                "Robert'); DROP TABLE students;--",
+                "Robert''); DROP TABLE students;--",
+            ),
             ("Normal text", "Normal text"),
             ("", ""),
         ];
@@ -260,7 +263,10 @@ mod tests {
     #[test]
     fn test_extract_thing_id_from_string() {
         // Test string formats
-        assert_eq!(extract_id_string("contacts:john_doe"), Some("john_doe".to_string()));
+        assert_eq!(
+            extract_id_string("contacts:john_doe"),
+            Some("john_doe".to_string())
+        );
         assert_eq!(extract_id_string("company:ABC"), Some("ABC".to_string()));
         assert_eq!(extract_id_string("invalid"), None);
         assert_eq!(extract_id_string(""), None);
@@ -318,7 +324,8 @@ mod tests {
             return Err("Invalid format".to_string());
         }
 
-        let year = parts[0].parse::<u8>()
+        let year = parts[0]
+            .parse::<u8>()
             .map_err(|_| "Invalid year".to_string())?;
 
         let country_and_seq = parts[1];
@@ -326,10 +333,12 @@ mod tests {
             return Err("Invalid country/sequence length".to_string());
         }
 
-        let country_code = country_and_seq[..3].parse::<u16>()
+        let country_code = country_and_seq[..3]
+            .parse::<u16>()
             .map_err(|_| "Invalid country code".to_string())?;
 
-        let sequence = country_and_seq[3..].parse::<u8>()
+        let sequence = country_and_seq[3..]
+            .parse::<u8>()
             .map_err(|_| "Invalid sequence".to_string())?;
 
         Ok(ParsedProjectNumber {
@@ -386,7 +395,8 @@ mod tests {
     }
 
     fn is_valid_email(email: &str) -> bool {
-        let pattern = regex::Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+        let pattern =
+            regex::Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
         pattern.is_match(email)
     }
 
@@ -450,15 +460,22 @@ mod tests {
             // SQL injection attempts should be rejected
             assert!(InputValidator::validate_project_name("'; DROP TABLE projects;--").is_err());
             assert!(InputValidator::validate_project_name("Project' OR '1'='1").is_err());
-            assert!(InputValidator::validate_project_name("Test\"; DELETE FROM projects;").is_err());
+            assert!(
+                InputValidator::validate_project_name("Test\"; DELETE FROM projects;").is_err()
+            );
             assert!(InputValidator::validate_project_name("Project`; DROP TABLE users;`").is_err());
         }
 
         #[test]
         fn test_validate_project_name_xss_attempts() {
             // XSS injection attempts should be rejected
-            assert!(InputValidator::validate_project_name("<script>alert('XSS')</script>").is_err());
-            assert!(InputValidator::validate_project_name("Project<img src=x onerror=alert(1)>").is_err());
+            assert!(
+                InputValidator::validate_project_name("<script>alert('XSS')</script>").is_err()
+            );
+            assert!(
+                InputValidator::validate_project_name("Project<img src=x onerror=alert(1)>")
+                    .is_err()
+            );
         }
 
         // ----- Email Validation -----
@@ -483,7 +500,9 @@ mod tests {
         fn test_validate_email_sql_injection() {
             // SQL injection in email fields
             assert!(InputValidator::validate_email("test'@example.com").is_err());
-            assert!(InputValidator::validate_email("test'; DROP TABLE users;--@example.com").is_err());
+            assert!(
+                InputValidator::validate_email("test'; DROP TABLE users;--@example.com").is_err()
+            );
         }
 
         // ----- Phone Validation -----
@@ -500,7 +519,8 @@ mod tests {
         fn test_validate_phone_invalid() {
             assert!(InputValidator::validate_phone("").is_err());
             assert!(InputValidator::validate_phone("123").is_err()); // Too short
-            assert!(InputValidator::validate_phone("123456789012345678901").is_err()); // Too long
+            assert!(InputValidator::validate_phone("123456789012345678901").is_err());
+            // Too long
         }
 
         #[test]
@@ -530,7 +550,9 @@ mod tests {
 
         #[test]
         fn test_validate_project_number_sql_injection() {
-            assert!(InputValidator::validate_project_number("25'; DROP TABLE projects;--").is_err());
+            assert!(
+                InputValidator::validate_project_number("25'; DROP TABLE projects;--").is_err()
+            );
             assert!(InputValidator::validate_project_number("' OR 1=1--").is_err());
         }
 
@@ -538,7 +560,20 @@ mod tests {
 
         #[test]
         fn test_validate_status_valid() {
-            let allowed = &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"];
+            let allowed = &[
+                "Lead",
+                "RFP",
+                "Submitted",
+                "Awarded",
+                "Design",
+                "Construction",
+                "Completed",
+                "Lost",
+                "No Response",
+                "Cancelled",
+                "On Hold",
+                "Superseded",
+            ];
             assert!(InputValidator::validate_status("Lead", allowed).is_ok());
             assert!(InputValidator::validate_status("RFP", allowed).is_ok());
             assert!(InputValidator::validate_status("Submitted", allowed).is_ok());
@@ -555,7 +590,20 @@ mod tests {
 
         #[test]
         fn test_validate_status_invalid() {
-            let allowed = &["Lead", "RFP", "Submitted", "Awarded", "Design", "Construction", "Completed", "Lost", "No Response", "Cancelled", "On Hold", "Superseded"];
+            let allowed = &[
+                "Lead",
+                "RFP",
+                "Submitted",
+                "Awarded",
+                "Design",
+                "Construction",
+                "Completed",
+                "Lost",
+                "No Response",
+                "Cancelled",
+                "On Hold",
+                "Superseded",
+            ];
             assert!(InputValidator::validate_status("InvalidStatus", allowed).is_err());
             assert!(InputValidator::validate_status("", allowed).is_err());
             // Old statuses should no longer be valid
@@ -577,7 +625,8 @@ mod tests {
         fn test_validate_text_field_valid() {
             assert!(InputValidator::validate_text_field("name", "John", 1, 50).is_ok());
             assert!(InputValidator::validate_text_field("name", "A", 1, 50).is_ok()); // Min length
-            assert!(InputValidator::validate_text_field("name", &"A".repeat(50), 1, 50).is_ok()); // Max length
+            assert!(InputValidator::validate_text_field("name", &"A".repeat(50), 1, 50).is_ok());
+            // Max length
         }
 
         #[test]
@@ -619,21 +668,42 @@ mod tests {
 
         #[test]
         fn test_sanitize_for_display() {
-            assert_eq!(InputValidator::sanitize_for_display("Normal text"), "Normal text");
-            assert_eq!(InputValidator::sanitize_for_display("Test-Project_123"), "Test-Project_123");
-            assert_eq!(InputValidator::sanitize_for_display("Client & Co."), "Client & Co.");
+            assert_eq!(
+                InputValidator::sanitize_for_display("Normal text"),
+                "Normal text"
+            );
+            assert_eq!(
+                InputValidator::sanitize_for_display("Test-Project_123"),
+                "Test-Project_123"
+            );
+            assert_eq!(
+                InputValidator::sanitize_for_display("Client & Co."),
+                "Client & Co."
+            );
             // Dangerous characters should be removed (quotes, angle brackets, semicolons)
-            assert_eq!(InputValidator::sanitize_for_display("test'; DROP TABLE--"), "test DROP TABLE--");
+            assert_eq!(
+                InputValidator::sanitize_for_display("test'; DROP TABLE--"),
+                "test DROP TABLE--"
+            );
             // Parentheses are allowed in sanitized output
-            assert_eq!(InputValidator::sanitize_for_display("<script>alert(1)</script>"), "scriptalert(1)script");
+            assert_eq!(
+                InputValidator::sanitize_for_display("<script>alert(1)</script>"),
+                "scriptalert(1)script"
+            );
         }
 
         #[test]
         fn test_escape_single_quotes() {
             assert_eq!(InputValidator::escape_single_quotes("test"), "test");
             assert_eq!(InputValidator::escape_single_quotes("O'Brien"), "O''Brien");
-            assert_eq!(InputValidator::escape_single_quotes("'; DROP TABLE--"), "''; DROP TABLE--");
-            assert_eq!(InputValidator::escape_single_quotes("' OR '1'='1"), "'' OR ''1''=''1");
+            assert_eq!(
+                InputValidator::escape_single_quotes("'; DROP TABLE--"),
+                "''; DROP TABLE--"
+            );
+            assert_eq!(
+                InputValidator::escape_single_quotes("' OR '1'='1"),
+                "'' OR ''1''=''1"
+            );
         }
     }
 
@@ -664,7 +734,11 @@ mod tests {
 
                 // ID validation should also reject
                 let id_result = InputValidator::validate_id(pattern);
-                assert!(id_result.is_err(), "ID validation should reject: {}", pattern);
+                assert!(
+                    id_result.is_err(),
+                    "ID validation should reject: {}",
+                    pattern
+                );
             }
         }
 
@@ -673,27 +747,31 @@ mod tests {
             // URL-encoded and hex-encoded attacks
             let encoded_patterns = vec![
                 "test%27%20OR%201=1--", // URL encoded
-                "test%00", // Null byte
+                "test%00",              // Null byte
             ];
 
             for pattern in encoded_patterns {
                 let result = InputValidator::validate_project_name(pattern);
-                assert!(result.is_err(), "Encoded pattern should be rejected: {}", pattern);
+                assert!(
+                    result.is_err(),
+                    "Encoded pattern should be rejected: {}",
+                    pattern
+                );
             }
         }
 
         #[test]
         fn test_comment_based_injection() {
-            let comment_patterns = vec![
-                "test/**/OR/**/1=1",
-                "test--comment",
-                "test#comment",
-            ];
+            let comment_patterns = vec!["test/**/OR/**/1=1", "test--comment", "test#comment"];
 
             for pattern in comment_patterns {
                 // These contain special characters that should be rejected
                 let result = InputValidator::validate_id(pattern);
-                assert!(result.is_err(), "Comment pattern should be rejected: {}", pattern);
+                assert!(
+                    result.is_err(),
+                    "Comment pattern should be rejected: {}",
+                    pattern
+                );
             }
         }
 
@@ -703,7 +781,10 @@ mod tests {
             let attacks = vec![
                 ("'; DROP TABLE--", "''; DROP TABLE--"),
                 ("test' OR '1'='1", "test'' OR ''1''=''1"),
-                ("Robert'); DROP TABLE students;--", "Robert''); DROP TABLE students;--"),
+                (
+                    "Robert'); DROP TABLE students;--",
+                    "Robert''); DROP TABLE students;--",
+                ),
             ];
 
             for (input, expected_escaped) in attacks {
@@ -732,7 +813,11 @@ mod tests {
 
             for pattern in xss_patterns {
                 let result = InputValidator::validate_project_name(pattern);
-                assert!(result.is_err(), "XSS pattern should be rejected: {}", pattern);
+                assert!(
+                    result.is_err(),
+                    "XSS pattern should be rejected: {}",
+                    pattern
+                );
             }
         }
 
@@ -746,7 +831,11 @@ mod tests {
 
             for pattern in xss_patterns {
                 let result = InputValidator::validate_project_name(pattern);
-                assert!(result.is_err(), "XSS event handler should be rejected: {}", pattern);
+                assert!(
+                    result.is_err(),
+                    "XSS event handler should be rejected: {}",
+                    pattern
+                );
             }
         }
 
@@ -793,30 +882,31 @@ mod tests {
             assert!(InputValidator::validate_project_name(&over_max).is_err());
         }
 
-    // ============================================================================
-    // SURREALDB VALUE SERIALIZATION TEST
-    // ============================================================================
+        // ============================================================================
+        // SURREALDB VALUE SERIALIZATION TEST
+        // ============================================================================
 
-    #[test]
-    fn test_dbvalue_serialization_format() {
-        use surrealdb_types::Value as DbValue;
-        use surrealdb_types::Number;
+        #[test]
+        fn test_dbvalue_serialization_format() {
+            use surrealdb_types::Number;
+            use surrealdb_types::Value as DbValue;
 
-        // Check how DbValue serializes to JSON string
-        let int_val = DbValue::Number(Number::Int(150000));
-        let json = serde_json::to_string(&int_val).unwrap();
-        println!("surrealdb_types Int serializes as: {}", json);
+            // Check how DbValue serializes to JSON string
+            let int_val = DbValue::Number(Number::Int(150000));
+            let json = serde_json::to_string(&int_val).unwrap();
+            println!("surrealdb_types Int serializes as: {}", json);
 
-        // Check surrealdb::types::Value
-        use surrealdb::types::Value as SdkValue;
-        let sdk_int = SdkValue::Number(Number::Int(150000));
-        let json = serde_json::to_string(&sdk_int).unwrap();
-        println!("surrealdb::types Int serializes as: {}", json);
+            // Check surrealdb::types::Value
+            use surrealdb::types::Value as SdkValue;
+            let sdk_int = SdkValue::Number(Number::Int(150000));
+            let json = serde_json::to_string(&sdk_int).unwrap();
+            println!("surrealdb::types Int serializes as: {}", json);
 
-        // Check if they're the same type
-        let same: bool = std::any::TypeId::of::<DbValue>() == std::any::TypeId::of::<SdkValue>();
-        println!("Same type: {}", same);
-    }
+            // Check if they're the same type
+            let same: bool =
+                std::any::TypeId::of::<DbValue>() == std::any::TypeId::of::<SdkValue>();
+            println!("Same type: {}", same);
+        }
     }
 
     // ============================================================================
@@ -826,26 +916,41 @@ mod tests {
     #[test]
     fn test_normalize_ws_url_appends_rpc_when_missing() {
         use crate::db::client::normalize_ws_url;
-        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000"), "ws://10.0.23.11:8000/rpc");
+        assert_eq!(
+            normalize_ws_url("ws://10.0.23.11:8000"),
+            "ws://10.0.23.11:8000/rpc"
+        );
     }
 
     #[test]
     fn test_normalize_ws_url_preserves_existing_rpc() {
         use crate::db::client::normalize_ws_url;
-        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000/rpc"), "ws://10.0.23.11:8000/rpc");
+        assert_eq!(
+            normalize_ws_url("ws://10.0.23.11:8000/rpc"),
+            "ws://10.0.23.11:8000/rpc"
+        );
     }
 
     #[test]
     fn test_normalize_ws_url_handles_trailing_slash() {
         use crate::db::client::normalize_ws_url;
-        assert_eq!(normalize_ws_url("ws://10.0.23.11:8000/"), "ws://10.0.23.11:8000/rpc");
+        assert_eq!(
+            normalize_ws_url("ws://10.0.23.11:8000/"),
+            "ws://10.0.23.11:8000/rpc"
+        );
     }
 
     #[test]
     fn test_normalize_ws_url_handles_wss() {
         use crate::db::client::normalize_ws_url;
-        assert_eq!(normalize_ws_url("wss://prod.example.com:8000"), "wss://prod.example.com:8000/rpc");
-        assert_eq!(normalize_ws_url("wss://prod.example.com:8000/rpc"), "wss://prod.example.com:8000/rpc");
+        assert_eq!(
+            normalize_ws_url("wss://prod.example.com:8000"),
+            "wss://prod.example.com:8000/rpc"
+        );
+        assert_eq!(
+            normalize_ws_url("wss://prod.example.com:8000/rpc"),
+            "wss://prod.example.com:8000/rpc"
+        );
     }
 
     // ============================================================================
@@ -856,26 +961,33 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_prod_fee_deserialization() {
-        use surrealdb::engine::remote::ws::{Ws, Client};
-        use surrealdb::Surreal;
-        use surrealdb::opt::auth::Root;
         use crate::db::types::Fee;
+        use surrealdb::engine::remote::ws::{Client, Ws};
+        use surrealdb::opt::auth::Root;
+        use surrealdb::Surreal;
 
         // Connect to PROD
-        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000").await
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000")
+            .await
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
             username: "martin".to_string(),
             password: "th38ret3ch".to_string(),
-        }).await.expect("Failed to sign in");
+        })
+        .await
+        .expect("Failed to sign in");
 
-        db.use_ns("emittiv").use_db("projects").await
+        db.use_ns("emittiv")
+            .use_db("projects")
+            .await
             .expect("Failed to set ns/db");
 
         // Run the same query as get_fees()
-        let mut response = db.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
-            .await.expect("Query failed");
+        let mut response = db
+            .query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
+            .await
+            .expect("Query failed");
 
         let result: Result<Vec<Fee>, _> = response.take(0);
         match result {
@@ -887,8 +999,11 @@ mod tests {
                 for fee in &fees {
                     if fee.pricing.is_some() {
                         let pricing_json = fee.pricing_typed();
-                        println!("Fee {:?}: pricing_typed() = {:?}",
-                            fee.id, pricing_json.is_some());
+                        println!(
+                            "Fee {:?}: pricing_typed() = {:?}",
+                            fee.id,
+                            pricing_json.is_some()
+                        );
 
                         // Verify serde serialization works (this is what Tauri IPC sends to frontend)
                         let serialized = serde_json::to_string(&fee).unwrap();
@@ -897,11 +1012,20 @@ mod tests {
                         // Verify pricing appears as plain JSON, not tagged enum
                         if let Some(ref p) = fee.pricing {
                             let pricing_json = crate::db::types::dbvalue_to_json(p);
-                            println!("Pricing as plain JSON: {}", serde_json::to_string(&pricing_json).unwrap());
+                            println!(
+                                "Pricing as plain JSON: {}",
+                                serde_json::to_string(&pricing_json).unwrap()
+                            );
                             // Should NOT contain "Number" or "Int" wrapper keys
                             let s = serde_json::to_string(&pricing_json).unwrap();
-                            assert!(!s.contains("\"Number\""), "Pricing JSON should be plain, not tagged");
-                            assert!(!s.contains("\"Int\""), "Pricing JSON should be plain, not tagged");
+                            assert!(
+                                !s.contains("\"Number\""),
+                                "Pricing JSON should be plain, not tagged"
+                            );
+                            assert!(
+                                !s.contains("\"Int\""),
+                                "Pricing JSON should be plain, not tagged"
+                            );
                         }
                         break;
                     }
@@ -922,21 +1046,26 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_prod_fee_paginated() {
-        use surrealdb::engine::remote::ws::{Ws, Client};
-        use surrealdb::Surreal;
-        use surrealdb::opt::auth::Root;
         use crate::db::types::Fee;
+        use surrealdb::engine::remote::ws::{Client, Ws};
+        use surrealdb::opt::auth::Root;
+        use surrealdb::Surreal;
 
         // Connect to PROD
-        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000").await
+        let db: Surreal<Client> = Surreal::new::<Ws>("10.0.23.11:8000")
+            .await
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
             username: "martin".to_string(),
             password: "th38ret3ch".to_string(),
-        }).await.expect("Failed to sign in");
+        })
+        .await
+        .expect("Failed to sign in");
 
-        db.use_ns("emittiv").use_db("projects").await
+        db.use_ns("emittiv")
+            .use_db("projects")
+            .await
             .expect("Failed to set ns/db");
 
         // Run the EXACT same query as get_fees_page() — this is what was failing
@@ -949,8 +1078,8 @@ mod tests {
         let mut response = db.query(&query).await.expect("Query failed");
 
         // Statement 0: count
-        let count_result: Option<serde_json::Value> = response.take(0)
-            .expect("Failed to take count result");
+        let count_result: Option<serde_json::Value> =
+            response.take(0).expect("Failed to take count result");
         let total = count_result
             .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
             .unwrap_or(0);
@@ -958,32 +1087,60 @@ mod tests {
         assert!(total > 0, "Expected at least 1 fee");
 
         // Statement 1: paginated fees — THIS WAS THE FAILING LINE
-        let items: Vec<Fee> = response.take(1)
+        let items: Vec<Fee> = response
+            .take(1)
             .expect("Failed to deserialize paginated fees — this was the bug!");
-        println!("SUCCESS: Deserialized {} paginated fees from PROD", items.len());
+        println!(
+            "SUCCESS: Deserialized {} paginated fees from PROD",
+            items.len()
+        );
         assert!(!items.is_empty(), "Expected paginated results");
 
         // Verify rev field deserializes correctly
         for fee in &items {
-            println!("Fee rev={}, status={}, name={}", fee.rev, fee.status, fee.name);
+            println!(
+                "Fee rev={}, status={}, name={}",
+                fee.rev, fee.status, fee.name
+            );
         }
 
         // CRITICAL: Test Tauri IPC serialization path
         // Tauri serializes the return value to JSON. If this fails, the frontend gets an error.
-        let paginated = crate::db::types::PaginatedResponse::new(items.clone(), total as usize, 1, page_size);
+        let paginated =
+            crate::db::types::PaginatedResponse::new(items.clone(), total as usize, 1, page_size);
         match serde_json::to_string(&paginated) {
             Ok(json) => {
-                println!("SUCCESS: PaginatedResponse<Fee> serialized to JSON ({} bytes)", json.len());
+                println!(
+                    "SUCCESS: PaginatedResponse<Fee> serialized to JSON ({} bytes)",
+                    json.len()
+                );
                 // Print first fee's JSON to verify format
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json) {
-                    if let Some(first_item) = parsed.get("items").and_then(|i| i.as_array()).and_then(|a| a.first()) {
-                        println!("First fee JSON keys: {:?}", first_item.as_object().map(|o| o.keys().collect::<Vec<_>>()));
+                    if let Some(first_item) = parsed
+                        .get("items")
+                        .and_then(|i| i.as_array())
+                        .and_then(|a| a.first())
+                    {
+                        println!(
+                            "First fee JSON keys: {:?}",
+                            first_item.as_object().map(|o| o.keys().collect::<Vec<_>>())
+                        );
                         // Check the critical fields
                         println!("  id: {:?}", first_item.get("id"));
                         println!("  project_id: {:?}", first_item.get("project_id"));
                         println!("  rev: {:?}", first_item.get("rev"));
-                        println!("  pricing: {:?}", first_item.get("pricing").map(|p| if p.is_null() { "null" } else { "present" }));
-                        println!("  time.created_at: {:?}", first_item.get("time").and_then(|t| t.get("created_at")));
+                        println!(
+                            "  pricing: {:?}",
+                            first_item.get("pricing").map(|p| if p.is_null() {
+                                "null"
+                            } else {
+                                "present"
+                            })
+                        );
+                        println!(
+                            "  time.created_at: {:?}",
+                            first_item.get("time").and_then(|t| t.get("created_at"))
+                        );
                     }
                 }
             }
@@ -995,10 +1152,16 @@ mod tests {
                     match serde_json::to_string(fee) {
                         Ok(_) => {}
                         Err(e) => {
-                            println!("Fee #{} serialization failed: {} (name={}, rev={})", i, e, fee.name, fee.rev);
+                            println!(
+                                "Fee #{} serialization failed: {} (name={}, rev={})",
+                                i, e, fee.name, fee.rev
+                            );
                             // Try each field
                             println!("  pricing is_some: {}", fee.pricing.is_some());
-                            println!("  payment_schedule is_some: {}", fee.payment_schedule.is_some());
+                            println!(
+                                "  payment_schedule is_some: {}",
+                                fee.payment_schedule.is_some()
+                            );
                             println!("  import_source is_some: {}", fee.import_source.is_some());
                         }
                     }
@@ -1008,27 +1171,41 @@ mod tests {
         }
 
         // Also test all Projects (ProjectNumber has i64 fields)
-        let mut proj_response = db.query("SELECT * FROM projects LIMIT 5").await
+        let mut proj_response = db
+            .query("SELECT * FROM projects LIMIT 5")
+            .await
             .expect("Projects query failed");
-        let projects: Vec<crate::db::types::Project> = proj_response.take(0)
+        let projects: Vec<crate::db::types::Project> = proj_response
+            .take(0)
             .expect("Failed to deserialize projects");
         println!("Deserialized {} projects", projects.len());
         for p in &projects {
-            println!("Project: year={}, country={}, seq={}, id={}",
-                p.number.year, p.number.country, p.number.seq, p.number.id);
+            println!(
+                "Project: year={}, country={}, seq={}, id={}",
+                p.number.year, p.number.country, p.number.seq, p.number.id
+            );
         }
 
         // Test ALL fees (non-paginated) — this is the get_fees() path used by dashboard
-        let mut all_fees_response = db.query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
-            .await.expect("All fees query failed");
-        let all_fees: Vec<Fee> = all_fees_response.take(0)
+        let mut all_fees_response = db
+            .query("SELECT * OMIT import_source FROM fee ORDER BY time.created_at DESC")
+            .await
+            .expect("All fees query failed");
+        let all_fees: Vec<Fee> = all_fees_response
+            .take(0)
             .expect("Failed to deserialize ALL fees — non-paginated path broken!");
-        println!("SUCCESS: Deserialized ALL {} fees (non-paginated)", all_fees.len());
+        println!(
+            "SUCCESS: Deserialized ALL {} fees (non-paginated)",
+            all_fees.len()
+        );
 
         // Verify serialization for ALL fees
         for (i, fee) in all_fees.iter().enumerate() {
             if let Err(e) = serde_json::to_string(fee) {
-                panic!("Fee #{} serialization failed: {} (id={:?}, rev={})", i, e, fee.id, fee.rev);
+                panic!(
+                    "Fee #{} serialization failed: {} (id={:?}, rev={})",
+                    i, e, fee.id, fee.rev
+                );
             }
         }
         println!("SUCCESS: All {} fees serialize to JSON", all_fees.len());

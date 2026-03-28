@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { Stage } from '../../../types/database';
-  import { generatePricingId, DEFAULT_DESIGN_STAGES, DEFAULT_POST_CONTRACT_STAGES } from '../../../types/database';
+  import {
+    generatePricingId,
+    DEFAULT_DESIGN_STAGES,
+    DEFAULT_POST_CONTRACT_STAGES
+  } from '../../../types/database';
   import { formatPercent } from '$lib/utils/format';
   import { sortable } from '$lib/actions/sortable';
   import IconButton from '../IconButton.svelte';
@@ -13,15 +17,15 @@
     readonly?: boolean;
   }
 
-  let {
-    stages = $bindable([]),
-    onUpdateStages,
-    readonly = false
-  }: Props = $props();
+  let { stages = $bindable([]), onUpdateStages, readonly = false }: Props = $props();
 
   // Separate design and post-contract stages (filter creates new array, so sort is safe)
-  const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
-  const postContractStages = $derived(stages.filter(s => s.is_post_contract).sort((a, b) => a.order - b.order));
+  const designStages = $derived(
+    stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order)
+  );
+  const postContractStages = $derived(
+    stages.filter(s => s.is_post_contract).sort((a, b) => a.order - b.order)
+  );
 
   // Calculate totals
   const designTotal = $derived(designStages.reduce((sum, s) => sum + s.percentage, 0));
@@ -30,7 +34,13 @@
 
   /** Generate a short code from a stage name (first letter of each word, uppercase). */
   function generateCode(name: string): string {
-    return name.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 4) || 'NS';
+    return (
+      name
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase())
+        .join('')
+        .slice(0, 4) || 'NS'
+    );
   }
 
   // Stage editing
@@ -41,7 +51,7 @@
       code: generateCode('New Stage'),
       percentage: 0,
       order: designStages.length + 1,
-      is_post_contract: false,
+      is_post_contract: false
     };
     const updated = [...stages, newStage];
     stages = updated;
@@ -70,7 +80,10 @@
     onUpdateStages(updated);
   }
 
-  function handleAutocompleteSelect(id: string, entry: { name: string; code: string; percentage: number }) {
+  function handleAutocompleteSelect(
+    id: string,
+    entry: { name: string; code: string; percentage: number }
+  ) {
     const updated = stages.map(s => {
       if (s.id !== id) return s;
       return { ...s, name: entry.name, code: entry.code, percentage: entry.percentage };
@@ -82,20 +95,14 @@
   // Pointer-based reorder handlers
   function handleDesignStageReorder(reordered: Stage[]) {
     const postContract = stages.filter(s => s.is_post_contract);
-    const updated = [
-      ...reordered.map((s, i) => ({ ...s, order: i + 1 })),
-      ...postContract,
-    ];
+    const updated = [...reordered.map((s, i) => ({ ...s, order: i + 1 })), ...postContract];
     stages = updated;
     onUpdateStages(updated);
   }
 
   function handlePostContractReorder(reordered: Stage[]) {
     const design = stages.filter(s => !s.is_post_contract);
-    const updated = [
-      ...design,
-      ...reordered.map((s, i) => ({ ...s, order: 10 + i })),
-    ];
+    const updated = [...design, ...reordered.map((s, i) => ({ ...s, order: 10 + i }))];
     stages = updated;
     onUpdateStages(updated);
   }
@@ -107,7 +114,7 @@
       code: generateCode('New Service'),
       percentage: 0,
       order: 10 + postContractStages.length,
-      is_post_contract: true,
+      is_post_contract: true
     };
     const updated = [...stages, newStage];
     stages = updated;
@@ -117,11 +124,11 @@
   function loadDefaults() {
     const designDefaults: Stage[] = DEFAULT_DESIGN_STAGES.map(s => ({
       ...s,
-      id: generatePricingId('stage'),
+      id: generatePricingId('stage')
     }));
     const postDefaults: Stage[] = DEFAULT_POST_CONTRACT_STAGES.map(s => ({
       ...s,
-      id: generatePricingId('stage'),
+      id: generatePricingId('stage')
     }));
     const all = [...designDefaults, ...postDefaults];
     stages = all;
@@ -140,7 +147,7 @@
         ...s,
         percentage: isLast
           ? Math.round((100 - evenPercent * (designStages.length - 1)) * 100) / 100
-          : evenPercent,
+          : evenPercent
       };
     });
     stages = updated;
@@ -155,7 +162,11 @@
       {#if !readonly}
         <div class="flex items-center gap-2">
           {#if stages.length === 0}
-            <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={loadDefaults}>
+            <button
+              type="button"
+              class="emittiv-text-btn emittiv-text-btn--primary"
+              onclick={loadDefaults}
+            >
               Load Defaults
             </button>
           {:else}
@@ -163,7 +174,13 @@
               Distribute Evenly
             </button>
           {/if}
-          <IconButton icon="plus" label="Add" variant="primary" size="md" onclick={addDesignStage} />
+          <IconButton
+            icon="plus"
+            label="Add"
+            variant="primary"
+            size="md"
+            onclick={addDesignStage}
+          />
         </div>
       {/if}
     {/snippet}
@@ -172,9 +189,7 @@
       <div class="p-4 text-center">
         <p class="text-emittiv-light text-sm mb-1">No design stages defined.</p>
         {#if !readonly}
-          <p class="text-emittiv-dark text-xxs">
-            Define the design stages for this project.
-          </p>
+          <p class="text-emittiv-dark text-xxs">Define the design stages for this project.</p>
         {/if}
       </div>
     {:else}
@@ -193,34 +208,35 @@
             items: designStages,
             onReorder: handleDesignStageReorder,
             dragClass: 'emittiv-sortable-dragging',
-            overClass: 'emittiv-drag-over',
+            overClass: 'emittiv-drag-over'
           }}
         >
           {#each designStages as stage (stage.id)}
             <div class="emittiv-sortable-row" data-sortable-id={stage.id}>
               <div class="emittiv-sortable-col--handle">
                 <svg class="emittiv-drag-handle" fill="currentColor" viewBox="0 0 16 16">
-                  <circle cx="5" cy="3" r="1.2"/>
-                  <circle cx="11" cy="3" r="1.2"/>
-                  <circle cx="5" cy="8" r="1.2"/>
-                  <circle cx="11" cy="8" r="1.2"/>
-                  <circle cx="5" cy="13" r="1.2"/>
-                  <circle cx="11" cy="13" r="1.2"/>
+                  <circle cx="5" cy="3" r="1.2" />
+                  <circle cx="11" cy="3" r="1.2" />
+                  <circle cx="5" cy="8" r="1.2" />
+                  <circle cx="11" cy="8" r="1.2" />
+                  <circle cx="5" cy="13" r="1.2" />
+                  <circle cx="11" cy="13" r="1.2" />
                 </svg>
               </div>
               <div class="emittiv-sortable-col--grow">
                 <div class="flex items-center gap-1.5">
                   <StageAutocomplete
                     value={stage.name}
-                    onselect={(entry) => handleAutocompleteSelect(stage.id, entry)}
-                    onchange={(val) => updateStage(stage.id, 'name', val)}
+                    onselect={entry => handleAutocompleteSelect(stage.id, entry)}
+                    onchange={val => updateStage(stage.id, 'name', val)}
                   />
                   <input
                     type="text"
                     class="emittiv-table-input text-emittiv-dark text-xxs flex-shrink-0"
                     style="width: 48px; text-align: center;"
                     value={stage.code}
-                    onchange={(e) => updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
+                    onchange={e =>
+                      updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
                   />
                 </div>
               </div>
@@ -232,7 +248,8 @@
                   step="0.5"
                   class="emittiv-table-input emittiv-table-input--lg"
                   value={stage.percentage}
-                  onchange={(e) => updateStage(stage.id, 'percentage', parseFloat(e.currentTarget.value) || 0)}
+                  onchange={e =>
+                    updateStage(stage.id, 'percentage', parseFloat(e.currentTarget.value) || 0)}
                 />
                 <span class="text-emittiv-light">%</span>
               </div>
@@ -275,8 +292,18 @@
             {formatPercent(designTotal, 1)}
           </span>
           {#if isDesignValid}
-            <svg class="emittiv-icon-check text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            <svg
+              class="emittiv-icon-check text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           {:else}
             <span class="text-red-500 text-xxs">(must equal 100%)</span>
@@ -290,7 +317,13 @@
   <PanelCard title="Post-Contract Services">
     {#snippet headerActions()}
       {#if !readonly}
-        <IconButton icon="plus" label="Add Service" variant="primary" size="md" onclick={addPostContractStage} />
+        <IconButton
+          icon="plus"
+          label="Add Service"
+          variant="primary"
+          size="md"
+          onclick={addPostContractStage}
+        />
       {/if}
     {/snippet}
 
@@ -318,34 +351,35 @@
             items: postContractStages,
             onReorder: handlePostContractReorder,
             dragClass: 'emittiv-sortable-dragging',
-            overClass: 'emittiv-drag-over',
+            overClass: 'emittiv-drag-over'
           }}
         >
           {#each postContractStages as stage (stage.id)}
             <div class="emittiv-sortable-row" data-sortable-id={stage.id}>
               <div class="emittiv-sortable-col--handle">
                 <svg class="emittiv-drag-handle" fill="currentColor" viewBox="0 0 16 16">
-                  <circle cx="5" cy="3" r="1.2"/>
-                  <circle cx="11" cy="3" r="1.2"/>
-                  <circle cx="5" cy="8" r="1.2"/>
-                  <circle cx="11" cy="8" r="1.2"/>
-                  <circle cx="5" cy="13" r="1.2"/>
-                  <circle cx="11" cy="13" r="1.2"/>
+                  <circle cx="5" cy="3" r="1.2" />
+                  <circle cx="11" cy="3" r="1.2" />
+                  <circle cx="5" cy="8" r="1.2" />
+                  <circle cx="11" cy="8" r="1.2" />
+                  <circle cx="5" cy="13" r="1.2" />
+                  <circle cx="11" cy="13" r="1.2" />
                 </svg>
               </div>
               <div class="emittiv-sortable-col--grow">
                 <div class="flex items-center gap-1.5">
                   <StageAutocomplete
                     value={stage.name}
-                    onselect={(entry) => handleAutocompleteSelect(stage.id, entry)}
-                    onchange={(val) => updateStage(stage.id, 'name', val)}
+                    onselect={entry => handleAutocompleteSelect(stage.id, entry)}
+                    onchange={val => updateStage(stage.id, 'name', val)}
                   />
                   <input
                     type="text"
                     class="emittiv-table-input text-emittiv-dark text-xxs flex-shrink-0"
                     style="width: 48px; text-align: center;"
                     value={stage.code}
-                    onchange={(e) => updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
+                    onchange={e =>
+                      updateStage(stage.id, 'code', e.currentTarget.value.toUpperCase())}
                   />
                 </div>
               </div>

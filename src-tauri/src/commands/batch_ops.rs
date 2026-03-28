@@ -15,12 +15,11 @@ pub async fn batch_delete_entities(
     let entity_label = format!("{} entities", table);
     execute_with_manager(
         &state,
-        |manager| Box::pin(async move {
-            manager.batch_delete(&table, &ids).await
-        }),
+        |manager| Box::pin(async move { manager.batch_delete(&table, &ids).await }),
         "batch delete",
         &entity_label,
-    ).await
+    )
+    .await
 }
 
 /// Update the status of multiple entities in a table.
@@ -35,10 +34,9 @@ pub async fn batch_update_status(
     let entity_label = format!("{} entities", table);
     execute_with_manager(
         &state,
-        |manager| Box::pin(async move {
-            manager.batch_update_status(&table, &ids, &status).await
-        }),
+        |manager| Box::pin(async move { manager.batch_update_status(&table, &ids, &status).await }),
         "batch update status",
         &entity_label,
-    ).await
+    )
+    .await
 }

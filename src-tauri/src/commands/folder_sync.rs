@@ -15,15 +15,15 @@
 //! - `completed` → `99 Completed`
 //! - `cancelled` → `00 Inactive`
 
-use tauri::{command, AppHandle, State};
+use chrono::Utc;
+use log::{info, warn};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use log::{info, warn};
-use serde::{Deserialize, Serialize};
-use chrono::Utc;
-use regex::Regex;
-use once_cell::sync::Lazy;
+use tauri::{command, AppHandle, State};
 
 use crate::commands::AppState;
 use crate::db::types::record_key_string;
@@ -153,7 +153,7 @@ fn get_folder_for_status(status: &str) -> &'static str {
         "awarded" | "design" | "construction" | "practical completion" => "11 Current",
         "completed" | "superseded" => "99 Completed",
         "cancelled" | "lost" | "no response" | "on hold" => "00 Inactive",
-        _ => "01 RFPs" // Default to RFPs
+        _ => "01 RFPs", // Default to RFPs
     }
 }
 
@@ -164,7 +164,7 @@ fn get_status_from_folder(folder: &str) -> Option<&'static str> {
         "11 Current" => Some("awarded"),
         "99 Completed" => Some("completed"),
         "00 Inactive" => Some("cancelled"),
-        _ => None
+        _ => None,
     }
 }
 
@@ -177,14 +177,16 @@ fn is_project_folder(folder_name: &str) -> bool {
 
 /// Extract project number from folder name
 fn extract_project_number(folder_name: &str) -> Option<String> {
-    PROJECT_NUMBER_PATTERN.captures(folder_name)
+    PROJECT_NUMBER_PATTERN
+        .captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
 }
 
 /// Extract project name from folder name (after the number and space)
 fn extract_project_name(folder_name: &str) -> String {
-    PROJECT_NAME_PATTERN.captures(folder_name)
+    PROJECT_NAME_PATTERN
+        .captures(folder_name)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
         .unwrap_or_else(|| folder_name.to_string())
@@ -214,30 +216,42 @@ async fn get_projects_from_db(state: &State<'_, AppState>) -> Result<Vec<DbProje
     }; // Read lock is dropped here
 
     // Get all projects using the existing get_projects method
-    let projects = manager_clone.get_projects()
+    let projects = manager_clone
+        .get_projects()
         .await
         .map_err(|e| format!("Failed to get projects: {}", e))?;
 
-    Ok(projects.iter().map(|p| {
-        // Extract ID properly - use id.id.to_string() and strip the special ⟨⟩ characters
-        // that SurrealDB uses for string IDs
-        let id_str = match &p.id {
-            Some(id) => record_key_string(&id.key)
-                .trim_start_matches('⟨')
-                .trim_end_matches('⟩')
-                .to_string(),
-            None => String::new(),
-        };
+    Ok(projects
+        .iter()
+        .map(|p| {
+            // Extract ID properly - use id.id.to_string() and strip the special ⟨⟩ characters
+            // that SurrealDB uses for string IDs
+            let id_str = match &p.id {
+                Some(id) => record_key_string(&id.key)
+                    .trim_start_matches('⟨')
+                    .trim_end_matches('⟩')
+                    .to_string(),
+                None => String::new(),
+            };
 
-        DbProjectInfo {
-            id: id_str,
-            number: p.number.id.clone(),
-            name: p.name.clone(),
-            name_short: if p.name_short.is_empty() { None } else { Some(p.name_short.clone()) },
-            status: p.status.clone(),
-            folder: if p.folder.is_empty() { None } else { Some(p.folder.clone()) },
-        }
-    }).collect())
+            DbProjectInfo {
+                id: id_str,
+                number: p.number.id.clone(),
+                name: p.name.clone(),
+                name_short: if p.name_short.is_empty() {
+                    None
+                } else {
+                    Some(p.name_short.clone())
+                },
+                status: p.status.clone(),
+                folder: if p.folder.is_empty() {
+                    None
+                } else {
+                    Some(p.folder.clone())
+                },
+            }
+        })
+        .collect())
 }
 
 // ============================================================================
@@ -365,19 +379,28 @@ pub async fn scan_folder_sync(
             continue;
         }
 
-        let expected_folder = project.folder.clone()
-            .unwrap_or_else(|| format!("{} {}", project.number, project.name_short.as_ref().unwrap_or(&project.name)));
+        let expected_folder = project.folder.clone().unwrap_or_else(|| {
+            format!(
+                "{} {}",
+                project.number,
+                project.name_short.as_ref().unwrap_or(&project.name)
+            )
+        });
 
         let expected_status_folder = get_folder_for_status(&project.status);
-        let expected_path = format!("{}/{}/{}", base_path, expected_status_folder, expected_folder);
+        let expected_path = format!(
+            "{}/{}/{}",
+            base_path, expected_status_folder, expected_folder
+        );
 
         // Find if folder exists anywhere
-        let found_paths: Vec<_> = folder_paths.iter()
-            .filter(|(name, _)| {
-                extract_project_number(name).as_ref() == Some(&project.number)
-            })
+        let found_paths: Vec<_> = folder_paths
+            .iter()
+            .filter(|(name, _)| extract_project_number(name).as_ref() == Some(&project.number))
             .flat_map(|(name, paths)| {
-                paths.iter().map(move |(path, status)| (name.clone(), path.clone(), status.clone()))
+                paths
+                    .iter()
+                    .map(move |(path, status)| (name.clone(), path.clone(), status.clone()))
             })
             .collect();
 
@@ -386,7 +409,10 @@ pub async fn scan_folder_sync(
             inconsistencies.push(FolderInconsistency {
                 project_id: project.id.clone(),
                 project_number: project.number.clone(),
-                project_name: project.name_short.clone().unwrap_or_else(|| project.name.clone()),
+                project_name: project
+                    .name_short
+                    .clone()
+                    .unwrap_or_else(|| project.name.clone()),
                 folder_name: expected_folder,
                 inconsistency_type: InconsistencyType::Missing,
                 db_status: Some(project.status.clone()),
@@ -405,7 +431,10 @@ pub async fn scan_folder_sync(
                 inconsistencies.push(FolderInconsistency {
                     project_id: project.id.clone(),
                     project_number: project.number.clone(),
-                    project_name: project.name_short.clone().unwrap_or_else(|| project.name.clone()),
+                    project_name: project
+                        .name_short
+                        .clone()
+                        .unwrap_or_else(|| project.name.clone()),
                     folder_name: folder_name.clone(),
                     inconsistency_type: InconsistencyType::WrongLocation,
                     db_status: Some(project.status.clone()),
@@ -420,7 +449,8 @@ pub async fn scan_folder_sync(
     }
 
     // Check for orphan folders (folders on disk with no DB record)
-    let db_numbers: std::collections::HashSet<_> = db_projects.iter()
+    let db_numbers: std::collections::HashSet<_> = db_projects
+        .iter()
         .filter(|p| !p.number.is_empty())
         .map(|p| p.number.clone())
         .collect();
@@ -453,7 +483,10 @@ pub async fn scan_folder_sync(
         }
     }
 
-    info!("Scan complete. Found {} inconsistencies", inconsistencies.len());
+    info!(
+        "Scan complete. Found {} inconsistencies",
+        inconsistencies.len()
+    );
 
     Ok(FolderSyncResult {
         scanned_at: Utc::now().to_rfc3339(),
@@ -482,16 +515,24 @@ pub async fn resolve_folder_inconsistency(
     state: State<'_, AppState>,
     app_handle: AppHandle,
 ) -> Result<ResolutionResponse, String> {
-    info!("Resolving folder inconsistency: action={}", resolution.action);
+    info!(
+        "Resolving folder inconsistency: action={}",
+        resolution.action
+    );
 
     match resolution.action.as_str() {
         "update_db" => {
-            let project_id = resolution.project_id
+            let project_id = resolution
+                .project_id
                 .ok_or("project_id is required for update_db action")?;
-            let new_status = resolution.new_status
+            let new_status = resolution
+                .new_status
                 .ok_or("new_status is required for update_db action")?;
 
-            info!("Attempting to update project ID '{}' to status '{}'", project_id, new_status);
+            info!(
+                "Attempting to update project ID '{}' to status '{}'",
+                project_id, new_status
+            );
 
             // Clone the manager to avoid holding lock across await
             let manager_clone = {
@@ -500,11 +541,15 @@ pub async fn resolve_folder_inconsistency(
             }; // Read lock is dropped here
 
             // Use safe update_project_status function with input validation
-            manager_clone.update_project_status(&project_id, &new_status)
+            manager_clone
+                .update_project_status(&project_id, &new_status)
                 .await
                 .map_err(|e| format!("Failed to update project status: {}", e))?;
 
-            info!("Successfully updated project {} status to {}", project_id, new_status);
+            info!(
+                "Successfully updated project {} status to {}",
+                project_id, new_status
+            );
             Ok(ResolutionResponse {
                 success: true,
                 message: format!("Project status updated to {}", new_status),
@@ -512,9 +557,11 @@ pub async fn resolve_folder_inconsistency(
         }
 
         "move_folder" => {
-            let from_path = resolution.from_path
+            let from_path = resolution
+                .from_path
                 .ok_or("from_path is required for move_folder action")?;
-            let to_path = resolution.to_path
+            let to_path = resolution
+                .to_path
                 .ok_or("to_path is required for move_folder action")?;
 
             let from = Path::new(&from_path);
@@ -550,7 +597,8 @@ pub async fn resolve_folder_inconsistency(
                     warn!("Rename failed, attempting copy+delete: {}", e);
 
                     let options = fs_extra::dir::CopyOptions::new();
-                    let parent_dir = to.parent()
+                    let parent_dir = to
+                        .parent()
                         .ok_or_else(|| "Destination path has no parent directory".to_string())?;
                     fs_extra::dir::copy(from, parent_dir, &options)
                         .map_err(|e| format!("Failed to copy folder: {}", e))?;
@@ -558,7 +606,10 @@ pub async fn resolve_folder_inconsistency(
                     fs::remove_dir_all(from)
                         .map_err(|e| format!("Failed to remove original folder: {}", e))?;
 
-                    info!("Moved folder (via copy+delete) from {} to {}", from_path, to_path);
+                    info!(
+                        "Moved folder (via copy+delete) from {} to {}",
+                        from_path, to_path
+                    );
                     Ok(ResolutionResponse {
                         success: true,
                         message: "Folder moved successfully".to_string(),
@@ -570,9 +621,11 @@ pub async fn resolve_folder_inconsistency(
         "create_folder" => {
             // For create_folder, we expect the project_number and project_name
             // to be passed directly since the frontend already has this info
-            let project_number = resolution.project_id
+            let project_number = resolution
+                .project_id
                 .ok_or("project_number is required for create_folder action")?;
-            let project_name = resolution.new_status
+            let project_name = resolution
+                .new_status
                 .ok_or("project_name (in new_status field) is required for create_folder action")?;
 
             if project_number.is_empty() {
@@ -584,9 +637,13 @@ pub async fn resolve_folder_inconsistency(
                 project_number.clone(),
                 project_name.clone(),
                 app_handle.clone(),
-            ).await?;
+            )
+            .await?;
 
-            info!("Created folder for project {} {}", project_number, project_name);
+            info!(
+                "Created folder for project {} {}",
+                project_number, project_name
+            );
             Ok(ResolutionResponse {
                 success: true,
                 message: format!("Folder created for {} {}", project_number, project_name),

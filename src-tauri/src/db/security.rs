@@ -2,17 +2,16 @@
 //!
 //! This module provides input validation to prevent SQL injection attacks.
 
-use serde::{Deserialize, Serialize};
-use regex::Regex;
 use once_cell::sync::Lazy;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 // Pre-compiled regex patterns for validation (compiled once at startup)
 // Using Lazy ensures these are compiled only once and any compilation errors
 // are caught at application startup rather than during runtime.
 
 static PROJECT_NAME_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[a-zA-Z0-9\s\-_().&,]+$")
-        .expect("PROJECT_NAME_PATTERN regex should compile")
+    Regex::new(r"^[a-zA-Z0-9\s\-_().&,]+$").expect("PROJECT_NAME_PATTERN regex should compile")
 });
 
 static EMAIL_PATTERN: Lazy<Regex> = Lazy::new(|| {
@@ -21,43 +20,69 @@ static EMAIL_PATTERN: Lazy<Regex> = Lazy::new(|| {
 });
 
 static PHONE_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[\+]?[0-9\s\-\(\)]{7,20}$")
-        .expect("PHONE_PATTERN regex should compile")
+    Regex::new(r"^[\+]?[0-9\s\-\(\)]{7,20}$").expect("PHONE_PATTERN regex should compile")
 });
 
 static PROJECT_NUMBER_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^\d{2}-\d{3}\d{2}$")
-        .expect("PROJECT_NUMBER_PATTERN regex should compile")
+    Regex::new(r"^\d{2}-\d{3}\d{2}$").expect("PROJECT_NUMBER_PATTERN regex should compile")
 });
 
-static ID_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[a-zA-Z0-9_]+$")
-        .expect("ID_PATTERN regex should compile")
-});
+static ID_PATTERN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[a-zA-Z0-9_]+$").expect("ID_PATTERN regex should compile"));
 
 /// Input validation error types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
-    InvalidLength { field: String, min: usize, max: usize, actual: usize },
-    InvalidCharacters { field: String, pattern: String },
-    RequiredField { field: String },
-    InvalidFormat { field: String, expected: String },
+    InvalidLength {
+        field: String,
+        min: usize,
+        max: usize,
+        actual: usize,
+    },
+    InvalidCharacters {
+        field: String,
+        pattern: String,
+    },
+    RequiredField {
+        field: String,
+    },
+    InvalidFormat {
+        field: String,
+        expected: String,
+    },
 }
 
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValidationError::InvalidLength { field, min, max, actual } => {
-                write!(f, "Field '{}' length {} is outside allowed range {}-{}", field, actual, min, max)
+            ValidationError::InvalidLength {
+                field,
+                min,
+                max,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "Field '{}' length {} is outside allowed range {}-{}",
+                    field, actual, min, max
+                )
             }
             ValidationError::InvalidCharacters { field, pattern } => {
-                write!(f, "Field '{}' contains invalid characters. Expected pattern: {}", field, pattern)
+                write!(
+                    f,
+                    "Field '{}' contains invalid characters. Expected pattern: {}",
+                    field, pattern
+                )
             }
             ValidationError::RequiredField { field } => {
                 write!(f, "Required field '{}' is missing or empty", field)
             }
             ValidationError::InvalidFormat { field, expected } => {
-                write!(f, "Field '{}' has invalid format. Expected: {}", field, expected)
+                write!(
+                    f,
+                    "Field '{}' has invalid format. Expected: {}",
+                    field, expected
+                )
             }
         }
     }
@@ -70,7 +95,9 @@ impl InputValidator {
     /// Validate project name (alphanumeric, spaces, hyphens, underscores)
     pub fn validate_project_name(name: &str) -> Result<(), ValidationError> {
         if name.is_empty() {
-            return Err(ValidationError::RequiredField { field: "name".to_string() });
+            return Err(ValidationError::RequiredField {
+                field: "name".to_string(),
+            });
         }
 
         if name.len() < 2 || name.len() > 200 {
@@ -86,7 +113,8 @@ impl InputValidator {
         if !PROJECT_NAME_PATTERN.is_match(name) {
             return Err(ValidationError::InvalidCharacters {
                 field: "name".to_string(),
-                pattern: "alphanumeric characters, spaces, hyphens, underscores, parentheses".to_string(),
+                pattern: "alphanumeric characters, spaces, hyphens, underscores, parentheses"
+                    .to_string(),
             });
         }
 
@@ -96,7 +124,9 @@ impl InputValidator {
     /// Validate email address
     pub fn validate_email(email: &str) -> Result<(), ValidationError> {
         if email.is_empty() {
-            return Err(ValidationError::RequiredField { field: "email".to_string() });
+            return Err(ValidationError::RequiredField {
+                field: "email".to_string(),
+            });
         }
 
         if !EMAIL_PATTERN.is_match(email) {
@@ -112,7 +142,9 @@ impl InputValidator {
     /// Validate phone number
     pub fn validate_phone(phone: &str) -> Result<(), ValidationError> {
         if phone.is_empty() {
-            return Err(ValidationError::RequiredField { field: "phone".to_string() });
+            return Err(ValidationError::RequiredField {
+                field: "phone".to_string(),
+            });
         }
 
         // Allow international phone formats
@@ -151,9 +183,16 @@ impl InputValidator {
     }
 
     /// Validate text field with length limits
-    pub fn validate_text_field(field_name: &str, value: &str, min_len: usize, max_len: usize) -> Result<(), ValidationError> {
+    pub fn validate_text_field(
+        field_name: &str,
+        value: &str,
+        min_len: usize,
+        max_len: usize,
+    ) -> Result<(), ValidationError> {
         if value.is_empty() && min_len > 0 {
-            return Err(ValidationError::RequiredField { field: field_name.to_string() });
+            return Err(ValidationError::RequiredField {
+                field: field_name.to_string(),
+            });
         }
 
         if value.len() < min_len || value.len() > max_len {
@@ -171,7 +210,9 @@ impl InputValidator {
     /// Validate ID format (alphanumeric and underscores only)
     pub fn validate_id(id: &str) -> Result<(), ValidationError> {
         if id.is_empty() {
-            return Err(ValidationError::RequiredField { field: "id".to_string() });
+            return Err(ValidationError::RequiredField {
+                field: "id".to_string(),
+            });
         }
 
         if !ID_PATTERN.is_match(id) {

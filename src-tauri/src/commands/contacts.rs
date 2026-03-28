@@ -2,9 +2,9 @@
 //!
 //! This module handles CRUD operations for contacts.
 
+use crate::commands::utils::execute_with_manager;
 use crate::crud_command;
 use crate::db::{Contact, ContactCreate, PaginatedResponse};
-use crate::commands::utils::execute_with_manager;
 use tauri::State;
 
 use super::{AppState, ContactUpdate};
@@ -119,19 +119,26 @@ crud_command!(
 /// # Returns
 /// * `Result<Contact, String>` - Updated contact or error message
 #[tauri::command]
-pub async fn update_contact(id: String, contact_update: ContactUpdate, state: State<'_, AppState>) -> Result<Contact, String> {
+pub async fn update_contact(
+    id: String,
+    contact_update: ContactUpdate,
+    state: State<'_, AppState>,
+) -> Result<Contact, String> {
     let contact_name = format!("contact '{}'", id);
     execute_with_manager(
         &state,
         |manager| {
             let id_clone = id.clone();
             Box::pin(async move {
-                manager.update_contact_partial(&id_clone, contact_update).await
+                manager
+                    .update_contact_partial(&id_clone, contact_update)
+                    .await
             })
         },
         "update",
-        &contact_name
-    ).await
+        &contact_name,
+    )
+    .await
 }
 
 /// Delete a contact from the database.
@@ -168,11 +175,10 @@ pub async fn delete_contact(id: String, state: State<'_, AppState>) -> Result<Co
         &state,
         |manager| {
             let id_clone = id.clone();
-            Box::pin(async move {
-                manager.delete_contact(&id_clone).await
-            })
+            Box::pin(async move { manager.delete_contact(&id_clone).await })
         },
         "delete",
-        &contact_name
-    ).await
+        &contact_name,
+    )
+    .await
 }

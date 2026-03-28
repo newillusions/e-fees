@@ -44,16 +44,21 @@ use super::AppState;
 #[tauri::command]
 pub async fn create_activity_log(
     log: ActivityLogCreate,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<ActivityLog, String> {
-    info!("Creating activity log: {} on {}", log.action, log.entity_name);
+    info!(
+        "Creating activity log: {} on {}",
+        log.action, log.entity_name
+    );
 
     let manager_clone = {
         let manager = state.read().await;
         manager.clone()
     };
 
-    manager_clone.create_activity_log(log).await
+    manager_clone
+        .create_activity_log(log)
+        .await
         .map_err(|e| format!("Failed to create activity log: {}", e))
 }
 
@@ -86,15 +91,20 @@ pub async fn get_activity_logs(
     limit: Option<usize>,
     entity_type: Option<String>,
     offset: Option<usize>,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<Vec<ActivityLog>, String> {
-    info!("Fetching activity logs (limit: {:?}, entity_type: {:?}, offset: {:?})", limit, entity_type, offset);
+    info!(
+        "Fetching activity logs (limit: {:?}, entity_type: {:?}, offset: {:?})",
+        limit, entity_type, offset
+    );
 
     let manager_clone = {
         let manager = state.read().await;
         manager.clone()
     };
 
-    manager_clone.get_activity_logs(limit, entity_type, offset).await
+    manager_clone
+        .get_activity_logs(limit, entity_type, offset)
+        .await
         .map_err(|e| format!("Failed to get activity logs: {}", e))
 }
