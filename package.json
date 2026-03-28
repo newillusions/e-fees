@@ -1,6 +1,6 @@
 {
   "name": "e-fees",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "main": "index.js",
   "scripts": {
     "version:sync": "node scripts/sync-version.cjs",
