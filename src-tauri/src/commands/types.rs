@@ -105,6 +105,10 @@ pub struct AppSettings {
     /// Log level setting - "off", "error", "warn", "info", "debug", "trace"
     #[serde(default)]
     pub log_level: Option<String>,
+    /// Scope service API URL for clause/scope generation
+    pub scope_api_url: Option<String>,
+    /// Scope service API key for authentication
+    pub scope_api_key: Option<String>,
 }
 
 /// Public application settings structure for frontend consumption.
@@ -135,6 +139,8 @@ pub struct AppSettingsPublic {
     /// Log level setting - "off", "error", "warn", "info", "debug", "trace"
     #[serde(default)]
     pub log_level: Option<String>,
+    pub scope_api_url: Option<String>,
+    pub scope_api_key: Option<String>,
 }
 
 impl From<&AppSettings> for AppSettingsPublic {
@@ -152,6 +158,8 @@ impl From<&AppSettings> for AppSettingsPublic {
             project_folder_path: settings.project_folder_path.clone(),
             dev_mode: settings.dev_mode,
             log_level: settings.log_level.clone(),
+            scope_api_url: settings.scope_api_url.clone(),
+            scope_api_key: settings.scope_api_key.clone(),
         }
     }
 }

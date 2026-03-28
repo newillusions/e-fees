@@ -161,7 +161,7 @@ pub use batch_ops::{batch_delete_entities, batch_update_status};
 
 // Fee stage access (scope–pricing linkage)
 pub mod fee_stages;
-pub use fee_stages::{get_fee_stages, add_stage_to_fee};
+pub use fee_stages::{get_fee_stages, add_stage_to_fee, get_stage_dictionary};
 
 // Stage dictionary (autocomplete for stage names)
 pub mod stage_dictionary;

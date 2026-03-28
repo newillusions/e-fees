@@ -64,6 +64,8 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         project_folder_path: None,
         dev_mode: None,
         log_level: None,
+        scope_api_url: None,
+        scope_api_key: None,
     };
 
     info!("Looking for .env file at: {:?}", env_path);
@@ -98,6 +100,8 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
                             "PROJECT_FOLDER_PATH" => settings.project_folder_path = Some(value.to_string()),
                             "DEV_MODE" => settings.dev_mode = Some(value.to_lowercase() == "true"),
                             "LOG_LEVEL" => settings.log_level = Some(value.to_lowercase()),
+                            "SCOPE_API_URL" => settings.scope_api_url = Some(value.to_string()),
+                            "SCOPE_API_KEY" => settings.scope_api_key = Some(value.to_string()),
                             _ => {} // Ignore unknown variables
                         }
                     }
@@ -256,7 +260,8 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                             "SURREALDB_USER" | "SURREALDB_PASS" |
                             "SURREALDB_VERIFY_CERTS" | "SURREALDB_ACCEPT_INVALID_HOSTNAMES" |
                             "STAFF_NAME" | "STAFF_EMAIL" | "STAFF_PHONE" | "STAFF_POSITION" |
-                            "PROJECT_FOLDER_PATH" | "DEV_MODE" | "LOG_LEVEL" => continue,
+                            "PROJECT_FOLDER_PATH" | "DEV_MODE" | "LOG_LEVEL" |
+                            "SCOPE_API_URL" | "SCOPE_API_KEY" => continue,
                             _ => lines.push(line.to_string()),
                         }
                     } else {
@@ -330,6 +335,17 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     // Write log_level setting (defaults to "info" if not set)
     let log_level_value = settings.log_level.as_deref().unwrap_or("info");
     lines.push(format!("LOG_LEVEL=\"{}\"", log_level_value));
+
+    lines.push("".to_string());
+    lines.push("# Scope Service".to_string());
+
+    if let Some(scope_url) = &settings.scope_api_url {
+        lines.push(format!("SCOPE_API_URL=\"{}\"", scope_url));
+    }
+
+    if let Some(scope_key) = &settings.scope_api_key {
+        lines.push(format!("SCOPE_API_KEY=\"{}\"", scope_key));
+    }
 
     // Write to file atomically
     let content = lines.join("\n");

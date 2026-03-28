@@ -5,6 +5,7 @@
   import { sortable } from '$lib/actions/sortable';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
+  import StageAutocomplete from './StageAutocomplete.svelte';
 
   interface Props {
     stages: Stage[];
@@ -64,6 +65,15 @@
     const updated = stages.map(s => {
       if (s.id !== id) return s;
       return { ...s, [field]: value };
+    });
+    stages = updated;
+    onUpdateStages(updated);
+  }
+
+  function handleAutocompleteSelect(id: string, entry: { name: string; code: string; percentage: number }) {
+    const updated = stages.map(s => {
+      if (s.id !== id) return s;
+      return { ...s, name: entry.name, code: entry.code, percentage: entry.percentage };
     });
     stages = updated;
     onUpdateStages(updated);
@@ -200,11 +210,10 @@
               </div>
               <div class="emittiv-sortable-col--grow">
                 <div class="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    class="emittiv-table-input emittiv-table-input--left"
+                  <StageAutocomplete
                     value={stage.name}
-                    onchange={(e) => updateStage(stage.id, 'name', e.currentTarget.value)}
+                    onselect={(entry) => handleAutocompleteSelect(stage.id, entry)}
+                    onchange={(val) => updateStage(stage.id, 'name', val)}
                   />
                   <input
                     type="text"
@@ -326,11 +335,10 @@
               </div>
               <div class="emittiv-sortable-col--grow">
                 <div class="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    class="emittiv-table-input emittiv-table-input--left"
+                  <StageAutocomplete
                     value={stage.name}
-                    onchange={(e) => updateStage(stage.id, 'name', e.currentTarget.value)}
+                    onselect={(entry) => handleAutocompleteSelect(stage.id, entry)}
+                    onchange={(val) => updateStage(stage.id, 'name', val)}
                   />
                   <input
                     type="text"

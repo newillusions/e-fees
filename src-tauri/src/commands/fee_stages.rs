@@ -23,6 +23,31 @@ pub struct FeeStage {
     pub is_post_contract: bool,
 }
 
+/// A stage from the scope service dictionary. Used for autocomplete suggestions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StageDictEntry {
+    pub canonical_name: String,
+    pub default_label: String,
+    pub aliases: Vec<String>,
+    pub sort_order: i64,
+}
+
+/// Scope service response wrapper.
+#[derive(Debug, Deserialize)]
+struct StagesApiResponse {
+    data: Vec<StageDictEntryRaw>,
+}
+
+/// Raw entry from scope API (aliases may be absent).
+#[derive(Debug, Deserialize)]
+struct StageDictEntryRaw {
+    canonical_name: String,
+    default_label: String,
+    #[serde(default)]
+    aliases: Vec<String>,
+    sort_order: i64,
+}
+
 // ============================================================================
 // COMMANDS
 // ============================================================================
@@ -133,4 +158,50 @@ pub async fn add_stage_to_fee(
 
     info!("Successfully updated stages for fee '{}' ({} total)", fee_id, stages.len());
     Ok(stages)
+}
+
+/// Fetch the stage dictionary from the scope service.
+/// Returns a list of canonical stages with labels and aliases for autocomplete.
+#[tauri::command]
+pub async fn get_stage_dictionary(
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<StageDictEntry>, String> {
+    let settings = super::settings::get_settings_internal(&app_handle)
+        .await
+        .map_err(|e| format!("Failed to read settings: {}", e))?;
+
+    let base_url = settings.scope_api_url
+        .ok_or_else(|| "SCOPE_API_URL not configured in settings".to_string())?;
+    let api_key = settings.scope_api_key
+        .ok_or_else(|| "SCOPE_API_KEY not configured in settings".to_string())?;
+
+    let url = format!("{}/stages", base_url.trim_end_matches('/'));
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .header("X-API-Key", &api_key)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to reach scope service: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Scope service returned {}", response.status()));
+    }
+
+    let body: StagesApiResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse scope response: {}", e))?;
+
+    let entries: Vec<StageDictEntry> = body.data.into_iter().map(|raw| StageDictEntry {
+        canonical_name: raw.canonical_name,
+        default_label: raw.default_label,
+        aliases: raw.aliases,
+        sort_order: raw.sort_order,
+    }).collect();
+
+    info!("Fetched {} stage dictionary entries from scope service", entries.len());
+    Ok(entries)
 }

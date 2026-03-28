@@ -100,6 +100,7 @@ use commands::{
     // Fee stage access (scope–pricing linkage)
     get_fee_stages,
     add_stage_to_fee,
+    get_stage_dictionary,
     // Stage dictionary (autocomplete for stage names)
     search_stage_dictionary,
     add_stage_to_dictionary,
@@ -384,6 +385,7 @@ pub fn run() {
             // Fee stage access (scope–pricing linkage)
             get_fee_stages,
             add_stage_to_fee,
+            get_stage_dictionary,
             // Stage dictionary (autocomplete for stage names)
             search_stage_dictionary,
             add_stage_to_dictionary,
