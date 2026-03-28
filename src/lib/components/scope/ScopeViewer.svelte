@@ -1,5 +1,6 @@
 <script lang="ts">
   import './scopeViewer.css';
+  import { invoke } from '@tauri-apps/api/core';
   import {
     getScope,
     generateScope,
@@ -16,10 +17,14 @@
   let {
     feeId,
     stages = [],
+    projectName = '',
+    projectNumber = '',
     ondirtychange,
   }: {
     feeId: string;
     stages?: import('$lib/api/feeStages').FeeStage[];
+    projectName?: string;
+    projectNumber?: string;
     ondirtychange?: (isDirty: boolean) => void;
   } = $props();
 
@@ -123,6 +128,32 @@
       await updateScope(feeId, { clauses: sections, generated_text: generatedText });
       dirty = false;
       message = 'Scope saved successfully';
+
+      // Export markdown to project folder if configured
+      if (projectNumber) {
+        try {
+          const folderInfo = await invoke<{ full_path: string; exists: boolean }>('get_project_folder_location', { projectNumber });
+          if (folderInfo.exists) {
+            const revision = scope?.current_revision ?? 1;
+            const stageNames = stages.map(s => s.name);
+            const result = await invoke<string | null>('export_scope_markdown', {
+              feeRef: feeId,
+              projectName,
+              projectFolder: folderInfo.full_path,
+              revision,
+              stages: stageNames,
+              scopeText: generatedText,
+            });
+            if (result) {
+              message = 'Scope saved and exported to project folder';
+            }
+          }
+        } catch (exportErr: any) {
+          // Don't fail the save — export is best-effort
+          logApiError('ScopeViewer export markdown', exportErr as Error);
+        }
+      }
+
       setTimeout(() => (message = null), 3000);
     } catch (err: any) {
       error = err.message || 'Failed to save scope';

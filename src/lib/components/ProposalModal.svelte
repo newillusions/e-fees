@@ -1493,9 +1493,12 @@
       scopeDirty = false;
     }}
   >
+    {@const scopeProject = projectStoreMap.get(extractId(proposal?.project_id))}
     <ScopeViewer
       feeId={getEntityId(proposal)}
       stages={proposal?.pricing?.stages ?? []}
+      projectName={scopeProject?.name || ''}
+      projectNumber={scopeProject?.project_number || ''}
       ondirtychange={(d) => scopeDirty = d}
     />
   </BaseModal>
