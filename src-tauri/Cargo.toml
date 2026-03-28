@@ -52,6 +52,8 @@ dirs = "6"
 # Excel export
 rust_xlsxwriter = "0.82"
 umya-spreadsheet = "2.3"
+# HTTP client for scope service queries
+reqwest = { version = "0.12", features = ["json"] }
 
 [dev-dependencies]
 serial_test = "3.1"
