@@ -47,8 +47,8 @@ cd e-fees
 npm install
 
 # Copy environment template
-cp .env.template .env
-# Edit .env with your database credentials
+cp e-fees.config.template e-fees.config
+# Edit e-fees.config with your database credentials
 
 # Start development server
 npm run tauri:dev

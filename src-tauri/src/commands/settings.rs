@@ -445,32 +445,28 @@ pub async fn reload_database_config(
         .surrealdb_pass
         .ok_or("Missing SurrealDB password in settings")?;
 
-    // Reconfigure the database manager
+    // Reconfigure the database manager and reconnect
     {
         let mut manager = state.write().await;
         manager
             .reconfigure(url, namespace, database, username, password)
             .await?;
+
+        match manager.reconnect().await {
+            Ok(_) => {
+                info!("Database reconfiguration successful - connection established");
+            }
+            Err(e) => {
+                warn!("Database reconfigured but reconnection failed: {}", e);
+                return Ok(format!(
+                    "Database configuration reloaded but connection failed: {}",
+                    e
+                ));
+            }
+        }
     }
 
-    // Test the new connection
-    let manager_clone = {
-        let manager = state.read().await;
-        manager.clone()
-    };
-
-    // Attempt to connect with new settings
-    let is_connected = manager_clone.check_connection().await;
-    if is_connected {
-        info!("Database reconfiguration successful - connection established");
-        Ok("Database configuration reloaded and connected successfully".to_string())
-    } else {
-        warn!("Database reconfiguration completed but connection test failed");
-        Ok(
-            "Database configuration reloaded but connection test failed - check settings"
-                .to_string(),
-        )
-    }
+    Ok("Database configuration reloaded and connected successfully".to_string())
 }
 
 /// Open folder picker dialog for user selection.

@@ -72,7 +72,7 @@ Production builds don't have access to developer console or verbose logging, mak
 
 **Planned Solution**:
 Implement dev mode toggle:
-- Add `DEV_MODE=false` to .env file
+- Add `DEV_MODE=false` to e-fees.config file
 - Add UI toggle in settings page
 - When enabled:
   - Verbose logging to file and console
@@ -128,7 +128,7 @@ Users should be able to configure where downloaded update files are saved, and p
 
 **Proposed Solution**:
 - Add "Download Location" setting in Settings modal
-- Store preference in .env file
+- Store preference in e-fees.config file
 - Pass custom path to updater when downloading
 - Consider custom install path option for Windows
 
