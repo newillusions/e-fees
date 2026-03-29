@@ -6,12 +6,22 @@
 
 use std::sync::Arc;
 
-use axum::{extract::Path, extract::State, Json};
+use axum::{
+    body::Body,
+    extract::Path,
+    extract::State,
+    http::{header, HeaderValue, StatusCode},
+    response::Response,
+    Json,
+};
 use chrono::Utc;
 use serde_json::{json, Value};
 use tracing::{info, warn};
 
-use e_fees_core::export::{build_fee_json, clean_number_for_path, is_placeholder};
+use e_fees_core::export::{
+    build_fee_json, clean_number_for_path, indesign_workbook::generate_indesign_workbook,
+    is_placeholder,
+};
 use e_fees_core::models::{record_id_string, Company, Contact, Fee, Project};
 
 use crate::error::ApiError;
@@ -254,4 +264,70 @@ pub async fn fee_json_status(
         "placeholder": placeholder,
         "fields": fields,
     })))
+}
+
+// ============================================================================
+// WORKBOOK EXPORT ENDPOINT
+// ============================================================================
+
+/// Export fee data as a multi-sheet XLSX workbook for InDesign data-merge.
+///
+/// Generates a workbook with sheets T0–T4 (design/post-contract durations,
+/// design fees, post-contract fees, payment schedule) plus a Revisions sheet.
+/// Returns raw xlsx bytes with appropriate Content-Type and Content-Disposition
+/// headers so the caller can download the file directly.
+#[utoipa::path(
+    post,
+    path = "/fees/{id}/export/indesign",
+    tag = "Fees",
+    params(("id" = String, Path, description = "Fee record key (fee: prefix stripped if present)")),
+    responses(
+        (status = 200, description = "XLSX workbook bytes", content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        (status = 404, description = "Fee not found", body = crate::schemas::ErrorResponse),
+        (status = 422, description = "Fee has no pricing data", body = crate::schemas::ErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
+pub async fn export_indesign(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Response<Body>, ApiError> {
+    let key = id.strip_prefix("fee:").unwrap_or(&id);
+
+    let fee: Option<Fee> = state.db.select(("fee", key)).await?;
+    let fee = fee.ok_or_else(|| ApiError::not_found("Fee", &id))?;
+
+    let xlsx_bytes = generate_indesign_workbook(&fee).map_err(|e| ApiError {
+        status: StatusCode::UNPROCESSABLE_ENTITY,
+        code: "export_failed".into(),
+        message: e,
+    })?;
+
+    let filename = format!("{}-indesign.xlsx", key.replace(':', "-").replace('_', "-"));
+    let disposition = format!("attachment; filename=\"{}\"", filename);
+
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
+        )
+        .header(
+            header::CONTENT_DISPOSITION,
+            HeaderValue::from_str(&disposition)
+                .unwrap_or_else(|_| HeaderValue::from_static("attachment")),
+        )
+        .header(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&xlsx_bytes.len().to_string())
+                .unwrap_or_else(|_| HeaderValue::from_static("0")),
+        )
+        .body(Body::from(xlsx_bytes))
+        .map_err(|e| ApiError::service_unavailable(format!("Failed to build response: {e}")))?;
+
+    info!("Generated InDesign workbook for fee:{}", key);
+
+    Ok(response)
 }

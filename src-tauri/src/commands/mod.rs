@@ -146,7 +146,7 @@ pub use system::{
 
 // Excel export
 pub mod export;
-pub use export::{export_fee_excel, export_fee_template};
+pub use export::{export_fee_excel, export_fee_template, export_indesign_workbook};
 
 // Batch operations (multi-select)
 pub mod batch_ops;

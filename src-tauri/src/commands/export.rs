@@ -8,6 +8,7 @@ use tauri::{AppHandle, State};
 use super::AppState;
 use crate::commands::folder_management::get_project_folder_location;
 use crate::excel_export::{generate_fee_excel, generate_fee_template};
+use e_fees_core::export::indesign_workbook::generate_indesign_workbook;
 
 /// Reveal a file in the native file manager (Finder on macOS, Explorer on Windows).
 fn reveal_in_file_manager(path: &str) {
@@ -144,6 +145,72 @@ pub async fn export_fee_template(
     info!("Template export saved to: {}", path);
     reveal_in_file_manager(&path);
     Ok(path)
+}
+
+/// Export a fee proposal to an InDesign workbook (.xlsx) in the project folder.
+///
+/// Saves to `<proposal_dir>/<project_number>-IDW Pricing.xlsx`. Falls back to
+/// the system temp directory when no project folder is found.
+///
+/// If `output_path` is provided (from "Export As…" dialog), saves there instead.
+#[tauri::command]
+pub async fn export_indesign_workbook(
+    fee_id: String,
+    output_path: Option<String>,
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    info!(
+        "export_indesign_workbook called for id: {}, output_path: {:?}",
+        fee_id, output_path
+    );
+
+    let record_id = fee_id.strip_prefix("fee:").unwrap_or(&fee_id).to_string();
+
+    let manager = state.read().await;
+    let fee = manager.get_fee_by_id(&record_id).await.map_err(|e| {
+        error!("Failed to fetch fee for InDesign workbook export: {}", e);
+        format!("Failed to fetch fee: {}", e)
+    })?;
+    let fee = fee.ok_or_else(|| "Fee not found".to_string())?;
+
+    // Extract project number from fee number (e.g. "25-97105-R1" → "25-97105")
+    let project_number = fee
+        .number
+        .split("-R")
+        .next()
+        .unwrap_or(&fee.number)
+        .to_string();
+
+    let safe_number = project_number.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "-");
+
+    let proposal_dir = find_proposal_dir(&app_handle, &project_number).await;
+
+    let resolved_path = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            let filename = format!("{}-IDW Pricing.xlsx", safe_number);
+            match &proposal_dir {
+                Some(dir) => dir.join(&filename),
+                None => std::env::temp_dir().join(&filename),
+            }
+        }
+    };
+
+    let bytes = generate_indesign_workbook(&fee).map_err(|e| {
+        error!("Failed to generate InDesign workbook: {}", e);
+        format!("Failed to generate workbook: {}", e)
+    })?;
+
+    std::fs::write(&resolved_path, &bytes).map_err(|e| {
+        error!("Failed to write InDesign workbook to {:?}: {}", resolved_path, e);
+        format!("Failed to write file: {}", e)
+    })?;
+
+    let path_str = resolved_path.to_string_lossy().to_string();
+    info!("InDesign workbook export saved to: {}", path_str);
+    reveal_in_file_manager(&path_str);
+    Ok(path_str)
 }
 
 /// Locate the project's `02 Proposal` directory via `find_project_folder()`.

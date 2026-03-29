@@ -36,6 +36,7 @@ use commands::{
     // Excel export
     export_fee_excel,
     export_fee_template,
+    export_indesign_workbook,
     // Scope markdown export
     export_scope_markdown,
     generate_next_project_number,
@@ -384,6 +385,7 @@ pub fn run() {
             // Excel export
             export_fee_excel,
             export_fee_template,
+            export_indesign_workbook,
             // Batch operations
             batch_delete_entities,
             batch_update_status,

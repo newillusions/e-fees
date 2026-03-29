@@ -1817,11 +1817,13 @@ name = "e-fees-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "rust_xlsxwriter",
  "serde",
  "serde_json",
  "surrealdb",
  "surrealdb-types",
  "utoipa",
+ "zip 2.4.2",
 ]
 
 [[package]]

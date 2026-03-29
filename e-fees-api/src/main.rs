@@ -58,6 +58,7 @@ pub struct AppState {
         routes::fees::delete_fee,
         routes::fee_export::export_fee_json,
         routes::fee_export::fee_json_status,
+        routes::fee_export::export_indesign,
         routes::companies::list_companies,
         routes::companies::get_company,
         routes::companies::create_company,
@@ -212,6 +213,10 @@ async fn main() {
         .route(
             "/fees/{id}/json-status",
             get(routes::fee_export::fee_json_status),
+        )
+        .route(
+            "/fees/{id}/export/indesign",
+            axum::routing::post(routes::fee_export::export_indesign),
         )
         .route(
             "/companies",
