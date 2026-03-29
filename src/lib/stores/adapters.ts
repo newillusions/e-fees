@@ -33,7 +33,7 @@ import {
   getFeesPage,
   getProjectById,
   getCompanyById,
-  getContactById,
+  getContactById
 } from '../api';
 
 /**
@@ -53,21 +53,21 @@ export interface PaginationApi<T> {
 /** Projects API adapter implementing CrudApi interface */
 export const projectsApi: CrudApi<Project> = {
   getAll: () => getProjects(),
-  create: (data) => createProjectWithTemplate(data),
+  create: data => createProjectWithTemplate(data),
   update: (id, data) => updateProject(id, data),
-  delete: (id) => deleteProject(id)
+  delete: id => deleteProject(id)
 };
 
 /** Companies API adapter implementing CrudApi interface */
 export const companiesApi: CrudApi<Company> = {
   getAll: () => getCompanies(),
-  create: (data) => createCompany(data),
+  create: data => createCompany(data),
   update: async (id, data) => {
     const result = await updateCompany(id, data);
     if (!result) throw new Error(`Company ${id} not found`);
     return result;
   },
-  delete: async (id) => {
+  delete: async id => {
     const result = await deleteCompany(id);
     if (!result) throw new Error(`Company ${id} not found`);
     return result;
@@ -77,17 +77,17 @@ export const companiesApi: CrudApi<Company> = {
 /** Contacts API adapter implementing CrudApi interface */
 export const contactsApi: CrudApi<Contact> = {
   getAll: () => getContacts(),
-  create: (data) => createContact(data),
+  create: data => createContact(data),
   update: (id, data) => updateContact(id, data),
-  delete: (id) => deleteContact(id)
+  delete: id => deleteContact(id)
 };
 
 /** Fees API adapter implementing CrudApi interface */
 export const feesApi: CrudApi<Fee> = {
   getAll: () => getFees(),
-  create: (data) => createFee(data),
+  create: data => createFee(data),
   update: (id, data) => updateFee(id, data as Omit<Fee, 'id'>),
-  delete: (id) => deleteFee(id)
+  delete: id => deleteFee(id)
 };
 
 // ============================================================================
@@ -97,19 +97,19 @@ export const feesApi: CrudApi<Fee> = {
 /** Projects pagination API adapter */
 export const projectsPaginationApi: PaginationApi<Project> = {
   getPage: (page, pageSize) => getProjectsPage(page, pageSize),
-  getById: (id) => getProjectById(id)
+  getById: id => getProjectById(id)
 };
 
 /** Companies pagination API adapter */
 export const companiesPaginationApi: PaginationApi<Company> = {
   getPage: (page, pageSize) => getCompaniesPage(page, pageSize),
-  getById: (id) => getCompanyById(id)
+  getById: id => getCompanyById(id)
 };
 
 /** Contacts pagination API adapter */
 export const contactsPaginationApi: PaginationApi<Contact> = {
   getPage: (page, pageSize) => getContactsPage(page, pageSize),
-  getById: (id) => getContactById(id)
+  getById: id => getContactById(id)
 };
 
 /** Fees pagination API adapter */

@@ -53,7 +53,10 @@ export async function searchStageDictionary(query: string): Promise<StageDiction
     const entries = await invoke<StageDictionaryEntry[]>('search_stage_dictionary', { query });
     return entries;
   } catch (error) {
-    logApiError('searchStageDictionary', error as Error, { query, component: 'StageDictionaryApi' });
+    logApiError('searchStageDictionary', error as Error, {
+      query,
+      component: 'StageDictionaryApi'
+    });
     throw error;
   }
 }

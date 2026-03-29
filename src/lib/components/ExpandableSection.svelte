@@ -1,7 +1,13 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
 
-  let { title, totalCount, showAll = $bindable(false), items = [], maxItems = 3 }: {
+  let {
+    title,
+    totalCount,
+    showAll = $bindable(false),
+    items = [],
+    maxItems = 3
+  }: {
     title: string;
     totalCount: number;
     showAll?: boolean;
@@ -40,10 +46,7 @@
 
       <!-- Expand/collapse button -->
       {#if items.length > maxItems}
-        <button
-          on:click={toggleExpanded}
-          class="emittiv-link text-sm text-center py-2"
-        >
+        <button on:click={toggleExpanded} class="emittiv-link text-sm text-center py-2">
           {showAll ? '↑ Show less' : `View all ${items.length} ${title.toLowerCase()} →`}
         </button>
       {/if}

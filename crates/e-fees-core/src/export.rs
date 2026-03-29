@@ -168,9 +168,9 @@ mod tests {
 
     use crate::models::{
         common::TimeStamps,
-        fee::Fee,
         company::Company,
         contact::Contact,
+        fee::Fee,
         project::{Project, ProjectNumber},
     };
     use surrealdb_types::Datetime;
@@ -306,9 +306,9 @@ mod tests {
     #[test]
     fn test_format_issue_date_invalid_returns_nonempty() {
         assert!(!format_issue_date("invalid").is_empty());
-        assert!(!format_issue_date("12345").is_empty());  // too short
+        assert!(!format_issue_date("12345").is_empty()); // too short
         assert!(!format_issue_date("").is_empty());
-        assert!(!format_issue_date("261399").is_empty());  // month 13 invalid
+        assert!(!format_issue_date("261399").is_empty()); // month 13 invalid
     }
 
     // ---- clean_record_key tests ----
@@ -382,14 +382,29 @@ mod tests {
         let obj = result.as_object().expect("result must be a JSON object");
 
         let expected_keys = [
-            "01 Document Name", "02 Document Number", "03 Document Release",
-            "04 Document Issue Date", "06 Project Name", "07 Project Activity",
-            "08 Project Package", "09 Project Stage", "11 Project Area",
-            "12 Project City", "13 Project Country", "21 Client Company",
-            "22 Client City", "23 Client Country", "26 Contact Name",
-            "27 Contact Position", "28 Contact Phone", "29 Contact Email",
-            "91 Staff Name", "92 Staff Position", "93 Staff Phone",
-            "94 Staff Email", "99 Strap Line",
+            "01 Document Name",
+            "02 Document Number",
+            "03 Document Release",
+            "04 Document Issue Date",
+            "06 Project Name",
+            "07 Project Activity",
+            "08 Project Package",
+            "09 Project Stage",
+            "11 Project Area",
+            "12 Project City",
+            "13 Project Country",
+            "21 Client Company",
+            "22 Client City",
+            "23 Client Country",
+            "26 Contact Name",
+            "27 Contact Position",
+            "28 Contact Phone",
+            "29 Contact Email",
+            "91 Staff Name",
+            "92 Staff Position",
+            "93 Staff Phone",
+            "94 Staff Email",
+            "99 Strap Line",
         ];
         assert_eq!(obj.len(), 23, "expected 23 fields (01-99 with gaps)");
         for key in &expected_keys {
@@ -408,7 +423,7 @@ mod tests {
 
         assert_eq!(result["01 Document Name"], "Test Fee");
         assert_eq!(result["02 Document Number"], "TF-001");
-        assert_eq!(result["03 Document Release"], "03");  // zero-padded
+        assert_eq!(result["03 Document Release"], "03"); // zero-padded
         assert_eq!(result["04 Document Issue Date"], "15 Mar 2026");
         assert_eq!(result["06 Project Name"], "Burj Al Arab Renovation");
         assert_eq!(result["07 Project Activity"], "Lighting Design");
@@ -436,7 +451,7 @@ mod tests {
         let fee = make_fee();
         let project = make_project();
         let company = make_company();
-        let contact = make_contact_parts();  // no full_name, has first + last
+        let contact = make_contact_parts(); // no full_name, has first + last
 
         let result = build_fee_json(&fee, &project, &company, &contact);
         assert_eq!(result["26 Contact Name"], "Jane Smith");
@@ -447,7 +462,7 @@ mod tests {
         let fee = make_fee();
         let project = make_project();
         let company = make_company();
-        let contact = make_contact_parts();  // no email/phone/position
+        let contact = make_contact_parts(); // no email/phone/position
 
         let result = build_fee_json(&fee, &project, &company, &contact);
         assert_eq!(result["27 Contact Position"], "");
@@ -459,11 +474,21 @@ mod tests {
     fn test_build_fee_json_rev_zero_padded() {
         let mut fee = make_fee();
         fee.rev = 1;
-        let result = build_fee_json(&fee, &make_project(), &make_company(), &make_contact_full_name());
+        let result = build_fee_json(
+            &fee,
+            &make_project(),
+            &make_company(),
+            &make_contact_full_name(),
+        );
         assert_eq!(result["03 Document Release"], "01");
 
         fee.rev = 10;
-        let result = build_fee_json(&fee, &make_project(), &make_company(), &make_contact_full_name());
+        let result = build_fee_json(
+            &fee,
+            &make_project(),
+            &make_company(),
+            &make_contact_full_name(),
+        );
         assert_eq!(result["03 Document Release"], "10");
     }
 }

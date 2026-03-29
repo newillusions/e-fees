@@ -552,7 +552,7 @@ export const INTEGRATION_CHECK_ORDER = [
   'connectionIndicator',
   'entityCountConsistency',
   'settingsModal',
-  'detailPanel',
+  'detailPanel'
 ] as const;
 
-export type IntegrationCheckName = typeof INTEGRATION_CHECK_ORDER[number];
+export type IntegrationCheckName = (typeof INTEGRATION_CHECK_ORDER)[number];

@@ -1,5 +1,11 @@
 <script lang="ts">
-  import type { PaymentScheduleEntry, PaymentSchedule, Stage, PricingConfig, PricingCell } from '../../../types/database';
+  import type {
+    PaymentScheduleEntry,
+    PaymentSchedule,
+    Stage,
+    PricingConfig,
+    PricingCell
+  } from '../../../types/database';
   import { generatePricingId } from '../../../types/database';
   import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
   import { roundWithConfig, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
@@ -28,7 +34,9 @@
   }: Props = $props();
 
   // Design stages for milestone generation
-  const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
+  const designStages = $derived(
+    stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order)
+  );
 
   // Compute design total from cells + stages (same logic as generateFromPricing)
   // This is more reliable than the prop which depends on Svelte 4 $: reactivity
@@ -48,13 +56,13 @@
   const statusColors = {
     pending: 'payment-pending',
     invoiced: 'payment-invoiced',
-    paid: 'payment-paid',
+    paid: 'payment-paid'
   };
 
   const statusIcons = {
     pending: '○',
     invoiced: '◐',
-    paid: '●',
+    paid: '●'
   };
 
   // Calculate totals
@@ -71,7 +79,7 @@
       entries,
       total_invoiced: totalInvoiced,
       total_paid: totalPaid,
-      total_outstanding: totalOutstanding,
+      total_outstanding: totalOutstanding
     };
   }
 
@@ -80,18 +88,22 @@
     const entries: PaymentScheduleEntry[] = [];
 
     // Calculate design subtotal from actual rounded stage totals
-    const designSubtotal = designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0);
+    const designSubtotal = designStages.reduce(
+      (sum, stage) => sum + getRoundedStageTotal(stage.id),
+      0
+    );
 
     // Mobilisation based on design subtotal
     const mobilisationAmount = designSubtotal * (config.mobilisation_percent / 100);
-    const mobilisationPercent = designSubtotal > 0 ? (mobilisationAmount / designSubtotal) * 100 : 0;
+    const mobilisationPercent =
+      designSubtotal > 0 ? (mobilisationAmount / designSubtotal) * 100 : 0;
     entries.push({
       id: generatePricingId('pay'),
       type: 'mobilisation',
       description: `Mobilisation (${config.mobilisation_percent}%)`,
       amount: mobilisationAmount,
       percentage_of_total: mobilisationPercent,
-      status: 'pending',
+      status: 'pending'
     });
 
     // Milestone payments using actual rounded stage totals
@@ -113,7 +125,7 @@
         amount: stageAmount,
         quoted_stage_amount: stageTotal,
         percentage_of_total: stagePercent,
-        status: 'pending',
+        status: 'pending'
       });
     }
 
@@ -129,7 +141,7 @@
       description: 'New Payment',
       amount: 0,
       percentage_of_total: 0,
-      status: 'pending',
+      status: 'pending'
     };
     const entries = [...schedule.entries, newEntry];
     const newSchedule = recalculateTotals(entries);
@@ -198,7 +210,7 @@
           description: `50% ${stageName}`,
           stage_percentage: 50,
           amount: halfAmount,
-          percentage_of_total: halfPercent,
+          percentage_of_total: halfPercent
         },
         {
           ...e,
@@ -206,8 +218,8 @@
           description: `100% ${stageName}`,
           stage_percentage: 100,
           amount: halfAmount,
-          percentage_of_total: halfPercent,
-        },
+          percentage_of_total: halfPercent
+        }
       ];
     });
 
@@ -244,7 +256,11 @@
     <div class="p-6 text-center">
       <p class="text-emittiv-light text-sm mb-3">No payment schedule defined.</p>
       {#if !readonly}
-        <button type="button" class="emittiv-btn emittiv-btn--primary emittiv-btn--lg" onclick={generateFromPricing}>
+        <button
+          type="button"
+          class="emittiv-btn emittiv-btn--primary emittiv-btn--lg"
+          onclick={generateFromPricing}
+        >
           Generate from Pricing
         </button>
       {/if}
@@ -269,7 +285,7 @@
               type="text"
               class="emittiv-table-input emittiv-table-input--left"
               value={entry.description}
-              onchange={(e) => updatePayment(entry.id, 'description', e.currentTarget.value)}
+              onchange={e => updatePayment(entry.id, 'description', e.currentTarget.value)}
             />
           {:else}
             <span class="text-emittiv-white">{entry.description}</span>
@@ -294,7 +310,11 @@
               type="text"
               inputmode="numeric"
               class="emittiv-table-input emittiv-table-input--lg"
-              use:formattedNumber={{ value: Math.round(entry.amount), onChange: (v) => updatePayment(entry.id, 'amount', v), min: 0 }}
+              use:formattedNumber={{
+                value: Math.round(entry.amount),
+                onChange: v => updatePayment(entry.id, 'amount', v),
+                min: 0
+              }}
             />
           {:else}
             <span class="text-emittiv-splash font-medium">{formatNumber(entry.amount)}</span>
@@ -310,11 +330,13 @@
               onclick={() => cycleStatus(entry.id)}
               title="Click to change status"
             >
-              {statusIcons[entry.status]} {entry.status}
+              {statusIcons[entry.status]}
+              {entry.status}
             </button>
           {:else}
             <span class="{statusColors[entry.status]} text-xs">
-              {statusIcons[entry.status]} {entry.status}
+              {statusIcons[entry.status]}
+              {entry.status}
             </span>
           {/if}
         </div>
@@ -332,7 +354,13 @@
                   onclick={() => splitPayment(entry.id)}
                 />
               {/if}
-              <IconButton icon="trash" variant="danger" size="sm" title="Remove" onclick={() => removePayment(entry.id)} />
+              <IconButton
+                icon="trash"
+                variant="danger"
+                size="sm"
+                title="Remove"
+                onclick={() => removePayment(entry.id)}
+              />
             </div>
           </div>
         {/if}
@@ -344,7 +372,11 @@
       <div class="emittiv-sortable-col--grow">TOTAL</div>
       <div class="emittiv-sortable-col--number"></div>
       <div class="emittiv-sortable-col--number">
-        <span class:text-emittiv-splash={scheduleValid} class:schedule-invalid={!scheduleValid} class="font-bold">
+        <span
+          class:text-emittiv-splash={scheduleValid}
+          class:schedule-invalid={!scheduleValid}
+          class="font-bold"
+        >
           {formatNumber(scheduledTotal)}
         </span>
       </div>
@@ -356,7 +388,10 @@
     {#if !scheduleValid}
       <div class="emittiv-schedule-diff">
         <span class="text-emittiv-light">Schedule difference:</span>
-        <span class={scheduleDifference > 0 ? 'schedule-surplus' : 'schedule-invalid'} class:font-medium={true}>
+        <span
+          class={scheduleDifference > 0 ? 'schedule-surplus' : 'schedule-invalid'}
+          class:font-medium={true}
+        >
           {scheduleDifference > 0 ? '+' : ''}{formatNumber(Math.round(scheduleDifference))}
         </span>
         <span class="text-emittiv-light">from target</span>
@@ -376,16 +411,28 @@
       </div>
       <div class="flex items-center gap-1">
         <span class="text-emittiv-light">Outstanding:</span>
-        <span class="text-emittiv-splash font-medium">{formatNumber(schedule.total_outstanding)}</span>
+        <span class="text-emittiv-splash font-medium"
+          >{formatNumber(schedule.total_outstanding)}</span
+        >
       </div>
     </div>
   {/snippet}
 </PanelCard>
 
 <style>
-  .payment-pending  { color: var(--color-status-pending); }
-  .payment-invoiced { color: var(--color-status-invoiced); }
-  .payment-paid     { color: var(--color-status-paid); }
-  .schedule-invalid { color: var(--color-error); }
-  .schedule-surplus { color: var(--color-success); }
+  .payment-pending {
+    color: var(--color-status-pending);
+  }
+  .payment-invoiced {
+    color: var(--color-status-invoiced);
+  }
+  .payment-paid {
+    color: var(--color-status-paid);
+  }
+  .schedule-invalid {
+    color: var(--color-error);
+  }
+  .schedule-surplus {
+    color: var(--color-success);
+  }
 </style>

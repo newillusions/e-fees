@@ -8,7 +8,7 @@
     onRemove,
     onExpand,
     onReorder,
-    onDropFromLibrary,
+    onDropFromLibrary
   }: {
     stage: StageDisplay;
     deliverables: Deliverable[];
@@ -49,7 +49,7 @@
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
 
       // Check if this deliverable is already in this stage (reorder)
-      const existingIndex = deliverables.findIndex((d) => d.id === data.id);
+      const existingIndex = deliverables.findIndex(d => d.id === data.id);
       if (existingIndex >= 0) {
         // Reorder within stage — move to end
         const reordered = [...deliverables];
@@ -80,7 +80,7 @@
 
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      const sourceIndex = deliverables.findIndex((d) => d.id === data.id);
+      const sourceIndex = deliverables.findIndex(d => d.id === data.id);
 
       if (sourceIndex >= 0 && sourceIndex !== targetIndex) {
         // Reorder within stage
@@ -103,11 +103,15 @@
   <div
     class="emittiv-stage-header"
     onclick={handleHeaderClick}
-    onkeydown={(e) => e.key === 'Enter' && handleHeaderClick()}
+    onkeydown={e => e.key === 'Enter' && handleHeaderClick()}
     role="button"
     tabindex="0"
   >
-    <span style="font-size: 10px; color: var(--emittiv-light); transition: transform 0.2s; transform: rotate({collapsed ? '-90deg' : '0deg'});">
+    <span
+      style="font-size: 10px; color: var(--emittiv-light); transition: transform 0.2s; transform: rotate({collapsed
+        ? '-90deg'
+        : '0deg'});"
+    >
       &#9660;
     </span>
     <span class="emittiv-stage-label">{stage.label}</span>
@@ -125,21 +129,15 @@
       {#if deliverables.length > 0}
         {#each deliverables as deliverable, index (deliverable.id)}
           <div
-            ondragover={(e) => handleCardDragOver(e, index)}
-            ondrop={(e) => handleCardDrop(e, index)}
+            ondragover={e => handleCardDragOver(e, index)}
+            ondrop={e => handleCardDrop(e, index)}
             style={dragOverIndex === index ? 'border-top: 2px solid var(--emittiv-splash);' : ''}
           >
-            <DeliverableCard
-              {deliverable}
-              {onRemove}
-              {onExpand}
-            />
+            <DeliverableCard {deliverable} {onRemove} {onExpand} />
           </div>
         {/each}
       {:else}
-        <div class="emittiv-drop-zone" class:active={dropActive}>
-          Drop deliverables here
-        </div>
+        <div class="emittiv-drop-zone" class:active={dropActive}>Drop deliverables here</div>
       {/if}
     </div>
   {/if}

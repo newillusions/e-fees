@@ -120,7 +120,9 @@ pub async fn create_fee(
         optional_sets = optional_sets,
     );
 
-    let mut qb = state.db.query(&query)
+    let mut qb = state
+        .db
+        .query(&query)
         .bind(("name", body.name))
         .bind(("number", body.number))
         .bind(("status", body.status))
@@ -218,7 +220,9 @@ pub async fn delete_fee(
     let deleted: Option<Fee> = state.db.delete(("fee", key)).await?;
 
     match deleted {
-        Some(_) => Ok(Json(json!({ "deleted": true, "id": format!("fee:{}", key) }))),
+        Some(_) => Ok(Json(
+            json!({ "deleted": true, "id": format!("fee:{}", key) }),
+        )),
         None => Err(ApiError::not_found("Fee", &id)),
     }
 }
@@ -270,7 +274,14 @@ fn fee_to_detail_json(f: &Fee) -> Value {
 /// Returns (0.0, "AED") if pricing is absent.
 fn extract_pricing(f: &Fee) -> (f64, String) {
     match f.pricing_typed() {
-        Some(p) => (p.config.quoted_fee, if p.config.currency.is_empty() { "AED".into() } else { p.config.currency }),
+        Some(p) => (
+            p.config.quoted_fee,
+            if p.config.currency.is_empty() {
+                "AED".into()
+            } else {
+                p.config.currency
+            },
+        ),
         None => (0.0, "AED".into()),
     }
 }

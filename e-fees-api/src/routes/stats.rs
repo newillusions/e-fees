@@ -25,9 +25,7 @@ const ACTIVE_FEE_STATUSES: &[&str] = &["Draft", "Sent", "Negotiation"];
     ),
     security(("api_key" = []))
 )]
-pub async fn get_stats(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Value>, ApiError> {
+pub async fn get_stats(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
     let projects: Vec<Project> = state.db.select("projects").await?;
     let companies: Vec<Company> = state.db.select("company").await?;
     let contacts: Vec<Contact> = state.db.select("contacts").await?;

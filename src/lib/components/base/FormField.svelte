@@ -11,7 +11,12 @@
   import type { FormFieldConfig, FieldChangeEvent, TypeaheadOption } from './types';
   import { logger } from '$lib/services/logger';
 
-  let { field, formData = $bindable({}), error = '', onfieldchange }: {
+  let {
+    field,
+    formData = $bindable({}),
+    error = '',
+    onfieldchange
+  }: {
     field: FormFieldConfig;
     formData?: Record<string, unknown>;
     error?: string;
@@ -54,7 +59,10 @@
   }
 
   // Handle typeahead selection
-  function handleTypeaheadSelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+  function handleTypeaheadSelect(data: {
+    id: string;
+    option: { id: string; [key: string]: unknown };
+  }) {
     setValue(data.id);
     if (field.onSelect) {
       field.onSelect(data.option as TypeaheadOption);

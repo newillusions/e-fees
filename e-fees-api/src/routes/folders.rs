@@ -44,8 +44,13 @@ pub async fn create_folder(
     if !number.chars().all(|c| c.is_alphanumeric() || c == '-') {
         return Err(ApiError::bad_request("Invalid project number format"));
     }
-    if name.chars().any(|c| c == '\'' || c == '"' || c == '\\' || c == ';' || c == '`' || c == '$') {
-        return Err(ApiError::bad_request("Project name contains invalid characters"));
+    if name
+        .chars()
+        .any(|c| c == '\'' || c == '"' || c == '\\' || c == ';' || c == '`' || c == '$')
+    {
+        return Err(ApiError::bad_request(
+            "Project name contains invalid characters",
+        ));
     }
 
     let folder_config = match &state.folder_config {
@@ -68,7 +73,12 @@ pub async fn create_folder(
         crate::ssh::shell_quote(name),
     );
     let stdout = ssh.exec(&remote_cmd).await?;
-    info!("Created folder for project {} ({}): {}", number, name, stdout.trim());
+    info!(
+        "Created folder for project {} ({}): {}",
+        number,
+        name,
+        stdout.trim()
+    );
 
     Ok(Json(json!({
         "status": "created",

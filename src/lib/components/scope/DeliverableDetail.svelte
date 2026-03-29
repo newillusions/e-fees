@@ -7,7 +7,7 @@
     onClose,
     onSave,
     onDuplicate,
-    onSaveAsNew,
+    onSaveAsNew
   }: {
     deliverable: Deliverable;
     onClose: () => void;
@@ -61,13 +61,19 @@
             {deliverable.title}
           </h3>
           <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
-            <span class="layer-badge {deliverable.layer}" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;">
+            <span
+              class="layer-badge {deliverable.layer}"
+              style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;"
+            >
               {deliverable.layer}
             </span>
             {#if deliverable.discipline}
-              <span style="font-size: 10px; color: var(--emittiv-light);">{deliverable.discipline}</span>
+              <span style="font-size: 10px; color: var(--emittiv-light);"
+                >{deliverable.discipline}</span
+              >
             {/if}
-            <span style="font-size: 10px; color: var(--emittiv-light);">v{deliverable.version}</span>
+            <span style="font-size: 10px; color: var(--emittiv-light);">v{deliverable.version}</span
+            >
           </div>
         </div>
         <button class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm" onclick={onClose}>
@@ -83,7 +89,9 @@
             bind:value={editBody}
           ></textarea>
         {:else}
-          <p style="font-size: 12px; color: var(--emittiv-lighter); white-space: pre-wrap; margin: 0;">
+          <p
+            style="font-size: 12px; color: var(--emittiv-lighter); white-space: pre-wrap; margin: 0;"
+          >
             {editBody}
           </p>
         {/if}
@@ -117,7 +125,10 @@
               Save
             </button>
           {:else}
-            <button class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm" onclick={() => (isEditing = true)}>
+            <button
+              class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm"
+              onclick={() => (isEditing = true)}
+            >
               Edit
             </button>
           {/if}

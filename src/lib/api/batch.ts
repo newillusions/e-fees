@@ -15,7 +15,7 @@ const TABLE_MAP: Record<string, string> = {
   projects: 'projects',
   companies: 'company',
   contacts: 'contacts',
-  fees: 'fee',
+  fees: 'fee'
 };
 
 /**
@@ -24,10 +24,7 @@ const TABLE_MAP: Record<string, string> = {
  * @param ids - Array of record keys (without table prefix)
  * @returns Array of deleted records (as JSON)
  */
-export async function batchDeleteEntities(
-  entityType: string,
-  ids: string[]
-): Promise<unknown[]> {
+export async function batchDeleteEntities(entityType: string, ids: string[]): Promise<unknown[]> {
   const table = TABLE_MAP[entityType];
   if (!table) throw new Error(`Unknown entity type: ${entityType}`);
 

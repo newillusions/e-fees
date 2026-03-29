@@ -1,5 +1,5 @@
-import '@testing-library/jest-dom'
-import { vi, beforeEach, afterEach, beforeAll } from 'vitest'
+import '@testing-library/jest-dom';
+import { vi, beforeEach, afterEach, beforeAll } from 'vitest';
 
 // Ensure we're in browser environment for Svelte 5
 Object.defineProperty(global, 'window', {
@@ -62,7 +62,7 @@ vi.mock('surrealdb', () => ({
   }))
 }));
 
-// Mock surrealdb.js v1.0+ 
+// Mock surrealdb.js v1.0+
 vi.mock('surrealdb.js', () => ({
   default: vi.fn().mockImplementation(() => ({
     connect: vi.fn().mockResolvedValue(true),
@@ -96,9 +96,9 @@ Object.defineProperty(window, 'localStorage', {
     getItem: vi.fn(),
     setItem: vi.fn(),
     removeItem: vi.fn(),
-    clear: vi.fn(),
+    clear: vi.fn()
   },
-  writable: true,
+  writable: true
 });
 
 // Mock console to reduce noise in tests
@@ -111,7 +111,7 @@ global.console = {
   // Mock info, log, debug to reduce test noise
   info: vi.fn(),
   log: vi.fn(),
-  debug: vi.fn(),
+  debug: vi.fn()
 };
 
 // Environment setup for Svelte 5 compatibility
@@ -120,7 +120,7 @@ beforeEach(() => {
   if (global.document && global.document.body) {
     global.document.body.innerHTML = '';
   }
-  
+
   // Reset any global state that might interfere
   vi.clearAllMocks();
 });
@@ -128,7 +128,7 @@ beforeEach(() => {
 // Clean up after each test
 afterEach(() => {
   vi.clearAllMocks();
-  
+
   // Clean up DOM state
   if (global.document && global.document.body) {
     global.document.body.innerHTML = '';
@@ -142,8 +142,10 @@ beforeAll(() => {
   console.error = (...args) => {
     // Filter out known Svelte testing warnings
     const message = args[0]?.toString() || '';
-    if (message.includes('lifecycle_function_unavailable') || 
-        message.includes('mount(...) is not available on the server')) {
+    if (
+      message.includes('lifecycle_function_unavailable') ||
+      message.includes('mount(...) is not available on the server')
+    ) {
       return;
     }
     originalError.apply(console, args);

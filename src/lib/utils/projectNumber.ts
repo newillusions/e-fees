@@ -29,14 +29,16 @@ export function parseProjectNumber(raw: string): ProjectNumber {
   const seq = parseInt(parts[1].substring(3), 10);
 
   if (isNaN(year) || isNaN(country) || isNaN(seq)) {
-    throw new Error(`Invalid project number "${raw}": non-numeric components. Expected YY-CCCNN (e.g., 25-97105).`);
+    throw new Error(
+      `Invalid project number "${raw}": non-numeric components. Expected YY-CCCNN (e.g., 25-97105).`
+    );
   }
 
   return {
     year,
     country,
     seq,
-    id: raw,
+    id: raw
   };
 }
 
@@ -57,7 +59,7 @@ export function buildProjectPayload<S extends string>(
     folder: formData.folder,
     time: {
       created_at: timestamp,
-      updated_at: timestamp,
-    },
+      updated_at: timestamp
+    }
   };
 }

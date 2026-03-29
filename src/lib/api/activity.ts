@@ -23,7 +23,11 @@ export async function createActivityLog(log: ActivityLogCreate): Promise<Activit
   try {
     return await invoke<ActivityLog>('create_activity_log', { log });
   } catch (error) {
-    activityLogger.error('Failed to create activity log', { action: log.action, entityType: log.entity_type, error });
+    activityLogger.error('Failed to create activity log', {
+      action: log.action,
+      entityType: log.entity_type,
+      error
+    });
     throw error;
   }
 }

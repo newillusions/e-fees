@@ -17,7 +17,7 @@ import {
   type AgentListResponse,
   type AgentFeeCreate,
   type AgentContactCreate,
-  type AgentExportResponse,
+  type AgentExportResponse
 } from './agent';
 
 // Mock global fetch
@@ -59,17 +59,17 @@ describe('Agent API Client', () => {
         status: 'ok',
         version: '0.10.27',
         db_connected: true,
-        uptime_seconds: 120,
+        uptime_seconds: 120
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse),
+        json: () => Promise.resolve(mockResponse)
       });
 
       const result = await client.health();
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/health', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result).toEqual(mockResponse);
     });
@@ -88,17 +88,17 @@ describe('Agent API Client', () => {
         total_companies: 19,
         total_contacts: 12,
         total_fees: 37,
-        active_fees: 15,
+        active_fees: 15
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockStats),
+        json: () => Promise.resolve(mockStats)
       });
 
       const result = await client.stats();
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/stats', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.total_projects).toBe(48);
       expect(result.active_fees).toBe(15);
@@ -118,20 +118,20 @@ describe('Agent API Client', () => {
             city: 'Riyadh',
             area: 'Hittin District',
             number: '25-96601',
-            folder: '/Projects/25-96601',
-          },
+            folder: '/Projects/25-96601'
+          }
         ],
-        total: 1,
+        total: 1
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       const result = await client.listProjects();
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/projects', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.items).toHaveLength(1);
       expect(result.items[0].name).toBe('Project Hittin');
@@ -149,17 +149,17 @@ describe('Agent API Client', () => {
         city: 'Riyadh',
         area: 'Hittin District',
         number: '25-96601',
-        folder: '/Projects/25-96601',
+        folder: '/Projects/25-96601'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockProject),
+        json: () => Promise.resolve(mockProject)
       });
 
       const result = await client.getProject('projects:abc123');
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/projects/projects:abc123', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.name).toBe('Project Hittin');
     });
@@ -168,7 +168,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({ error: 'Project not found' }),
+        json: () => Promise.resolve({ error: 'Project not found' })
       });
 
       await expect(client.getProject('projects:nonexistent')).rejects.toThrow('Project not found');
@@ -185,16 +185,16 @@ describe('Agent API Client', () => {
         city: 'Dubai',
         area: 'Downtown',
         number: '26-97101',
-        folder: '/Projects/26-97101',
+        folder: '/Projects/26-97101'
       };
       const mockCreated: AgentProjectResponse = {
         id: 'projects:xyz789',
-        ...newProject,
+        ...newProject
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: () => Promise.resolve(mockCreated),
+        json: () => Promise.resolve(mockCreated)
       });
 
       const result = await client.createProject(newProject);
@@ -202,7 +202,7 @@ describe('Agent API Client', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newProject),
+        body: JSON.stringify(newProject)
       });
       expect(result.id).toBe('projects:xyz789');
     });
@@ -221,14 +221,14 @@ describe('Agent API Client', () => {
             project_id: 'projects:abc123',
             company_id: 'company:def456',
             total_fee: 960000,
-            currency: 'AED',
-          },
+            currency: 'AED'
+          }
         ],
-        total: 1,
+        total: 1
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       const result = await client.listFees();
@@ -249,17 +249,17 @@ describe('Agent API Client', () => {
         project_id: 'projects:abc123',
         company_id: 'company:def456',
         total_fee: 960000,
-        currency: 'AED',
+        currency: 'AED'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockFee),
+        json: () => Promise.resolve(mockFee)
       });
 
       const result = await client.getFee('fee:abc123_1');
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/fees/fee:abc123_1', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.name).toBe('WAMI Hotel - Lighting Design');
       expect(result.total_fee).toBe(960000);
@@ -269,7 +269,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({ error: 'Fee not found' }),
+        json: () => Promise.resolve({ error: 'Fee not found' })
       });
 
       await expect(client.getFee('fee:nonexistent')).rejects.toThrow('Fee not found');
@@ -283,7 +283,7 @@ describe('Agent API Client', () => {
         number: 'E-26-97101-01',
         project_id: 'projects:abc123',
         company_id: 'company:def456',
-        contact_id: 'contacts:ghi789',
+        contact_id: 'contacts:ghi789'
       };
       const mockCreated: AgentFeeResponse = {
         id: 'fee:abc123_1',
@@ -294,12 +294,12 @@ describe('Agent API Client', () => {
         project_id: 'projects:abc123',
         company_id: 'company:def456',
         total_fee: 0,
-        currency: 'AED',
+        currency: 'AED'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: () => Promise.resolve(mockCreated),
+        json: () => Promise.resolve(mockCreated)
       });
 
       const result = await client.createFee(newFee);
@@ -307,7 +307,7 @@ describe('Agent API Client', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/fees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newFee),
+        body: JSON.stringify(newFee)
       });
       expect(result.id).toBe('fee:abc123_1');
       expect(result.status).toBe('Draft');
@@ -318,18 +318,18 @@ describe('Agent API Client', () => {
     it('should pass project_id query parameter', async () => {
       const mockList: AgentListResponse<AgentFeeResponse> = {
         items: [],
-        total: 0,
+        total: 0
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       await client.listFees('projects:abc123');
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:3100/api/fees?project_id=projects%3Aabc123',
-        { headers: { 'Content-Type': 'application/json' } },
+        { headers: { 'Content-Type': 'application/json' } }
       );
     });
 
@@ -345,20 +345,20 @@ describe('Agent API Client', () => {
             project_id: 'projects:abc123',
             company_id: 'company:def456',
             total_fee: 500000,
-            currency: 'AED',
-          },
+            currency: 'AED'
+          }
         ],
-        total: 1,
+        total: 1
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       const result = await client.listFees();
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/fees', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.total).toBe(1);
     });
@@ -374,14 +374,14 @@ describe('Agent API Client', () => {
             name_short: 'SAQR',
             abbreviation: 'SAQR',
             city: 'Riyadh',
-            country: 'Saudi Arabia',
-          },
+            country: 'Saudi Arabia'
+          }
         ],
-        total: 1,
+        total: 1
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       const result = await client.listCompanies();
@@ -398,16 +398,16 @@ describe('Agent API Client', () => {
         name_short: 'TC',
         abbreviation: 'TC',
         city: 'Dubai',
-        country: 'United Arab Emirates',
+        country: 'United Arab Emirates'
       };
       const mockCreated: AgentCompanyResponse = {
         id: 'company:new123',
-        ...newCompany,
+        ...newCompany
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: () => Promise.resolve(mockCreated),
+        json: () => Promise.resolve(mockCreated)
       });
 
       const result = await client.createCompany(newCompany);
@@ -415,7 +415,7 @@ describe('Agent API Client', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/companies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCompany),
+        body: JSON.stringify(newCompany)
       });
       expect(result.id).toBe('company:new123');
     });
@@ -433,20 +433,20 @@ describe('Agent API Client', () => {
             email: 'ahmed@example.com',
             phone: '+971501234567',
             position: 'Project Manager',
-            company_id: 'company:xyz789',
-          },
+            company_id: 'company:xyz789'
+          }
         ],
-        total: 1,
+        total: 1
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       const result = await client.listContacts();
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/contacts', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.items).toHaveLength(1);
       expect(result.items[0].first_name).toBe('Ahmed');
@@ -455,18 +455,18 @@ describe('Agent API Client', () => {
     it('should pass company_id query parameter', async () => {
       const mockList: AgentListResponse<AgentContactResponse> = {
         items: [],
-        total: 0,
+        total: 0
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockList),
+        json: () => Promise.resolve(mockList)
       });
 
       await client.listContacts('company:xyz789');
 
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:3100/api/contacts?company_id=company%3Axyz789',
-        { headers: { 'Content-Type': 'application/json' } },
+        { headers: { 'Content-Type': 'application/json' } }
       );
     });
   });
@@ -481,17 +481,17 @@ describe('Agent API Client', () => {
         email: 'ahmed@example.com',
         phone: '+971501234567',
         position: 'Project Manager',
-        company_id: 'company:xyz789',
+        company_id: 'company:xyz789'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockContact),
+        json: () => Promise.resolve(mockContact)
       });
 
       const result = await client.getContact('contacts:abc123');
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/contacts/contacts:abc123', {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.first_name).toBe('Ahmed');
       expect(result.company_id).toBe('company:xyz789');
@@ -501,7 +501,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({ error: 'Contact not found' }),
+        json: () => Promise.resolve({ error: 'Contact not found' })
       });
 
       await expect(client.getContact('contacts:nonexistent')).rejects.toThrow('Contact not found');
@@ -516,17 +516,17 @@ describe('Agent API Client', () => {
         email: 'ahmed@example.com',
         phone: '+971501234567',
         position: 'Project Manager',
-        company_id: 'company:xyz789',
+        company_id: 'company:xyz789'
       };
       const mockCreated: AgentContactResponse = {
         id: 'contacts:new123',
         ...newContact,
-        full_name: 'Ahmed Al Rashid',
+        full_name: 'Ahmed Al Rashid'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: () => Promise.resolve(mockCreated),
+        json: () => Promise.resolve(mockCreated)
       });
 
       const result = await client.createContact(newContact);
@@ -534,7 +534,7 @@ describe('Agent API Client', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newContact),
+        body: JSON.stringify(newContact)
       });
       expect(result.id).toBe('contacts:new123');
       expect(result.full_name).toBe('Ahmed Al Rashid');
@@ -545,22 +545,19 @@ describe('Agent API Client', () => {
     it('should export fee as Excel file', async () => {
       const mockExport: AgentExportResponse = {
         path: '/tmp/fee-E-26-97101-01-rev1.xlsx',
-        filename: 'fee-E-26-97101-01-rev1.xlsx',
+        filename: 'fee-E-26-97101-01-rev1.xlsx'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockExport),
+        json: () => Promise.resolve(mockExport)
       });
 
       const result = await client.exportFeeExcel('fee:abc123_1');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3100/api/fees/fee:abc123_1/export',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/fees/fee:abc123_1/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
       expect(result.filename).toBe('fee-E-26-97101-01-rev1.xlsx');
       expect(result.path).toContain('.xlsx');
     });
@@ -568,18 +565,18 @@ describe('Agent API Client', () => {
     it('should handle fee ID without prefix', async () => {
       const mockExport: AgentExportResponse = {
         path: '/tmp/fee-25-97105-rev2.xlsx',
-        filename: 'fee-25-97105-rev2.xlsx',
+        filename: 'fee-25-97105-rev2.xlsx'
       };
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockExport),
+        json: () => Promise.resolve(mockExport)
       });
 
       const result = await client.exportFeeExcel('abc123');
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:3100/api/fees/abc123/export', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
       expect(result.filename).toBe('fee-25-97105-rev2.xlsx');
     });
@@ -588,7 +585,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({ error: 'Fee not found' }),
+        json: () => Promise.resolve({ error: 'Fee not found' })
       });
 
       await expect(client.exportFeeExcel('fee:nonexistent')).rejects.toThrow('Fee not found');
@@ -600,7 +597,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
-        json: () => Promise.resolve({ error: 'Internal server error' }),
+        json: () => Promise.resolve({ error: 'Internal server error' })
       });
 
       await expect(client.listProjects()).rejects.toThrow('Internal server error');
@@ -610,7 +607,7 @@ describe('Agent API Client', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 502,
-        json: () => Promise.reject(new Error('Not JSON')),
+        json: () => Promise.reject(new Error('Not JSON'))
       });
 
       await expect(client.listProjects()).rejects.toThrow('HTTP 502');

@@ -74,11 +74,11 @@ export const contactFormFields: FormFieldConfig[] = [
         displayFields: ['name'],
         onSearch: async (searchText: string) => {
           if (!searchText || searchText.length < 1) return [];
-          
+
           try {
             const searchLower = searchText.toLowerCase();
             const companies = get(companiesStore);
-            
+
             return companies
               .filter(company => {
                 const nameMatch = company.name?.toLowerCase().includes(searchLower);

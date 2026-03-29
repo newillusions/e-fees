@@ -157,9 +157,7 @@ describe('Filter Utilities', () => {
       // This tests the key feature added for company code search
       const configWithCompanySearch: FilterConfig<TestContact> = {
         searchFields: ['full_name', 'first_name', 'last_name', 'email', 'phone', 'position'],
-        customSearchFunctions: [
-          (contact) => mockGetCompanySearchText(contact.company)
-        ]
+        customSearchFunctions: [contact => mockGetCompanySearchText(contact.company)]
       };
 
       it('should search by company code (PTG)', () => {
@@ -206,12 +204,17 @@ describe('Filter Utilities', () => {
         const configWithMultipleCustom: FilterConfig<TestContact> = {
           searchFields: ['full_name'],
           customSearchFunctions: [
-            (contact) => mockGetCompanySearchText(contact.company),
-            (contact) => `extra_${contact.position}` // Additional searchable field
+            contact => mockGetCompanySearchText(contact.company),
+            contact => `extra_${contact.position}` // Additional searchable field
           ]
         };
 
-        const filtered = createFilterFunction(mockContacts, 'extra_director', {}, configWithMultipleCustom);
+        const filtered = createFilterFunction(
+          mockContacts,
+          'extra_director',
+          {},
+          configWithMultipleCustom
+        );
         expect(filtered.length).toBe(1);
         expect(filtered[0].full_name).toBe('Ryan Marginson');
       });
@@ -221,8 +224,8 @@ describe('Filter Utilities', () => {
       const configWithFilters: FilterConfig<TestContact> = {
         searchFields: ['full_name'],
         filterFields: {
-          company: (contact) => mockGetCompanyShortName(contact.company),
-          position: (contact) => contact.position
+          company: contact => mockGetCompanyShortName(contact.company),
+          position: contact => contact.position
         }
       };
 
@@ -265,11 +268,9 @@ describe('Filter Utilities', () => {
       const fullConfig: FilterConfig<TestContact> = {
         searchFields: ['full_name', 'first_name', 'last_name', 'email', 'position'],
         filterFields: {
-          company: (contact) => mockGetCompanyShortName(contact.company)
+          company: contact => mockGetCompanyShortName(contact.company)
         },
-        customSearchFunctions: [
-          (contact) => mockGetCompanySearchText(contact.company)
-        ]
+        customSearchFunctions: [contact => mockGetCompanySearchText(contact.company)]
       };
 
       it('should apply both search and filters', () => {
@@ -290,7 +291,7 @@ describe('Filter Utilities', () => {
           mockContacts,
           'dil', // Company code
           { position: 'Senior Architect' },
-          { ...fullConfig, filterFields: { position: (c) => c.position } }
+          { ...fullConfig, filterFields: { position: c => c.position } }
         );
         expect(filtered.length).toBe(1);
         expect(filtered[0].full_name).toBe('Jane Doe');
@@ -324,7 +325,7 @@ describe('Filter Utilities', () => {
 
   describe('getUniqueFieldValues', () => {
     it('should extract unique values', () => {
-      const positions = getUniqueFieldValues(mockContacts, (c) => c.position);
+      const positions = getUniqueFieldValues(mockContacts, c => c.position);
       expect(positions).toContain('Project Manager');
       expect(positions).toContain('Senior Architect');
       expect(positions).toContain('Director');
@@ -334,7 +335,7 @@ describe('Filter Utilities', () => {
     });
 
     it('should return sorted values', () => {
-      const positions = getUniqueFieldValues(mockContacts, (c) => c.position);
+      const positions = getUniqueFieldValues(mockContacts, c => c.position);
       const sorted = [...positions].sort();
       expect(positions).toEqual(sorted);
     });
@@ -344,15 +345,12 @@ describe('Filter Utilities', () => {
         ...mockContacts,
         { ...mockContacts[0], id: 'empty', position: '' }
       ];
-      const positions = getUniqueFieldValues(contactsWithEmpty, (c) => c.position);
+      const positions = getUniqueFieldValues(contactsWithEmpty, c => c.position);
       expect(positions).not.toContain('');
     });
 
     it('should return unique company names', () => {
-      const companies = getUniqueFieldValues(
-        mockContacts,
-        (c) => mockGetCompanyShortName(c.company)
-      );
+      const companies = getUniqueFieldValues(mockContacts, c => mockGetCompanyShortName(c.company));
       expect(companies.length).toBe(4);
       expect(companies).toContain('P&T Group');
       expect(companies).toContain('Dubai Islands');
@@ -404,9 +402,7 @@ describe('Filter Utilities', () => {
   describe('getFilterCounts', () => {
     const config: FilterConfig<TestContact> = {
       searchFields: ['full_name'],
-      customSearchFunctions: [
-        (contact) => mockGetCompanySearchText(contact.company)
-      ]
+      customSearchFunctions: [contact => mockGetCompanySearchText(contact.company)]
     };
 
     it('should return total and filtered counts', () => {
@@ -429,12 +425,10 @@ describe('Integration: Contact Search by Company Code', () => {
   const realWorldConfig: FilterConfig<TestContact> = {
     searchFields: ['full_name', 'first_name', 'last_name', 'email', 'phone', 'position'],
     filterFields: {
-      company: (contact) => mockGetCompanyShortName(contact.company),
-      position: (contact) => contact.position
+      company: contact => mockGetCompanyShortName(contact.company),
+      position: contact => contact.position
     },
-    customSearchFunctions: [
-      (contact) => mockGetCompanySearchText(contact.company)
-    ]
+    customSearchFunctions: [contact => mockGetCompanySearchText(contact.company)]
   };
 
   it('should find Ryan Marginson when searching "dub"', () => {
@@ -492,18 +486,23 @@ interface TestProject {
 const mockProjects: TestProject[] = [
   { id: 'p1', name: 'Museum', status: 'Lead', time: { updated_at: '2025-06-15T10:00:00Z' } },
   { id: 'p2', name: 'Hotel', status: 'RFP', time: { updated_at: '2025-08-20T10:00:00Z' } },
-  { id: 'p3', name: 'Office Tower', status: 'Submitted', time: { updated_at: '2026-01-05T10:00:00Z' } },
+  {
+    id: 'p3',
+    name: 'Office Tower',
+    status: 'Submitted',
+    time: { updated_at: '2026-01-05T10:00:00Z' }
+  },
   { id: 'p4', name: 'Villa', status: 'Awarded', time: { updated_at: '2026-03-10T10:00:00Z' } },
-  { id: 'p5', name: 'Warehouse', status: 'Lost', time: { updated_at: '2025-11-22T10:00:00Z' } },
+  { id: 'p5', name: 'Warehouse', status: 'Lost', time: { updated_at: '2025-11-22T10:00:00Z' } }
 ];
 
 const projectFilterConfig: FilterConfig<TestProject> = {
   searchFields: ['name'],
   filterFields: {
-    status: (p) => p.status,
+    status: p => p.status
   },
-  dateFieldExtractor: (p) => p.time?.updated_at || '',
-  dateFieldFormat: 'iso',
+  dateFieldExtractor: p => p.time?.updated_at || '',
+  dateFieldFormat: 'iso'
 };
 
 describe('Advanced Filtering: Multi-select Status', () => {
@@ -530,7 +529,9 @@ describe('Advanced Filtering: Multi-select Status', () => {
     const advanced: AdvancedFilters = { statusSet: new Set(['Lead', 'RFP', 'Submitted']) };
     const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
     expect(filtered.length).toBe(3);
-    expect(filtered.map(p => p.status)).toEqual(expect.arrayContaining(['Lead', 'RFP', 'Submitted']));
+    expect(filtered.map(p => p.status)).toEqual(
+      expect.arrayContaining(['Lead', 'RFP', 'Submitted'])
+    );
   });
 
   it('should return empty when no items match selected status', () => {
@@ -572,13 +573,15 @@ describe('Advanced Filtering: Date Range (ISO)', () => {
     const advanced: AdvancedFilters = { dateRange: { from: '2025-08', to: '2026-01' } };
     const filtered = createFilterFunction(mockProjects, '', {}, projectFilterConfig, advanced);
     expect(filtered.length).toBe(3);
-    expect(filtered.map(p => p.name)).toEqual(expect.arrayContaining(['Hotel', 'Warehouse', 'Office Tower']));
+    expect(filtered.map(p => p.name)).toEqual(
+      expect.arrayContaining(['Hotel', 'Warehouse', 'Office Tower'])
+    );
   });
 
   it('should exclude items with no date', () => {
     const itemsWithNoDate: TestProject[] = [
       ...mockProjects,
-      { id: 'p6', name: 'No Date', status: 'Lead' },
+      { id: 'p6', name: 'No Date', status: 'Lead' }
     ];
     const advanced: AdvancedFilters = { dateRange: { from: '2025-01', to: '' } };
     const filtered = createFilterFunction(itemsWithNoDate, '', {}, projectFilterConfig, advanced);
@@ -598,16 +601,16 @@ const mockFees: TestFee[] = [
   { id: 'f1', name: 'Fee A', status: 'Draft', issue_date: '250601' },
   { id: 'f2', name: 'Fee B', status: 'Sent', issue_date: '250820' },
   { id: 'f3', name: 'Fee C', status: 'Accepted', issue_date: '260105' },
-  { id: 'f4', name: 'Fee D', status: 'Draft', issue_date: '260310' },
+  { id: 'f4', name: 'Fee D', status: 'Draft', issue_date: '260310' }
 ];
 
 const feeFilterConfig: FilterConfig<TestFee> = {
   searchFields: ['name'],
   filterFields: {
-    status: (f) => f.status,
+    status: f => f.status
   },
-  dateFieldExtractor: (f) => f.issue_date,
-  dateFieldFormat: 'yymmdd',
+  dateFieldExtractor: f => f.issue_date,
+  dateFieldFormat: 'yymmdd'
 };
 
 describe('Advanced Filtering: Date Range (YYMMDD)', () => {

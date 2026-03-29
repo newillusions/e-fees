@@ -1,9 +1,21 @@
 <script lang="ts">
-  import { feesStore, feesActions, companiesStore, companiesActions, settingsStore, settingsActions } from '$lib/stores';
+  import {
+    feesStore,
+    feesActions,
+    companiesStore,
+    companiesActions,
+    settingsStore,
+    settingsActions
+  } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, compareIds } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
-  import { openFolderInExplorer, copyProjectTemplate, checkProjectFolderExists, renameFolderWithOldSuffix } from '$lib/api';
+  import {
+    openFolderInExplorer,
+    copyProjectTemplate,
+    checkProjectFolderExists,
+    renameFolderWithOldSuffix
+  } from '$lib/api';
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
@@ -14,7 +26,12 @@
   import { logger, logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
 
-  let { isOpen = $bindable(false), project = null, onedit, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    project = null,
+    onedit,
+    onclose
+  }: {
     isOpen?: boolean;
     project?: Project | null;
     onedit?: (project: Project | null) => void;
@@ -49,17 +66,24 @@
   // Helper to parse issue dates for sorting
   const parseIssueDate = (dateStr: string): Date => {
     if (dateStr.length === 6) {
-      return new Date(`20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`);
+      return new Date(
+        `20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`
+      );
     }
     return new Date(dateStr);
   };
 
   // Filter fees for this project using type-safe comparison
-  const projectFees = $derived(project?.id
-    ? $feesStore
-        .filter(fee => compareIds(fee.project_id, project.id))
-        .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
-    : []);
+  const projectFees = $derived(
+    project?.id
+      ? $feesStore
+          .filter(fee => compareIds(fee.project_id, project.id))
+          .sort(
+            (a, b) =>
+              parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime()
+          )
+      : []
+  );
 
   // Load related data when component mounts
   onMount(() => {
@@ -67,7 +91,7 @@
     companiesActions.load();
     settingsActions.load();
   });
-  
+
   function handleEdit() {
     onedit?.(project);
   }
@@ -75,7 +99,7 @@
   function handleClose() {
     onclose?.();
   }
-  
+
   // Function to get full project folder path
   function getFullProjectPath(): string {
     if (!project) return '';
@@ -88,7 +112,11 @@
 
     // Normalize base path (remove trailing separators)
     let normalizedBase = basePath;
-    while (normalizedBase.endsWith(separator) || normalizedBase.endsWith('/') || normalizedBase.endsWith('\\')) {
+    while (
+      normalizedBase.endsWith(separator) ||
+      normalizedBase.endsWith('/') ||
+      normalizedBase.endsWith('\\')
+    ) {
       normalizedBase = normalizedBase.slice(0, -1);
     }
 
@@ -105,7 +133,7 @@
 
     return `${normalizedBase}${separator}${statusFolder}${separator}${normalizedFolder}`;
   }
-  
+
   // Function to open project folder in explorer
   async function openProjectFolder() {
     if (!project) return;
@@ -113,7 +141,7 @@
     const projectFolderPath = $settingsStore.project_folder_path;
     if (!projectFolderPath) {
       folderError = 'Project folder path not configured. Please set it in Settings.';
-      setTimeout(() => folderError = '', 5000);
+      setTimeout(() => (folderError = ''), 5000);
       return;
     }
 
@@ -123,34 +151,42 @@
       const result = await openFolderInExplorer(fullPath);
       if (result.includes('Failed')) {
         folderError = 'Failed to open project folder. Please check the path exists.';
-        setTimeout(() => folderError = '', 5000);
+        setTimeout(() => (folderError = ''), 5000);
       }
     } catch (error) {
       logApiError('open project folder', error as Error);
       folderError = 'Failed to open project folder. Please check the path exists.';
-      setTimeout(() => folderError = '', 5000);
+      setTimeout(() => (folderError = ''), 5000);
     }
   }
-  
+
   // Handle field click events from InfoCard
-  function handleFieldClick(detail: { field: { label: string; value: string | number | undefined; type?: string; clickable?: boolean }, index: number }) {
+  function handleFieldClick(detail: {
+    field: {
+      label: string;
+      value: string | number | undefined;
+      type?: string;
+      clickable?: boolean;
+    };
+    index: number;
+  }) {
     const { field } = detail;
     if (field.label === 'Folder') {
       openProjectFolder();
     }
   }
-  
+
   // Project folder creation workflow
   async function handleCreateProjectFolder() {
     if (!project) {
       logger.error('Cannot create project folder: no project data');
       return;
     }
-    
+
     try {
       const projectNumber = project.number?.id || '';
       const projectName = project.name_short || project.name || '';
-      
+
       if (!projectNumber || !projectName) {
         logger.error('Cannot create project folder: missing project number or name');
         warningModal = {
@@ -164,10 +200,10 @@
         };
         return;
       }
-      
+
       // First, check if folder already exists
       const folderExists = await checkProjectFolderExists(projectNumber, projectName);
-      
+
       if (folderExists) {
         warningModal = {
           isOpen: true,
@@ -179,10 +215,10 @@
             try {
               // Rename existing folder with _old suffix
               const renameResult = await renameFolderWithOldSuffix(projectNumber, projectName);
-              
+
               // Now create new folder
               const copyResult = await copyProjectTemplate(projectNumber, projectName);
-              
+
               warningModal = {
                 isOpen: true,
                 title: 'Success',
@@ -209,10 +245,10 @@
         };
         return;
       }
-      
+
       // Create the project folder
       const copyResult = await copyProjectTemplate(projectNumber, projectName);
-      
+
       warningModal = {
         isOpen: true,
         title: 'Success',
@@ -222,7 +258,6 @@
         onConfirm: null,
         onCancel: null
       };
-      
     } catch (error) {
       logApiError('create project folder', error as Error);
       warningModal = {
@@ -236,7 +271,7 @@
       };
     }
   }
-  
+
   // Custom actions for the detail panel
   const customActions = $derived([
     {
@@ -263,7 +298,7 @@
 >
   <svelte:fragment slot="header">
     {#if project}
-      <DetailHeader 
+      <DetailHeader
         name="{project.number?.id} - {project.name}"
         subtitle="{project.name_short} • {project.area}"
         location="{project.city}, {project.country}"
@@ -276,12 +311,12 @@
       />
     {/if}
   </svelte:fragment>
-  
+
   <svelte:fragment slot="content">
     {#if project}
       <!-- Project Information Section -->
-      <InfoCard 
-        title="Project Information" 
+      <InfoCard
+        title="Project Information"
         columns={3}
         fields={[
           { label: 'Project Number', value: project.number?.id || '—' },
@@ -293,65 +328,91 @@
         ]}
         onfieldclick={handleFieldClick}
       />
-    
-    <!-- Fee Proposals Section -->
-    <section>
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="emittiv-section-title">Fee Proposals</h2>
-        <span class="text-xs text-emittiv-light px-2 py-1 rounded-lg" style="background-color: #111;">
-          {projectFees.length} total
-        </span>
-      </div>
-      
-      {#if projectFees.length === 0}
-        <div class="emittiv-empty-state">
-          <svg class="emittiv-empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p class="text-emittiv-light text-sm">No proposals yet</p>
+
+      <!-- Fee Proposals Section -->
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="emittiv-section-title">Fee Proposals</h2>
+          <span
+            class="text-xs text-emittiv-light px-2 py-1 rounded-lg"
+            style="background-color: #111;"
+          >
+            {projectFees.length} total
+          </span>
         </div>
-      {:else}
-        <div class="grid gap-2">
-          {#each projectFees as fee}
-            <ListCard clickable={false}>
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex-1 min-w-0">
-                  <div>
-                    <h3 class="text-xs font-medium text-emittiv-light">Fee Number:</h3>
-                    <p class="text-sm text-emittiv-white">{fee.number}</p>
-                  </div>
-                  <div class="mt-2">
-                    <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
-                    <p class="text-sm text-emittiv-lighter">{fee.name}{#if fee.package} - {fee.package}{/if}</p>
-                  </div>
-                  <div class="mt-2 space-y-1">
+
+        {#if projectFees.length === 0}
+          <div class="emittiv-empty-state">
+            <svg
+              class="emittiv-empty-state__icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <p class="text-emittiv-light text-sm">No proposals yet</p>
+          </div>
+        {:else}
+          <div class="grid gap-2">
+            {#each projectFees as fee}
+              <ListCard clickable={false}>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
                     <div>
-                      <h3 class="text-xs font-medium text-emittiv-light">Company:</h3>
-                      <p class="text-sm text-emittiv-white">{companyLookup.getCompanyName(fee.company_id) || 'N/A'}</p>
+                      <h3 class="text-xs font-medium text-emittiv-light">Fee Number:</h3>
+                      <p class="text-sm text-emittiv-white">{fee.number}</p>
                     </div>
-                    {#if fee.staff_name}
+                    <div class="mt-2">
+                      <h3 class="text-xs font-medium text-emittiv-light">Proposal Name:</h3>
+                      <p class="text-sm text-emittiv-lighter">
+                        {fee.name}{#if fee.package}
+                          - {fee.package}{/if}
+                      </p>
+                    </div>
+                    <div class="mt-2 space-y-1">
                       <div>
-                        <h3 class="text-xs font-medium text-emittiv-light">Staff:</h3>
-                        <p class="text-sm text-emittiv-white">{fee.staff_name}</p>
+                        <h3 class="text-xs font-medium text-emittiv-light">Company:</h3>
+                        <p class="text-sm text-emittiv-white">
+                          {companyLookup.getCompanyName(fee.company_id) || 'N/A'}
+                        </p>
                       </div>
-                    {/if}
-                    <div class="emittiv-card-meta">
-                      <span>Rev: {fee.rev}</span>
-                      <span>
-                        {new Date(fee.issue_date.length === 6 ? `20${fee.issue_date.substring(0,2)}-${fee.issue_date.substring(2,4)}-${fee.issue_date.substring(4,6)}` : fee.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
+                      {#if fee.staff_name}
+                        <div>
+                          <h3 class="text-xs font-medium text-emittiv-light">Staff:</h3>
+                          <p class="text-sm text-emittiv-white">{fee.staff_name}</p>
+                        </div>
+                      {/if}
+                      <div class="emittiv-card-meta">
+                        <span>Rev: {fee.rev}</span>
+                        <span>
+                          {new Date(
+                            fee.issue_date.length === 6
+                              ? `20${fee.issue_date.substring(0, 2)}-${fee.issue_date.substring(2, 4)}-${fee.issue_date.substring(4, 6)}`
+                              : fee.issue_date
+                          ).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <StatusBadge status={fee.status} type="proposal" />
+                  </div>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={fee.status} type="proposal" />
-                </div>
-              </div>
-            </ListCard>
-          {/each}
-        </div>
-      {/if}
-    </section>
+              </ListCard>
+            {/each}
+          </div>
+        {/if}
+      </section>
     {/if}
   </svelte:fragment>
 </DetailPanel>
@@ -365,5 +426,5 @@
   cancelText={warningModal.cancelText}
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
-  onclose={() => warningModal.isOpen = false}
+  onclose={() => (warningModal.isOpen = false)}
 />

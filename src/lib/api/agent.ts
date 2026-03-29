@@ -130,8 +130,8 @@ export class AgentApiClient {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
-      },
+        ...options.headers
+      }
     });
 
     if (!response.ok) {
@@ -167,7 +167,7 @@ export class AgentApiClient {
   async createProject(project: AgentProjectCreate): Promise<AgentProjectResponse> {
     return this.request('/api/projects', {
       method: 'POST',
-      body: JSON.stringify(project),
+      body: JSON.stringify(project)
     });
   }
 
@@ -183,7 +183,7 @@ export class AgentApiClient {
   async createFee(fee: AgentFeeCreate): Promise<AgentFeeResponse> {
     return this.request('/api/fees', {
       method: 'POST',
-      body: JSON.stringify(fee),
+      body: JSON.stringify(fee)
     });
   }
 
@@ -194,12 +194,14 @@ export class AgentApiClient {
   async createCompany(company: AgentCompanyCreate): Promise<AgentCompanyResponse> {
     return this.request('/api/companies', {
       method: 'POST',
-      body: JSON.stringify(company),
+      body: JSON.stringify(company)
     });
   }
 
   async listContacts(companyId?: string): Promise<AgentListResponse<AgentContactResponse>> {
-    const path = companyId ? `/api/contacts?company_id=${encodeURIComponent(companyId)}` : '/api/contacts';
+    const path = companyId
+      ? `/api/contacts?company_id=${encodeURIComponent(companyId)}`
+      : '/api/contacts';
     return this.request(path);
   }
 
@@ -210,13 +212,13 @@ export class AgentApiClient {
   async createContact(contact: AgentContactCreate): Promise<AgentContactResponse> {
     return this.request('/api/contacts', {
       method: 'POST',
-      body: JSON.stringify(contact),
+      body: JSON.stringify(contact)
     });
   }
 
   async exportFeeExcel(id: string): Promise<AgentExportResponse> {
     return this.request(`/api/fees/${id}/export`, {
-      method: 'POST',
+      method: 'POST'
     });
   }
 }

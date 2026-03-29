@@ -1,7 +1,7 @@
-import './styles/app.css'
-import { mount } from 'svelte'
-import App from './App.svelte'
-import { securityMonitor, getSecurityReport } from './lib/security'
+import './styles/app.css';
+import { mount } from 'svelte';
+import App from './App.svelte';
+import { securityMonitor, getSecurityReport } from './lib/security';
 
 // Extend window for dev debugging tools
 declare global {
@@ -14,15 +14,14 @@ const appDiv = document.getElementById('app');
 if (appDiv) {
   try {
     const app = mount(App, {
-      target: appDiv,
+      target: appDiv
     });
 
     // Initialize security monitoring in development
     if (import.meta.env.DEV) {
-      
       // Make security report available globally for debugging
       window.getSecurityReport = getSecurityReport;
-      
+
       // Log initial security validation
       setTimeout(() => {
         const report = getSecurityReport();
@@ -38,7 +37,8 @@ if (appDiv) {
     console.error('Failed to create Svelte app:', error);
     // SEC-M2: Use textContent instead of innerHTML to prevent XSS
     const errorContainer = document.createElement('div');
-    errorContainer.style.cssText = 'color: white; padding: 20px; background: linear-gradient(135deg, #000, #333); min-height: 100vh;';
+    errorContainer.style.cssText =
+      'color: white; padding: 20px; background: linear-gradient(135deg, #000, #333); min-height: 100vh;';
 
     const heading = document.createElement('h1');
     heading.textContent = 'Svelte Error';

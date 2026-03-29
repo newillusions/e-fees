@@ -80,7 +80,11 @@ export async function addStageToFee(feeId: string, stage: FeeStage): Promise<Fee
     });
     return stages;
   } catch (error) {
-    logApiError('addStageToFee', error as Error, { feeId, stageId: stage.id, component: 'FeeStagesApi' });
+    logApiError('addStageToFee', error as Error, {
+      feeId,
+      stageId: stage.id,
+      component: 'FeeStagesApi'
+    });
     throw error;
   }
 }

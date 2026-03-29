@@ -92,7 +92,10 @@ pub async fn list_deliverables(
     State(state): State<Arc<AppState>>,
     params: Query<DeliverableListParams>,
 ) -> Result<Json<Value>, ApiError> {
-    let status = params.status.clone().unwrap_or_else(|| "active".to_string());
+    let status = params
+        .status
+        .clone()
+        .unwrap_or_else(|| "active".to_string());
 
     let mut where_clauses = vec!["status = $status".to_string()];
     let mut binds: Vec<(&str, Value)> = vec![("status", json!(status))];

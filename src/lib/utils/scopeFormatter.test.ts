@@ -10,25 +10,23 @@ describe('formatSectionsAsText', () => {
         title: 'Administrative',
         clauses: [
           { number: '1.1', clause_id: 'c1', title: 'General', body: 'General terms apply' },
-          { number: '1.2', clause_id: 'c2', title: 'Meetings', body: 'Regular meetings required' },
-        ],
+          { number: '1.2', clause_id: 'c2', title: 'Meetings', body: 'Regular meetings required' }
+        ]
       },
       {
         number: '2.0',
         title: 'Commercial',
-        clauses: [
-          { number: '2.1', clause_id: 'c3', title: 'Payment', body: 'Net 30 days' },
-        ],
-      },
+        clauses: [{ number: '2.1', clause_id: 'c3', title: 'Payment', body: 'Net 30 days' }]
+      }
     ];
 
     const result = formatSectionsAsText(sections);
     expect(result).toBe(
       '1.0 ADMINISTRATIVE\n\n' +
-      '1.1 General — General terms apply\n' +
-      '1.2 Meetings — Regular meetings required\n\n' +
-      '2.0 COMMERCIAL\n\n' +
-      '2.1 Payment — Net 30 days'
+        '1.1 General — General terms apply\n' +
+        '1.2 Meetings — Regular meetings required\n\n' +
+        '2.0 COMMERCIAL\n\n' +
+        '2.1 Payment — Net 30 days'
     );
   });
 
@@ -37,9 +35,7 @@ describe('formatSectionsAsText', () => {
   });
 
   it('handles section with no clauses', () => {
-    const sections: ScopeSection[] = [
-      { number: '1.0', title: 'Empty', clauses: [] },
-    ];
+    const sections: ScopeSection[] = [{ number: '1.0', title: 'Empty', clauses: [] }];
     expect(formatSectionsAsText(sections)).toBe('1.0 EMPTY');
   });
 
@@ -49,13 +45,12 @@ describe('formatSectionsAsText', () => {
         number: '1.0',
         title: 'Legal',
         clauses: [
-          { number: '1.1', clause_id: 'c1', title: 'Liability', body: 'Limited to fee value' },
-        ],
-      },
+          { number: '1.1', clause_id: 'c1', title: 'Liability', body: 'Limited to fee value' }
+        ]
+      }
     ];
     expect(formatSectionsAsText(sections)).toBe(
-      '1.0 LEGAL\n\n' +
-      '1.1 Liability — Limited to fee value'
+      '1.0 LEGAL\n\n' + '1.1 Liability — Limited to fee value'
     );
   });
 });

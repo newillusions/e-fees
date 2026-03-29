@@ -4,12 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
-import {
-  searchCountries,
-  getAreaSuggestions,
-  getCitySuggestions,
-  getAllCities
-} from './reference';
+import { searchCountries, getAreaSuggestions, getCitySuggestions, getAllCities } from './reference';
 import type { CountrySearchResult } from '../../types';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -51,7 +46,9 @@ describe('Reference Data API Module', () => {
 
       const result = await getAreaSuggestions('United Arab Emirates');
 
-      expect(mockInvoke).toHaveBeenCalledWith('get_area_suggestions', { country: 'United Arab Emirates' });
+      expect(mockInvoke).toHaveBeenCalledWith('get_area_suggestions', {
+        country: 'United Arab Emirates'
+      });
       expect(result).toEqual(mockAreas);
     });
 
@@ -77,7 +74,9 @@ describe('Reference Data API Module', () => {
 
       const result = await getCitySuggestions('United Arab Emirates');
 
-      expect(mockInvoke).toHaveBeenCalledWith('get_city_suggestions', { country: 'United Arab Emirates' });
+      expect(mockInvoke).toHaveBeenCalledWith('get_city_suggestions', {
+        country: 'United Arab Emirates'
+      });
       expect(result).toEqual(mockCities);
     });
 

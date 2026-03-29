@@ -156,7 +156,9 @@ function generateTestFee(sequence: number): Fee {
 /**
  * Extract ID from SurrealDB Thing object or string
  */
-function extractTestId(id: string | SurrealThing | { id: string | { String: string } } | undefined): string {
+function extractTestId(
+  id: string | SurrealThing | { id: string | { String: string } } | undefined
+): string {
   if (typeof id === 'string') return id;
   if (!id) return '';
   // Handle SurrealThing with nested { String: ... } structure
@@ -169,7 +171,8 @@ function extractTestId(id: string | SurrealThing | { id: string | { String: stri
   if ('id' in id) {
     const innerId = id.id;
     if (typeof innerId === 'string') return innerId;
-    if (typeof innerId === 'object' && innerId && 'String' in innerId) return (innerId as { String: string }).String;
+    if (typeof innerId === 'object' && innerId && 'String' in innerId)
+      return (innerId as { String: string }).String;
   }
   return String(id);
 }
@@ -188,12 +191,11 @@ class MockPaginatedApi<T extends { id?: any; time?: { created_at: string } }> {
   constructor(totalItems: number, generator: (seq: number) => T, pageSize = 50) {
     this.pageSize = pageSize;
     // Generate items and sort by created_at DESC (newest first)
-    this.allItems = Array.from({ length: totalItems }, (_, i) => generator(i + 1))
-      .sort((a, b) => {
-        const timeA = a.time?.created_at || '';
-        const timeB = b.time?.created_at || '';
-        return timeB.localeCompare(timeA); // DESC order
-      });
+    this.allItems = Array.from({ length: totalItems }, (_, i) => generator(i + 1)).sort((a, b) => {
+      const timeA = a.time?.created_at || '';
+      const timeB = b.time?.created_at || '';
+      return timeB.localeCompare(timeA); // DESC order
+    });
   }
 
   /**
@@ -292,9 +294,7 @@ describe('TC-001: Initial Page Load', () => {
     mockState.pagination.currentPage = response.page;
     mockState.pagination.totalRecords = response.total;
     mockState.pagination.hasMore = response.hasMore;
-    mockState.pagination.loadedIds = new Set(
-      response.items.map(item => extractTestId(item.id!))
-    );
+    mockState.pagination.loadedIds = new Set(response.items.map(item => extractTestId(item.id!)));
 
     // Assert: State matches requirements
     expect(mockState.pagination.currentPage).toBe(1);
@@ -325,15 +325,11 @@ describe('TC-001: Initial Page Load', () => {
 describe('TC-004: Duplicate Prevention', () => {
   it('should prevent duplicates when server returns overlapping records', () => {
     // Arrange: Store has records 1-50
-    const existingItems = Array.from({ length: 50 }, (_, i) =>
-      generateTestProject(i + 1)
-    );
+    const existingItems = Array.from({ length: 50 }, (_, i) => generateTestProject(i + 1));
     const existingIds = new Set(existingItems.map(item => extractTestId(item.id!)));
 
     // Server returns records 25-75 (overlap)
-    const newItems = Array.from({ length: 51 }, (_, i) =>
-      generateTestProject(i + 25)
-    );
+    const newItems = Array.from({ length: 51 }, (_, i) => generateTestProject(i + 25));
 
     // Act: Deduplicate using existing logic pattern
     const deduped = newItems.filter(item => {
@@ -353,9 +349,7 @@ describe('TC-004: Duplicate Prevention', () => {
 
   it('should detect duplicates using loadedIds Set', () => {
     // Arrange: Pagination state with 50 loaded IDs
-    const loadedIds = new Set(
-      Array.from({ length: 50 }, (_, i) => `project:PAGTEST_${i + 1}`)
-    );
+    const loadedIds = new Set(Array.from({ length: 50 }, (_, i) => `project:PAGTEST_${i + 1}`));
 
     // Act: Check if new items are already loaded
     const newItem1 = generateTestProject(25); // Duplicate
@@ -371,9 +365,7 @@ describe('TC-004: Duplicate Prevention', () => {
 
   it('should maintain Set of loaded IDs for O(1) lookup', () => {
     // Arrange: Large set of IDs
-    const loadedIds = new Set(
-      Array.from({ length: 1000 }, (_, i) => `project:PAGTEST_${i}`)
-    );
+    const loadedIds = new Set(Array.from({ length: 1000 }, (_, i) => `project:PAGTEST_${i}`));
 
     // Act: Multiple lookups
     const start = performance.now();
@@ -598,7 +590,7 @@ describe('TC-009: Concurrent Load Prevention', () => {
     const results = await Promise.all([
       loadPage(1),
       loadPage(2), // Should be blocked
-      loadPage(3)  // Should be blocked
+      loadPage(3) // Should be blocked
     ]);
 
     // Assert: Only first load succeeded
@@ -657,11 +649,7 @@ describe('TC-009: Concurrent Load Prevention', () => {
     await simulateLoad(3);
 
     // Assert: Operations completed in order (no overlap)
-    expect(operations).toEqual([
-      'start-1', 'end-1',
-      'start-2', 'end-2',
-      'start-3', 'end-3'
-    ]);
+    expect(operations).toEqual(['start-1', 'end-1', 'start-2', 'end-2', 'start-3', 'end-3']);
   });
 });
 
@@ -854,13 +842,9 @@ describe('On-Demand Related Record Loading', () => {
     const companiesInMemory = new Map<string, Company>();
 
     // Act: Load required companies
-    const requiredCompanyIds = new Set(
-      fees.map(fee => String(fee.company_id))
-    );
+    const requiredCompanyIds = new Set(fees.map(fee => String(fee.company_id)));
 
-    const toFetch = Array.from(requiredCompanyIds).filter(
-      id => !companiesInMemory.has(id)
-    );
+    const toFetch = Array.from(requiredCompanyIds).filter(id => !companiesInMemory.has(id));
 
     if (toFetch.length > 0) {
       const companies = await companiesApi.fetchByIds(toFetch);
@@ -975,9 +959,7 @@ describe('Performance Requirements', () => {
 
   it('should handle large datasets efficiently', () => {
     // Arrange: 10,000 IDs in Set
-    const loadedIds = new Set(
-      Array.from({ length: 10000 }, (_, i) => `project:PAGTEST_${i}`)
-    );
+    const loadedIds = new Set(Array.from({ length: 10000 }, (_, i) => `project:PAGTEST_${i}`));
 
     // Act: Duplicate checks
     const start = performance.now();

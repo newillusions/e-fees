@@ -22,9 +22,7 @@
   let { pricing, postContractItems, paymentSchedule, onClose }: Props = $props();
 
   // Sorted data
-  const disciplines = $derived(
-    [...(pricing?.disciplines || [])].sort((a, b) => a.order - b.order)
-  );
+  const disciplines = $derived([...(pricing?.disciplines || [])].sort((a, b) => a.order - b.order));
   const designStages = $derived(
     pricing?.stages?.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order) || []
   );
@@ -61,7 +59,9 @@
           </span>
         </div>
         <div class="emittiv-summary-line emittiv-summary-line--sub">
-          <span class="text-emittiv-dark">Buffer ({formatPercent(pricing.config.buffer_percent)})</span>
+          <span class="text-emittiv-dark"
+            >Buffer ({formatPercent(pricing.config.buffer_percent)})</span
+          >
           <span class="text-emittiv-light">
             +{formatCurrency(pricing.config.quoted_fee - pricing.config.target_fee, currency)}
           </span>
@@ -130,7 +130,9 @@
             {#each costs as cost}
               <div class="emittiv-summary-line emittiv-summary-line--sub">
                 <span class="text-emittiv-dark">
-                  {cost.description} ({formatNumber(cost.base_cost)} + {formatPercent(cost.markup_percent)})
+                  {cost.description} ({formatNumber(cost.base_cost)} + {formatPercent(
+                    cost.markup_percent
+                  )})
                 </span>
                 <span class="text-emittiv-light">
                   {formatCurrency(cost.cost_to_client, currency)}
@@ -159,10 +161,17 @@
         {/if}
         <div class="emittiv-summary-line emittiv-summary-line--total">
           <span class="text-emittiv-white font-bold text-lg">
-            {pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? 'GRAND TOTAL' : 'TOTAL'}
+            {pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary
+              ? 'GRAND TOTAL'
+              : 'TOTAL'}
           </span>
           <span class="text-emittiv-splash font-bold text-xl">
-            <CurrencyAmount amount={pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary ? pricing.grand_total : pricing.subtotal} config={pricing.config} />
+            <CurrencyAmount
+              amount={pricing.config.tax_type === 'vat' && pricing.config.show_tax_in_summary
+                ? pricing.grand_total
+                : pricing.subtotal}
+              config={pricing.config}
+            />
           </span>
         </div>
         {#if pricing.config.tax_type === 'vat' && !pricing.config.show_tax_in_summary}
@@ -172,7 +181,8 @@
         {/if}
         {#if pricing.config.tax_type === 'withholding'}
           <div class="text-emittiv-dark text-xs mt-1">
-            Withholding tax ({pricing.config.vat_percent}%) applies — invoices will be grossed up so net receivable equals the quoted fee
+            Withholding tax ({pricing.config.vat_percent}%) applies — invoices will be grossed up so
+            net receivable equals the quoted fee
           </div>
         {/if}
       </div>
@@ -184,7 +194,10 @@
             MOBILISATION ({formatPercent(pricing.config.mobilisation_percent)})
           </span>
           <span class="text-emittiv-splash font-bold">
-            <CurrencyAmount amount={pricing.subtotal * (pricing.config.mobilisation_percent / 100)} config={pricing.config} />
+            <CurrencyAmount
+              amount={pricing.subtotal * (pricing.config.mobilisation_percent / 100)}
+              config={pricing.config}
+            />
           </span>
         </div>
       </div>
@@ -225,6 +238,10 @@
 </PanelCard>
 
 <style>
-  .summary-invoiced { color: var(--color-status-invoiced); }
-  .summary-paid { color: var(--color-status-paid); }
+  .summary-invoiced {
+    color: var(--color-status-invoiced);
+  }
+  .summary-paid {
+    color: var(--color-status-paid);
+  }
 </style>

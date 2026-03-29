@@ -43,9 +43,7 @@ fn stage_to_json(s: &StageConfig) -> Value {
     ),
     security(("api_key" = []))
 )]
-pub async fn list_stages(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Value>, ApiError> {
+pub async fn list_stages(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
     let query = "SELECT * FROM stage_config WHERE status = 'active' ORDER BY sort_order ASC";
 
     let mut response = state.db.query(query).await?;

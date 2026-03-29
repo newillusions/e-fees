@@ -40,7 +40,10 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<Hea
         let start = Instant::now();
         let ok = tokio::time::timeout(
             Duration::from_secs(2),
-            state.http.get(format!("{}/api/tags", state.ollama_url)).send(),
+            state
+                .http
+                .get(format!("{}/api/tags", state.ollama_url))
+                .send(),
         )
         .await
         .map(|r| r.map(|r| r.status().is_success()).unwrap_or(false))
@@ -49,8 +52,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<Hea
         (ok, latency)
     };
 
-    let ((db_ok, db_latency), (ollama_ok, ollama_latency)) =
-        tokio::join!(db_check, ollama_check);
+    let ((db_ok, db_latency), (ollama_ok, ollama_latency)) = tokio::join!(db_check, ollama_check);
 
     if !db_ok {
         error!("Health check: SurrealDB unreachable (latency: {db_latency}ms)");

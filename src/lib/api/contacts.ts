@@ -87,10 +87,7 @@ export async function createContact(contact: ContactCreate): Promise<Contact> {
  * @returns Updated contact
  * @throws Error if update fails
  */
-export async function updateContact(
-  id: string,
-  contactUpdate: ContactUpdate
-): Promise<Contact> {
+export async function updateContact(id: string, contactUpdate: ContactUpdate): Promise<Contact> {
   try {
     const updated = await invoke<Contact>('update_contact', {
       id,

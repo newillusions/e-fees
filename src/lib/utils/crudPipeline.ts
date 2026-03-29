@@ -30,7 +30,7 @@ export function applyFiltersAndSearch<T extends object>(
 
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
-    filtered = filtered.filter((item) => {
+    filtered = filtered.filter(item => {
       if (searchFields && searchFields.length > 0) {
         for (const field of searchFields) {
           const value = item[field];
@@ -50,7 +50,7 @@ export function applyFiltersAndSearch<T extends object>(
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== null && value !== undefined && value !== '') {
-      filtered = filtered.filter((item) => {
+      filtered = filtered.filter(item => {
         const itemValue = getPropertyValue(item, key);
         if (typeof value === 'string' && typeof itemValue === 'string') {
           return itemValue.toLowerCase().includes(value.toLowerCase());

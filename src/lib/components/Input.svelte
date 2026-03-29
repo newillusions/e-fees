@@ -1,5 +1,14 @@
 <script lang="ts">
-  let { type = 'text', value = $bindable(''), placeholder = '', label = '', error = '', disabled = false, required = false, className = '' }: {
+  let {
+    type = 'text',
+    value = $bindable(''),
+    placeholder = '',
+    label = '',
+    error = '',
+    disabled = false,
+    required = false,
+    className = ''
+  }: {
     type?: 'text' | 'email' | 'password' | 'number' | 'search';
     value?: string;
     placeholder?: string;

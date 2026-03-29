@@ -26,39 +26,39 @@ export function useOperationState() {
     saving: false,
     deleting: false,
     message: '',
-    error: null,
+    error: null
   };
 
   const store = writable(initialState);
 
   const actions: OperationActions = {
     setLoading(loading: boolean) {
-      store.update((state) => ({ ...state, loading }));
+      store.update(state => ({ ...state, loading }));
     },
 
     setSaving(saving: boolean) {
-      store.update((state) => ({ ...state, saving }));
+      store.update(state => ({ ...state, saving }));
     },
 
     setDeleting(deleting: boolean) {
-      store.update((state) => ({ ...state, deleting }));
+      store.update(state => ({ ...state, deleting }));
     },
 
     setMessage(message: string) {
-      store.update((state) => ({ ...state, message, error: null }));
+      store.update(state => ({ ...state, message, error: null }));
     },
 
     setError(error: string | null) {
-      store.update((state) => ({ ...state, error, message: '' }));
+      store.update(state => ({ ...state, error, message: '' }));
     },
 
     clearMessages() {
-      store.update((state) => ({ ...state, message: '', error: null }));
+      store.update(state => ({ ...state, message: '', error: null }));
     },
 
     reset() {
       store.set(initialState);
-    },
+    }
   };
 
   return { store, actions };
@@ -75,7 +75,7 @@ export async function withLoadingState<T>(
   const loadingActions = {
     loading: actions.setLoading,
     saving: actions.setSaving,
-    deleting: actions.setDeleting,
+    deleting: actions.setDeleting
   } as const;
   const setLoadingState = loadingActions[loadingType];
 

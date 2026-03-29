@@ -1,10 +1,10 @@
 /**
  * Enhanced Generic CRUD Utilities
- * 
+ *
  * This module provides comprehensive CRUD operations and state management
  * patterns with SurrealDB support, optimistic updates, and professional logging.
  * It eliminates duplicate API call patterns and provides consistent error handling.
- * 
+ *
  * Key Features:
  * - SurrealDB Thing object support
  * - Optimistic updates with rollback
@@ -19,7 +19,12 @@ import { extractSurrealId, compareSurrealIds } from './surrealdb';
 import { logger, logApiError, type LogContext } from '../services/logger';
 import { applyFiltersAndSearch, applySorting } from './crudPipeline';
 import { getErrorMessage } from './operationState';
-import { optimisticCreate, optimisticUpdate, optimisticDelete, recomputeFiltered } from './crudOptimistic';
+import {
+  optimisticCreate,
+  optimisticUpdate,
+  optimisticDelete,
+  recomputeFiltered
+} from './crudOptimistic';
 import { createQueryActions } from './crudQueryActions';
 import type { UnknownSurrealThing } from '../../types';
 
@@ -39,7 +44,7 @@ export type {
   FormData,
   UpdateData,
   PaginatedResult,
-  SearchResultSet,
+  SearchResultSet
 } from './crudTypes';
 
 // Re-export extracted utilities for backward compatibility
@@ -51,7 +56,7 @@ import type {
   CrudApi,
   CrudStoreOptions,
   CrudActions,
-  CrudStoreInterface,
+  CrudStoreInterface
 } from './crudTypes';
 
 // ============================================================================
@@ -103,14 +108,18 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
   }
 
   // Wrap imported pipeline functions to pass searchFields from closure
-  const filterAndSearch = (items: T[], searchQuery: string, filters: Record<string, unknown>): T[] =>
+  const filterAndSearch = (
+    items: T[],
+    searchQuery: string,
+    filters: Record<string, unknown>
+  ): T[] =>
     applyFiltersAndSearch(items, searchQuery, filters, searchFields as (keyof T)[] | undefined);
 
   const actions: CrudActions<T> = {
     async load() {
       store.update(state => ({ ...state, loading: true, error: null }));
       componentLogger?.info('Loading entities');
-      
+
       try {
         const items = await api.getAll();
         const stateValue = get(store);
@@ -119,25 +128,25 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
           filterAndSearch(items, stateValue.searchQuery, stateValue.filters),
           stateValue.sort
         );
-        
-        store.update(state => ({ 
-          ...state, 
-          items, 
+
+        store.update(state => ({
+          ...state,
+          items,
           filteredItems,
           loading: false,
           lastUpdated: new Date(),
           optimisticUpdates: new Map() // Clear optimistic updates on fresh load
         }));
-        
+
         componentLogger?.info('Successfully loaded entities', { count: items.length });
       } catch (error) {
         const errorMessage = getErrorMessage(error, 'Failed to load data');
-        store.update(state => ({ 
-          ...state, 
-          loading: false, 
-          error: errorMessage 
+        store.update(state => ({
+          ...state,
+          loading: false,
+          error: errorMessage
         }));
-        
+
         if (enableLogging) {
           await logApiError('load', error as Error, { component });
         }
@@ -164,7 +173,10 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             return {
               ...state,
               items,
-              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
+              filteredItems: applySorting(
+                filterAndSearch(items, state.searchQuery, state.filters),
+                state.sort
+              )
             };
           });
         }
@@ -197,12 +209,15 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
         } else {
           store.update(state => {
             const items = state.items.map(item =>
-              idExtractor(item.id) === id ? updatedItem : item,
+              idExtractor(item.id) === id ? updatedItem : item
             );
             return {
               ...state,
               items,
-              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
+              filteredItems: applySorting(
+                filterAndSearch(items, state.searchQuery, state.filters),
+                state.sort
+              )
             };
           });
         }
@@ -238,7 +253,10 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
             return {
               ...state,
               items,
-              filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
+              filteredItems: applySorting(
+                filterAndSearch(items, state.searchQuery, state.filters),
+                state.sort
+              )
             };
           });
         }
@@ -277,8 +295,13 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
     },
 
     ...createQueryActions({
-      store, api, filterAndSearch, idExtractor,
-      componentLogger, enableLogging, component,
+      store,
+      api,
+      filterAndSearch,
+      idExtractor,
+      componentLogger,
+      enableLogging,
+      component
     })
   };
 
@@ -292,7 +315,6 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
   return { store, actions, destroy };
 }
 
-
 // ============================================================================
 // SURREALDB-SPECIFIC UTILITIES
 // ============================================================================
@@ -300,7 +322,9 @@ export function useCrudStore<T extends { id?: UnknownSurrealThing }>(
 /**
  * Type guard for SurrealDB Thing objects (v2: {tb, id} or v3: {table, key}).
  */
-function isSurrealThingLike(id: unknown): id is { tb?: unknown; id?: unknown; table?: unknown; key?: unknown } {
+function isSurrealThingLike(
+  id: unknown
+): id is { tb?: unknown; id?: unknown; table?: unknown; key?: unknown } {
   if (typeof id !== 'object' || id === null) return false;
   return ('tb' in id && 'id' in id) || ('table' in id && 'key' in id);
 }

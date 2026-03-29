@@ -182,7 +182,6 @@ const mockContacts: Contact[] = [
 // Export mock data for fallback use
 export { mockProjects, mockFees, mockCompanies, mockContacts };
 
-
 // Stores - initialize with empty arrays, not mock data
 export const projects = writable<Project[]>([]);
 export const fees = writable<Fee[]>([]);

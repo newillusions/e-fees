@@ -14,6 +14,11 @@
   backRoute="/projects"
   DetailComponent={ProjectDetail}
   ModalComponent={ProjectModal}
-  detailProps={(entity, { onedit, onclose }) => ({ project: entity, isOpen: true, onedit, onclose })}
+  detailProps={(entity, { onedit, onclose }) => ({
+    project: entity,
+    isOpen: true,
+    onedit,
+    onclose
+  })}
   modalProps={(entity, { onclose }) => ({ isOpen: true, project: entity, mode: 'edit', onclose })}
 />

@@ -6,7 +6,7 @@
     deliverable,
     onRemove,
     onExpand,
-    isDragging = false,
+    isDragging = false
   }: {
     deliverable: Deliverable;
     onRemove?: (d: Deliverable) => void;

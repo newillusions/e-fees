@@ -46,12 +46,30 @@ impl Config {
     pub fn load() -> Self {
         // Build defaults matching config.yaml structure
         let mut defaults: HashMap<String, serde_yaml::Value> = HashMap::new();
-        defaults.insert("server.port".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(3200u64)));
-        defaults.insert("server.host".to_string(), serde_yaml::Value::String("0.0.0.0".to_string()));
-        defaults.insert("database.url".to_string(), serde_yaml::Value::String("ws://10.0.23.11:8000".to_string()));
-        defaults.insert("database.namespace".to_string(), serde_yaml::Value::String("emittiv".to_string()));
-        defaults.insert("database.database".to_string(), serde_yaml::Value::String("projects".to_string()));
-        defaults.insert("log_level".to_string(), serde_yaml::Value::String("info".to_string()));
+        defaults.insert(
+            "server.port".to_string(),
+            serde_yaml::Value::Number(serde_yaml::Number::from(3200u64)),
+        );
+        defaults.insert(
+            "server.host".to_string(),
+            serde_yaml::Value::String("0.0.0.0".to_string()),
+        );
+        defaults.insert(
+            "database.url".to_string(),
+            serde_yaml::Value::String("ws://10.0.23.11:8000".to_string()),
+        );
+        defaults.insert(
+            "database.namespace".to_string(),
+            serde_yaml::Value::String("emittiv".to_string()),
+        );
+        defaults.insert(
+            "database.database".to_string(),
+            serde_yaml::Value::String("projects".to_string()),
+        );
+        defaults.insert(
+            "log_level".to_string(),
+            serde_yaml::Value::String("info".to_string()),
+        );
 
         // Look for config.yaml in /data/config.yaml (Docker) or ./config.yaml (local dev)
         let config_path = if std::path::Path::new("/data/config.yaml").exists() {
@@ -72,22 +90,26 @@ impl Config {
         let port: u16 = env::var("API_PORT")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or_else(|| {
-                cm.get_i64("server.port")
-                    .map(|p| p as u16)
-                    .unwrap_or(3200)
-            });
+            .unwrap_or_else(|| cm.get_i64("server.port").map(|p| p as u16).unwrap_or(3200));
 
-        let host = cm.get_str("server.host").unwrap_or_else(|| "0.0.0.0".to_string());
+        let host = cm
+            .get_str("server.host")
+            .unwrap_or_else(|| "0.0.0.0".to_string());
 
-        let surreal_url = env::var("SURREAL_URL")
-            .unwrap_or_else(|_| cm.get_str("database.url").unwrap_or_else(|| "ws://10.0.23.11:8000".to_string()));
+        let surreal_url = env::var("SURREAL_URL").unwrap_or_else(|_| {
+            cm.get_str("database.url")
+                .unwrap_or_else(|| "ws://10.0.23.11:8000".to_string())
+        });
 
-        let surreal_ns = env::var("SURREAL_NS")
-            .unwrap_or_else(|_| cm.get_str("database.namespace").unwrap_or_else(|| "emittiv".to_string()));
+        let surreal_ns = env::var("SURREAL_NS").unwrap_or_else(|_| {
+            cm.get_str("database.namespace")
+                .unwrap_or_else(|| "emittiv".to_string())
+        });
 
-        let surreal_db = env::var("SURREAL_DB")
-            .unwrap_or_else(|_| cm.get_str("database.database").unwrap_or_else(|| "projects".to_string()));
+        let surreal_db = env::var("SURREAL_DB").unwrap_or_else(|_| {
+            cm.get_str("database.database")
+                .unwrap_or_else(|| "projects".to_string())
+        });
 
         // Secrets from env vars only
         let surreal_user = env::var("SURREAL_USER").expect("SURREAL_USER required");
@@ -99,14 +121,16 @@ impl Config {
             .map(|k| k.trim().to_string())
             .filter(|k| !k.is_empty())
             .collect();
-        assert!(!api_keys.is_empty(), "API_KEY must contain at least one non-empty key");
+        assert!(
+            !api_keys.is_empty(),
+            "API_KEY must contain at least one non-empty key"
+        );
 
         // Folder config from env vars (infrastructure-specific, not in config.yaml)
         let folder_config = env::var("NC_SSH_HOST").ok().map(|ssh_host| FolderConfig {
             ssh_host,
             ssh_user: env::var("NC_SSH_USER").unwrap_or_else(|_| "root".into()),
-            ssh_key: env::var("NC_SSH_KEY")
-                .unwrap_or_else(|_| "/root/.ssh/id_ed25519".into()),
+            ssh_key: env::var("NC_SSH_KEY").unwrap_or_else(|_| "/root/.ssh/id_ed25519".into()),
             script_path: env::var("NC_SCRIPT_PATH")
                 .unwrap_or_else(|_| "/mnt/user/appdata/scripts/nc-project-create.sh".into()),
             nc_base_path: env::var("NC_BASE_PATH")

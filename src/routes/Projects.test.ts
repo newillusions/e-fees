@@ -29,7 +29,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 vi.mock('$lib/stores', async () => {
   const actual = await vi.importActual('$lib/stores');
   return {
-    ...actual,
+    ...actual
     // We'll override specific stores in tests
   };
 });
@@ -68,10 +68,7 @@ function createMockPaginatedResponse(
 ): PaginatedResponse<Project> {
   const start = (page - 1) * pageSize;
   const end = Math.min(start + pageSize, totalItems);
-  const items = Array.from(
-    { length: end - start },
-    (_, i) => generateTestProject(start + i)
-  );
+  const items = Array.from({ length: end - start }, (_, i) => generateTestProject(start + i));
 
   return {
     items,
@@ -175,9 +172,7 @@ describe('TC-UI-002: Infinite Scroll Trigger', () => {
     const page1 = createMockPaginatedResponse(150, 1, 50);
     const page2 = createMockPaginatedResponse(150, 2, 50);
 
-    vi.mocked(invoke)
-      .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2);
+    vi.mocked(invoke).mockResolvedValueOnce(page1).mockResolvedValueOnce(page2);
 
     const { paginatedProjectsStore, createScrollTrigger } = await import('$lib/stores');
 
@@ -221,9 +216,7 @@ describe('TC-UI-002: Infinite Scroll Trigger', () => {
     const page1 = createMockPaginatedResponse(150, 1, 50);
     const page2 = createMockPaginatedResponse(150, 2, 50);
 
-    vi.mocked(invoke)
-      .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2);
+    vi.mocked(invoke).mockResolvedValueOnce(page1).mockResolvedValueOnce(page2);
 
     const { paginatedProjectsStore } = await import('$lib/stores');
 
@@ -283,9 +276,7 @@ describe('TC-UI-003: Loading States', () => {
       setTimeout(() => resolve(createMockPaginatedResponse(150, 2, 50)), 100);
     });
 
-    vi.mocked(invoke)
-      .mockResolvedValueOnce(page1)
-      .mockReturnValueOnce(slowPage2);
+    vi.mocked(invoke).mockResolvedValueOnce(page1).mockReturnValueOnce(slowPage2);
 
     const { paginatedProjectsStore } = await import('$lib/stores');
 
@@ -307,9 +298,7 @@ describe('TC-UI-003: Loading States', () => {
     const page1 = createMockPaginatedResponse(75, 1, 50);
     const page2 = createMockPaginatedResponse(75, 2, 50);
 
-    vi.mocked(invoke)
-      .mockResolvedValueOnce(page1)
-      .mockResolvedValueOnce(page2);
+    vi.mocked(invoke).mockResolvedValueOnce(page1).mockResolvedValueOnce(page2);
 
     const { paginatedProjectsStore } = await import('$lib/stores');
 

@@ -6,12 +6,25 @@
   import ImportWizard from '$lib/components/ImportWizard.svelte';
   import BulkActionBar from '$lib/components/BulkActionBar.svelte';
   import ResultsCounter from '$lib/components/ResultsCounter.svelte';
-  import { paginatedFeesStore, projectsStore, companiesStore, contactsStore, projectsActions, companiesActions, contactsActions } from '$lib/stores';
+  import {
+    paginatedFeesStore,
+    projectsStore,
+    companiesStore,
+    contactsStore,
+    projectsActions,
+    companiesActions,
+    contactsActions
+  } from '$lib/stores';
   import { get } from 'svelte/store';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import StatusChips from '$lib/components/StatusChips.svelte';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import {
+    createFilterFunction,
+    getUniqueFieldValues,
+    hasActiveFilters,
+    clearAllFilters
+  } from '$lib/utils/filters';
   import type { AdvancedFilters } from '$lib/utils/filters';
   import { createFeeFilterConfig, createProjectLookup } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -52,7 +65,8 @@
 
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
@@ -137,23 +151,25 @@
 
   // Filter configuration for proposals - uses unified search module
   // This enables searching by company code (e.g., "ptg") and project name
-  const filterConfig = $derived((() => {
-    const baseConfig = createFeeFilterConfig({ companyLookup, projectLookup });
-    return {
-      ...baseConfig,
-      filterFields: {
-        status: (proposal: Fee) => proposal.status,
-        staff: (proposal: Fee) => proposal.staff_name || '',
-        company: (proposal: Fee) => companyLookup.getCompanyName(proposal.company_id),
-        project: (proposal: Fee) => {
-          const id = extractId(proposal.project_id);
-          return projectLookup.get(id)?.name || '';
-        }
-      },
-      dateFieldExtractor: (proposal: Fee) => proposal.issue_date || '',
-      dateFieldFormat: 'yymmdd' as const,
-    };
-  })());
+  const filterConfig = $derived(
+    (() => {
+      const baseConfig = createFeeFilterConfig({ companyLookup, projectLookup });
+      return {
+        ...baseConfig,
+        filterFields: {
+          status: (proposal: Fee) => proposal.status,
+          staff: (proposal: Fee) => proposal.staff_name || '',
+          company: (proposal: Fee) => companyLookup.getCompanyName(proposal.company_id),
+          project: (proposal: Fee) => {
+            const id = extractId(proposal.project_id);
+            return projectLookup.get(id)?.name || '';
+          }
+        },
+        dateFieldExtractor: (proposal: Fee) => proposal.issue_date || '',
+        dateFieldFormat: 'yymmdd' as const
+      };
+    })()
+  );
 
   // Filter to latest revision per project when toggle is off
   function filterToLatestRevisions(fees: Fee[]): Fee[] {
@@ -178,41 +194,58 @@
   });
 
   // Reactive filtered proposals using optimized filter function
-  const filteredProposals = $derived(createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig, advanced));
+  const filteredProposals = $derived(
+    createFilterFunction(revisionFilteredFees, searchQuery, filters, filterConfig, advanced)
+  );
 
   // Count projects with multiple revisions
-  const multiRevisionCount = $derived((() => {
-    const revCounts = new Map<string, number>();
-    for (const fee of fees) {
-      const pid = extractId(fee.project_id);
-      revCounts.set(pid, (revCounts.get(pid) ?? 0) + 1);
-    }
-    let count = 0;
-    for (const c of revCounts.values()) {
-      if (c > 1) count++;
-    }
-    return count;
-  })());
+  const multiRevisionCount = $derived(
+    (() => {
+      const revCounts = new Map<string, number>();
+      for (const fee of fees) {
+        const pid = extractId(fee.project_id);
+        revCounts.set(pid, (revCounts.get(pid) ?? 0) + 1);
+      }
+      let count = 0;
+      for (const c of revCounts.values()) {
+        if (c > 1) count++;
+      }
+      return count;
+    })()
+  );
 
   // Get unique values for dropdown filters
-  const uniqueStaff = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => proposal.staff_name || '').filter(Boolean));
-  const uniqueCompanies = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => companyLookup.getCompanyName(proposal.company_id)).filter(name => name !== 'N/A'));
-  const uniqueProjects = $derived(getUniqueFieldValues(revisionFilteredFees, (proposal) => {
-    const id = extractId(proposal.project_id);
-    return projectLookup.get(id)?.name || '';
-  }).filter(Boolean));
+  const uniqueStaff = $derived(
+    getUniqueFieldValues(revisionFilteredFees, proposal => proposal.staff_name || '').filter(
+      Boolean
+    )
+  );
+  const uniqueCompanies = $derived(
+    getUniqueFieldValues(revisionFilteredFees, proposal =>
+      companyLookup.getCompanyName(proposal.company_id)
+    ).filter(name => name !== 'N/A')
+  );
+  const uniqueProjects = $derived(
+    getUniqueFieldValues(revisionFilteredFees, proposal => {
+      const id = extractId(proposal.project_id);
+      return projectLookup.get(id)?.name || '';
+    }).filter(Boolean)
+  );
 
   // Count proposals per status for styling (bold for non-empty)
   // Uses single-pass O(n) instead of O(n*statuses)
   const statusCounts = $derived(
-    fees.reduce((acc, fee) => {
-      if (fee.status && fee.status in acc) {
-        acc[fee.status]++;
-      }
-      return acc;
-    }, Object.fromEntries(PROPOSAL_STATUSES.map(s => [s, 0])) as Record<string, number>)
+    fees.reduce(
+      (acc, fee) => {
+        if (fee.status && fee.status in acc) {
+          acc[fee.status]++;
+        }
+        return acc;
+      },
+      Object.fromEntries(PROPOSAL_STATUSES.map(s => [s, 0])) as Record<string, number>
+    )
   );
-  
+
   function handleNewProposal() {
     selectedProposal = null;
     proposalModalMode = 'create';
@@ -241,12 +274,12 @@
     selectedProposal = proposal;
     isProposalDetailOpen = true;
   }
-  
+
   function handleCloseDetail() {
     isProposalDetailOpen = false;
     selectedProposal = null;
   }
-  
+
   function handleEditFromDetail(proposal: typeof selectedProposal) {
     // Close detail panel and open edit modal
     isProposalDetailOpen = false;
@@ -254,14 +287,14 @@
     proposalModalMode = 'edit';
     showProposalModal = true;
   }
-  
+
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
     statusSelected = new SvelteSet();
     dateFrom = '';
     dateTo = '';
   }
-  
+
   // Load proposals on mount
   onMount(() => {
     // Check store state directly to avoid race condition with $effect subscription
@@ -274,16 +307,16 @@
     if (!get(companiesStore).length) companiesActions.load();
     if (!get(contactsStore).length) contactsActions.load();
   });
-  
+
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
-  
+
   // O(1) lookup functions using pre-computed Maps (replaces O(n) .find() calls)
   function getProjectName(projectRef: UnknownSurrealThing): string {
     if (!projectRef) return 'N/A';
     const id = extractId(projectRef);
     const project = projectLookup.get(id);
-    return project?.name || (id || 'Unknown Project');
+    return project?.name || id || 'Unknown Project';
   }
 
   function getCompanyName(companyRef: UnknownSurrealThing): string {
@@ -313,12 +346,14 @@
           class="emittiv-search-input"
         />
       </div>
-      <button
-        class="emittiv-search-button"
-        aria-label="Search"
-      >
+      <button class="emittiv-search-button" aria-label="Search">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
       </button>
       <ResultsCounter
@@ -327,20 +362,30 @@
         hasFilters={hasFiltersActive}
         entityName="proposals"
         loadedItems={fees.length}
-        hasMore={hasMore}
+        {hasMore}
         inline={true}
         onclearfilters={clearFilters}
       />
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
       <button
-        class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'}"
-        onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+        class="emittiv-btn emittiv-btn--sm {selectMode
+          ? 'emittiv-btn--primary'
+          : 'emittiv-btn--secondary'}"
+        onclick={() => {
+          selectMode = !selectMode;
+          if (!selectMode) clearSelection();
+        }}
         aria-label="Toggle selection mode"
         title="Multi-select"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+          />
         </svg>
       </button>
       <button
@@ -350,29 +395,32 @@
         title="Import from RFPs JSON"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          />
         </svg>
         <span>Import</span>
       </button>
-      <button
-        class="emittiv-fab"
-        onclick={handleNewProposal}
-        aria-label="Add new proposal"
-      >
+      <button class="emittiv-fab" onclick={handleNewProposal} aria-label="Add new proposal">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
         </svg>
       </button>
     </div>
   </div>
-  
+
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Company Filter -->
-    <select
-      bind:value={filters.company}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.company} class="emittiv-filter-select">
       <option value="">All Companies</option>
       {#each uniqueCompanies as company}
         <option value={company}>{company}</option>
@@ -380,10 +428,7 @@
     </select>
 
     <!-- Project Filter -->
-    <select
-      bind:value={filters.project}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.project} class="emittiv-filter-select">
       <option value="">All Projects</option>
       {#each uniqueProjects as project}
         <option value={project}>{project}</option>
@@ -391,10 +436,7 @@
     </select>
 
     <!-- Staff Filter -->
-    <select
-      bind:value={filters.staff}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.staff} class="emittiv-filter-select">
       <option value="">All Staff</option>
       {#each uniqueStaff as staff}
         <option value={staff}>{staff}</option>
@@ -406,11 +448,7 @@
     <!-- Revisions Toggle -->
     {#if multiRevisionCount > 0}
       <label class="flex items-center gap-1.5 ml-2 cursor-pointer">
-        <input
-          type="checkbox"
-          bind:checked={showAllRevisions}
-          class="accent-emittiv-splash"
-        />
+        <input type="checkbox" bind:checked={showAllRevisions} class="accent-emittiv-splash" />
         <span class="text-xs text-emittiv-light hover:text-emittiv-white transition-all">
           Show all revisions ({multiRevisionCount})
         </span>
@@ -420,32 +458,36 @@
 
   <!-- Status Chips -->
   <div class="mb-4">
-    <StatusChips statuses={PROPOSAL_STATUSES} bind:selected={statusSelected} counts={statusCounts} activePreset={ACTIVE_PROPOSAL_STATUSES} />
+    <StatusChips
+      statuses={PROPOSAL_STATUSES}
+      bind:selected={statusSelected}
+      counts={statusCounts}
+      activePreset={ACTIVE_PROPOSAL_STATUSES}
+    />
   </div>
 
-<style>
-  .import-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background-color: var(--emittiv-darker);
-    border: 1px solid var(--emittiv-dark);
-    border-radius: 8px;
-    color: var(--emittiv-lighter);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-  }
+  <style>
+    .import-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background-color: var(--emittiv-darker);
+      border: 1px solid var(--emittiv-dark);
+      border-radius: 8px;
+      color: var(--emittiv-lighter);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+    }
 
-  .import-btn:hover {
-    border-color: var(--emittiv-splash);
-    color: var(--emittiv-white);
-  }
-</style>
-  
-  
+    .import-btn:hover {
+      border-color: var(--emittiv-splash);
+      color: var(--emittiv-white);
+    }
+  </style>
+
   {#if isLoading && fees.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
@@ -462,17 +504,22 @@
     />
   {:else if filteredProposals.length === 0}
     <div class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No proposals found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button
-        onclick={clearFilters}
-        class="emittiv-link text-sm"
-      >
-        Clear all filters
-      </button>
+      <button onclick={clearFilters} class="emittiv-link text-sm"> Clear all filters </button>
     </div>
   {:else}
     <!-- Bulk Action Bar -->
@@ -486,10 +533,7 @@
     />
 
     <!-- Scrollable container for infinite scroll -->
-    <div
-      bind:this={scrollContainer}
-      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
-    >
+    <div bind:this={scrollContainer} class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1">
       {#each filteredProposals as proposal}
         <ProposalCard
           {proposal}
@@ -498,10 +542,10 @@
           projectName={getProjectName(proposal.project_id)}
           companyName={getCompanyName(proposal.company_id)}
           contactName={getContactName(proposal.contact_id)}
-          onedit={(proposal) => handleEditProposal(proposal)}
-          onview={(proposal) => handleViewProposal(proposal)}
+          onedit={proposal => handleEditProposal(proposal)}
+          onview={proposal => handleViewProposal(proposal)}
           onselect={() => toggleSelect(extractIdFromRelation(proposal.id || ''))}
-          onstatusclick={(status) => {
+          onstatusclick={status => {
             const next = new SvelteSet(statusSelected);
             if (next.has(status)) next.delete(status);
             else next.add(status);
@@ -530,11 +574,11 @@
 </div>
 
 <!-- FP Modal -->
-<ProposalModal 
+<ProposalModal
   bind:isOpen={showProposalModal}
   proposal={selectedProposal}
   mode={proposalModalMode}
-  onclose={() => showProposalModal = false}
+  onclose={() => (showProposalModal = false)}
 />
 
 <!-- Proposal Detail Panel -->
@@ -548,6 +592,6 @@
 <!-- Import Wizard Modal -->
 <ImportWizard
   bind:isOpen={showImportWizard}
-  onclose={() => showImportWizard = false}
+  onclose={() => (showImportWizard = false)}
   onimported={handleImportComplete}
 />

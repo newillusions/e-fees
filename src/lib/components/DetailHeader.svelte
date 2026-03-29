@@ -1,5 +1,14 @@
 <script lang="ts">
-  let { name, subtitle = '', location = '', avatar = '', avatarBg = 'from-emittiv-splash/20 to-emittiv-splash/10', avatarBorder = 'border-emittiv-splash/30', avatarText = 'text-emittiv-splash', stats = [] }: {
+  let {
+    name,
+    subtitle = '',
+    location = '',
+    avatar = '',
+    avatarBg = 'from-emittiv-splash/20 to-emittiv-splash/10',
+    avatarBorder = 'border-emittiv-splash/30',
+    avatarText = 'text-emittiv-splash',
+    stats = []
+  }: {
     name: string;
     subtitle?: string;
     location?: string;

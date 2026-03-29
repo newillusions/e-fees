@@ -1,6 +1,14 @@
 <script lang="ts">
   // Props for flexible card configuration
-  let { clickable = true, href = '', customClass = '', selectable = false, selected = false, onclick, onselect }: {
+  let {
+    clickable = true,
+    href = '',
+    customClass = '',
+    selectable = false,
+    selected = false,
+    onclick,
+    onselect
+  }: {
     clickable?: boolean;
     href?: string;
     customClass?: string;
@@ -100,7 +108,9 @@
   </a>
 {:else}
   <div
-    class="group list-card px-4 py-3 {clickable ? 'cursor-pointer' : ''} {selected ? 'emittiv-card--selected' : ''} {customClass}"
+    class="group list-card px-4 py-3 {clickable ? 'cursor-pointer' : ''} {selected
+      ? 'emittiv-card--selected'
+      : ''} {customClass}"
     on:click={handleClick}
     on:keydown={handleKeydown}
     on:mouseenter={handleMouseEnter}

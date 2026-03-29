@@ -107,10 +107,10 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
       totalRecords: 0,
       hasMore: true,
       loadedIds: new Set<string>(),
-      isLoading: false,
+      isLoading: false
     },
     initialized: false,
-    error: null,
+    error: null
   };
 
   const store = writable<PaginatedStoreState<T>>(initialState);
@@ -127,7 +127,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
     loadedIds: Set<string>
   ): { items: T[]; addedIds: string[] } => {
     const addedIds: string[] = [];
-    const uniqueNewItems = newItems.filter((item) => {
+    const uniqueNewItems = newItems.filter(item => {
       const id = getItemId(item);
       if (id && !loadedIds.has(id)) {
         addedIds.push(id);
@@ -138,7 +138,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
 
     return {
       items: [...existingItems, ...uniqueNewItems],
-      addedIds,
+      addedIds
     };
   };
 
@@ -151,10 +151,10 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
         return;
       }
 
-      store.update((state) => ({
+      store.update(state => ({
         ...state,
         pagination: { ...state.pagination, isLoading: true },
-        error: null,
+        error: null
       }));
 
       try {
@@ -162,12 +162,12 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
 
         // Process items and track IDs
         const loadedIds = new Set<string>();
-        response.items.forEach((item) => {
+        response.items.forEach(item => {
           const id = getItemId(item);
           if (id) loadedIds.add(id);
         });
 
-        store.update((state) => ({
+        store.update(state => ({
           ...state,
           items: response.items,
           pagination: {
@@ -176,18 +176,17 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
             totalRecords: response.total,
             hasMore: response.has_more,
             loadedIds,
-            isLoading: false,
+            isLoading: false
           },
           initialized: true,
-          error: null,
+          error: null
         }));
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Failed to load data';
-        store.update((state) => ({
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load data';
+        store.update(state => ({
           ...state,
           pagination: { ...state.pagination, isLoading: false },
-          error: errorMessage,
+          error: errorMessage
         }));
         throw error;
       }
@@ -197,25 +196,22 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
       const currentState = get(store);
 
       // Prevent concurrent loads or loading when no more data
-      if (
-        currentState.pagination.isLoading ||
-        !currentState.pagination.hasMore
-      ) {
+      if (currentState.pagination.isLoading || !currentState.pagination.hasMore) {
         return;
       }
 
       const nextPage = currentState.pagination.currentPage + 1;
 
-      store.update((state) => ({
+      store.update(state => ({
         ...state,
         pagination: { ...state.pagination, isLoading: true },
-        error: null,
+        error: null
       }));
 
       try {
         const response = await fetchPage(nextPage, pageSize);
 
-        store.update((state) => {
+        store.update(state => {
           const { items, addedIds } = appendUniqueItems(
             state.items,
             response.items,
@@ -224,7 +220,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
 
           // Add new IDs to the set
           const newLoadedIds = new Set(state.pagination.loadedIds);
-          addedIds.forEach((id) => newLoadedIds.add(id));
+          addedIds.forEach(id => newLoadedIds.add(id));
 
           return {
             ...state,
@@ -235,18 +231,17 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
               totalRecords: response.total,
               hasMore: response.has_more,
               loadedIds: newLoadedIds,
-              isLoading: false,
+              isLoading: false
             },
-            error: null,
+            error: null
           };
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Failed to load more data';
-        store.update((state) => ({
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load more data';
+        store.update(state => ({
           ...state,
           pagination: { ...state.pagination, isLoading: false },
-          error: errorMessage,
+          error: errorMessage
         }));
         throw error;
       }
@@ -256,10 +251,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
       const currentState = get(store);
 
       // Don't start background loading if already loading or no more data
-      if (
-        currentState.pagination.isLoading ||
-        !currentState.pagination.hasMore
-      ) {
+      if (currentState.pagination.isLoading || !currentState.pagination.hasMore) {
         return;
       }
 
@@ -268,7 +260,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
         await actions.loadNextPage();
 
         // Small delay between pages to avoid overwhelming the server
-        await new Promise((resolve) => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
+        await new Promise(resolve => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
       }
     },
 
@@ -300,7 +292,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
       const id = getItemId(item);
       if (!id) return;
 
-      store.update((state) => {
+      store.update(state => {
         // Check for duplicates
         if (state.pagination.loadedIds.has(id)) {
           return state;
@@ -315,34 +307,32 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
           pagination: {
             ...state.pagination,
             totalRecords: state.pagination.totalRecords + 1,
-            loadedIds: newLoadedIds,
-          },
+            loadedIds: newLoadedIds
+          }
         };
       });
     },
 
     updateItem(id: string, updatedItem: T): void {
-      store.update((state) => ({
+      store.update(state => ({
         ...state,
-        items: state.items.map((item) =>
-          getItemId(item) === id ? updatedItem : item
-        ),
+        items: state.items.map(item => (getItemId(item) === id ? updatedItem : item))
       }));
     },
 
     removeItem(id: string): void {
-      store.update((state) => {
+      store.update(state => {
         const newLoadedIds = new Set(state.pagination.loadedIds);
         newLoadedIds.delete(id);
 
         return {
           ...state,
-          items: state.items.filter((item) => getItemId(item) !== id),
+          items: state.items.filter(item => getItemId(item) !== id),
           pagination: {
             ...state.pagination,
             totalRecords: Math.max(0, state.pagination.totalRecords - 1),
-            loadedIds: newLoadedIds,
-          },
+            loadedIds: newLoadedIds
+          }
         };
       });
     },
@@ -353,7 +343,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
 
     getState(): PaginatedStoreState<T> {
       return get(store);
-    },
+    }
   };
 
   return { store, actions };
@@ -370,9 +360,7 @@ export function createPaginatedStore<T extends { id?: UnknownSurrealThing }>(
  * @param fetchById - Function to fetch a single entity by ID
  * @returns Functions to fetch and cache entities
  */
-export function createOnDemandLoader<T>(
-  fetchById: (id: string) => Promise<T | null>
-): {
+export function createOnDemandLoader<T>(fetchById: (id: string) => Promise<T | null>): {
   /** Get an entity from cache or fetch it */
   getOrFetch: (id: string) => Promise<T | null>;
   /** Check if entity is in cache */
@@ -398,7 +386,7 @@ export function createOnDemandLoader<T>(
       }
 
       // Fetch and cache
-      const fetchPromise = fetchById(id).then((entity) => {
+      const fetchPromise = fetchById(id).then(entity => {
         pending.delete(id);
         if (entity) {
           cache.set(id, entity);
@@ -421,7 +409,7 @@ export function createOnDemandLoader<T>(
     clear(): void {
       cache.clear();
       pending.clear();
-    },
+    }
   };
 }
 
@@ -474,7 +462,7 @@ export function createScrollTrigger(
       element.removeEventListener('scroll', handleScroll);
       element = null;
       attached = false;
-    },
+    }
   };
 }
 

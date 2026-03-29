@@ -3,7 +3,15 @@
   import ActionButton from './ActionButton.svelte';
   import type { Company } from '../../types';
 
-  let { company, clickable = true, selectable = false, selected = false, onedit, onview, onselect }: {
+  let {
+    company,
+    clickable = true,
+    selectable = false,
+    selected = false,
+    onedit,
+    onview,
+    onselect
+  }: {
     company: Company;
     clickable?: boolean;
     selectable?: boolean;
@@ -33,9 +41,7 @@
 <BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
-    <h3
-      class="emittiv-card-title"
-    >
+    <h3 class="emittiv-card-title">
       {company.name}
     </h3>
   </svelte:fragment>
@@ -71,16 +77,14 @@
         <span>VAT:<br />{company.tax_no}</span>
       {/if}
       <span
-        >Created:<br />{company.time ? new Date(company.time.created_at)
-          .toISOString()
-          .slice(2, 10)
-          .replace(/-/g, '') : '—'}</span
+        >Created:<br />{company.time
+          ? new Date(company.time.created_at).toISOString().slice(2, 10).replace(/-/g, '')
+          : '—'}</span
       >
       <span
-        >Updated:<br />{company.time ? new Date(company.time.updated_at)
-          .toISOString()
-          .slice(2, 10)
-          .replace(/-/g, '') : '—'}</span
+        >Updated:<br />{company.time
+          ? new Date(company.time.updated_at).toISOString().slice(2, 10).replace(/-/g, '')
+          : '—'}</span
       >
     </div>
   </svelte:fragment>

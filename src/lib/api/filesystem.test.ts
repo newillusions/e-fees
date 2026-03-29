@@ -59,7 +59,9 @@ describe('Filesystem API Module', () => {
 
       const result = await openFolderInExplorer('/path/to/folder');
 
-      expect(mockInvoke).toHaveBeenCalledWith('open_folder_in_explorer', { folderPath: '/path/to/folder' });
+      expect(mockInvoke).toHaveBeenCalledWith('open_folder_in_explorer', {
+        folderPath: '/path/to/folder'
+      });
       expect(result).toBe('Success');
     });
 

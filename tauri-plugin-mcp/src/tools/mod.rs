@@ -1,6 +1,6 @@
+use log::info;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime};
-use log::info;
 
 use crate::shared::commands;
 use crate::socket_server::SocketResponse;
@@ -91,10 +91,7 @@ pub async fn handle_command<R: Runtime>(
             info!("[TAURI_MCP] Error: {}", err);
         }
     } else if let Err(ref e) = result {
-        info!(
-            "[TAURI_MCP] Command {} failed with error: {}",
-            command, e
-        );
+        info!("[TAURI_MCP] Command {} failed with error: {}", command, e);
     }
 
     result

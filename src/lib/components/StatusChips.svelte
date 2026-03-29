@@ -31,10 +31,10 @@
   }
 
   const isActivePresetOn = $derived(
-    activePreset != null
-    && activePreset.length > 0
-    && selected.size === activePreset.length
-    && activePreset.every(s => selected.has(s))
+    activePreset != null &&
+      activePreset.length > 0 &&
+      selected.size === activePreset.length &&
+      activePreset.every(s => selected.has(s))
   );
 
   function toggleActivePreset() {

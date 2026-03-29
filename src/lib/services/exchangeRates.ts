@@ -6,13 +6,13 @@
 const API_BASE = 'https://api.frankfurter.app';
 
 export const SUPPORTED_CURRENCIES = ['AED', 'SAR', 'USD', 'EUR', 'GBP'] as const;
-export type CurrencyCode = typeof SUPPORTED_CURRENCIES[number];
+export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
 
 export interface ExchangeRates {
   base: string;
-  date: string;          // ISO date of the rates (from ECB)
+  date: string; // ISO date of the rates (from ECB)
   rates: Record<string, number>;
-  fetchedAt: Date;       // When we fetched them
+  fetchedAt: Date; // When we fetched them
 }
 
 let cachedRates: ExchangeRates | null = null;
@@ -40,18 +40,18 @@ export async function fetchLatestRates(): Promise<ExchangeRates> {
 
   // Build full rate table with EUR as base
   const eurRates: Record<string, number> = {
-    'USD': eurToUsd,
-    'GBP': eurToGbp,
-    'AED': eurToUsd * 3.6725,
-    'SAR': eurToUsd * 3.75,
-    'EUR': 1,
+    USD: eurToUsd,
+    GBP: eurToGbp,
+    AED: eurToUsd * 3.6725,
+    SAR: eurToUsd * 3.75,
+    EUR: 1
   };
 
   cachedRates = {
     base: 'EUR',
     date: data.date,
     rates: eurRates,
-    fetchedAt: new Date(),
+    fetchedAt: new Date()
   };
 
   return cachedRates;

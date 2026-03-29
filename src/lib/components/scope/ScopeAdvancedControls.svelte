@@ -7,7 +7,7 @@
     feeId,
     stages = [],
     onassemble,
-    loading = false,
+    loading = false
   }: {
     feeId: string;
     stages?: import('$lib/api/feeStages').FeeStage[];
@@ -46,9 +46,7 @@
   });
 
   // Stages sorted by order for selection
-  let sortedStages = $derived(
-    [...stages].sort((a, b) => a.order - b.order)
-  );
+  let sortedStages = $derived([...stages].sort((a, b) => a.order - b.order));
 
   function toggleDiscipline(d: string) {
     const next = new SvelteSet(selectedDisciplines);
@@ -68,7 +66,7 @@
     const request: AssembleRequest = {
       fee_id: feeId,
       disciplines: [...selectedDisciplines],
-      stages: selectedStages.size > 0 ? [...selectedStages] : undefined,
+      stages: selectedStages.size > 0 ? [...selectedStages] : undefined
     };
     onassemble(request);
   }

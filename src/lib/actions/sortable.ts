@@ -21,10 +21,7 @@ export interface SortableOptions<T extends { id: string }> {
   handleSelector?: string;
 }
 
-export function sortable<T extends { id: string }>(
-  node: HTMLElement,
-  options: SortableOptions<T>,
-) {
+export function sortable<T extends { id: string }>(node: HTMLElement, options: SortableOptions<T>) {
   let opts = options;
   let draggedId: string | null = null;
   let overId: string | null = null;
@@ -131,7 +128,9 @@ export function sortable<T extends { id: string }>(
     // Release capture
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch { /* already released */ }
+    } catch {
+      /* already released */
+    }
 
     draggedId = null;
     overId = null;
@@ -150,6 +149,6 @@ export function sortable<T extends { id: string }>(
       node.removeEventListener('pointerdown', handlePointerDown);
       node.removeEventListener('pointermove', handlePointerMove);
       node.removeEventListener('pointerup', handlePointerUp);
-    },
+    }
   };
 }

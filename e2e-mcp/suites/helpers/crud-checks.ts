@@ -538,7 +538,7 @@ export const CRUD_CHECK_ORDER = [
   'crudContact',
   'crudProject',
   'crudFee',
-  'crudCleanup',
+  'crudCleanup'
 ] as const;
 
-export type CrudCheckName = typeof CRUD_CHECK_ORDER[number];
+export type CrudCheckName = (typeof CRUD_CHECK_ORDER)[number];

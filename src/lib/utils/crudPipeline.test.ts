@@ -13,7 +13,7 @@ const items: TestItem[] = [
   { id: '1', name: 'Alpha Project', status: 'active', city: 'Dubai', count: 10 },
   { id: '2', name: 'Beta Corp', status: 'inactive', city: 'Riyadh', count: 5 },
   { id: '3', name: 'Gamma Design', status: 'active', city: 'Dubai', count: 20 },
-  { id: '4', name: 'Delta Build', status: 'completed', city: 'Beirut', count: 15 },
+  { id: '4', name: 'Delta Build', status: 'completed', city: 'Beirut', count: 15 }
 ];
 
 describe('applyFiltersAndSearch', () => {
@@ -44,7 +44,10 @@ describe('applyFiltersAndSearch', () => {
   });
 
   it('ignores empty/null filter values', () => {
-    const result = applyFiltersAndSearch(items, '', { status: '', city: null as unknown as string });
+    const result = applyFiltersAndSearch(items, '', {
+      status: '',
+      city: null as unknown as string
+    });
     expect(result.length).toBe(4);
   });
 
@@ -97,7 +100,7 @@ describe('applySorting', () => {
   it('pushes null/undefined values to the end', () => {
     const itemsWithNull = [
       ...items,
-      { id: '5', name: 'Epsilon', status: 'draft', count: undefined },
+      { id: '5', name: 'Epsilon', status: 'draft', count: undefined }
     ];
     const result = applySorting(itemsWithNull, { field: 'count', direction: 'asc' });
     expect(result[result.length - 1].id).toBe('5');

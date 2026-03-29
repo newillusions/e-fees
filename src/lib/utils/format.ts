@@ -23,7 +23,7 @@ export function formatCurrency(
   // Format number with thousand separators
   const formatted = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
 
   return `${formatted} ${currency}`;
@@ -37,13 +37,10 @@ export function formatCurrency(
  * @param locale - Locale for formatting (default: 'en-AE')
  * @returns Formatted number string
  */
-export function formatNumber(
-  amount: number,
-  locale: string = 'en-AE'
-): string {
+export function formatNumber(amount: number, locale: string = 'en-AE'): string {
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
 }
 
@@ -85,10 +82,7 @@ export function parseCurrency(value: string): number {
  * @param format - Output format ('short' | 'long' | 'iso')
  * @returns Formatted date string
  */
-export function formatDate(
-  dateStr: string,
-  format: 'short' | 'long' | 'iso' = 'short'
-): string {
+export function formatDate(dateStr: string, format: 'short' | 'long' | 'iso' = 'short'): string {
   let date: Date;
 
   // Handle YYMMDD format
@@ -111,7 +105,7 @@ export function formatDate(
       return date.toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
-        year: 'numeric',
+        year: 'numeric'
       });
     case 'iso':
       return date.toISOString().split('T')[0];
@@ -120,7 +114,7 @@ export function formatDate(
       return date.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric',
+        year: 'numeric'
       });
   }
 }

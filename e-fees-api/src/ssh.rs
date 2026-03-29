@@ -88,10 +88,7 @@ impl SshOps {
     pub async fn write_file(&self, remote_path: &str, content: &[u8]) -> Result<(), ApiError> {
         let user_host = format!("{}@{}", self.user, self.host);
         let quoted = shell_quote(remote_path);
-        let remote_cmd = format!(
-            "cat > {} && chown {} {}",
-            quoted, self.nc_owner, quoted
-        );
+        let remote_cmd = format!("cat > {} && chown {} {}", quoted, self.nc_owner, quoted);
 
         let mut child = Command::new("ssh")
             .args(self.ssh_args())
@@ -126,7 +123,10 @@ impl SshOps {
 
     /// Return `true` if `remote_path` exists on the remote host.
     pub async fn path_exists(&self, remote_path: &str) -> Result<bool, ApiError> {
-        let remote_cmd = format!("test -e {} && echo yes || echo no", shell_quote(remote_path));
+        let remote_cmd = format!(
+            "test -e {} && echo yes || echo no",
+            shell_quote(remote_path)
+        );
         let output = self.exec(&remote_cmd).await?;
         Ok(output.trim() == "yes")
     }
@@ -154,10 +154,7 @@ impl SshOps {
 
     /// Recursively set ownership on `path` to `nc_owner`.
     pub async fn chown_recursive(&self, path: &str) -> Result<(), ApiError> {
-        let remote_cmd = format!(
-            "chown -R {} {}",
-            self.nc_owner, shell_quote(path)
-        );
+        let remote_cmd = format!("chown -R {} {}", self.nc_owner, shell_quote(path));
         self.exec(&remote_cmd).await?;
         Ok(())
     }
@@ -168,11 +165,11 @@ impl SshOps {
     /// spaces correctly. Falls back to `--shallow` on group folder 1 if targeted
     /// scan fails.
     pub async fn nc_rescan(&self, subpath: &str) -> Result<(), ApiError> {
-        let inner_cmd = format!("php /var/www/html/occ files:scan --path={}", shell_quote(subpath));
-        let targeted_cmd = format!(
-            "docker exec nextcloud-e sh -c {}",
-            shell_quote(&inner_cmd)
+        let inner_cmd = format!(
+            "php /var/www/html/occ files:scan --path={}",
+            shell_quote(subpath)
         );
+        let targeted_cmd = format!("docker exec nextcloud-e sh -c {}", shell_quote(&inner_cmd));
         if self.exec(&targeted_cmd).await.is_ok() {
             return Ok(());
         }

@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { hover = true, padding = 'p-6', className = '' }: { hover?: boolean; padding?: string; className?: string } = $props();
+  let {
+    hover = true,
+    padding = 'p-6',
+    className = ''
+  }: { hover?: boolean; padding?: string; className?: string } = $props();
 </script>
 
 <div

@@ -1,5 +1,10 @@
 <script lang="ts">
-  let { title = 'Information', fields = [], columns = 3, onfieldclick }: {
+  let {
+    title = 'Information',
+    fields = [],
+    columns = 3,
+    onfieldclick
+  }: {
     title?: string;
     fields?: Array<{
       label: string;
@@ -8,7 +13,15 @@
       clickable?: boolean;
     }>;
     columns?: number;
-    onfieldclick?: (detail: { field: { label: string; value: string | number | undefined; type?: string; clickable?: boolean }, index: number }) => void;
+    onfieldclick?: (detail: {
+      field: {
+        label: string;
+        value: string | number | undefined;
+        type?: string;
+        clickable?: boolean;
+      };
+      index: number;
+    }) => void;
   } = $props();
 
   function formatValue(value: string | number | undefined, type: string = 'text'): string {

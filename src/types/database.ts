@@ -2,7 +2,7 @@
 // Auto-generated from database schema
 
 // Enums
-export type ProjectActivity = 
+export type ProjectActivity =
   | 'Design and Consultancy'
   | 'Management'
   | 'Construction'
@@ -24,7 +24,7 @@ export type ProjectStatus =
   | 'On Hold'
   | 'Superseded';
 
-export type ProjectStage = 
+export type ProjectStage =
   | 'Concept'
   | 'Design Development'
   | 'Documentation'
@@ -181,20 +181,20 @@ export interface Currency {
 /** Discipline allocation for fee breakdown */
 export interface Discipline {
   id: string;
-  name: string;           // "Lighting Design", "Audio Visual"
-  code: string;           // Short abbreviation for column headers ("LD", "AV")
-  percentage: number;     // Allocation percentage (0-100)
-  order: number;          // Display order
+  name: string; // "Lighting Design", "Audio Visual"
+  code: string; // Short abbreviation for column headers ("LD", "AV")
+  percentage: number; // Allocation percentage (0-100)
+  order: number; // Display order
 }
 
 /** Design stage definition */
 export interface Stage {
   id: string;
-  name: string;           // "Schematic Design", "Design Development"
-  code: string;           // "SD", "DD", "CD"
-  percentage: number;     // Fee percentage for this stage
-  order: number;          // Display order
-  is_post_contract: boolean;  // Design phase vs post-contract
+  name: string; // "Schematic Design", "Design Development"
+  code: string; // "SD", "DD", "CD"
+  percentage: number; // Fee percentage for this stage
+  order: number; // Display order
+  is_post_contract: boolean; // Design phase vs post-contract
 }
 
 /** Tax type for pricing */
@@ -205,55 +205,55 @@ export type RoundingMode = 'ceiling' | 'nearest';
 
 /** Pricing configuration */
 export interface PricingConfig {
-  target_fee: number;           // What we want to achieve
-  buffer_percent: number;       // Negotiation margin (typically 0-10%)
-  quoted_fee: number;           // Calculated: target / (1 - buffer/100)
-  currency: string;             // "AED", "USD", etc.
-  vat_percent: number;          // VAT rate (typically 5% UAE)
-  vat_included: boolean;        // Whether VAT is included in quoted_fee
+  target_fee: number; // What we want to achieve
+  buffer_percent: number; // Negotiation margin (typically 0-10%)
+  quoted_fee: number; // Calculated: target / (1 - buffer/100)
+  currency: string; // "AED", "USD", etc.
+  vat_percent: number; // VAT rate (typically 5% UAE)
+  vat_included: boolean; // Whether VAT is included in quoted_fee
   mobilisation_percent: number; // Advance payment percentage (typically 30%)
   // Rounding settings for client-friendly stage totals
-  rounding_increment: number;   // 50, 100, 250, 500, 1000 (default: 50)
-  rounding_mode: RoundingMode;  // 'ceiling' or 'nearest' (default: 'ceiling')
-  tax_type: TaxType;            // 'vat', 'withholding', or 'none' (default: 'vat')
+  rounding_increment: number; // 50, 100, 250, 500, 1000 (default: 50)
+  rounding_mode: RoundingMode; // 'ceiling' or 'nearest' (default: 'ceiling')
+  tax_type: TaxType; // 'vat', 'withholding', or 'none' (default: 'vat')
   show_tax_in_summary: boolean; // Show tax in summary panels (default: false)
   // Multi-currency support (e.g., AED→SAR for Saudi projects)
-  exchange_rate?: number;       // Conversion rate (1 base currency = X client currency)
-  client_currency?: string;     // Target currency code (e.g., "SAR")
-  quote_currency?: string;      // Currency amounts are quoted in (default: same as currency)
-  rate_locked_at?: string;      // ISO datetime when the rate was locked (set on save)
+  exchange_rate?: number; // Conversion rate (1 base currency = X client currency)
+  client_currency?: string; // Target currency code (e.g., "SAR")
+  quote_currency?: string; // Currency amounts are quoted in (default: same as currency)
+  rate_locked_at?: string; // ISO datetime when the rate was locked (set on save)
 }
 
 /** Discipline × Stage pricing cell */
 export interface PricingCell {
   discipline_id: string;
   stage_id: string;
-  amount: number;           // Calculated from percentages
+  amount: number; // Calculated from percentages
   override_amount?: number; // Manual override if needed
 }
 
 /** Reimbursable cost/expense */
 export interface ReimbursableCost {
   id: string;
-  description: string;        // "CAD Document Purchase", "Sample Materials"
-  stage_id: string;           // Which stage this cost belongs to
-  discipline_id?: string;     // Optional: specific discipline
-  base_cost: number;          // Actual cost incurred
-  markup_percent: number;     // Markup percentage (typically 10-20%)
-  cost_to_client: number;     // Calculated: base_cost × (1 + markup/100)
-  date_incurred: string;      // When the cost was incurred
-  notes?: string;             // Optional notes
+  description: string; // "CAD Document Purchase", "Sample Materials"
+  stage_id: string; // Which stage this cost belongs to
+  discipline_id?: string; // Optional: specific discipline
+  base_cost: number; // Actual cost incurred
+  markup_percent: number; // Markup percentage (typically 10-20%)
+  cost_to_client: number; // Calculated: base_cost × (1 + markup/100)
+  date_incurred: string; // When the cost was incurred
+  notes?: string; // Optional notes
 }
 
 /** Post-contract line item (different structure from design stages) */
 export interface PostContractItem {
   id: string;
-  stage_id: string;           // Links to post-contract stage
-  description: string;        // "Site Visit", "As-Built Documentation"
-  quantity: number;           // Number of visits/items
-  unit: string;               // "visit", "set", "lump sum"
-  rate: number;               // Per-unit rate
-  amount: number;             // quantity × rate
+  stage_id: string; // Links to post-contract stage
+  description: string; // "Site Visit", "As-Built Documentation"
+  quantity: number; // Number of visits/items
+  unit: string; // "visit", "set", "lump sum"
+  rate: number; // Per-unit rate
+  amount: number; // quantity × rate
 }
 
 /** Payment schedule entry - multiple entries can link to same stage */
@@ -263,15 +263,15 @@ export type PaymentStatus = 'pending' | 'invoiced' | 'paid';
 export interface PaymentScheduleEntry {
   id: string;
   type: PaymentType;
-  description: string;        // "30% Mobilisation", "50% DD", "100% DD"
-  stage_id?: string;          // Linked stage (for milestone payments)
-  stage_percentage?: number;  // What % of the stage fee this represents (50, 100)
-  amount: number;             // Payment amount (after mobilisation deduction)
+  description: string; // "30% Mobilisation", "50% DD", "100% DD"
+  stage_id?: string; // Linked stage (for milestone payments)
+  stage_percentage?: number; // What % of the stage fee this represents (50, 100)
+  amount: number; // Payment amount (after mobilisation deduction)
   quoted_stage_amount?: number; // Original quoted fee for the stage (before deduction)
   percentage_of_total: number; // What % of contract total this represents
-  due_date?: string;          // Expected due date
+  due_date?: string; // Expected due date
   status: PaymentStatus;
-  invoice_number?: string;    // For future Invoice Ninja integration
+  invoice_number?: string; // For future Invoice Ninja integration
   invoice_date?: string;
   paid_date?: string;
 }
@@ -289,11 +289,11 @@ export interface PricingBreakdown {
   config: PricingConfig;
   disciplines: Discipline[];
   stages: Stage[];
-  cells: PricingCell[];        // The matrix values
-  costs: ReimbursableCost[];   // Reimbursable expenses
+  cells: PricingCell[]; // The matrix values
+  costs: ReimbursableCost[]; // Reimbursable expenses
   design_phase_total: number;
   post_contract_total: number;
-  costs_total: number;         // Total reimbursable costs to client
+  costs_total: number; // Total reimbursable costs to client
   subtotal: number;
   vat_amount: number;
   grand_total: number;
@@ -303,13 +303,13 @@ export interface PricingBreakdown {
 export interface PricingRevision {
   id: string;
   fee_id: string;
-  revision_number: number;    // Sequential within fee
-  created_at: string;         // ISO timestamp
-  created_by: string;         // User who made the change
-  change_summary: string;     // Brief description of what changed
-  pricing_snapshot: PricingBreakdown;  // Full state at this revision
+  revision_number: number; // Sequential within fee
+  created_at: string; // ISO timestamp
+  created_by: string; // User who made the change
+  change_summary: string; // Brief description of what changed
+  pricing_snapshot: PricingBreakdown; // Full state at this revision
   is_client_release: boolean; // Was this sent to client?
-  release_number?: number;    // Client-facing version (01, 02, etc.)
+  release_number?: number; // Client-facing version (01, 02, etc.)
 }
 
 // ============================================================================
@@ -317,37 +317,49 @@ export interface PricingRevision {
 // ============================================================================
 
 export const DEFAULT_DISCIPLINES: Omit<Discipline, 'id'>[] = [
-  { name: "Lighting", code: "LX", percentage: 45, order: 1 },
-  { name: "Video", code: "VID", percentage: 25, order: 2 },
-  { name: "Audio", code: "AUD", percentage: 20, order: 3 },
-  { name: "Control", code: "CTL", percentage: 10, order: 4 },
+  { name: 'Lighting', code: 'LX', percentage: 45, order: 1 },
+  { name: 'Video', code: 'VID', percentage: 25, order: 2 },
+  { name: 'Audio', code: 'AUD', percentage: 20, order: 3 },
+  { name: 'Control', code: 'CTL', percentage: 10, order: 4 }
 ];
 
 export const DEFAULT_DESIGN_STAGES: Omit<Stage, 'id'>[] = [
-  { name: "Concept Design", code: "CON", percentage: 25, order: 1, is_post_contract: false },
-  { name: "Schematic Design", code: "SD", percentage: 30, order: 2, is_post_contract: false },
-  { name: "Detailed Design", code: "DD", percentage: 35, order: 3, is_post_contract: false },
-  { name: "Construction Documents", code: "CD", percentage: 10, order: 4, is_post_contract: false },
+  { name: 'Concept Design', code: 'CON', percentage: 25, order: 1, is_post_contract: false },
+  { name: 'Schematic Design', code: 'SD', percentage: 30, order: 2, is_post_contract: false },
+  { name: 'Detailed Design', code: 'DD', percentage: 35, order: 3, is_post_contract: false },
+  { name: 'Construction Documents', code: 'CD', percentage: 10, order: 4, is_post_contract: false }
 ];
 
 export const DEFAULT_POST_CONTRACT_STAGES: Omit<Stage, 'id'>[] = [
-  { name: "Site Meetings", code: "SM", percentage: 0, order: 10, is_post_contract: true },
-  { name: "Construction Supervision", code: "CS", percentage: 0, order: 11, is_post_contract: true },
-  { name: "Installation Validation", code: "IV", percentage: 0, order: 12, is_post_contract: true },
-  { name: "Commissioning Supervision", code: "CMS", percentage: 0, order: 13, is_post_contract: true },
-  { name: "Programming Supervision", code: "PS", percentage: 0, order: 14, is_post_contract: true },
+  { name: 'Site Meetings', code: 'SM', percentage: 0, order: 10, is_post_contract: true },
+  {
+    name: 'Construction Supervision',
+    code: 'CS',
+    percentage: 0,
+    order: 11,
+    is_post_contract: true
+  },
+  { name: 'Installation Validation', code: 'IV', percentage: 0, order: 12, is_post_contract: true },
+  {
+    name: 'Commissioning Supervision',
+    code: 'CMS',
+    percentage: 0,
+    order: 13,
+    is_post_contract: true
+  },
+  { name: 'Programming Supervision', code: 'PS', percentage: 0, order: 14, is_post_contract: true }
 ];
 
 export const DEFAULT_PRICING_CONFIG: Omit<PricingConfig, 'target_fee' | 'quoted_fee'> = {
   buffer_percent: 5,
-  currency: "AED",
+  currency: 'AED',
   vat_percent: 5,
   vat_included: false,
   mobilisation_percent: 30,
   rounding_increment: 50,
   rounding_mode: 'ceiling',
   tax_type: 'vat',
-  show_tax_in_summary: false,
+  show_tax_in_summary: false
 };
 
 export const DEFAULT_COST_MARKUP_PERCENT = 15;
@@ -398,7 +410,7 @@ export function generateProjectId(year: number, country: number, seq: number): s
 export function parseProjectId(id: string): ProjectNumber | null {
   const match = id.match(/^(\d{2})-(\d{3})(\d{2})$/);
   if (!match) return null;
-  
+
   return {
     year: parseInt(match[1]),
     country: parseInt(match[2]),
@@ -435,11 +447,12 @@ export function parseIssueDate(dateStr: string): Date | null {
  * Convert an amount to the client currency using the exchange rate.
  * Returns undefined if no exchange rate or client currency is configured.
  */
-export function convertToClientCurrency(
-  amount: number,
-  config: PricingConfig
-): number | undefined {
-  if (!config.exchange_rate || !config.client_currency || config.client_currency === config.currency) {
+export function convertToClientCurrency(amount: number, config: PricingConfig): number | undefined {
+  if (
+    !config.exchange_rate ||
+    !config.client_currency ||
+    config.client_currency === config.currency
+  ) {
     return undefined;
   }
   return amount * config.exchange_rate;
@@ -487,7 +500,7 @@ export function generatePricingId(prefix: string): string {
 export function createDefaultDisciplines(): Discipline[] {
   return DEFAULT_DISCIPLINES.map((d, index) => ({
     ...d,
-    id: generatePricingId('disc'),
+    id: generatePricingId('disc')
   }));
 }
 
@@ -497,7 +510,7 @@ export function createDefaultDisciplines(): Discipline[] {
 export function createDefaultDesignStages(): Stage[] {
   return DEFAULT_DESIGN_STAGES.map((s, index) => ({
     ...s,
-    id: generatePricingId('stage'),
+    id: generatePricingId('stage')
   }));
 }
 
@@ -507,7 +520,7 @@ export function createDefaultDesignStages(): Stage[] {
 export function createDefaultPostContractStages(): Stage[] {
   return DEFAULT_POST_CONTRACT_STAGES.map((s, index) => ({
     ...s,
-    id: generatePricingId('stage'),
+    id: generatePricingId('stage')
   }));
 }
 
@@ -554,9 +567,7 @@ export function calculatePricingTotals(
 
   if (stages && stages.length > 0) {
     // Group cells by stage and round each stage total
-    const designStageIds = new Set(
-      stages.filter(s => !s.is_post_contract).map(s => s.id)
-    );
+    const designStageIds = new Set(stages.filter(s => !s.is_post_contract).map(s => s.id));
 
     const stageTotals = new Map<string, number>();
     for (const cell of cells) {
@@ -578,15 +589,9 @@ export function calculatePricingTotals(
     );
   }
 
-  const post_contract_total = postContractItems.reduce(
-    (sum, item) => sum + item.amount,
-    0
-  );
+  const post_contract_total = postContractItems.reduce((sum, item) => sum + item.amount, 0);
 
-  const costs_total = costs.reduce(
-    (sum, cost) => sum + cost.cost_to_client,
-    0
-  );
+  const costs_total = costs.reduce((sum, cost) => sum + cost.cost_to_client, 0);
 
   const subtotal = design_phase_total + post_contract_total + costs_total;
 
@@ -603,6 +608,6 @@ export function calculatePricingTotals(
     costs_total,
     subtotal,
     vat_amount,
-    grand_total,
+    grand_total
   };
 }

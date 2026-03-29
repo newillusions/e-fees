@@ -1,6 +1,6 @@
 /**
  * Tauri Commands Integration Tests
- * 
+ *
  * Tests for the integration between frontend API calls and Tauri backend commands.
  * Ensures proper communication, data transformation, and error handling across
  * the frontend-backend boundary.
@@ -75,14 +75,16 @@ describe('Tauri Commands Integration', () => {
 
     it('should update project', async () => {
       const updatedProject = { ...mockProject, name: 'Updated Project Name' };
-      
+
       vi.mocked(invoke).mockResolvedValueOnce(updatedProject);
 
-      const result = await ApiClient.updateProject('projects:25-97101', { name: 'Updated Project Name' });
+      const result = await ApiClient.updateProject('projects:25-97101', {
+        name: 'Updated Project Name'
+      });
 
-      expect(invoke).toHaveBeenCalledWith('update_project', { 
-        id: 'projects:25-97101', 
-        projectUpdate: { name: 'Updated Project Name' } 
+      expect(invoke).toHaveBeenCalledWith('update_project', {
+        id: 'projects:25-97101',
+        projectUpdate: { name: 'Updated Project Name' }
       });
       expect(result).toEqual(updatedProject);
     });
@@ -100,14 +102,16 @@ describe('Tauri Commands Integration', () => {
       const error = new Error('Project number already exists');
       vi.mocked(invoke).mockRejectedValueOnce(error);
 
-      await expect(ApiClient.createProject({
-        project_number: '25-97101', // Duplicate
-        name: 'Test Project',
-        country: 'UAE',
-        city: 'Dubai',
-        client_company: 'Test',
-        status: 'Submitted' as const
-      })).rejects.toThrow('Project number already exists');
+      await expect(
+        ApiClient.createProject({
+          project_number: '25-97101', // Duplicate
+          name: 'Test Project',
+          country: 'UAE',
+          city: 'Dubai',
+          client_company: 'Test',
+          status: 'Submitted' as const
+        })
+      ).rejects.toThrow('Project number already exists');
       expect(invoke).toHaveBeenCalledWith('create_project', expect.any(Object));
     });
   });
@@ -184,13 +188,13 @@ describe('Tauri Commands Integration', () => {
 
     it('should update company', async () => {
       const updatedCompany = { ...mockCompany, name_short: 'Emittiv Eng' };
-      
+
       vi.mocked(invoke).mockResolvedValueOnce(updatedCompany);
 
       const result = await ApiClient.updateCompany('company:emt', { name_short: 'Emittiv Eng' });
 
-      expect(invoke).toHaveBeenCalledWith('update_company', { 
-        id: 'company:emt', 
+      expect(invoke).toHaveBeenCalledWith('update_company', {
+        id: 'company:emt',
         companyUpdate: {
           name: null,
           name_short: 'Emittiv Eng',
@@ -217,15 +221,17 @@ describe('Tauri Commands Integration', () => {
       const validationError = new Error('Invalid email format');
       vi.mocked(invoke).mockRejectedValueOnce(validationError);
 
-      await expect(ApiClient.createCompany({
-        name: 'Test Company',
-        name_short: 'TestCo',
-        abbreviation: 'TC',
-        country: 'UAE',
-        city: 'Dubai',
-        reg_no: 'REG123',
-        tax_no: 'TAX456'
-      })).rejects.toThrow('Invalid email format');
+      await expect(
+        ApiClient.createCompany({
+          name: 'Test Company',
+          name_short: 'TestCo',
+          abbreviation: 'TC',
+          country: 'UAE',
+          city: 'Dubai',
+          reg_no: 'REG123',
+          tax_no: 'TAX456'
+        })
+      ).rejects.toThrow('Invalid email format');
     });
   });
 
@@ -282,16 +288,16 @@ describe('Tauri Commands Integration', () => {
 
     it('should update contact', async () => {
       const updatedContact = { ...mockContact, position: 'Senior Project Manager' };
-      
+
       vi.mocked(invoke).mockResolvedValueOnce(updatedContact);
 
-      const result = await ApiClient.updateContact('contact:john123', { 
-        position: 'Senior Project Manager' 
+      const result = await ApiClient.updateContact('contact:john123', {
+        position: 'Senior Project Manager'
       });
 
-      expect(invoke).toHaveBeenCalledWith('update_contact', { 
-        id: 'contact:john123', 
-        contactUpdate: { position: 'Senior Project Manager' } 
+      expect(invoke).toHaveBeenCalledWith('update_contact', {
+        id: 'contact:john123',
+        contactUpdate: { position: 'Senior Project Manager' }
       });
       expect(result).toEqual(updatedContact);
     });
@@ -309,14 +315,16 @@ describe('Tauri Commands Integration', () => {
       const constraintError = new Error('Company does not exist');
       vi.mocked(invoke).mockRejectedValueOnce(constraintError);
 
-      await expect(ApiClient.createContact({
-        first_name: 'Test',
-        last_name: 'User',
-        email: 'test@example.com',
-        phone: '123456789',
-        position: 'Engineer',
-        company: 'company:nonexistent'
-      })).rejects.toThrow('Company does not exist');
+      await expect(
+        ApiClient.createContact({
+          first_name: 'Test',
+          last_name: 'User',
+          email: 'test@example.com',
+          phone: '123456789',
+          position: 'Engineer',
+          company: 'company:nonexistent'
+        })
+      ).rejects.toThrow('Company does not exist');
     });
   });
 
@@ -425,24 +433,26 @@ describe('Tauri Commands Integration', () => {
       const enumError = new Error('Invalid status value');
       vi.mocked(invoke).mockRejectedValueOnce(enumError);
 
-      await expect(ApiClient.createFee({
-        name: 'Invalid Fee',
-        number: '25-97101-03',
-        rev: 1,
-        status: 'invalid_status' as any, // Invalid enum value
-        issue_date: '2025-08-21',
-        activity: 'Test Activity',
-        package: 'structural',
-        project_id: '25-97101', // prefix stripped
-        company_id: 'emt', // prefix stripped
-        contact_id: 'john123', // prefix stripped
-        staff_name: 'Test Engineer',
-        staff_email: 'test@example.com',
-        staff_phone: '123456789',
-        staff_position: 'Engineer',
-        strap_line: 'Test strap line',
-        revisions: []
-      })).rejects.toThrow('Invalid status value');
+      await expect(
+        ApiClient.createFee({
+          name: 'Invalid Fee',
+          number: '25-97101-03',
+          rev: 1,
+          status: 'invalid_status' as any, // Invalid enum value
+          issue_date: '2025-08-21',
+          activity: 'Test Activity',
+          package: 'structural',
+          project_id: '25-97101', // prefix stripped
+          company_id: 'emt', // prefix stripped
+          contact_id: 'john123', // prefix stripped
+          staff_name: 'Test Engineer',
+          staff_email: 'test@example.com',
+          staff_phone: '123456789',
+          staff_position: 'Engineer',
+          strap_line: 'Test strap line',
+          revisions: []
+        })
+      ).rejects.toThrow('Invalid status value');
     });
   });
 
@@ -531,36 +541,42 @@ describe('Tauri Commands Integration', () => {
       const dbError = new Error('Database connection lost');
       vi.mocked(invoke).mockRejectedValue(dbError);
 
-      await expect(ApiClient.createProject({
-        project_number: '25-97103',
-        name: 'Test Project',
-        country: 'UAE',
-        city: 'Dubai',
-        client_company: 'Test Company',
-        status: 'RFP' as const
-      })).rejects.toThrow('Database connection lost');
+      await expect(
+        ApiClient.createProject({
+          project_number: '25-97103',
+          name: 'Test Project',
+          country: 'UAE',
+          city: 'Dubai',
+          client_company: 'Test Company',
+          status: 'RFP' as const
+        })
+      ).rejects.toThrow('Database connection lost');
     });
 
     it('should handle permission errors', async () => {
       const permissionError = new Error('Insufficient permissions');
       vi.mocked(invoke).mockRejectedValue(permissionError);
 
-      await expect(ApiClient.deleteProject('projects:25-97101')).rejects.toThrow('Insufficient permissions');
+      await expect(ApiClient.deleteProject('projects:25-97101')).rejects.toThrow(
+        'Insufficient permissions'
+      );
     });
 
     it('should handle malformed data errors', async () => {
       const dataError = new Error('Invalid data format');
       vi.mocked(invoke).mockRejectedValue(dataError);
 
-      await expect(ApiClient.createCompany({
-        name: '', // Invalid empty name
-        name_short: 'Test',
-        abbreviation: 'TST',
-        country: 'UAE',
-        city: 'Dubai',
-        reg_no: 'REG123',
-        tax_no: 'TAX456'
-      })).rejects.toThrow('Invalid data format');
+      await expect(
+        ApiClient.createCompany({
+          name: '', // Invalid empty name
+          name_short: 'Test',
+          abbreviation: 'TST',
+          country: 'UAE',
+          city: 'Dubai',
+          reg_no: 'REG123',
+          tax_no: 'TAX456'
+        })
+      ).rejects.toThrow('Invalid data format');
     });
   });
 
@@ -601,7 +617,7 @@ describe('Tauri Commands Integration', () => {
         issue_date: '250821',
         revisions: []
       };
-      
+
       const mockFeeWithDates = {
         ...baseMockFee,
         issue_date: '250821', // YYMMDD format for fees

@@ -15,17 +15,7 @@
 </script>
 
 <div class="emittiv-date-range">
-  <input
-    type="month"
-    class="emittiv-date-input"
-    bind:value={from}
-    placeholder="From"
-  />
+  <input type="month" class="emittiv-date-input" bind:value={from} placeholder="From" />
   <span class="emittiv-date-range__sep">&ndash;</span>
-  <input
-    type="month"
-    class="emittiv-date-input"
-    bind:value={to}
-    placeholder="To"
-  />
+  <input type="month" class="emittiv-date-input" bind:value={to} placeholder="To" />
 </div>

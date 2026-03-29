@@ -309,7 +309,9 @@ describe('ApiClient', () => {
       it('should handle duplicate abbreviation errors', async () => {
         mockInvoke.mockRejectedValueOnce(new Error('Abbreviation already exists'));
 
-        await expect(ApiClient.createCompany(newCompany)).rejects.toThrow('Abbreviation already exists');
+        await expect(ApiClient.createCompany(newCompany)).rejects.toThrow(
+          'Abbreviation already exists'
+        );
       });
     });
 
@@ -426,7 +428,9 @@ describe('ApiClient', () => {
         const invalidContact = { ...newContact, email: 'invalid-email' };
         mockInvoke.mockRejectedValueOnce(new Error('Invalid email format'));
 
-        await expect(ApiClient.createContact(invalidContact)).rejects.toThrow('Invalid email format');
+        await expect(ApiClient.createContact(invalidContact)).rejects.toThrow(
+          'Invalid email format'
+        );
       });
     });
 

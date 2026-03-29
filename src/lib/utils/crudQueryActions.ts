@@ -35,9 +35,10 @@ export interface QueryActions<T> {
 }
 
 export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
-  deps: QueryDeps<T>,
+  deps: QueryDeps<T>
 ): QueryActions<T> {
-  const { store, api, filterAndSearch, idExtractor, componentLogger, enableLogging, component } = deps;
+  const { store, api, filterAndSearch, idExtractor, componentLogger, enableLogging, component } =
+    deps;
 
   return {
     async search(query: string) {
@@ -49,23 +50,32 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
           const searchResults = await api.search(query);
           store.update(state => ({
             ...state,
-            filteredItems: applySorting(filterAndSearch(searchResults, query, state.filters), state.sort),
-            loading: false,
+            filteredItems: applySorting(
+              filterAndSearch(searchResults, query, state.filters),
+              state.sort
+            ),
+            loading: false
           }));
         } catch (error) {
           if (enableLogging) await logApiError('search', error as Error, { component, query });
           store.update(state => ({
             ...state,
             error: 'Search unavailable — showing cached results',
-            filteredItems: applySorting(filterAndSearch(state.items, query, state.filters), state.sort),
-            loading: false,
+            filteredItems: applySorting(
+              filterAndSearch(state.items, query, state.filters),
+              state.sort
+            ),
+            loading: false
           }));
         }
       } else {
         store.update(state => ({
           ...state,
           searchQuery: query,
-          filteredItems: applySorting(filterAndSearch(state.items, query, state.filters), state.sort),
+          filteredItems: applySorting(
+            filterAndSearch(state.items, query, state.filters),
+            state.sort
+          )
         }));
       }
     },
@@ -79,8 +89,11 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
           const filterResults = await api.filter(filters);
           store.update(state => ({
             ...state,
-            filteredItems: applySorting(filterAndSearch(filterResults, state.searchQuery, filters), state.sort),
-            loading: false,
+            filteredItems: applySorting(
+              filterAndSearch(filterResults, state.searchQuery, filters),
+              state.sort
+            ),
+            loading: false
           }));
         } catch (error) {
           if (enableLogging) await logApiError('filter', error as Error, { component, filters });
@@ -88,15 +101,21 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
             ...state,
             error: 'Filter unavailable — showing cached results',
             filters,
-            filteredItems: applySorting(filterAndSearch(state.items, state.searchQuery, filters), state.sort),
-            loading: false,
+            filteredItems: applySorting(
+              filterAndSearch(state.items, state.searchQuery, filters),
+              state.sort
+            ),
+            loading: false
           }));
         }
       } else {
         store.update(state => ({
           ...state,
           filters,
-          filteredItems: applySorting(filterAndSearch(state.items, state.searchQuery, filters), state.sort),
+          filteredItems: applySorting(
+            filterAndSearch(state.items, state.searchQuery, filters),
+            state.sort
+          )
         }));
       }
     },
@@ -108,7 +127,10 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
         return {
           ...state,
           sort,
-          filteredItems: applySorting(filterAndSearch(state.items, state.searchQuery, state.filters), sort),
+          filteredItems: applySorting(
+            filterAndSearch(state.items, state.searchQuery, state.filters),
+            sort
+          )
         };
       });
     },
@@ -120,7 +142,7 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
         searchQuery: '',
         filters: {},
         sort: null,
-        filteredItems: [...state.items],
+        filteredItems: [...state.items]
       }));
     },
 
@@ -141,8 +163,11 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
         return {
           ...state,
           items,
-          filteredItems: applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort),
-          optimisticUpdates: new Map(),
+          filteredItems: applySorting(
+            filterAndSearch(items, state.searchQuery, state.filters),
+            state.sort
+          ),
+          optimisticUpdates: new Map()
         };
       });
     },
@@ -150,6 +175,6 @@ export function createQueryActions<T extends { id?: UnknownSurrealThing }>(
     getById(id: string): T | null {
       const currentState = get(store);
       return currentState.items.find(item => idExtractor(item.id) === id) || null;
-    },
+    }
   };
 }

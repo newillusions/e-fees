@@ -257,9 +257,7 @@ async fn main() {
         .await
         .expect("Failed to bind address");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }
 
 /// Serve the OpenAPI spec as JSON (no auth required).
@@ -276,4 +274,3 @@ async fn openapi_json() -> (axum::http::StatusCode, Json<Value>) {
         }
     }
 }
-

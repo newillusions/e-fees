@@ -65,6 +65,6 @@ export function formattedNumber(node: HTMLInputElement, options: FormattedNumber
       node.removeEventListener('focus', handleFocus);
       node.removeEventListener('blur', handleBlur);
       node.removeEventListener('keydown', handleKeydown);
-    },
+    }
   };
 }

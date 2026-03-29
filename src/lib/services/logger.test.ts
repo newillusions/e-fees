@@ -18,7 +18,7 @@ beforeEach(() => {
   console.error = vi.fn();
   console.warn = vi.fn();
   console.log = vi.fn();
-  
+
   // Reset logger to default state
   logger.setLevel(LogLevel.INFO);
 });
@@ -33,7 +33,7 @@ describe('Logger Service', () => {
   describe('Basic Logging', () => {
     it('should log error messages', async () => {
       await logger.error('Test error message');
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'error',
         target: 'frontend',
@@ -44,7 +44,7 @@ describe('Logger Service', () => {
 
     it('should log with context', async () => {
       await logger.error('Test error', { component: 'TestComponent', userId: '123' });
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'error',
         target: 'TestComponent',
@@ -56,10 +56,10 @@ describe('Logger Service', () => {
     it('should log with error object', async () => {
       const error = new Error('Test error');
       await logger.error('Operation failed', { action: 'test' }, error);
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'error',
-        target: 'frontend', 
+        target: 'frontend',
         message: 'test: Operation failed - Test error',
         context: JSON.stringify({ action: 'test' })
       });
@@ -67,31 +67,51 @@ describe('Logger Service', () => {
 
     it('should support all log levels', async () => {
       logger.setLevel(LogLevel.TRACE);
-      
+
       await logger.error('Error message');
-      await logger.warn('Warning message');  
+      await logger.warn('Warning message');
       await logger.info('Info message');
       await logger.debug('Debug message');
       await logger.trace('Trace message');
-      
+
       expect(mockInvoke).toHaveBeenCalledTimes(5);
-      expect(mockInvoke).toHaveBeenNthCalledWith(1, 'log_message', expect.objectContaining({ level: 'error' }));
-      expect(mockInvoke).toHaveBeenNthCalledWith(2, 'log_message', expect.objectContaining({ level: 'warn' }));
-      expect(mockInvoke).toHaveBeenNthCalledWith(3, 'log_message', expect.objectContaining({ level: 'info' }));
-      expect(mockInvoke).toHaveBeenNthCalledWith(4, 'log_message', expect.objectContaining({ level: 'debug' }));
-      expect(mockInvoke).toHaveBeenNthCalledWith(5, 'log_message', expect.objectContaining({ level: 'trace' }));
+      expect(mockInvoke).toHaveBeenNthCalledWith(
+        1,
+        'log_message',
+        expect.objectContaining({ level: 'error' })
+      );
+      expect(mockInvoke).toHaveBeenNthCalledWith(
+        2,
+        'log_message',
+        expect.objectContaining({ level: 'warn' })
+      );
+      expect(mockInvoke).toHaveBeenNthCalledWith(
+        3,
+        'log_message',
+        expect.objectContaining({ level: 'info' })
+      );
+      expect(mockInvoke).toHaveBeenNthCalledWith(
+        4,
+        'log_message',
+        expect.objectContaining({ level: 'debug' })
+      );
+      expect(mockInvoke).toHaveBeenNthCalledWith(
+        5,
+        'log_message',
+        expect.objectContaining({ level: 'trace' })
+      );
     });
   });
 
   describe('Log Level Filtering', () => {
     it('should respect log level settings', async () => {
       logger.setLevel(LogLevel.WARN);
-      
+
       await logger.error('Should log');
       await logger.warn('Should log');
       await logger.info('Should not log');
       await logger.debug('Should not log');
-      
+
       expect(mockInvoke).toHaveBeenCalledTimes(2);
     });
   });
@@ -100,7 +120,7 @@ describe('Logger Service', () => {
     it('should create component logger with context', async () => {
       const componentLogger = createComponentLogger('TestModal');
       await componentLogger.info('Test message');
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'info',
         target: 'frontend',
@@ -112,10 +132,10 @@ describe('Logger Service', () => {
     it('should support child logger context', async () => {
       const childLogger = logger.child({ component: 'ParentComponent' });
       await childLogger.info('Child message');
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'info',
-        target: 'frontend', 
+        target: 'frontend',
         message: '[ParentComponent] Child message',
         context: null
       });
@@ -126,7 +146,7 @@ describe('Logger Service', () => {
     it('should log API errors correctly', async () => {
       const error = new Error('Network timeout');
       await logApiError('createProject', error, { userId: '123' });
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'error',
         target: 'frontend',
@@ -137,7 +157,7 @@ describe('Logger Service', () => {
 
     it('should log user actions correctly', async () => {
       await logUserAction('buttonClicked', { button: 'save', screen: 'project' });
-      
+
       expect(mockInvoke).toHaveBeenCalledWith('log_message', {
         level: 'info',
         target: 'frontend',
@@ -150,22 +170,25 @@ describe('Logger Service', () => {
   describe('Performance Timer', () => {
     it('should measure and log execution time', async () => {
       vi.useFakeTimers();
-      
+
       const timer = logger.timer('TestOperation', { component: 'TestComponent' });
-      
+
       // Simulate 100ms delay
       vi.advanceTimersByTime(100);
-      
+
       timer();
-      
+
       // Should only call once for the completion log (optimized implementation)
-      expect(mockInvoke).toHaveBeenCalledWith('log_message', expect.objectContaining({
-        level: 'info',
-        target: 'TestComponent',
-        message: expect.stringContaining('Timer TestOperation:'),
-        context: expect.stringContaining('duration')
-      }));
-      
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'log_message',
+        expect.objectContaining({
+          level: 'info',
+          target: 'TestComponent',
+          message: expect.stringContaining('Timer TestOperation:'),
+          context: expect.stringContaining('duration')
+        })
+      );
+
       vi.useRealTimers();
     });
   });
@@ -173,13 +196,10 @@ describe('Logger Service', () => {
   describe('Fallback Behavior', () => {
     it('should fallback to console when Tauri invoke fails', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Tauri not available'));
-      
+
       await logger.error('Test error message');
-      
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to send log to Tauri:',
-        expect.any(Error)
-      );
+
+      expect(console.error).toHaveBeenCalledWith('Failed to send log to Tauri:', expect.any(Error));
       expect(console.error).toHaveBeenCalledWith('Test error message');
     });
   });
@@ -189,7 +209,7 @@ describe('Message Formatting', () => {
   it('should format messages with component and action', async () => {
     const componentLogger = createComponentLogger('TestModal');
     await componentLogger.info('Operation completed', { action: 'save' });
-    
+
     expect(mockInvoke).toHaveBeenCalledWith('log_message', {
       level: 'info',
       target: 'frontend',
@@ -201,9 +221,9 @@ describe('Message Formatting', () => {
   it('should handle nested component context', async () => {
     const parentLogger = logger.child({ component: 'ParentModal' });
     await parentLogger.info('Child action', { component: 'ChildModal', action: 'click' });
-    
+
     expect(mockInvoke).toHaveBeenCalledWith('log_message', {
-      level: 'info', 
+      level: 'info',
       target: 'ChildModal',
       message: '[ParentModal] [ChildModal] click: Child action',
       context: JSON.stringify({ component: 'ChildModal', action: 'click' })

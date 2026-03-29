@@ -15,7 +15,7 @@ import {
   getProjectDisplayInfo,
   getCompanyDisplayInfo,
   getContactDisplayInfo,
-  getFeeDisplayInfo,
+  getFeeDisplayInfo
 } from './search';
 import { normalizedMatch } from './searchNormalize';
 import { extractId } from './index';
@@ -28,16 +28,12 @@ export interface SearchResult {
   route: string;
 }
 
-export function searchProjects(
-  projects: Project[],
-  query: string,
-  max: number
-): SearchResult[] {
+export function searchProjects(projects: Project[], query: string, max: number): SearchResult[] {
   return projects
-    .filter((p) => {
-      const searchFields = PROJECT_SEARCH_FIELDS.map((field) => String(p[field] || ''));
+    .filter(p => {
+      const searchFields = PROJECT_SEARCH_FIELDS.map(field => String(p[field] || ''));
       searchFields.push(String(p.project_number || ''));
-      return searchFields.some((f) => normalizedMatch(f, query));
+      return searchFields.some(f => normalizedMatch(f, query));
     })
     .slice(0, max)
     .map((p): SearchResult => {
@@ -47,20 +43,16 @@ export function searchProjects(
         id: extractId(p.id),
         name: displayInfo.name,
         subtitle: displayInfo.subtitle,
-        route: '/projects',
+        route: '/projects'
       };
     });
 }
 
-export function searchCompanies(
-  companies: Company[],
-  query: string,
-  max: number
-): SearchResult[] {
+export function searchCompanies(companies: Company[], query: string, max: number): SearchResult[] {
   return companies
-    .filter((c) => {
-      const searchFields = COMPANY_SEARCH_FIELDS.map((field) => String(c[field] || ''));
-      return searchFields.some((f) => normalizedMatch(f, query));
+    .filter(c => {
+      const searchFields = COMPANY_SEARCH_FIELDS.map(field => String(c[field] || ''));
+      return searchFields.some(f => normalizedMatch(f, query));
     })
     .slice(0, max)
     .map((c): SearchResult => {
@@ -70,7 +62,7 @@ export function searchCompanies(
         id: extractId(c.id),
         name: displayInfo.name,
         subtitle: displayInfo.subtitle,
-        route: '/companies',
+        route: '/companies'
       };
     });
 }
@@ -83,11 +75,11 @@ export function searchContacts(
 ): SearchResult[] {
   const lookups = { companyLookup };
   return contacts
-    .filter((c) => {
-      const searchFields = CONTACT_SEARCH_FIELDS.map((field) => String(c[field] || ''));
+    .filter(c => {
+      const searchFields = CONTACT_SEARCH_FIELDS.map(field => String(c[field] || ''));
       const companySearchText = companyLookup.getCompanySearchText(c.company);
       return (
-        searchFields.some((f) => normalizedMatch(f, query)) ||
+        searchFields.some(f => normalizedMatch(f, query)) ||
         normalizedMatch(companySearchText, query)
       );
     })
@@ -99,7 +91,7 @@ export function searchContacts(
         id: extractId(c.id),
         name: displayInfo.name,
         subtitle: displayInfo.subtitle,
-        route: '/contacts',
+        route: '/contacts'
       };
     });
 }
@@ -118,16 +110,14 @@ export function searchFees(
       const dateB = b.time?.updated_at || b.time?.created_at || '';
       return dateB.localeCompare(dateA);
     })
-    .filter((f) => {
-      const feeFields = FEE_SEARCH_FIELDS.map((field) => String(f[field] || ''));
+    .filter(f => {
+      const feeFields = FEE_SEARCH_FIELDS.map(field => String(f[field] || ''));
       const companySearchText = companyLookup.getCompanySearchText(f.company_id);
       const projectId = extractId(f.project_id);
       const project = projectLookup.get(projectId);
-      const projectSearchText = [project?.name, project?.name_short]
-        .filter(Boolean)
-        .join(' ');
+      const projectSearchText = [project?.name, project?.name_short].filter(Boolean).join(' ');
       return (
-        feeFields.some((field) => normalizedMatch(field, query)) ||
+        feeFields.some(field => normalizedMatch(field, query)) ||
         normalizedMatch(companySearchText, query) ||
         normalizedMatch(projectSearchText, query)
       );
@@ -140,7 +130,7 @@ export function searchFees(
         id: extractId(f.id),
         name: displayInfo.name,
         subtitle: displayInfo.subtitle,
-        route: '/proposals',
+        route: '/proposals'
       };
     });
 }

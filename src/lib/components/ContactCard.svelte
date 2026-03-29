@@ -3,7 +3,17 @@
   import ActionButton from './ActionButton.svelte';
   import type { Contact } from '../../types';
 
-  let { contact, clickable = true, companyName = '', selectable = false, selected = false, onedit, onview, onselect, oncompanyclick }: {
+  let {
+    contact,
+    clickable = true,
+    companyName = '',
+    selectable = false,
+    selected = false,
+    onedit,
+    onview,
+    onselect,
+    oncompanyclick
+  }: {
     contact: Contact;
     clickable?: boolean;
     companyName?: string;
@@ -35,9 +45,7 @@
 <BaseListCard {clickable} {selectable} {selected} onclick={handleCardClick} {onselect}>
   <!-- Title -->
   <svelte:fragment slot="title">
-    <h3
-      class="emittiv-card-title"
-    >
+    <h3 class="emittiv-card-title">
       {contact.full_name}
     </h3>
   </svelte:fragment>
@@ -49,7 +57,10 @@
         <button
           type="button"
           class="emittiv-badge--clickable text-sm text-emittiv-lighter"
-          onclick={(e) => { e.stopPropagation(); oncompanyclick?.(companyName); }}
+          onclick={e => {
+            e.stopPropagation();
+            oncompanyclick?.(companyName);
+          }}
           style="text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px;"
         >
           {companyName}

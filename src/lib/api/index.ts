@@ -72,11 +72,7 @@ export {
 } from './filesystem';
 
 // Revision and template export operations
-export {
-  cloneFeeRevision,
-  getFeesForProject,
-  exportFeeTemplate
-} from './revisions';
+export { cloneFeeRevision, getFeesForProject, exportFeeTemplate } from './revisions';
 
 // Settings operations
 export { getSettings, saveSettings, reloadDatabaseConfig, reconnectDatabase } from './settings';
@@ -95,12 +91,7 @@ export {
 } from './system';
 
 // Reference data operations
-export {
-  searchCountries,
-  getAreaSuggestions,
-  getCitySuggestions,
-  getAllCities
-} from './reference';
+export { searchCountries, getAreaSuggestions, getCitySuggestions, getAllCities } from './reference';
 
 // Batch operations
 export { batchDeleteEntities, batchUpdateStatus } from './batch';

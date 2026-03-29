@@ -49,7 +49,9 @@ async fn create_generic_deliverable(c: &Client) -> Value {
         resp.status()
     );
 
-    resp.json::<Value>().await.expect("Failed to parse response")
+    resp.json::<Value>()
+        .await
+        .expect("Failed to parse response")
 }
 
 /// Create a discipline deliverable that replaces a generic one.
@@ -79,7 +81,9 @@ async fn create_discipline_deliverable(c: &Client, replaces_id: &str) -> Value {
         resp.status()
     );
 
-    resp.json::<Value>().await.expect("Failed to parse response")
+    resp.json::<Value>()
+        .await
+        .expect("Failed to parse response")
 }
 
 /// Soft-delete (archive) a deliverable by ID.
@@ -138,7 +142,10 @@ async fn test_stages_list_returns_ordered_stages() {
 
     // Each stage must have the required fields
     for stage in data {
-        assert!(stage["canonical_name"].is_string(), "canonical_name missing");
+        assert!(
+            stage["canonical_name"].is_string(),
+            "canonical_name missing"
+        );
         assert!(stage["default_label"].is_string(), "default_label missing");
         assert!(stage["sort_order"].is_number(), "sort_order missing");
         // aliases is optional so we just check it doesn't panic
@@ -212,7 +219,10 @@ async fn test_deliverable_list_with_stage_filter() {
     let data = body["data"].as_array().expect("data should be an array");
 
     let found = data.iter().any(|d| d["id"].as_str() == Some(&id));
-    assert!(found, "Test deliverable should appear in stage=concept list");
+    assert!(
+        found,
+        "Test deliverable should appear in stage=concept list"
+    );
 
     // Cleanup
     cleanup_deliverable(&c, &id).await;
@@ -408,7 +418,9 @@ async fn test_assemble_with_discipline_dedup() {
     assert_eq!(resp.status(), 200);
 
     let body: Value = resp.json().await.unwrap();
-    let stages = body["stages"].as_array().expect("stages should be an array");
+    let stages = body["stages"]
+        .as_array()
+        .expect("stages should be an array");
 
     // Find the concept stage
     let concept = stages
@@ -474,7 +486,9 @@ async fn test_assemble_without_matching_discipline_keeps_generic() {
     assert_eq!(resp.status(), 200);
 
     let body: Value = resp.json().await.unwrap();
-    let stages = body["stages"].as_array().expect("stages should be an array");
+    let stages = body["stages"]
+        .as_array()
+        .expect("stages should be an array");
 
     let concept = stages
         .iter()
@@ -558,10 +572,15 @@ async fn test_assemble_returns_stages() {
     assert_eq!(resp.status(), 200);
 
     let body: Value = resp.json().await.unwrap();
-    let stages = body["stages"].as_array().expect("stages should be an array");
+    let stages = body["stages"]
+        .as_array()
+        .expect("stages should be an array");
 
     // Should have at least one stage
-    assert!(!stages.is_empty(), "Assembly should return at least one stage");
+    assert!(
+        !stages.is_empty(),
+        "Assembly should return at least one stage"
+    );
 
     // Each stage must have canonical_name, label, and deliverables
     for stage in stages {
@@ -569,10 +588,7 @@ async fn test_assemble_returns_stages() {
             stage["canonical_name"].is_string(),
             "Each stage must have canonical_name"
         );
-        assert!(
-            stage["label"].is_string(),
-            "Each stage must have label"
-        );
+        assert!(stage["label"].is_string(), "Each stage must have label");
         assert!(
             stage["deliverables"].is_array(),
             "Each stage must have deliverables array"
@@ -818,8 +834,7 @@ async fn test_save_scope_overwrites() {
         "Should have the second deliverable, not the first"
     );
     assert_eq!(
-        deliverables_used[0]["wording_snapshot"],
-        "DELETE ME - Custom wording override",
+        deliverables_used[0]["wording_snapshot"], "DELETE ME - Custom wording override",
         "Should use the wording override, not master body"
     );
 
@@ -869,10 +884,7 @@ async fn test_zz_final_cleanup() {
     cleanup_all_test_deliverables(&c).await;
 
     // Also clean up test scope assemblies
-    for fee_key in [
-        "DELETE_ME_save_load_test",
-        "DELETE_ME_overwrite_test",
-    ] {
+    for fee_key in ["DELETE_ME_save_load_test", "DELETE_ME_overwrite_test"] {
         cleanup_scope_assembly(&c, fee_key).await;
     }
 }

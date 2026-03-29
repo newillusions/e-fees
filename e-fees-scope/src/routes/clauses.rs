@@ -73,7 +73,10 @@ pub async fn list_clauses(
     State(state): State<Arc<AppState>>,
     params: Query<ClauseListParams>,
 ) -> Result<Json<Value>, ApiError> {
-    let status = params.status.clone().unwrap_or_else(|| "active".to_string());
+    let status = params
+        .status
+        .clone()
+        .unwrap_or_else(|| "active".to_string());
 
     let mut where_clauses = vec!["status = $status".to_string()];
     let mut binds: Vec<(&str, Value)> = vec![("status", json!(status))];
@@ -365,9 +368,7 @@ pub async fn delete_clause(
     ),
     security(("api_key" = []))
 )]
-pub async fn list_categories(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Value>, ApiError> {
+pub async fn list_categories(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
     let query = "SELECT category, count() AS count FROM clause \
                  WHERE status = 'active' GROUP BY category ORDER BY category ASC";
 

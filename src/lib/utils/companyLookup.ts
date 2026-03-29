@@ -1,6 +1,6 @@
 /**
  * Optimized company lookup utilities with memoization.
- * 
+ *
  * This module provides efficient company lookup functions that use caching
  * to avoid repeated database lookups and complex ID parsing operations.
  * It replaces the duplicate company lookup logic found across components.
@@ -46,14 +46,14 @@ export interface CompanyLookup {
 
 /**
  * Creates an optimized company lookup system with memoization.
- * 
+ *
  * This function builds a cache of companies for fast lookups and provides
  * methods to retrieve company information without repeated ID parsing.
  * The cache is rebuilt when the companies array changes.
- * 
+ *
  * @param companies - Array of company objects to cache
  * @returns CompanyLookup interface with optimized lookup methods
- * 
+ *
  * @example
  * ```typescript
  * const lookup = createCompanyLookup(companies);
@@ -98,23 +98,23 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
     getCompanyName: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'Unknown Company';
-      
+
       const company = companyCache.get(id) || companyCache.get(`company:${id}`);
       return company?.name || 'Unknown Company';
     },
-    
+
     getCompanyShortName: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
-      
+
       const company = companyCache.get(id) || companyCache.get(`company:${id}`);
       return company?.name_short || company?.name || 'N/A';
     },
-    
+
     getCompanyCountry: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
-      
+
       const company = companyCache.get(id) || companyCache.get(`company:${id}`);
       return company?.country || 'N/A';
     },
@@ -122,7 +122,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
     getCompanyCity: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
-      
+
       const company = companyCache.get(id) || companyCache.get(`company:${id}`);
       return company?.city || 'N/A';
     },
@@ -130,7 +130,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
     getCompanyAbbreviation: (companyRef: UnknownSurrealThing): string => {
       const id = extractId(companyRef);
       if (!id) return 'N/A';
-      
+
       const company = companyCache.get(id) || companyCache.get(`company:${id}`);
       return company?.abbreviation || 'N/A';
     },
@@ -150,11 +150,7 @@ export function createCompanyLookup(companies: Company[]): CompanyLookup {
       if (!company) return '';
 
       // Combine all searchable company fields
-      return [
-        company.name,
-        company.name_short,
-        company.abbreviation
-      ].filter(Boolean).join(' ');
+      return [company.name, company.name_short, company.abbreviation].filter(Boolean).join(' ');
     },
 
     getCacheSize: (): number => {
@@ -177,7 +173,7 @@ export function clearCompanyCache(): void {
 
 /**
  * Gets cache statistics for debugging and monitoring.
- * 
+ *
  * @returns Object containing cache size and hit rate information
  */
 export function getCompanyCacheStats(): { size: number; keys: string[] } {

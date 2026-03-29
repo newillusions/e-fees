@@ -33,7 +33,7 @@ export type {
   AgentFeeResponse,
   AgentFeeCreate,
   AgentCompanyResponse,
-  AgentListResponse,
+  AgentListResponse
 } from './api/agent';
 
 // Re-export types from types file

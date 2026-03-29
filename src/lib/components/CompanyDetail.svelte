@@ -16,7 +16,12 @@
   import StatusBadge from './StatusBadge.svelte';
   import type { Company, Contact, Fee, Project } from '../../types';
 
-  let { isOpen = $bindable(false), company = null, onedit, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    company = null,
+    onedit,
+    onclose
+  }: {
     isOpen?: boolean;
     company?: Company | null;
     onedit?: (company: Company | null) => void;
@@ -24,29 +29,35 @@
   } = $props();
 
   // Filter contacts for this company using type-safe comparison
-  const companyContacts = $derived(company?.id
-    ? $contactsStore.filter(contact => compareIds(contact.company, company.id))
-    : []);
+  const companyContacts = $derived(
+    company?.id ? $contactsStore.filter(contact => compareIds(contact.company, company.id)) : []
+  );
 
   // Filter Fees for this company using type-safe comparison
-  const companyFees = $derived(company?.id
-    ? $feesStore
-        .filter(fee => compareIds(fee.company_id, company.id))
-        .sort((a, b) =>
-          new Date(b.time?.created_at || 0).getTime() - new Date(a.time?.created_at || 0).getTime()
-        )
-    : []);
+  const companyFees = $derived(
+    company?.id
+      ? $feesStore
+          .filter(fee => compareIds(fee.company_id, company.id))
+          .sort(
+            (a, b) =>
+              new Date(b.time?.created_at || 0).getTime() -
+              new Date(a.time?.created_at || 0).getTime()
+          )
+      : []
+  );
 
   // Filter projects related to this company (through fees)
-  const companyProjects = $derived(company?.id
-    ? $projectsStore
-        .filter(project =>
-          companyFees.some(fee => compareIds(fee.project_id, project.id))
-        )
-        .sort((a, b) =>
-          new Date(b.time?.updated_at || 0).getTime() - new Date(a.time?.updated_at || 0).getTime()
-        )
-    : []);
+  const companyProjects = $derived(
+    company?.id
+      ? $projectsStore
+          .filter(project => companyFees.some(fee => compareIds(fee.project_id, project.id)))
+          .sort(
+            (a, b) =>
+              new Date(b.time?.updated_at || 0).getTime() -
+              new Date(a.time?.updated_at || 0).getTime()
+          )
+      : []
+  );
 
   // Load all related data when component mounts
   onMount(() => {
@@ -102,9 +113,7 @@
       <!-- Projects Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="emittiv-section-title">
-            Related Projects
-          </h2>
+          <h2 class="emittiv-section-title">Related Projects</h2>
           <span
             class="text-xs text-emittiv-light px-2 py-1 rounded-lg"
             style="background-color: #111;"
@@ -156,9 +165,7 @@
       <!-- Fee Proposals Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="emittiv-section-title">
-            Fee Proposals
-          </h2>
+          <h2 class="emittiv-section-title">Fee Proposals</h2>
           <span
             class="text-xs text-emittiv-light px-2 py-1 rounded-lg"
             style="background-color: #111;"

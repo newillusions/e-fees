@@ -130,16 +130,16 @@ export interface AssembleResponse {
 // ── Scope Clause Structure (from auto_number_clauses) ──────────────
 
 export interface ScopeSection {
-  number: string;       // e.g. "1.0"
-  title: string;        // Category name (e.g. "Administrative")
+  number: string; // e.g. "1.0"
+  title: string; // Category name (e.g. "Administrative")
   clauses: ScopeClauseItem[];
 }
 
 export interface ScopeClauseItem {
-  number: string;       // e.g. "1.1", "1.2"
-  clause_id: string;    // SurrealDB key
-  title: string;        // Clause title
-  body: string;         // Clause body text
+  number: string; // e.g. "1.1", "1.2"
+  clause_id: string; // SurrealDB key
+  title: string; // Clause title
+  body: string; // Clause body text
 }
 
 export interface ScopeAssembly {

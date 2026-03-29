@@ -76,11 +76,9 @@ export function getProjectSearchText(
   const project = lookup.get(id);
   if (!project) return '';
 
-  return [
-    project.name,
-    project.name_short,
-    project.number?.id || project.number
-  ].filter(Boolean).join(' ');
+  return [project.name, project.name_short, project.number?.id || project.number]
+    .filter(Boolean)
+    .join(' ');
 }
 
 // ============================================================================
@@ -91,28 +89,46 @@ export function getProjectSearchText(
  * Project search fields - what fields to search when querying projects.
  */
 export const PROJECT_SEARCH_FIELDS: (keyof Project)[] = [
-  'name', 'name_short', 'area', 'city', 'country', 'folder'
+  'name',
+  'name_short',
+  'area',
+  'city',
+  'country',
+  'folder'
 ];
 
 /**
  * Company search fields - what fields to search when querying companies.
  */
 export const COMPANY_SEARCH_FIELDS: (keyof Company)[] = [
-  'name', 'name_short', 'abbreviation', 'city', 'country'
+  'name',
+  'name_short',
+  'abbreviation',
+  'city',
+  'country'
 ];
 
 /**
  * Contact search fields - what fields to search when querying contacts.
  */
 export const CONTACT_SEARCH_FIELDS: (keyof Contact)[] = [
-  'full_name', 'first_name', 'last_name', 'email', 'phone', 'position'
+  'full_name',
+  'first_name',
+  'last_name',
+  'email',
+  'phone',
+  'position'
 ];
 
 /**
  * Fee/Proposal search fields - what fields to search when querying proposals.
  */
 export const FEE_SEARCH_FIELDS: (keyof Fee)[] = [
-  'name', 'number', 'activity', 'package', 'staff_name'
+  'name',
+  'number',
+  'activity',
+  'package',
+  'staff_name'
 ];
 
 // ============================================================================
@@ -163,16 +179,16 @@ export function createContactFilterConfig(lookups?: SearchLookups): FilterConfig
   const config: FilterConfig<Contact> = {
     searchFields: CONTACT_SEARCH_FIELDS,
     filterFields: {
-      company: (contact) => lookups?.companyLookup?.getCompanyShortName(contact.company) || '',
-      country: (contact) => lookups?.companyLookup?.getCompanyCountry(contact.company) || '',
-      position: (contact) => contact.position || ''
+      company: contact => lookups?.companyLookup?.getCompanyShortName(contact.company) || '',
+      country: contact => lookups?.companyLookup?.getCompanyCountry(contact.company) || '',
+      position: contact => contact.position || ''
     }
   };
 
   // Add company search if lookup is available
   if (lookups?.companyLookup) {
     config.customSearchFunctions = [
-      (contact) => lookups.companyLookup!.getCompanySearchText(contact.company)
+      contact => lookups.companyLookup!.getCompanySearchText(contact.company)
     ];
   }
 
@@ -199,16 +215,12 @@ export function createFeeFilterConfig(lookups?: SearchLookups): FilterConfig<Fee
 
   // Add company search if lookup is available
   if (lookups?.companyLookup) {
-    customSearchFunctions.push(
-      (fee) => lookups.companyLookup!.getCompanySearchText(fee.company_id)
-    );
+    customSearchFunctions.push(fee => lookups.companyLookup!.getCompanySearchText(fee.company_id));
   }
 
   // Add project search if lookup is available
   if (lookups?.projectLookup) {
-    customSearchFunctions.push(
-      (fee) => getProjectSearchText(fee.project_id, lookups.projectLookup!)
-    );
+    customSearchFunctions.push(fee => getProjectSearchText(fee.project_id, lookups.projectLookup!));
   }
 
   return {
@@ -265,14 +277,14 @@ export function getFeeDisplayInfo(
   }
 
   // Build display name: Project Name - Package (if both exist)
-  const displayName = [projectName, fee.package]
-    .filter(Boolean)
-    .join(' - ') || fee.name || fee.number || 'Unnamed Proposal';
+  const displayName =
+    [projectName, fee.package].filter(Boolean).join(' - ') ||
+    fee.name ||
+    fee.number ||
+    'Unnamed Proposal';
 
   // Subtitle: fee number + status
-  const subtitle = [fee.number, fee.status]
-    .filter(Boolean)
-    .join(' • ');
+  const subtitle = [fee.number, fee.status].filter(Boolean).join(' • ');
 
   return { name: displayName, subtitle };
 }
@@ -288,17 +300,16 @@ export function getContactDisplayInfo(
   contact: Contact,
   lookups?: SearchLookups
 ): { name: string; subtitle: string } {
-  const name = contact.full_name ||
+  const name =
+    contact.full_name ||
     `${contact.first_name || ''} ${contact.last_name || ''}`.trim() ||
     'Unnamed Contact';
 
   const companyName = lookups?.companyLookup?.getCompanyShortName(contact.company);
 
-  const subtitle = [
-    contact.position,
-    companyName !== 'N/A' ? companyName : null,
-    contact.email
-  ].filter(Boolean).join(' • ');
+  const subtitle = [contact.position, companyName !== 'N/A' ? companyName : null, contact.email]
+    .filter(Boolean)
+    .join(' • ');
 
   return { name, subtitle };
 }
@@ -313,9 +324,7 @@ export function getProjectDisplayInfo(project: Project): { name: string; subtitl
   const name = project.name || 'Unnamed Project';
   const projectNumber = getProjectNumberId(project);
 
-  const subtitle = [projectNumber, project.city, project.country]
-    .filter(Boolean)
-    .join(' • ');
+  const subtitle = [projectNumber, project.city, project.country].filter(Boolean).join(' • ');
 
   return { name, subtitle };
 }
@@ -428,11 +437,17 @@ export function createTypeaheadSearch<T, R>(
  */
 export function createProjectTypeaheadSearch(
   extractIdFn: (item: UnknownSurrealThing) => string | null
-): (projects: Project[], searchText: string) => Array<{ id: string; name: string; name_short: string; number: string }> {
-  return createTypeaheadSearch<Project, { id: string; name: string; name_short: string; number: string }>({
+): (
+  projects: Project[],
+  searchText: string
+) => Array<{ id: string; name: string; name_short: string; number: string }> {
+  return createTypeaheadSearch<
+    Project,
+    { id: string; name: string; name_short: string; number: string }
+  >({
     searchFields: ['name', 'name_short'],
-    nestedFieldExtractor: (p) => [p.number?.id || ''],
-    mapToResult: (p) => ({
+    nestedFieldExtractor: p => [p.number?.id || ''],
+    mapToResult: p => ({
       id: extractIdFn(p.id) || extractIdFn(p) || '',
       name: p.name || '',
       name_short: p.name_short || '',
@@ -446,10 +461,16 @@ export function createProjectTypeaheadSearch(
  */
 export function createCompanyTypeaheadSearch(
   extractIdFn: (item: UnknownSurrealThing) => string | null
-): (companies: Company[], searchText: string) => Array<{ id: string; name: string; name_short: string; abbreviation: string }> {
-  return createTypeaheadSearch<Company, { id: string; name: string; name_short: string; abbreviation: string }>({
+): (
+  companies: Company[],
+  searchText: string
+) => Array<{ id: string; name: string; name_short: string; abbreviation: string }> {
+  return createTypeaheadSearch<
+    Company,
+    { id: string; name: string; name_short: string; abbreviation: string }
+  >({
     searchFields: ['name', 'name_short', 'abbreviation'],
-    mapToResult: (c) => ({
+    mapToResult: c => ({
       id: extractIdFn(c.id) || extractIdFn(c) || '',
       name: c.name || '',
       name_short: c.name_short || '',
@@ -463,10 +484,16 @@ export function createCompanyTypeaheadSearch(
  */
 export function createContactTypeaheadSearch(
   extractIdFn: (item: UnknownSurrealThing) => string | null
-): (contacts: Contact[], searchText: string) => Array<{ id: string; name: string; full_name: string; email: string }> {
-  return createTypeaheadSearch<Contact, { id: string; name: string; full_name: string; email: string }>({
+): (
+  contacts: Contact[],
+  searchText: string
+) => Array<{ id: string; name: string; full_name: string; email: string }> {
+  return createTypeaheadSearch<
+    Contact,
+    { id: string; name: string; full_name: string; email: string }
+  >({
     searchFields: ['full_name', 'email'],
-    mapToResult: (c) => ({
+    mapToResult: c => ({
       id: extractIdFn(c.id) || extractIdFn(c) || '',
       name: c.full_name || '',
       full_name: c.full_name || '',

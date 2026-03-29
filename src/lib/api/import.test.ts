@@ -29,7 +29,7 @@ const mockPreview: ImportPreview = {
       stage_count: 4,
       phase_count: 0,
       add_on_count: 4,
-      has_conversion_rate: true,
+      has_conversion_rate: true
     },
     {
       source_file: 'thakher-proposal.json',
@@ -42,21 +42,21 @@ const mockPreview: ImportPreview = {
       stage_count: 24,
       phase_count: 4,
       add_on_count: 0,
-      has_conversion_rate: false,
-    },
+      has_conversion_rate: false
+    }
   ],
   methodology: {
     wht_rate: 0.05,
     aed_to_sar: 1.0211,
     overhead_rate: 0.1,
     margin_rate: 0.05,
-    default_stage_count: 6,
+    default_stage_count: 6
   },
   clients: [
     { name: 'SAQR Alkhorayef Investment Company', client_type: 'client', project_count: 1 },
-    { name: 'P&T Group, Dubai', client_type: 'consultant', project_count: 2 },
+    { name: 'P&T Group, Dubai', client_type: 'consultant', project_count: 2 }
   ],
-  warnings: [],
+  warnings: []
 };
 
 const mockImportResult: ImportResult = {
@@ -66,7 +66,7 @@ const mockImportResult: ImportResult = {
   companies_created: 3,
   companies_skipped: 1,
   errors: [],
-  warnings: ['Company "Emittiv Lighting Design" already exists, skipping'],
+  warnings: ['Company "Emittiv Lighting Design" already exists, skipping']
 };
 
 describe('Import Wizard API Module', () => {
@@ -150,7 +150,7 @@ describe('Import Wizard API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('import_execute', {
         directory: '/path/to/dir',
         importProposals: true,
-        importCompanies: true,
+        importCompanies: true
       });
       expect(result).toEqual(mockImportResult);
     });
@@ -159,7 +159,7 @@ describe('Import Wizard API Module', () => {
       const companiesOnly: ImportResult = {
         ...mockImportResult,
         projects_created: 0,
-        fees_created: 0,
+        fees_created: 0
       };
       mockInvoke.mockResolvedValueOnce(companiesOnly);
 
@@ -168,7 +168,7 @@ describe('Import Wizard API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('import_execute', {
         directory: '/path/to/dir',
         importProposals: false,
-        importCompanies: true,
+        importCompanies: true
       });
       expect(result.projects_created).toBe(0);
       expect(result.companies_created).toBe(3);
@@ -178,7 +178,7 @@ describe('Import Wizard API Module', () => {
       const proposalsOnly: ImportResult = {
         ...mockImportResult,
         companies_created: 0,
-        companies_skipped: 0,
+        companies_skipped: 0
       };
       mockInvoke.mockResolvedValueOnce(proposalsOnly);
 
@@ -206,7 +206,7 @@ describe('Import Wizard API Module', () => {
         companies_created: 2,
         companies_skipped: 0,
         errors: ['Failed to create project "X": duplicate key'],
-        warnings: [],
+        warnings: []
       };
       mockInvoke.mockResolvedValueOnce(partialFailure);
 
@@ -220,7 +220,9 @@ describe('Import Wizard API Module', () => {
     it('should throw on complete failure', async () => {
       mockInvoke.mockRejectedValueOnce(new Error('Database connection failed'));
 
-      await expect(importExecute('/path', true, true)).rejects.toThrow('Database connection failed');
+      await expect(importExecute('/path', true, true)).rejects.toThrow(
+        'Database connection failed'
+      );
     });
   });
 });

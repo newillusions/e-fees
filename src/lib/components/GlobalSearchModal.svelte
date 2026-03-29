@@ -9,10 +9,13 @@
     searchCompanies,
     searchContacts,
     searchFees,
-    type SearchResult,
+    type SearchResult
   } from '$lib/utils/searchProviders';
 
-  let { isOpen = $bindable(false), onclose }: {
+  let {
+    isOpen = $bindable(false),
+    onclose
+  }: {
     isOpen?: boolean;
     onclose?: () => void;
   } = $props();
@@ -26,10 +29,13 @@
 
   // Entity icons
   const typeIcons: Record<string, string> = {
-    project: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-    company: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+    project:
+      'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+    company:
+      'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
     contact: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    proposal: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+    proposal:
+      'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
   };
 
   const typeColors: Record<string, string> = {
@@ -63,7 +69,7 @@
       ...searchProjects(projects, q, MAX_RESULTS_PER_TYPE),
       ...searchCompanies(companies, q, MAX_RESULTS_PER_TYPE),
       ...searchContacts(contacts, companyLookup, q, MAX_RESULTS_PER_TYPE),
-      ...searchFees(fees, companyLookup, projectLookup, q, MAX_RESULTS_PER_TYPE),
+      ...searchFees(fees, companyLookup, projectLookup, q, MAX_RESULTS_PER_TYPE)
     ];
   }
 
@@ -147,8 +153,19 @@
       <h2 id="search-dialog-title" class="sr-only">Quick Search</h2>
       <!-- Search Input -->
       <div class="search-input-wrapper">
-        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg
+          class="search-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
         <input
           bind:this={inputElement}
@@ -176,11 +193,16 @@
                   class="result-item"
                   class:selected={index === selectedIndex}
                   on:click={() => navigateToResult(result)}
-                  on:mouseenter={() => selectedIndex = index}
+                  on:mouseenter={() => (selectedIndex = index)}
                 >
                   <div class="result-icon {typeColors[result.type]}">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={typeIcons[result.type]} />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d={typeIcons[result.type]}
+                      />
                     </svg>
                   </div>
                   <div class="result-content">
@@ -194,7 +216,12 @@
           {:else}
             <div class="no-results">
               <svg class="no-results-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <p>No results found for "{searchQuery}"</p>
             </div>
@@ -212,7 +239,12 @@
               <div class="hint-category">
                 <span class="category-icon {typeColors.project}">
                   <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={typeIcons.project} />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d={typeIcons.project}
+                    />
                   </svg>
                 </span>
                 <span>Projects</span>
@@ -220,7 +252,12 @@
               <div class="hint-category">
                 <span class="category-icon {typeColors.company}">
                   <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={typeIcons.company} />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d={typeIcons.company}
+                    />
                   </svg>
                 </span>
                 <span>Companies</span>
@@ -228,7 +265,12 @@
               <div class="hint-category">
                 <span class="category-icon {typeColors.contact}">
                   <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={typeIcons.contact} />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d={typeIcons.contact}
+                    />
                   </svg>
                 </span>
                 <span>Contacts</span>
@@ -236,7 +278,12 @@
               <div class="hint-category">
                 <span class="category-icon {typeColors.proposal}">
                   <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={typeIcons.proposal} />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d={typeIcons.proposal}
+                    />
                   </svg>
                 </span>
                 <span>Proposals</span>
@@ -275,8 +322,12 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .search-container {

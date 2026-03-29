@@ -108,7 +108,7 @@ export async function importExecute(
     const result = await invoke<ImportResult>('import_execute', {
       directory,
       importProposals,
-      importCompanies,
+      importCompanies
     });
     return result;
   } catch (error) {

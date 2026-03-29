@@ -1,6 +1,6 @@
 /**
  * Test Data Fixtures
- * 
+ *
  * Centralized test data for consistent testing across all test suites.
  * Includes mock data for projects, companies, contacts, fees, and reference data.
  */
@@ -31,7 +31,7 @@ export const TEST_COUNTRIES: Country[] = [
     dial_code: 971
   },
   {
-    id: '2', 
+    id: '2',
     name: 'Saudi Arabia',
     code: 'SA',
     dial_code: 966
@@ -60,7 +60,7 @@ export const TEST_CURRENCIES: Currency[] = [
   },
   {
     id: '2',
-    code: 'SAR', 
+    code: 'SAR',
     name: 'Saudi Riyal',
     symbol: '﷼'
   },
@@ -88,7 +88,7 @@ export const TEST_COMPANIES: Company[] = [
     address: 'Business Bay, Dubai Marina Tower, Floor 25',
     phone: '+971501234567',
     email: 'info@emittiv.com',
-    website: 'https://emittiv.com',
+    website: 'https://emittiv.com'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -100,7 +100,7 @@ export const TEST_COMPANIES: Company[] = [
     address: 'King Fahd Road, Al Olaya District',
     phone: '+966501234567',
     email: 'contact@acme.com',
-    website: 'https://acme.com',
+    website: 'https://acme.com'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -112,7 +112,7 @@ export const TEST_COMPANIES: Company[] = [
     address: 'Canary Wharf, 1 Canada Square',
     phone: '+442071234567',
     email: 'hello@techsolutions.co.uk',
-    website: 'https://techsolutions.co.uk',
+    website: 'https://techsolutions.co.uk'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   }
@@ -128,7 +128,7 @@ export const TEST_CONTACTS: Contact[] = [
     position: 'Project Manager',
     company: 'company:emittiv123',
     phone: '+971501234567',
-    email: 'john.smith@emittiv.com',
+    email: 'john.smith@emittiv.com'
     // linkedin: 'https://linkedin.com/in/johnsmith',
     // created_at: '2025-08-21T10:00:00Z',
     // updated_at: '2025-08-21T10:00:00Z'
@@ -141,7 +141,7 @@ export const TEST_CONTACTS: Contact[] = [
     position: 'Engineering Director',
     company: 'company:acme456',
     phone: '+966501234567',
-    email: 'jane.doe@acme.com',
+    email: 'jane.doe@acme.com'
     // linkedin: 'https://linkedin.com/in/janedoe',
     // created_at: '2025-08-21T10:00:00Z',
     // updated_at: '2025-08-21T10:00:00Z'
@@ -154,7 +154,7 @@ export const TEST_CONTACTS: Contact[] = [
     position: 'Senior Engineer',
     company: 'company:tech789',
     phone: '+442071234567',
-    email: 'mike.johnson@techsolutions.co.uk',
+    email: 'mike.johnson@techsolutions.co.uk'
     // linkedin: 'https://linkedin.com/in/mikejohnson',
     // created_at: '2025-08-21T10:00:00Z',
     // updated_at: '2025-08-21T10:00:00Z'
@@ -170,7 +170,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Arab Emirates',
     city: 'Dubai',
     client_company: 'Emittiv Engineering Consultancy',
-    status: 'Design',
+    status: 'Design'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -181,7 +181,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'Saudi Arabia',
     city: 'Riyadh',
     client_company: 'ACME Corporation',
-    status: 'Awarded',
+    status: 'Awarded'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -192,7 +192,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Kingdom',
     city: 'London',
     client_company: 'Tech Solutions Ltd',
-    status: 'RFP',
+    status: 'RFP'
     // created_at: '2025-08-21T09:00:00Z',
     // updated_at: '2025-08-21T09:00:00Z'
   },
@@ -203,7 +203,7 @@ export const TEST_PROJECTS: Project[] = [
     country: 'United Arab Emirates',
     city: 'Abu Dhabi',
     client_company: 'Previous Client',
-    status: 'Completed',
+    status: 'Completed'
     // created_at: '2024-12-15T09:00:00Z',
     // updated_at: '2024-12-20T09:00:00Z'
   }
@@ -274,7 +274,20 @@ export const TEST_ENUMS = {
   fee_statuses: ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Lost', 'No Response', 'Superseded'],
   fee_stages: ['Draft', 'Prepared', 'Sent', 'Under Review', 'Negotiation', 'Awarded', 'Lost'],
   fee_packages: ['structural', 'architectural', 'mep', 'civil', 'full_package'],
-  project_statuses: ['Lead', 'RFP', 'Submitted', 'Awarded', 'Design', 'Construction', 'Completed', 'Lost', 'No Response', 'Cancelled', 'On Hold', 'Superseded']
+  project_statuses: [
+    'Lead',
+    'RFP',
+    'Submitted',
+    'Awarded',
+    'Design',
+    'Construction',
+    'Completed',
+    'Lost',
+    'No Response',
+    'Cancelled',
+    'On Hold',
+    'Superseded'
+  ]
 };
 
 // Helper functions for test data manipulation
@@ -302,7 +315,9 @@ export const TestDataHelpers = {
   // Create test project with custom data
   createTestProject: (overrides: Partial<Project> = {}): Project => ({
     id: `projects:test-${Date.now()}`,
-    project_number: `25-97${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    project_number: `25-97${Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, '0')}`,
     name: 'Test Project',
     country: 'United Arab Emirates',
     city: 'Dubai',
@@ -364,7 +379,10 @@ export const TestDataHelpers = {
   }),
 
   // Simulate SurrealDB Thing object format
-  withThingId: <T extends { id: string }>(item: T, table: string): T & { id: { tb: string; id: string } } => ({
+  withThingId: <T extends { id: string }>(
+    item: T,
+    table: string
+  ): T & { id: { tb: string; id: string } } => ({
     ...item,
     id: {
       tb: table,

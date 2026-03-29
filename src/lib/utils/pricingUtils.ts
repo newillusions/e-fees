@@ -14,7 +14,7 @@ import { roundToIncrement } from './format';
 export function getRoundingConfig(config: any): { increment: number; mode: string } {
   return {
     increment: config?.rounding_increment ?? 50,
-    mode: config?.rounding_mode ?? 'ceiling',
+    mode: config?.rounding_mode ?? 'ceiling'
   };
 }
 
@@ -30,10 +30,7 @@ export function roundWithConfig(rawTotal: number, config: any): number {
  * Calculate WHT (withholding tax) gross-up amounts.
  * Formula: invoiced = amount / (1 - whtRate), wht = invoiced - amount.
  */
-export function calcWhtAmounts(
-  amount: number,
-  whtRate: number
-): { invoiced: number; wht: number } {
+export function calcWhtAmounts(amount: number, whtRate: number): { invoiced: number; wht: number } {
   if (whtRate === 0) return { invoiced: Math.round(amount), wht: 0 };
   if (whtRate >= 1) return { invoiced: Math.round(amount), wht: 0 };
   const invoiced = Math.round(amount / (1 - whtRate));

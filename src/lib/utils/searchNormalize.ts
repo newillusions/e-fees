@@ -21,7 +21,7 @@ export function normalizeForSearch(text: string): string {
   return text
     .toLowerCase()
     .replace(/[.\-']/g, '') // Remove dots, dashes, apostrophes
-    .replace(/\s+/g, ' ')   // Collapse whitespace
+    .replace(/\s+/g, ' ') // Collapse whitespace
     .trim();
 }
 

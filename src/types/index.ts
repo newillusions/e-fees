@@ -35,13 +35,17 @@ export interface SurrealV3RecordId {
 export type SurrealId = string | SurrealThing | SurrealV3RecordId;
 
 // Type for unknown SurrealDB Thing objects (before parsing)
-export type UnknownSurrealThing = {
-  tb?: string;
-  id?: unknown;
-  table?: string;
-  key?: unknown;
-  String?: string;
-} | string | null | undefined;
+export type UnknownSurrealThing =
+  | {
+      tb?: string;
+      id?: unknown;
+      table?: string;
+      key?: unknown;
+      String?: string;
+    }
+  | string
+  | null
+  | undefined;
 
 // Import types needed within this file
 import type { Project } from './database';
@@ -67,9 +71,8 @@ export type {
   ContactCreate,
   ContactUpdate,
   FeeCreate,
-  FeeUpdate,
+  FeeUpdate
 } from './database';
-
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -77,7 +80,7 @@ export type {
 
 /**
  * Database statistics response structure.
- * 
+ *
  * Returned by the getStats API endpoint to provide dashboard metrics.
  */
 export interface DatabaseStats {
@@ -95,7 +98,7 @@ export interface DatabaseStats {
 
 /**
  * Database connection information structure.
- * 
+ *
  * Provides detailed information about the current database connection
  * for debugging and monitoring purposes.
  */
@@ -120,7 +123,7 @@ export interface DatabaseInfo {
 
 /**
  * Database table schema information structure.
- * 
+ *
  * Provides detailed schema information for a specific table
  * including fields, relationships, and constraints.
  */
@@ -166,7 +169,7 @@ export interface TableSchema {
 
 /**
  * Country search result structure.
- * 
+ *
  * Returned by country search API for autocomplete functionality.
  */
 export interface CountrySearchResult {
@@ -186,7 +189,7 @@ export interface CountrySearchResult {
 
 /**
  * Project creation result structure.
- * 
+ *
  * Returned when creating a project with template folder operations.
  */
 export interface ProjectCreationResult {
@@ -202,7 +205,7 @@ export interface ProjectCreationResult {
 
 /**
  * File operation result structure.
- * 
+ *
  * Returned by file system operations like folder creation and file copying.
  */
 export interface FileOperationResult {

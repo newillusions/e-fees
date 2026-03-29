@@ -41,9 +41,7 @@
     isQuotingInClient && convertedDisplayTotal !== undefined ? convertedDisplayTotal : displayTotal
   );
   const primaryCurrency = $derived(isQuotingInClient && clientCurrency ? clientCurrency : currency);
-  const secondaryTotal = $derived(
-    isQuotingInClient ? displayTotal : convertedDisplayTotal
-  );
+  const secondaryTotal = $derived(isQuotingInClient ? displayTotal : convertedDisplayTotal);
   const secondaryCurrency = $derived(isQuotingInClient ? currency : clientCurrency);
   const hasSecondary = $derived(
     secondaryTotal !== undefined && secondaryCurrency && secondaryCurrency !== primaryCurrency
@@ -72,7 +70,9 @@
         <div class="emittiv-summary-bar__sep"></div>
         <div class="emittiv-summary-bar__item">
           <span class="emittiv-summary-bar__label">Design</span>
-          <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent">{formatNumber(designTotal)}</span>
+          <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent"
+            >{formatNumber(designTotal)}</span
+          >
         </div>
       {/if}
 
@@ -101,9 +101,15 @@
       {/if}
 
       {#if showTax && taxType === 'withholding' && (pricing?.config?.vat_percent ?? 0) > 0}
-        {@const { invoiced: grossedUp } = calcWhtAmounts(subtotal, (pricing?.config?.vat_percent ?? 0) / 100)}
+        {@const { invoiced: grossedUp } = calcWhtAmounts(
+          subtotal,
+          (pricing?.config?.vat_percent ?? 0) / 100
+        )}
         <div class="emittiv-summary-bar__sep"></div>
-        <div class="emittiv-summary-bar__item" title="Invoiced amount after {pricing?.config?.vat_percent}% WHT gross-up">
+        <div
+          class="emittiv-summary-bar__item"
+          title="Invoiced amount after {pricing?.config?.vat_percent}% WHT gross-up"
+        >
           <span class="emittiv-summary-bar__label">WHT Invoice</span>
           <span class="emittiv-summary-bar__value">{formatNumber(grossedUp)}</span>
         </div>
@@ -112,10 +118,15 @@
 
     <div class="emittiv-summary-bar__total">
       <span class="emittiv-summary-bar__label">TOTAL</span>
-      <span class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold">
-        {formatNumber(primaryTotal)} {primaryCurrency}
+      <span
+        class="emittiv-summary-bar__value emittiv-summary-bar__value--accent emittiv-summary-bar__value--bold"
+      >
+        {formatNumber(primaryTotal)}
+        {primaryCurrency}
         {#if hasSecondary && secondaryTotal !== undefined}
-          <span class="emittiv-summary-bar__converted">({formatNumber(secondaryTotal)} {secondaryCurrency})</span>
+          <span class="emittiv-summary-bar__converted"
+            >({formatNumber(secondaryTotal)} {secondaryCurrency})</span
+          >
         {/if}
       </span>
     </div>

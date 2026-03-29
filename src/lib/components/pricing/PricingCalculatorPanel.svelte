@@ -1,5 +1,11 @@
 <script lang="ts">
-  import type { PricingConfig, Discipline, Stage, PricingCell, PostContractItem } from '../../../types/database';
+  import type {
+    PricingConfig,
+    Discipline,
+    Stage,
+    PricingCell,
+    PostContractItem
+  } from '../../../types/database';
   import {
     calculateQuotedFee,
     calculateCellAmount,
@@ -8,7 +14,11 @@
     DEFAULT_PRICING_CONFIG
   } from '../../../types/database';
   import { formatCurrency, formatNumber, formatPercent } from '$lib/utils/format';
-  import { roundWithConfig, calcWhtAmounts, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
+  import {
+    roundWithConfig,
+    calcWhtAmounts,
+    whtTooltip as whtTooltipFn
+  } from '$lib/utils/pricingUtils';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import CurrencyAmount from '../CurrencyAmount.svelte';
@@ -48,8 +58,12 @@
   }: Props = $props();
 
   // Design stages only (not post-contract)
-  const designStages = $derived(stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order));
-  const postContractStages = $derived(stages.filter(s => s.is_post_contract).sort((a, b) => a.order - b.order));
+  const designStages = $derived(
+    stages.filter(s => !s.is_post_contract).sort((a, b) => a.order - b.order)
+  );
+  const postContractStages = $derived(
+    stages.filter(s => s.is_post_contract).sort((a, b) => a.order - b.order)
+  );
   const sortedDisciplines = $derived([...disciplines].sort((a, b) => a.order - b.order));
 
   // Stage total overrides (manual edits to rounded stage totals)
@@ -57,7 +71,7 @@
 
   // Post-contract totals
   const postContractSubtotal = $derived(postContractItems.reduce((sum, i) => sum + i.amount, 0));
-  const postContractVat = $derived(postContractSubtotal * (config?.vat_percent || 0) / 100);
+  const postContractVat = $derived((postContractSubtotal * (config?.vat_percent || 0)) / 100);
   const postContractTotal = $derived(postContractSubtotal + postContractVat);
 
   // Recalculate quoted fee when target or buffer changes
@@ -84,14 +98,17 @@
             discipline_id: disc.id,
             stage_id: stage.id,
             amount,
-            override_amount: existing?.override_amount,
+            override_amount: existing?.override_amount
           });
         }
       }
       // Only update if cells actually changed — compare by ID, not index position
-      const cellsChanged = newCells.length !== cells.length ||
+      const cellsChanged =
+        newCells.length !== cells.length ||
         newCells.some(c => {
-          const old = cells.find(oc => oc.discipline_id === c.discipline_id && oc.stage_id === c.stage_id);
+          const old = cells.find(
+            oc => oc.discipline_id === c.discipline_id && oc.stage_id === c.stage_id
+          );
           return !old || Math.abs(c.amount - old.amount) > 0.01;
         });
       if (cellsChanged) {
@@ -122,9 +139,8 @@
 
     // Only set override if value actually differs from calculated
     // Use Math.round for comparison since we display rounded values
-    const newOverride = (value !== null && Math.round(value) !== Math.round(calculatedAmount))
-      ? value
-      : undefined;
+    const newOverride =
+      value !== null && Math.round(value) !== Math.round(calculatedAmount) ? value : undefined;
 
     const updated = cells.map(c => {
       if (c.discipline_id === disciplineId && c.stage_id === stageId) {
@@ -194,7 +210,9 @@
     designStages.reduce((sum, stage) => sum + getRoundedStageTotal(stage.id), 0)
   );
   // VAT is added on top; withholding is NOT added to proposal totals (applied at invoice time only)
-  const designVat = $derived(config?.tax_type === 'vat' ? designSubtotal * (config?.vat_percent || 0) / 100 : 0);
+  const designVat = $derived(
+    config?.tax_type === 'vat' ? (designSubtotal * (config?.vat_percent || 0)) / 100 : 0
+  );
   const grandTotal = $derived(designSubtotal + designVat);
 
   // Withholding tax gross-up helper: invoiced_amount = quoted / (1 - rate)
@@ -209,20 +227,25 @@
 
   // Multi-currency conversion
   const hasClientCurrency = $derived(
-    !!config?.client_currency && config.client_currency !== config.currency && !!config?.exchange_rate
+    !!config?.client_currency &&
+      config.client_currency !== config.currency &&
+      !!config?.exchange_rate
   );
   const convertedTotal = $derived(
-    hasClientCurrency ? convertToClientCurrency(
-      config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal,
-      config
-    ) : undefined
+    hasClientCurrency
+      ? convertToClientCurrency(
+          config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal,
+          config
+        )
+      : undefined
   );
 
   // Live exchange rate from store
   const liveRate = $derived.by(() => {
     // Subscribe to store to trigger reactivity when rates are fetched
     const rates = $exchangeRatesStore;
-    if (!rates || !config?.client_currency || config.client_currency === config.currency) return null;
+    if (!rates || !config?.client_currency || config.client_currency === config.currency)
+      return null;
     return getRate(config.currency as CurrencyCode, config.client_currency as CurrencyCode);
   });
   const liveRateDate = $derived($exchangeRatesStore?.date ?? null);
@@ -281,14 +304,18 @@
         quantity: 1,
         unit: 'visit',
         rate: 0,
-        amount: 0,
+        amount: 0
       }));
     const updated = [...kept, ...newItems];
     postContractItems = updated;
     onUpdatePostContract(updated);
   });
 
-  function updatePostContractItem(id: string, field: keyof PostContractItem, value: string | number) {
+  function updatePostContractItem(
+    id: string,
+    field: keyof PostContractItem,
+    value: string | number
+  ) {
     const updated = postContractItems.map(item => {
       if (item.id !== id) return item;
       const newItem = { ...item, [field]: value };
@@ -318,7 +345,11 @@
             type="text"
             inputmode="numeric"
             class="emittiv-table-input emittiv-table-input--left"
-            use:formattedNumber={{ value: config.target_fee, onChange: (v) => updateConfig('target_fee', v), min: 0 }}
+            use:formattedNumber={{
+              value: config.target_fee,
+              onChange: v => updateConfig('target_fee', v),
+              min: 0
+            }}
           />
         {:else}
           <span class="text-emittiv-white">{formatNumber(config.target_fee)}</span>
@@ -330,7 +361,7 @@
           <select
             class="emittiv-select"
             value={config.currency}
-            onchange={(e) => updateConfig('currency', e.currentTarget.value)}
+            onchange={e => updateConfig('currency', e.currentTarget.value)}
           >
             <option value="AED">AED</option>
             <option value="USD">USD</option>
@@ -353,7 +384,7 @@
               step="1"
               class="emittiv-table-input emittiv-table-input--lg"
               value={config.buffer_percent}
-              onchange={(e) => updateConfig('buffer_percent', parseFloat(e.currentTarget.value) || 0)}
+              onchange={e => updateConfig('buffer_percent', parseFloat(e.currentTarget.value) || 0)}
             />
             <span class="emittiv-field-suffix__unit">%</span>
           </div>
@@ -372,7 +403,7 @@
               step="0.5"
               class="emittiv-table-input emittiv-table-input--lg"
               value={config.vat_percent}
-              onchange={(e) => updateConfig('vat_percent', parseFloat(e.currentTarget.value) || 0)}
+              onchange={e => updateConfig('vat_percent', parseFloat(e.currentTarget.value) || 0)}
             />
             <span class="emittiv-field-suffix__unit">%</span>
           </div>
@@ -391,7 +422,8 @@
               step="5"
               class="emittiv-table-input emittiv-table-input--lg"
               value={config.mobilisation_percent}
-              onchange={(e) => updateConfig('mobilisation_percent', parseFloat(e.currentTarget.value) || 0)}
+              onchange={e =>
+                updateConfig('mobilisation_percent', parseFloat(e.currentTarget.value) || 0)}
             />
             <span class="emittiv-field-suffix__unit">%</span>
           </div>
@@ -401,7 +433,9 @@
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--quoted">
         <label class="emittiv-label">Calculated Fee</label>
-        <span class="emittiv-calc-quoted"><CurrencyAmount amount={config.quoted_fee} config={config} /></span>
+        <span class="emittiv-calc-quoted"
+          ><CurrencyAmount amount={config.quoted_fee} {config} /></span
+        >
       </div>
     </div>
 
@@ -413,7 +447,7 @@
           <select
             class="emittiv-select"
             value={config.rounding_increment ?? 50}
-            onchange={(e) => updateConfig('rounding_increment', parseInt(e.currentTarget.value))}
+            onchange={e => updateConfig('rounding_increment', parseInt(e.currentTarget.value))}
           >
             <option value={50}>50</option>
             <option value={100}>100</option>
@@ -431,13 +465,15 @@
           <select
             class="emittiv-select"
             value={config.rounding_mode ?? 'ceiling'}
-            onchange={(e) => updateConfig('rounding_mode', e.currentTarget.value)}
+            onchange={e => updateConfig('rounding_mode', e.currentTarget.value)}
           >
             <option value="ceiling">Ceiling (up)</option>
             <option value="nearest">Nearest</option>
           </select>
         {:else}
-          <span class="text-emittiv-white">{config.rounding_mode === 'nearest' ? 'Nearest' : 'Ceiling'}</span>
+          <span class="text-emittiv-white"
+            >{config.rounding_mode === 'nearest' ? 'Nearest' : 'Ceiling'}</span
+          >
         {/if}
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--currency">
@@ -446,14 +482,20 @@
           <select
             class="emittiv-select"
             value={config.tax_type ?? 'vat'}
-            onchange={(e) => updateConfig('tax_type', e.currentTarget.value)}
+            onchange={e => updateConfig('tax_type', e.currentTarget.value)}
           >
             <option value="vat">VAT</option>
             <option value="withholding">WHT</option>
             <option value="none">None</option>
           </select>
         {:else}
-          <span class="text-emittiv-white">{config.tax_type === 'none' ? 'None' : config.tax_type === 'withholding' ? 'WHT' : 'VAT'}</span>
+          <span class="text-emittiv-white"
+            >{config.tax_type === 'none'
+              ? 'None'
+              : config.tax_type === 'withholding'
+                ? 'WHT'
+                : 'VAT'}</span
+          >
         {/if}
       </div>
       <div class="emittiv-calc-field emittiv-calc-field--pct">
@@ -464,7 +506,7 @@
               type="checkbox"
               class="emittiv-checkbox"
               checked={config.show_tax_in_summary ?? false}
-              onchange={(e) => updateConfig('show_tax_in_summary', e.currentTarget.checked)}
+              onchange={e => updateConfig('show_tax_in_summary', e.currentTarget.checked)}
             />
             <span class="text-emittiv-light text-xs">In summary</span>
           </label>
@@ -485,7 +527,7 @@
           <select
             class="emittiv-select"
             value={config.client_currency ?? ''}
-            onchange={(e) => {
+            onchange={e => {
               const val = e.currentTarget.value;
               updateConfig('client_currency', val || undefined);
               if (!val || val === config.currency) {
@@ -512,7 +554,7 @@
             <select
               class="emittiv-select"
               value={config.quote_currency ?? config.currency}
-              onchange={(e) => updateConfig('quote_currency', e.currentTarget.value)}
+              onchange={e => updateConfig('quote_currency', e.currentTarget.value)}
             >
               <option value={config.currency}>{config.currency}</option>
               <option value={config.client_currency}>{config.client_currency}</option>
@@ -532,7 +574,7 @@
                 class="emittiv-input"
                 value={config.exchange_rate ?? ''}
                 disabled={isRateLocked}
-                onchange={(e) => {
+                onchange={e => {
                   const val = parseFloat(e.currentTarget.value);
                   updateConfig('exchange_rate', isNaN(val) || val <= 0 ? undefined : val);
                 }}
@@ -562,7 +604,8 @@
           {:else if liveRate !== null && liveRateDate}
             <label class="emittiv-label">Live Rate</label>
             <span class="text-emittiv-light text-xs">
-              1 {config.currency} = {liveRate.toFixed(4)} {config.client_currency}
+              1 {config.currency} = {liveRate.toFixed(4)}
+              {config.client_currency}
               <span class="text-emittiv-dark">(ECB {liveRateDate})</span>
             </span>
           {:else}
@@ -577,7 +620,11 @@
             <label class="emittiv-label">Rate Locked</label>
             <div class="emittiv-rate-lock">
               <span class="text-emittiv-light text-xs">
-                Locked {new Date(config.rate_locked_at!).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                Locked {new Date(config.rate_locked_at!).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                })}
               </span>
               {#if !readonly}
                 <button
@@ -609,7 +656,9 @@
       <div class="emittiv-calc-row mt-1">
         <div class="emittiv-calc-field emittiv-calc-field--quoted" style="margin-left: auto;">
           <label class="emittiv-label">Converted Total</label>
-          <span class="emittiv-calc-quoted">{formatCurrency(convertedTotal, config.client_currency)}</span>
+          <span class="emittiv-calc-quoted"
+            >{formatCurrency(convertedTotal, config.client_currency)}</span
+          >
         </div>
       </div>
     {/if}
@@ -622,8 +671,12 @@
       <div class="emittiv-sortable-header emittiv-sortable-header--compact">
         <div class="emittiv-sortable-col--grow">Stage</div>
         {#each sortedDisciplines as disc}
-          <div class="emittiv-sortable-col--number" title="{disc.name} ({formatPercent(disc.percentage)})">
-            {disc.code || disc.name} <span class="text-emittiv-lighter">{formatPercent(disc.percentage)}</span>
+          <div
+            class="emittiv-sortable-col--number"
+            title="{disc.name} ({formatPercent(disc.percentage)})"
+          >
+            {disc.code || disc.name}
+            <span class="text-emittiv-lighter">{formatPercent(disc.percentage)}</span>
           </div>
         {/each}
         <div class="emittiv-sortable-col--accent">Total</div>
@@ -631,8 +684,12 @@
 
       <!-- Data rows -->
       {#each designStages as stage}
-        <div class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact">
-          <div class="emittiv-sortable-col--grow flex items-center justify-between text-emittiv-white">
+        <div
+          class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact"
+        >
+          <div
+            class="emittiv-sortable-col--grow flex items-center justify-between text-emittiv-white"
+          >
             <span>{stage.name}</span>
             <span class="text-emittiv-light text-xs flex">
               <span class="w-8 text-center">[{stage.code}]</span>
@@ -653,7 +710,12 @@
                       title="Reset to calculated value"
                     >
                       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
                       </svg>
                     </button>
                   {/if}
@@ -663,7 +725,11 @@
                     class="emittiv-table-input emittiv-table-input--md"
                     class:emittiv-text--override={isOverridden}
                     class:emittiv-table-input--has-override={isOverridden}
-                    use:formattedNumber={{ value: Math.round(cellValue), onChange: (v) => setCellOverride(disc.id, stage.id, v), min: 0 }}
+                    use:formattedNumber={{
+                      value: Math.round(cellValue),
+                      onChange: v => setCellOverride(disc.id, stage.id, v),
+                      min: 0
+                    }}
                   />
                 </div>
               {:else}
@@ -673,7 +739,12 @@
               {/if}
             </div>
           {/each}
-          <div class="emittiv-sortable-col--accent" title="{isWithholding ? whtTooltip(getRoundedStageTotal(stage.id)) : `Calculated: ${formatNumber(getStageTotal(stage.id))} → Rounded: ${formatNumber(roundWithConfig(getStageTotal(stage.id), config))}`}">
+          <div
+            class="emittiv-sortable-col--accent"
+            title={isWithholding
+              ? whtTooltip(getRoundedStageTotal(stage.id))
+              : `Calculated: ${formatNumber(getStageTotal(stage.id))} → Rounded: ${formatNumber(roundWithConfig(getStageTotal(stage.id), config))}`}
+          >
             {#if !readonly}
               {@const isOverridden = hasStageTotalOverride(stage.id)}
               <div class="emittiv-sortable-cell-group">
@@ -685,7 +756,12 @@
                     title="Reset to calculated value"
                   >
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                   </button>
                 {/if}
@@ -695,7 +771,11 @@
                   class="emittiv-table-input emittiv-table-input--md emittiv-table-input--accent"
                   class:emittiv-text--override={isOverridden}
                   class:emittiv-table-input--has-override={isOverridden}
-                  use:formattedNumber={{ value: getRoundedStageTotal(stage.id), onChange: (v) => setStageTotalOverride(stage.id, v), min: 0 }}
+                  use:formattedNumber={{
+                    value: getRoundedStageTotal(stage.id),
+                    onChange: v => setStageTotalOverride(stage.id, v),
+                    min: 0
+                  }}
                 />
               </div>
             {:else}
@@ -746,20 +826,27 @@
         </div>
       {/if}
       <!-- Total row -->
-      <div class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total">
-        <div class="emittiv-sortable-col--grow">{config.tax_type === 'vat' && config.show_tax_in_summary ? 'TOTAL (incl. VAT)' : 'TOTAL'}</div>
+      <div
+        class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total"
+      >
+        <div class="emittiv-sortable-col--grow">
+          {config.tax_type === 'vat' && config.show_tax_in_summary ? 'TOTAL (incl. VAT)' : 'TOTAL'}
+        </div>
         {#each sortedDisciplines as disc}
           <div class="emittiv-sortable-col--number"></div>
         {/each}
         <div class="emittiv-sortable-col--accent" title={whtTooltip(designSubtotal)}>
-          {formatNumber(config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal)}
+          {formatNumber(
+            config.tax_type === 'vat' && config.show_tax_in_summary ? grandTotal : designSubtotal
+          )}
         </div>
       </div>
 
       <!-- Matrix validation - only warn if difference exceeds rounding threshold -->
       {#if Math.abs(designSubtotal - config.quoted_fee) > (config.rounding_increment ?? 50) * designStages.length}
         <div class="emittiv-matrix-warning">
-          Note: Matrix subtotal ({formatNumber(designSubtotal)}) differs significantly from quoted fee ({formatNumber(config.quoted_fee)}) - check for manual overrides
+          Note: Matrix subtotal ({formatNumber(designSubtotal)}) differs significantly from quoted
+          fee ({formatNumber(config.quoted_fee)}) - check for manual overrides
         </div>
       {/if}
     </PanelCard>
@@ -788,7 +875,9 @@
       {#each postContractStages as stage (stage.id)}
         {@const item = getItemForStage(stage.id)}
         {#if item}
-          <div class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact">
+          <div
+            class="emittiv-sortable-row emittiv-sortable-row--static emittiv-sortable-row--compact"
+          >
             <div class="emittiv-sortable-col--grow text-emittiv-white">
               {stage.name}
             </div>
@@ -798,7 +887,11 @@
                   type="text"
                   inputmode="numeric"
                   class="emittiv-table-input emittiv-table-input--md"
-                  use:formattedNumber={{ value: item.quantity, onChange: (v) => updatePostContractItem(item.id, 'quantity', v), min: 0 }}
+                  use:formattedNumber={{
+                    value: item.quantity,
+                    onChange: v => updatePostContractItem(item.id, 'quantity', v),
+                    min: 0
+                  }}
                 />
               {:else}
                 <span class="text-emittiv-white">{item.quantity}</span>
@@ -810,7 +903,11 @@
                   type="text"
                   inputmode="numeric"
                   class="emittiv-table-input emittiv-table-input--md"
-                  use:formattedNumber={{ value: item.rate, onChange: (v) => updatePostContractItem(item.id, 'rate', v), min: 0 }}
+                  use:formattedNumber={{
+                    value: item.rate,
+                    onChange: v => updatePostContractItem(item.id, 'rate', v),
+                    min: 0
+                  }}
                 />
               {:else}
                 <span class="text-emittiv-white">{formatNumber(item.rate)}</span>
@@ -842,7 +939,9 @@
         </div>
       </div>
       <!-- Total row -->
-      <div class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total">
+      <div
+        class="emittiv-sortable-footer emittiv-sortable-footer--compact emittiv-sortable-footer--total"
+      >
         <div class="emittiv-sortable-col--grow">TOTAL</div>
         <div class="emittiv-sortable-col--number"></div>
         <div class="emittiv-sortable-col--number"></div>

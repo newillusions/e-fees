@@ -23,7 +23,7 @@ export const PROPOSAL_STATUSES = [
   'Superseded'
 ] as const;
 
-export type ProposalStatus = typeof PROPOSAL_STATUSES[number];
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
 
 /**
  * Proposal status options formatted for select dropdowns.
@@ -48,11 +48,7 @@ export const PROPOSAL_STATUS_OPTIONS_TYPEAHEAD = PROPOSAL_STATUSES.map(status =>
  * Active proposal statuses (for dashboard metrics, etc.)
  * These represent proposals that are still "in progress"
  */
-export const ACTIVE_PROPOSAL_STATUSES: ProposalStatus[] = [
-  'Draft',
-  'Sent',
-  'Negotiation'
-];
+export const ACTIVE_PROPOSAL_STATUSES: ProposalStatus[] = ['Draft', 'Sent', 'Negotiation'];
 
 // =============================================================================
 // PROJECT STATUSES
@@ -77,7 +73,7 @@ export const PROJECT_STATUSES = [
   'Superseded'
 ] as const;
 
-export type ProjectStatus = typeof PROJECT_STATUSES[number];
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 /**
  * Project status options formatted for select/dropdown components.
@@ -118,23 +114,23 @@ export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = [
  * Returns semantic CSS class names referencing design tokens (defined in app.css).
  */
 export const STATUS_COLORS: Record<string, string> = {
-  'Lead': 'status-color--lead',
-  'Draft': 'status-color--draft',
-  'RFP': 'status-color--rfp',
-  'Submitted': 'status-color--submitted',
-  'Sent': 'status-color--sent',
-  'Negotiation': 'status-color--negotiation',
-  'Awarded': 'status-color--awarded',
-  'Accepted': 'status-color--accepted',
-  'Design': 'status-color--design',
-  'Construction': 'status-color--construction',
-  'Completed': 'status-color--completed',
-  'Lost': 'status-color--lost',
-  'Rejected': 'status-color--rejected',
+  Lead: 'status-color--lead',
+  Draft: 'status-color--draft',
+  RFP: 'status-color--rfp',
+  Submitted: 'status-color--submitted',
+  Sent: 'status-color--sent',
+  Negotiation: 'status-color--negotiation',
+  Awarded: 'status-color--awarded',
+  Accepted: 'status-color--accepted',
+  Design: 'status-color--design',
+  Construction: 'status-color--construction',
+  Completed: 'status-color--completed',
+  Lost: 'status-color--lost',
+  Rejected: 'status-color--rejected',
   'No Response': 'status-color--no-response',
-  'Cancelled': 'status-color--cancelled',
+  Cancelled: 'status-color--cancelled',
   'On Hold': 'status-color--on-hold',
-  'Superseded': 'status-color--superseded',
+  Superseded: 'status-color--superseded'
 };
 
 /**

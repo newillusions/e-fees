@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { clickable = true, customPadding = false, onclick }: {
+  let {
+    clickable = true,
+    customPadding = false,
+    onclick
+  }: {
     clickable?: boolean;
     customPadding?: boolean;
     onclick?: (event: MouseEvent | KeyboardEvent) => void;

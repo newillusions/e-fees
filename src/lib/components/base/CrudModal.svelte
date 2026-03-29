@@ -22,7 +22,20 @@
   type DeleteCallback = (entity: any) => Promise<void>;
 
   // Props - EntityType allows any entity object to be passed in
-  let { isOpen = $bindable(false), entity = null as EntityType | null, mode = 'create' as 'create' | 'edit', title, fields, validationRules = [] as ValidationRule<FormDataType>[], onSave, onDelete = null as DeleteCallback | null, maxWidth = '500px', customClass = '', zIndex = 100, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    entity = null as EntityType | null,
+    mode = 'create' as 'create' | 'edit',
+    title,
+    fields,
+    validationRules = [] as ValidationRule<FormDataType>[],
+    onSave,
+    onDelete = null as DeleteCallback | null,
+    maxWidth = '500px',
+    customClass = '',
+    zIndex = 100,
+    onclose
+  }: {
     isOpen?: boolean;
     entity?: EntityType | null;
     mode?: 'create' | 'edit';
@@ -222,9 +235,7 @@
               disabled={$operationState.saving || $operationState.deleting}
             >
               {#if $operationState.saving}
-                <div
-                  class="emittiv-spinner-sm"
-                ></div>
+                <div class="emittiv-spinner-sm"></div>
               {/if}
               Update
             </Button>

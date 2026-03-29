@@ -12,7 +12,7 @@ import { normalizedMatch } from './searchNormalize';
  */
 export interface DateRange {
   from: string; // 'YYYY-MM' or ''
-  to: string;   // 'YYYY-MM' or ''
+  to: string; // 'YYYY-MM' or ''
 }
 
 /**
@@ -49,18 +49,18 @@ export interface FilterConfig<T> {
 
 /**
  * Creates a filtered and sorted array based on search query and filters.
- * 
+ *
  * This function provides consistent filtering logic that can be used across
  * all route components, eliminating code duplication and ensuring uniform
  * filtering behavior throughout the application.
- * 
+ *
  * @template T - The type of items being filtered
  * @param items - Array of items to filter
  * @param searchQuery - Text search query (case-insensitive)
  * @param filters - Object containing filter key-value pairs
  * @param config - Configuration object defining search and filter behavior
  * @returns Filtered and sorted array of items
- * 
+ *
  * @example
  * ```typescript
  * const filteredProjects = createFilterFunction(
@@ -84,56 +84,59 @@ export function createFilterFunction<T>(
   config: FilterConfig<T>,
   advanced?: AdvancedFilters
 ): T[] {
-  return items.filter(item => {
-    // Apply search filter if query is provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim();
+  return items
+    .filter(item => {
+      // Apply search filter if query is provided
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim();
 
-      // Check direct field matches using normalized matching
-      // This allows "uae" to match "U.A.E." and "p&t" to match "P&T Group"
-      const matchesDirectFields = config.searchFields.some(field => {
-        const value = item[field];
-        return typeof value === 'string' && normalizedMatch(value, query);
-      });
+        // Check direct field matches using normalized matching
+        // This allows "uae" to match "U.A.E." and "p&t" to match "P&T Group"
+        const matchesDirectFields = config.searchFields.some(field => {
+          const value = item[field];
+          return typeof value === 'string' && normalizedMatch(value, query);
+        });
 
-      // Check custom search functions (e.g., company name/code lookup)
-      const matchesCustomSearch = config.customSearchFunctions?.some(fn => {
-        const value = fn(item);
-        return typeof value === 'string' && normalizedMatch(value, query);
-      }) || false;
+        // Check custom search functions (e.g., company name/code lookup)
+        const matchesCustomSearch =
+          config.customSearchFunctions?.some(fn => {
+            const value = fn(item);
+            return typeof value === 'string' && normalizedMatch(value, query);
+          }) || false;
 
-      if (!matchesDirectFields && !matchesCustomSearch) return false;
-    }
-
-    // Apply dynamic filters
-    for (const [filterKey, filterValue] of Object.entries(filters)) {
-      if (filterValue && config.filterFields?.[filterKey]) {
-        const itemValue = config.filterFields[filterKey](item);
-        if (itemValue !== filterValue) return false;
+        if (!matchesDirectFields && !matchesCustomSearch) return false;
       }
-    }
 
-    // Apply advanced multi-select status filter
-    if (advanced?.statusSet && advanced.statusSet.size > 0 && config.filterFields?.status) {
-      const itemStatus = config.filterFields.status(item);
-      if (!advanced.statusSet.has(itemStatus)) return false;
-    }
-
-    // Apply advanced date range filter
-    if (advanced?.dateRange && config.dateFieldExtractor) {
-      const { from, to } = advanced.dateRange;
-      if (from || to) {
-        const rawDate = config.dateFieldExtractor(item);
-        if (!rawDate) return false;
-        const yearMonth = extractYearMonth(rawDate, config.dateFieldFormat || 'iso');
-        if (!yearMonth) return false;
-        if (from && yearMonth < from) return false;
-        if (to && yearMonth > to) return false;
+      // Apply dynamic filters
+      for (const [filterKey, filterValue] of Object.entries(filters)) {
+        if (filterValue && config.filterFields?.[filterKey]) {
+          const itemValue = config.filterFields[filterKey](item);
+          if (itemValue !== filterValue) return false;
+        }
       }
-    }
 
-    return true;
-  }).sort(config.sortFunction || (defaultSortFunction as (a: T, b: T) => number));
+      // Apply advanced multi-select status filter
+      if (advanced?.statusSet && advanced.statusSet.size > 0 && config.filterFields?.status) {
+        const itemStatus = config.filterFields.status(item);
+        if (!advanced.statusSet.has(itemStatus)) return false;
+      }
+
+      // Apply advanced date range filter
+      if (advanced?.dateRange && config.dateFieldExtractor) {
+        const { from, to } = advanced.dateRange;
+        if (from || to) {
+          const rawDate = config.dateFieldExtractor(item);
+          if (!rawDate) return false;
+          const yearMonth = extractYearMonth(rawDate, config.dateFieldFormat || 'iso');
+          if (!yearMonth) return false;
+          if (from && yearMonth < from) return false;
+          if (to && yearMonth > to) return false;
+        }
+      }
+
+      return true;
+    })
+    .sort(config.sortFunction || (defaultSortFunction as (a: T, b: T) => number));
 }
 
 /**
@@ -168,12 +171,15 @@ export function extractYearMonth(value: string, format: 'iso' | 'yymmdd'): strin
 
 /**
  * Default sort function that sorts by updated_at timestamp in descending order.
- * 
+ *
  * @param a - First item to compare
  * @param b - Second item to compare
  * @returns Sort comparison result
  */
-function defaultSortFunction<T extends { time?: { updated_at?: string; created_at?: string } }>(a: T, b: T): number {
+function defaultSortFunction<T extends { time?: { updated_at?: string; created_at?: string } }>(
+  a: T,
+  b: T
+): number {
   const timeA = a.time?.updated_at || a.time?.created_at || '';
   const timeB = b.time?.updated_at || b.time?.created_at || '';
   return new Date(timeB).getTime() - new Date(timeA).getTime();
@@ -181,15 +187,15 @@ function defaultSortFunction<T extends { time?: { updated_at?: string; created_a
 
 /**
  * Creates unique sorted values from an array of items for use in filter dropdowns.
- * 
+ *
  * This function extracts unique values from a specific field across all items,
  * providing a clean list for dropdown options.
- * 
+ *
  * @template T - The type of items being processed
  * @param items - Array of items to extract values from
  * @param fieldExtractor - Function to extract the value from each item
  * @returns Sorted array of unique values
- * 
+ *
  * @example
  * ```typescript
  * const uniqueCountries = getUniqueFieldValues(
@@ -198,25 +204,22 @@ function defaultSortFunction<T extends { time?: { updated_at?: string; created_a
  * );
  * ```
  */
-export function getUniqueFieldValues<T>(
-  items: T[],
-  fieldExtractor: (item: T) => string
-): string[] {
+export function getUniqueFieldValues<T>(items: T[], fieldExtractor: (item: T) => string): string[] {
   const uniqueValues = new Set<string>();
-  
+
   items.forEach(item => {
     const value = fieldExtractor(item);
     if (value && value.trim()) {
       uniqueValues.add(value);
     }
   });
-  
+
   return Array.from(uniqueValues).sort();
 }
 
 /**
  * Checks if any filters are currently active (have non-empty values).
- * 
+ *
  * @param filters - Object containing filter key-value pairs
  * @param searchQuery - Current search query
  * @returns True if any filters or search query are active
@@ -235,7 +238,7 @@ export function hasActiveFilters(
 
 /**
  * Clears all active filters and search query.
- * 
+ *
  * @param filters - Object containing filter key-value pairs (will be mutated)
  * @returns Empty search query string
  */
@@ -258,7 +261,7 @@ export function clearAdvancedFilters(): AdvancedFilters {
 
 /**
  * Counts the total number of items that match current filters.
- * 
+ *
  * @template T - The type of items being counted
  * @param items - Array of items to count
  * @param searchQuery - Text search query

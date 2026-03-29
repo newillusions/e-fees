@@ -18,14 +18,14 @@ type SortFn<T> = (items: T[], sort: CrudState<T>['sort']) => T[];
 export function recomputeFiltered<T>(
   store: Writable<CrudState<T>>,
   filterAndSearch: FilterFn<T>,
-  applySorting: SortFn<T>,
+  applySorting: SortFn<T>
 ): void {
   store.update(state => ({
     ...state,
     filteredItems: applySorting(
       filterAndSearch(state.items, state.searchQuery, state.filters),
-      state.sort,
-    ),
+      state.sort
+    )
   }));
 }
 
@@ -33,12 +33,9 @@ function recompute<T>(
   items: T[],
   state: CrudState<T>,
   filterAndSearch: FilterFn<T>,
-  applySorting: SortFn<T>,
+  applySorting: SortFn<T>
 ): T[] {
-  return applySorting(
-    filterAndSearch(items, state.searchQuery, state.filters),
-    state.sort,
-  );
+  return applySorting(filterAndSearch(items, state.searchQuery, state.filters), state.sort);
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +47,7 @@ export function optimisticCreate<T extends { id?: UnknownSurrealThing }>(
   data: Omit<T, 'id'>,
   idExtractor: IdExtractor,
   filterAndSearch: FilterFn<T>,
-  applySorting: SortFn<T>,
+  applySorting: SortFn<T>
 ): { tempId: string; commit: (realItem: T) => void; rollback: () => void } {
   const tempId = `temp_${Date.now()}`;
   const optimisticItem = { ...data, id: tempId } as T;
@@ -61,7 +58,7 @@ export function optimisticCreate<T extends { id?: UnknownSurrealThing }>(
       ...state,
       items: newItems,
       filteredItems: recompute(newItems, state, filterAndSearch, applySorting),
-      optimisticUpdates: new Map(state.optimisticUpdates).set(tempId, optimisticItem),
+      optimisticUpdates: new Map(state.optimisticUpdates).set(tempId, optimisticItem)
     };
   });
 
@@ -82,7 +79,7 @@ export function optimisticCreate<T extends { id?: UnknownSurrealThing }>(
           ...state,
           items,
           filteredItems: recompute(items, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
     },
@@ -95,10 +92,10 @@ export function optimisticCreate<T extends { id?: UnknownSurrealThing }>(
           ...state,
           items,
           filteredItems: recompute(items, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
-    },
+    }
   };
 }
 
@@ -112,7 +109,7 @@ export function optimisticUpdate<T extends { id?: UnknownSurrealThing }>(
   data: Partial<T>,
   idExtractor: IdExtractor,
   filterAndSearch: FilterFn<T>,
-  applySorting: SortFn<T>,
+  applySorting: SortFn<T>
 ): { originalItem: T | null; commit: (updatedItem: T) => void; rollback: () => void } {
   let originalItem: T | null = null;
 
@@ -129,7 +126,7 @@ export function optimisticUpdate<T extends { id?: UnknownSurrealThing }>(
       ...state,
       items: newItems,
       filteredItems: recompute(newItems, state, filterAndSearch, applySorting),
-      optimisticUpdates: new Map(state.optimisticUpdates).set(id, originalItem),
+      optimisticUpdates: new Map(state.optimisticUpdates).set(id, originalItem)
     };
   });
 
@@ -137,35 +134,31 @@ export function optimisticUpdate<T extends { id?: UnknownSurrealThing }>(
     originalItem,
     commit(updatedItem: T) {
       store.update(state => {
-        const items = state.items.map(item =>
-          idExtractor(item.id) === id ? updatedItem : item,
-        );
+        const items = state.items.map(item => (idExtractor(item.id) === id ? updatedItem : item));
         const updates = new Map(state.optimisticUpdates);
         updates.delete(id);
         return {
           ...state,
           items,
           filteredItems: recompute(items, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
     },
     rollback() {
       if (!originalItem) return;
       store.update(state => {
-        const items = state.items.map(item =>
-          idExtractor(item.id) === id ? originalItem! : item,
-        );
+        const items = state.items.map(item => (idExtractor(item.id) === id ? originalItem! : item));
         const updates = new Map(state.optimisticUpdates);
         updates.delete(id);
         return {
           ...state,
           items,
           filteredItems: recompute(items, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
-    },
+    }
   };
 }
 
@@ -178,7 +171,7 @@ export function optimisticDelete<T extends { id?: UnknownSurrealThing }>(
   id: string,
   idExtractor: IdExtractor,
   filterAndSearch: FilterFn<T>,
-  applySorting: SortFn<T>,
+  applySorting: SortFn<T>
 ): { deletedItem: T | null; itemIndex: number; commit: () => void; rollback: () => void } {
   let deletedItem: T | null = null;
   let itemIndex = -1;
@@ -194,7 +187,7 @@ export function optimisticDelete<T extends { id?: UnknownSurrealThing }>(
       ...state,
       items: newItems,
       filteredItems: recompute(newItems, state, filterAndSearch, applySorting),
-      optimisticUpdates: new Map(state.optimisticUpdates).set(id, deletedItem),
+      optimisticUpdates: new Map(state.optimisticUpdates).set(id, deletedItem)
     };
   });
 
@@ -210,7 +203,7 @@ export function optimisticDelete<T extends { id?: UnknownSurrealThing }>(
           ...state,
           items,
           filteredItems: recompute(items, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
     },
@@ -225,9 +218,9 @@ export function optimisticDelete<T extends { id?: UnknownSurrealThing }>(
           ...state,
           items: newItems,
           filteredItems: recompute(newItems, state, filterAndSearch, applySorting),
-          optimisticUpdates: updates,
+          optimisticUpdates: updates
         };
       });
-    },
+    }
   };
 }

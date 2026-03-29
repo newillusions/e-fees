@@ -11,7 +11,12 @@
   import ActionButton from './ActionButton.svelte';
   import type { Contact, Fee, Company } from '../../types';
 
-  let { isOpen = $bindable(false), contact = null, onedit, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    contact = null,
+    onedit,
+    onclose
+  }: {
     isOpen?: boolean;
     contact?: Contact | null;
     onedit?: (contact: Contact | null) => void;
@@ -35,11 +40,16 @@
   };
 
   // Filter Fees where this contact is involved using type-safe comparison
-  const contactFees = $derived(contact?.id
-    ? $feesStore
-        .filter(fee => compareIds(fee.contact_id, contact.id))
-        .sort((a, b) => parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime())
-    : []);
+  const contactFees = $derived(
+    contact?.id
+      ? $feesStore
+          .filter(fee => compareIds(fee.contact_id, contact.id))
+          .sort(
+            (a, b) =>
+              parseIssueDate(b.issue_date).getTime() - parseIssueDate(a.issue_date).getTime()
+          )
+      : []
+  );
 
   // Load related data when component mounts
   onMount(() => {
@@ -56,14 +66,16 @@
   }
 
   // Generate initials for avatar
-  const initials = $derived(contact
-    ? (contact.full_name || '')
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase()
-    : '');
+  const initials = $derived(
+    contact
+      ? (contact.full_name || '')
+          .split(' ')
+          .map(n => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase()
+      : ''
+  );
 </script>
 
 <DetailPanel {isOpen} show={!!contact} title="contact" onedit={handleEdit} onclose={handleClose}>
@@ -120,9 +132,7 @@
         />
       {:else}
         <section>
-          <h2 class="emittiv-section-title">
-            Company Information
-          </h2>
+          <h2 class="emittiv-section-title">Company Information</h2>
           <div class="emittiv-empty-state">
             <svg
               class="emittiv-empty-state__icon"
@@ -145,9 +155,7 @@
       <!-- Fee Proposals Section -->
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="emittiv-section-title">
-            Fee Proposals
-          </h2>
+          <h2 class="emittiv-section-title">Fee Proposals</h2>
           <span
             class="text-xs text-emittiv-light px-2 py-1 rounded-lg"
             style="background-color: #111;"

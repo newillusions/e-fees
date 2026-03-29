@@ -158,8 +158,8 @@ export class AilxApiClient {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
-      },
+        ...options.headers
+      }
     });
 
     if (!response.ok) {
@@ -230,7 +230,7 @@ export class AilxApiClient {
   ): Promise<AssignProjectResponse> {
     return this.request(`/api/fixtures/${encodeURIComponent(productId)}/assign-project`, {
       method: 'POST',
-      body: JSON.stringify(assignment),
+      body: JSON.stringify(assignment)
     });
   }
 }

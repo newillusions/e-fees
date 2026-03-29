@@ -14,6 +14,11 @@
   backRoute="/proposals"
   DetailComponent={ProposalDetail}
   ModalComponent={ProposalModal}
-  detailProps={(entity, { onedit, onclose }) => ({ proposal: entity, isOpen: true, onedit, onclose })}
+  detailProps={(entity, { onedit, onclose }) => ({
+    proposal: entity,
+    isOpen: true,
+    onedit,
+    onclose
+  })}
   modalProps={(entity, { onclose }) => ({ isOpen: true, proposal: entity, mode: 'edit', onclose })}
 />

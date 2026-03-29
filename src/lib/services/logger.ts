@@ -45,7 +45,7 @@ interface LoggerConfig {
 
 /**
  * Professional logging service for E-Fees application
- * 
+ *
  * Features:
  * - Multiple log levels (error, warn, info, debug, trace)
  * - Structured logging with context
@@ -53,23 +53,23 @@ interface LoggerConfig {
  * - Console fallback for development
  * - Performance optimized
  * - TypeScript support
- * 
+ *
  * @example
  * ```typescript
  * import { logger } from '$lib/services/logger';
- * 
+ *
  * // Simple logging
  * logger.error('Database connection failed');
  * logger.warn('Retrying operation', { attempt: 3 });
  * logger.info('User logged in', { userId: 'user123' });
- * 
+ *
  * // With context
  * logger.error('API call failed', {
  *   component: 'ProjectModal',
  *   action: 'createProject',
  *   error: new Error('Network timeout')
  * });
- * 
+ *
  * // Component-specific logger
  * const componentLogger = logger.child({ component: 'ContactModal' });
  * componentLogger.info('Modal opened');
@@ -132,25 +132,25 @@ class Logger {
    */
   private formatMessage(message: string, context?: LogContext, error?: Error): string {
     const parts: string[] = [];
-    
+
     if (this.config.component) {
       parts.push(`[${this.config.component}]`);
     }
-    
+
     if (context?.component && context.component !== this.config.component) {
       parts.push(`[${context.component}]`);
     }
-    
+
     if (context?.action) {
       parts.push(`${context.action}:`);
     }
-    
+
     parts.push(message);
-    
+
     if (error) {
       parts.push(`- ${error.message}`);
     }
-    
+
     return parts.join(' ');
   }
 
@@ -171,9 +171,9 @@ class Logger {
       // Fallback to console if Tauri logging fails
       if (this.config.enableConsole) {
         console.error('Failed to send log to Tauri:', err);
-        console[entry.level === LogLevel.ERROR ? 'error' : 
-               entry.level === LogLevel.WARN ? 'warn' : 
-               'log'](this.formatMessage(entry.message, entry.context, entry.error));
+        console[
+          entry.level === LogLevel.ERROR ? 'error' : entry.level === LogLevel.WARN ? 'warn' : 'log'
+        ](this.formatMessage(entry.message, entry.context, entry.error));
       }
     }
   }
@@ -185,7 +185,7 @@ class Logger {
     if (!this.config.enableConsole) return;
 
     const message = this.formatMessage(entry.message, entry.context, entry.error);
-    
+
     switch (entry.level) {
       case LogLevel.ERROR:
         console.error(message, entry.context, entry.error);
@@ -209,10 +209,10 @@ class Logger {
     if (!this.isLevelEnabled(entry.level)) return;
 
     entry.timestamp = new Date();
-    
+
     // Always log to console in development
     this.logToConsole(entry);
-    
+
     // Send to Tauri backend for persistent logging
     await this.sendToTauri(entry);
   }
@@ -289,7 +289,7 @@ class Logger {
    */
   timer(label: string, context?: LogContext): () => void {
     const start = performance.now();
-    
+
     return () => {
       const duration = performance.now() - start;
       this.info(`Timer ${label}: ${duration.toFixed(2)}ms`, {
@@ -304,13 +304,16 @@ class Logger {
 export const logger = Logger.getInstance();
 
 // Export convenience functions for common patterns
-export const createComponentLogger = (component: string): Logger => 
-  logger.child({ component });
+export const createComponentLogger = (component: string): Logger => logger.child({ component });
 
-export const logApiError = async (operation: string, error: Error, context?: LogContext): Promise<void> => 
+export const logApiError = async (
+  operation: string,
+  error: Error,
+  context?: LogContext
+): Promise<void> =>
   logger.error(`API operation failed: ${operation}`, { ...context, action: operation }, error);
 
-export const logUserAction = async (action: string, context?: LogContext): Promise<void> => 
+export const logUserAction = async (action: string, context?: LogContext): Promise<void> =>
   logger.info(`User action: ${action}`, { ...context, action });
 
 // Development helpers

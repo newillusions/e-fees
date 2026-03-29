@@ -1,5 +1,15 @@
 <script lang="ts">
-  let { value = $bindable(''), label = '', id = '', required = false, disabled = false, error = '', options = [] as Array<{ value: string; label: string }>, placeholder = 'Select an option', className = '' }: {
+  let {
+    value = $bindable(''),
+    label = '',
+    id = '',
+    required = false,
+    disabled = false,
+    error = '',
+    options = [] as Array<{ value: string; label: string }>,
+    placeholder = 'Select an option',
+    className = ''
+  }: {
     value?: string;
     label?: string;
     id?: string;
@@ -15,9 +25,9 @@
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
 
   // Build class list using shared emittiv-select styles
-  const selectClasses = $derived(['emittiv-select', error ? 'emittiv-select--error' : '', className]
-    .filter(Boolean)
-    .join(' '));
+  const selectClasses = $derived(
+    ['emittiv-select', error ? 'emittiv-select--error' : '', className].filter(Boolean).join(' ')
+  );
 </script>
 
 <div class="emittiv-form-field">

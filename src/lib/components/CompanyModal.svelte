@@ -14,7 +14,13 @@
   import type { Company, CompanyCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
-  let { isOpen = $bindable(false), company = null, mode = 'create', zIndex = 100, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    company = null,
+    mode = 'create',
+    zIndex = 100,
+    onclose
+  }: {
     isOpen?: boolean;
     company?: Company | null;
     mode?: 'create' | 'edit';

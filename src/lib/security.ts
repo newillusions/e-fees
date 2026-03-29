@@ -29,7 +29,11 @@ export interface InlineScriptDetails {
 }
 
 /** Union type for all security event details */
-export type SecurityEventDetails = CSPViolation | UnsafeEvalDetails | InlineScriptDetails | Record<string, unknown>;
+export type SecurityEventDetails =
+  | CSPViolation
+  | UnsafeEvalDetails
+  | InlineScriptDetails
+  | Record<string, unknown>;
 
 export interface SecurityEvent {
   type: 'csp-violation' | 'unsafe-eval' | 'inline-script' | 'external-resource';
@@ -42,7 +46,7 @@ export interface SecurityEvent {
 class SecurityMonitor {
   private violations: SecurityEvent[] = [];
   private maxViolations = 100; // Keep last 100 violations
-  
+
   constructor() {
     this.initCSPReporting();
     this.initSecurityHeaders();
@@ -50,7 +54,7 @@ class SecurityMonitor {
 
   private initCSPReporting(): void {
     // Listen for CSP violations
-    document.addEventListener('securitypolicyviolation', (event) => {
+    document.addEventListener('securitypolicyviolation', event => {
       const violation: CSPViolation = {
         blockedURI: event.blockedURI,
         columnNumber: event.columnNumber,
@@ -83,7 +87,7 @@ class SecurityMonitor {
   private checkForUnsafePractices(): void {
     // Check for eval usage
     const originalEval = window.eval;
-    window.eval = function(code: string) {
+    window.eval = function (code: string) {
       securityMonitor.reportSecurityEvent({
         type: 'unsafe-eval',
         timestamp: new Date(),
@@ -96,16 +100,16 @@ class SecurityMonitor {
     };
 
     // Check for inline script injection attempts
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element;
             if (element.tagName === 'SCRIPT' && element.textContent) {
               securityMonitor.reportSecurityEvent({
                 type: 'inline-script',
                 timestamp: new Date(),
-                details: { 
+                details: {
                   script: element.textContent.substring(0, 100),
                   src: element.getAttribute('src')
                 },
@@ -139,7 +143,7 @@ class SecurityMonitor {
   public reportSecurityEvent(event: SecurityEvent): void {
     // Add to violations array
     this.violations.push(event);
-    
+
     // Keep only the last maxViolations
     if (this.violations.length > this.maxViolations) {
       this.violations.shift();
@@ -160,7 +164,7 @@ class SecurityMonitor {
 
   public getViolationsSummary(): Record<string, number> {
     const summary: Record<string, number> = {};
-    
+
     this.violations.forEach(violation => {
       if (violation.type === 'csp-violation') {
         const directive = (violation.details as CSPViolation).violatedDirective;
@@ -195,20 +199,28 @@ class SecurityMonitor {
     // Check for mixed content
     if (window.location.protocol === 'https:') {
       // Check for HTTP resources in HTTPS context
-      const httpResources = document.querySelectorAll('img[src^="http:"], script[src^="http:"], link[href^="http:"]');
+      const httpResources = document.querySelectorAll(
+        'img[src^="http:"], script[src^="http:"], link[href^="http:"]'
+      );
       if (httpResources.length > 0) {
-        errors.push(`Found ${httpResources.length} HTTP resources in HTTPS context (mixed content)`);
+        errors.push(
+          `Found ${httpResources.length} HTTP resources in HTTPS context (mixed content)`
+        );
       }
     }
 
     // Check for inline event handlers
     const inlineHandlers = document.querySelectorAll('[onclick], [onload], [onerror]');
     if (inlineHandlers.length > 0) {
-      warnings.push(`Found ${inlineHandlers.length} inline event handlers (potential CSP violations)`);
+      warnings.push(
+        `Found ${inlineHandlers.length} inline event handlers (potential CSP violations)`
+      );
     }
 
     // Check for external domains
-    const externalLinks = document.querySelectorAll('a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"])');
+    const externalLinks = document.querySelectorAll(
+      'a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"])'
+    );
     if (externalLinks.length > 0) {
       warnings.push(`Found ${externalLinks.length} external links - ensure they are trusted`);
     }

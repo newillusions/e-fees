@@ -72,7 +72,10 @@ fn auto_number_clauses(clauses: &[Clause]) -> (Value, String, Value) {
 
             numbering_map[&key] = json!(clause_number);
 
-            raw_lines.push(format!("{} {} — {}", clause_number, clause.title, clause.body));
+            raw_lines.push(format!(
+                "{} {} — {}",
+                clause_number, clause.title, clause.body
+            ));
 
             clause_items.push(json!({
                 "number": clause_number,
@@ -105,16 +108,16 @@ async fn fetch_corpus_examples(
     fee_key: &str,
 ) -> Vec<String> {
     // Try to get project_number from the fee's linked project
-    let query = format!("SELECT project_id.number.id AS pn OMIT id FROM fee:`{}`;", fee_key);
+    let query = format!(
+        "SELECT project_id.number.id AS pn OMIT id FROM fee:`{}`;",
+        fee_key
+    );
     let mut res = match db.query(&query).await {
         Ok(r) => r,
         Err(_) => return Vec::new(),
     };
     let rows: Vec<Value> = res.take(0).unwrap_or_default();
-    let project_number = rows
-        .first()
-        .and_then(|r| r["pn"].as_str())
-        .unwrap_or("");
+    let project_number = rows.first().and_then(|r| r["pn"].as_str()).unwrap_or("");
 
     // Find corpus docs — prefer same project, fall back to recent
     // Get the country-year prefix (e.g., "24-971" from "24-97106")
@@ -182,22 +185,26 @@ async fn create_revision(
     let clauses_json = serde_json::to_string(&dbvalue_to_json(&assembly.clauses))
         .unwrap_or_else(|_| "[]".to_string());
 
-    let rev_result = db.query(
-        "CREATE scope_revision SET \
+    let rev_result = db
+        .query(
+            "CREATE scope_revision SET \
          fee_id = type::record('fee', $fee_key), \
          revision = $revision, \
          clauses = $clauses_str, \
          generated_text = $generated_text, \
          stages_at_time = $stages, \
          trigger = $trigger;",
-    )
-    .bind(("fee_key", fee_key.to_string()))
-    .bind(("revision", next_rev))
-    .bind(("clauses_str", clauses_json))
-    .bind(("generated_text", assembly.generated_text.clone()))
-    .bind(("stages", assembly.stages_snapshot.clone().unwrap_or_default()))
-    .bind(("trigger", trigger.to_string()))
-    .await;
+        )
+        .bind(("fee_key", fee_key.to_string()))
+        .bind(("revision", next_rev))
+        .bind(("clauses_str", clauses_json))
+        .bind(("generated_text", assembly.generated_text.clone()))
+        .bind((
+            "stages",
+            assembly.stages_snapshot.clone().unwrap_or_default(),
+        ))
+        .bind(("trigger", trigger.to_string()))
+        .await;
 
     if let Err(ref e) = rev_result {
         tracing::warn!("Failed to create scope revision: {}", e);
@@ -456,7 +463,10 @@ pub async fn update_scope(
          SELECT * FROM scope_assembly WHERE fee_id = type::record('fee', $fee_key);"
     );
 
-    let mut q = state.db.query(&query).bind(("fee_key", fee_key.to_string()));
+    let mut q = state
+        .db
+        .query(&query)
+        .bind(("fee_key", fee_key.to_string()));
 
     if let Some(ref text) = body.generated_text {
         q = q.bind(("generated_text", text.clone()));
@@ -537,8 +547,7 @@ pub async fn regenerate_scope(
     let _revision = create_revision(&state.db, fee_key, "regeneration").await?;
 
     // Update record
-    let update_query =
-        "UPDATE scope_assembly SET \
+    let update_query = "UPDATE scope_assembly SET \
          generated_text = $generated_text, \
          llm_polished = true, \
          llm_model = $llm_model, \

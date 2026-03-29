@@ -5,7 +5,11 @@
   import type { ImportPreview, ImportResult } from '$lib/api/import';
   import { selectFolder } from '$lib/api';
 
-  let { isOpen = $bindable(false), onclose, onimported }: {
+  let {
+    isOpen = $bindable(false),
+    onclose,
+    onimported
+  }: {
     isOpen?: boolean;
     onclose?: () => void;
     onimported?: (result: ImportResult | null) => void;
@@ -140,7 +144,12 @@
         {#if step !== 'importing'}
           <button on:click={closeModal} class="emittiv-modal__close" aria-label="Close modal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         {/if}
@@ -148,17 +157,32 @@
 
       <!-- Step indicator -->
       <div class="import-wizard-steps">
-        <div class="import-wizard-step" class:active={step === 'select'} class:done={step !== 'select'}>
+        <div
+          class="import-wizard-step"
+          class:active={step === 'select'}
+          class:done={step !== 'select'}
+        >
           <span class="import-wizard-step__number">1</span>
           <span class="import-wizard-step__label">Select</span>
         </div>
         <div class="import-wizard-step__line" class:done={step !== 'select'}></div>
-        <div class="import-wizard-step" class:active={step === 'preview'} class:done={step === 'importing' || step === 'result'}>
+        <div
+          class="import-wizard-step"
+          class:active={step === 'preview'}
+          class:done={step === 'importing' || step === 'result'}
+        >
           <span class="import-wizard-step__number">2</span>
           <span class="import-wizard-step__label">Preview</span>
         </div>
-        <div class="import-wizard-step__line" class:done={step === 'importing' || step === 'result'}></div>
-        <div class="import-wizard-step" class:active={step === 'importing' || step === 'result'} class:done={step === 'result'}>
+        <div
+          class="import-wizard-step__line"
+          class:done={step === 'importing' || step === 'result'}
+        ></div>
+        <div
+          class="import-wizard-step"
+          class:active={step === 'importing' || step === 'result'}
+          class:done={step === 'result'}
+        >
           <span class="import-wizard-step__number">3</span>
           <span class="import-wizard-step__label">Import</span>
         </div>
@@ -169,7 +193,8 @@
         <!-- Step 1: Select Directory -->
         {#if step === 'select'}
           <p class="import-wizard-description">
-            Select the directory containing RFPs JSON export files (staff-rates.json, proposal files, etc.)
+            Select the directory containing RFPs JSON export files (staff-rates.json, proposal
+            files, etc.)
           </p>
 
           <div class="import-wizard-directory-select">
@@ -200,7 +225,7 @@
             </button>
           </div>
 
-        <!-- Step 2: Preview -->
+          <!-- Step 2: Preview -->
         {:else if step === 'preview' && preview}
           <div class="import-wizard-preview">
             <!-- Proposals -->
@@ -215,17 +240,27 @@
                 {#if importProposals}
                   <div class="import-wizard-table">
                     <div class="import-wizard-table__header">
-                      <span class="import-wizard-table__col import-wizard-table__col--name">Project</span>
+                      <span class="import-wizard-table__col import-wizard-table__col--name"
+                        >Project</span
+                      >
                       <span class="import-wizard-table__col import-wizard-table__col--num">#</span>
-                      <span class="import-wizard-table__col import-wizard-table__col--fee">Fee</span>
-                      <span class="import-wizard-table__col import-wizard-table__col--type">Type</span>
+                      <span class="import-wizard-table__col import-wizard-table__col--fee">Fee</span
+                      >
+                      <span class="import-wizard-table__col import-wizard-table__col--type"
+                        >Type</span
+                      >
                     </div>
                     {#each preview.proposals as proposal}
                       <div class="import-wizard-table__row">
-                        <span class="import-wizard-table__col import-wizard-table__col--name" title={proposal.project_name}>
+                        <span
+                          class="import-wizard-table__col import-wizard-table__col--name"
+                          title={proposal.project_name}
+                        >
                           {proposal.project_name}
                         </span>
-                        <span class="import-wizard-table__col import-wizard-table__col--num">{proposal.project_number}</span>
+                        <span class="import-wizard-table__col import-wizard-table__col--num"
+                          >{proposal.project_number}</span
+                        >
                         <span class="import-wizard-table__col import-wizard-table__col--fee">
                           {formatCurrency(proposal.total_fee, proposal.currency)}
                         </span>
@@ -255,15 +290,27 @@
                 {#if importCompanies}
                   <div class="import-wizard-table">
                     <div class="import-wizard-table__header">
-                      <span class="import-wizard-table__col import-wizard-table__col--name">Name</span>
-                      <span class="import-wizard-table__col import-wizard-table__col--type">Type</span>
-                      <span class="import-wizard-table__col import-wizard-table__col--num">Projects</span>
+                      <span class="import-wizard-table__col import-wizard-table__col--name"
+                        >Name</span
+                      >
+                      <span class="import-wizard-table__col import-wizard-table__col--type"
+                        >Type</span
+                      >
+                      <span class="import-wizard-table__col import-wizard-table__col--num"
+                        >Projects</span
+                      >
                     </div>
                     {#each preview.clients as client}
                       <div class="import-wizard-table__row">
-                        <span class="import-wizard-table__col import-wizard-table__col--name">{client.name}</span>
-                        <span class="import-wizard-table__col import-wizard-table__col--type">{client.client_type}</span>
-                        <span class="import-wizard-table__col import-wizard-table__col--num">{client.project_count}</span>
+                        <span class="import-wizard-table__col import-wizard-table__col--name"
+                          >{client.name}</span
+                        >
+                        <span class="import-wizard-table__col import-wizard-table__col--type"
+                          >{client.client_type}</span
+                        >
+                        <span class="import-wizard-table__col import-wizard-table__col--num"
+                          >{client.project_count}</span
+                        >
                       </div>
                     {/each}
                   </div>
@@ -279,13 +326,19 @@
                 </div>
                 <div class="import-wizard-info-grid">
                   <span class="import-wizard-info-label">WHT Rate</span>
-                  <span class="import-wizard-info-value">{(preview.methodology.wht_rate * 100).toFixed(0)}%</span>
+                  <span class="import-wizard-info-value"
+                    >{(preview.methodology.wht_rate * 100).toFixed(0)}%</span
+                  >
                   <span class="import-wizard-info-label">AED to SAR</span>
                   <span class="import-wizard-info-value">{preview.methodology.aed_to_sar}</span>
                   <span class="import-wizard-info-label">Overhead</span>
-                  <span class="import-wizard-info-value">{(preview.methodology.overhead_rate * 100).toFixed(0)}%</span>
+                  <span class="import-wizard-info-value"
+                    >{(preview.methodology.overhead_rate * 100).toFixed(0)}%</span
+                  >
                   <span class="import-wizard-info-label">Margin</span>
-                  <span class="import-wizard-info-value">{(preview.methodology.margin_rate * 100).toFixed(0)}%</span>
+                  <span class="import-wizard-info-value"
+                    >{(preview.methodology.margin_rate * 100).toFixed(0)}%</span
+                  >
                 </div>
               </div>
             {/if}
@@ -295,7 +348,8 @@
               <div class="import-wizard-section">
                 <div class="import-wizard-section__header">
                   <span class="import-wizard-section__title">
-                    Staff Rates ({preview.staff_rates.count} roles in {preview.staff_rates.currency})
+                    Staff Rates ({preview.staff_rates.count} roles in {preview.staff_rates
+                      .currency})
                   </span>
                 </div>
               </div>
@@ -316,7 +370,12 @@
           {/if}
 
           <div class="import-wizard-actions">
-            <button class="emittiv-btn emittiv-btn--ghost" on:click={() => { step = 'select'; }}>Back</button>
+            <button
+              class="emittiv-btn emittiv-btn--ghost"
+              on:click={() => {
+                step = 'select';
+              }}>Back</button
+            >
             <button
               class="emittiv-btn emittiv-btn--primary"
               on:click={handleImport}
@@ -326,7 +385,7 @@
             </button>
           </div>
 
-        <!-- Step 3: Importing -->
+          <!-- Step 3: Importing -->
         {:else if step === 'importing'}
           <div class="import-wizard-loading">
             <div class="import-wizard-spinner"></div>
@@ -334,17 +393,31 @@
             <p class="import-wizard-loading__sub">This may take a few seconds.</p>
           </div>
 
-        <!-- Step 4: Result -->
+          <!-- Step 4: Result -->
         {:else if step === 'result' && result}
           <div class="import-wizard-result">
-            <div class="import-wizard-result__icon" class:success={result.success} class:error={!result.success}>
+            <div
+              class="import-wizard-result__icon"
+              class:success={result.success}
+              class:error={!result.success}
+            >
               {#if result.success}
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               {:else}
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
                 </svg>
               {/if}
             </div>
@@ -539,7 +612,7 @@
     color: var(--emittiv-white);
   }
 
-  .import-wizard-checkbox input[type="checkbox"] {
+  .import-wizard-checkbox input[type='checkbox'] {
     accent-color: var(--emittiv-splash);
     width: 16px;
     height: 16px;
@@ -656,7 +729,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Result */

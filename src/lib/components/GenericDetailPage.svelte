@@ -20,10 +20,7 @@
       entity: any,
       callbacks: { onedit: () => void; onclose: () => void }
     ) => Record<string, unknown>;
-    modalProps: (
-      entity: any,
-      callbacks: { onclose: () => void }
-    ) => Record<string, unknown>;
+    modalProps: (entity: any, callbacks: { onclose: () => void }) => Record<string, unknown>;
   }
 
   let {
@@ -34,7 +31,7 @@
     DetailComponent,
     ModalComponent,
     detailProps,
-    modalProps,
+    modalProps
   }: Props = $props();
 
   let previousPage = $state(backRoute);
@@ -116,7 +113,7 @@
 <div
   class="emittiv-backdrop emittiv-backdrop--blur"
   onclick={handleClose}
-  onkeydown={(e) => e.key === 'Escape' && handleClose()}
+  onkeydown={e => e.key === 'Escape' && handleClose()}
   role="button"
   tabindex="-1"
   aria-label="Close detail view"
@@ -155,10 +152,7 @@
 
 <!-- Edit Modal -->
 {#if showModal && entity}
-  <svelte:component
-    this={ModalComponent}
-    {...modalProps(entity, { onclose: handleModalClose })}
-  />
+  <svelte:component this={ModalComponent} {...modalProps(entity, { onclose: handleModalClose })} />
 {/if}
 
 <style>

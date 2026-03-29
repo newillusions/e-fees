@@ -186,7 +186,9 @@ pub async fn delete_company(
     let deleted: Option<Company> = state.db.delete(("company", &*id)).await?;
 
     match deleted {
-        Some(_) => Ok(Json(json!({ "deleted": true, "id": format!("company:{}", id) }))),
+        Some(_) => Ok(Json(
+            json!({ "deleted": true, "id": format!("company:{}", id) }),
+        )),
         None => Err(ApiError::not_found("Company", &id)),
     }
 }

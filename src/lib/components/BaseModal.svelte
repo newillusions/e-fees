@@ -2,7 +2,16 @@
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
-  let { isOpen = $bindable(false), title = '', maxWidth = '', size = 'md' as 'sm' | 'md' | 'lg' | 'xl', showCloseButton = true, customClass = '', zIndex = 100, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    title = '',
+    maxWidth = '',
+    size = 'md' as 'sm' | 'md' | 'lg' | 'xl',
+    showCloseButton = true,
+    customClass = '',
+    zIndex = 100,
+    onclose
+  }: {
     isOpen?: boolean;
     title?: string;
     maxWidth?: string;
@@ -62,7 +71,9 @@
     });
 
     return {
-      destroy() { node.removeEventListener('keydown', handleTab); }
+      destroy() {
+        node.removeEventListener('keydown', handleTab);
+      }
     };
   }
 </script>

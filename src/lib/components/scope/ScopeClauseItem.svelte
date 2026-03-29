@@ -3,7 +3,7 @@
 
   let {
     clause,
-    onupdate,
+    onupdate
   }: {
     clause: ClauseType;
     onupdate?: (field: 'title' | 'body', value: string) => void;
@@ -45,11 +45,7 @@
   <div class="emittiv-scope-clause emittiv-scope-clause--editing" onkeydown={handleKeydown}>
     <div class="emittiv-scope-clause__number">{clause.number}</div>
     <div class="emittiv-scope-clause__edit-fields">
-      <input
-        class="emittiv-input"
-        bind:value={editTitle}
-        placeholder="Clause title"
-      />
+      <input class="emittiv-input" bind:value={editTitle} placeholder="Clause title" />
       <textarea
         class="emittiv-input emittiv-scope-clause__body-input"
         bind:value={editBody}

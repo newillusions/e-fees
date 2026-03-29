@@ -20,11 +20,15 @@ describe('getRoundingConfig', () => {
 
 describe('roundWithConfig', () => {
   it('rounds up to increment with ceiling mode', () => {
-    expect(roundWithConfig(12847, { rounding_increment: 50, rounding_mode: 'ceiling' })).toBe(12850);
+    expect(roundWithConfig(12847, { rounding_increment: 50, rounding_mode: 'ceiling' })).toBe(
+      12850
+    );
   });
 
   it('rounds to nearest increment', () => {
-    expect(roundWithConfig(12825, { rounding_increment: 50, rounding_mode: 'nearest' })).toBe(12850);
+    expect(roundWithConfig(12825, { rounding_increment: 50, rounding_mode: 'nearest' })).toBe(
+      12850
+    );
   });
 
   it('uses default config when undefined', () => {

@@ -17,11 +17,7 @@ import { get } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
 import type { Project, Company, Contact, Fee, PaginatedResponse } from '../../types';
 import { extractSurrealId } from '../utils/surrealdb';
-import {
-  createPaginatedStore,
-  createOnDemandLoader,
-  DEFAULT_PAGE_SIZE
-} from './pagination';
+import { createPaginatedStore, createOnDemandLoader, DEFAULT_PAGE_SIZE } from './pagination';
 
 // Mock Tauri invoke - already mocked in setup.ts but we'll configure it per test
 vi.mock('@tauri-apps/api/core');
@@ -129,16 +125,14 @@ describe('TC-002: Background Loading - Automatic Fetch', () => {
   it('should load initial 50 records', async () => {
     // Mock API to return first page (50 records)
     const mockInvoke = vi.mocked(invoke);
-    mockInvoke.mockResolvedValueOnce(
-      createPaginatedResponse(mockProjects, 1, 50)
-    );
+    mockInvoke.mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50));
 
     // Create a fresh paginated store for testing
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
 
@@ -161,16 +155,16 @@ describe('TC-002: Background Loading - Automatic Fetch', () => {
 
     // Setup mock responses for each page
     mockInvoke
-      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50))  // Initial
-      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 2, 50))  // Page 2
-      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 3, 50))  // Page 3
+      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50)) // Initial
+      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 2, 50)) // Page 2
+      .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 3, 50)) // Page 3
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 4, 50)); // Page 4
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     // Initial load
     await actions.loadInitialPage();
@@ -207,11 +201,11 @@ describe('TC-002: Background Loading - Automatic Fetch', () => {
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 3, 50))
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 4, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     await actions.loadNextPage();
@@ -233,17 +227,18 @@ describe('TC-002: Background Loading - Automatic Fetch', () => {
     const mockInvoke = vi.mocked(invoke);
 
     // Simulate slow network
-    mockInvoke.mockImplementationOnce(() =>
-      new Promise(resolve =>
-        setTimeout(() => resolve(createPaginatedResponse(mockProjects, 1, 50)), 50)
-      )
+    mockInvoke.mockImplementationOnce(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve(createPaginatedResponse(mockProjects, 1, 50)), 50)
+        )
     );
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     const startTime = performance.now();
 
@@ -280,11 +275,11 @@ describe('TC-003: Scroll-Triggered Loading', () => {
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50))
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 2, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     // Initial load
     await actions.loadInitialPage();
@@ -310,11 +305,11 @@ describe('TC-003: Scroll-Triggered Loading', () => {
       .mockResolvedValueOnce(createPaginatedResponse(limitedProjects, 1, 50))
       .mockResolvedValueOnce(createPaginatedResponse(limitedProjects, 2, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     expect(get(store).pagination.hasMore).toBe(true);
@@ -335,11 +330,11 @@ describe('TC-003: Scroll-Triggered Loading', () => {
 
     mockInvoke.mockResolvedValueOnce(createPaginatedResponse(smallDataset, 1, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     expect(get(store).pagination.hasMore).toBe(false);
@@ -374,7 +369,7 @@ describe('TC-006: On-Demand Company Loading', () => {
     mockInvoke.mockResolvedValueOnce(targetCompany);
 
     const loader = createOnDemandLoader<Company>(
-      async (id) => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
+      async id => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
     );
 
     // Should not be in cache initially
@@ -397,7 +392,7 @@ describe('TC-006: On-Demand Company Loading', () => {
     mockInvoke.mockResolvedValueOnce(targetCompany);
 
     const loader = createOnDemandLoader<Company>(
-      async (id) => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
+      async id => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
     );
 
     // First fetch
@@ -419,12 +414,12 @@ describe('TC-006: On-Demand Company Loading', () => {
 
     const targetCompany = mockCompanies[5];
     // Slow response to test concurrent handling
-    mockInvoke.mockImplementation(() =>
-      new Promise(resolve => setTimeout(() => resolve(targetCompany), 50))
+    mockInvoke.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(targetCompany), 50))
     );
 
     const loader = createOnDemandLoader<Company>(
-      async (id) => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
+      async id => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
     );
 
     // Fire multiple concurrent requests
@@ -450,7 +445,7 @@ describe('TC-006: On-Demand Company Loading', () => {
     mockInvoke.mockResolvedValue(targetCompany);
 
     const loader = createOnDemandLoader<Company>(
-      async (id) => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
+      async id => mockInvoke('get_company_by_id', { id }) as Promise<Company | null>
     );
 
     // Populate cache
@@ -492,15 +487,13 @@ describe('TC-004: Duplicate Prevention', () => {
       has_more: false
     };
 
-    mockInvoke
-      .mockResolvedValueOnce(page1Response)
-      .mockResolvedValueOnce(page2Response);
+    mockInvoke.mockResolvedValueOnce(page1Response).mockResolvedValueOnce(page2Response);
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     // Load page 1
     await actions.loadInitialPage();
@@ -526,11 +519,11 @@ describe('TC-004: Duplicate Prevention', () => {
 
     mockInvoke.mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
 
@@ -568,11 +561,11 @@ describe('TC-005: Sort Order Maintenance', () => {
       .mockResolvedValueOnce(createPaginatedResponse(allProjects, 2, 50))
       .mockResolvedValueOnce(createPaginatedResponse(allProjects, 3, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     await actions.loadNextPage();
@@ -609,17 +602,18 @@ describe('EC-003: Concurrent Load Prevention', () => {
     const mockProjects = Array.from({ length: 50 }, (_, i) => generateTestProject(i));
 
     // Slow response to test concurrent handling
-    mockInvoke.mockImplementation(() =>
-      new Promise(resolve =>
-        setTimeout(() => resolve(createPaginatedResponse(mockProjects, 1, 50)), 100)
-      )
+    mockInvoke.mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve(createPaginatedResponse(mockProjects, 1, 50)), 100)
+        )
     );
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     // Trigger multiple loads concurrently (rapid scroll simulation)
     const load1 = actions.loadInitialPage();
@@ -643,26 +637,28 @@ describe('EC-003: Concurrent Load Prevention', () => {
     // Fast initial, slow second page
     mockInvoke
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50))
-      .mockImplementationOnce(() =>
-        new Promise(resolve =>
-          setTimeout(() => resolve(createPaginatedResponse(mockProjects, 2, 50)), 100)
-        )
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => resolve(createPaginatedResponse(mockProjects, 2, 50)), 100)
+          )
       );
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
 
     // Clear mock to track subsequent calls
     mockInvoke.mockClear();
-    mockInvoke.mockImplementation(() =>
-      new Promise(resolve =>
-        setTimeout(() => resolve(createPaginatedResponse(mockProjects, 2, 50)), 100)
-      )
+    mockInvoke.mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve(createPaginatedResponse(mockProjects, 2, 50)), 100)
+        )
     );
 
     // Trigger multiple next page loads concurrently
@@ -693,11 +689,11 @@ describe('EC-005: Empty Page Response', () => {
       has_more: false
     });
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
 
@@ -722,16 +718,14 @@ describe('EC-005: Empty Page Response', () => {
       has_more: false
     });
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        const response = await mockInvoke('get_projects_page', { page, page_size: pageSize });
-        // Normalize response
-        return {
-          ...(response as PaginatedResponse<Project>),
-          items: (response as PaginatedResponse<Project>).items || []
-        };
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      const response = await mockInvoke('get_projects_page', { page, page_size: pageSize });
+      // Normalize response
+      return {
+        ...(response as PaginatedResponse<Project>),
+        items: (response as PaginatedResponse<Project>).items || []
+      };
+    });
 
     // Should not throw
     await expect(actions.loadInitialPage()).resolves.not.toThrow();
@@ -749,11 +743,11 @@ describe('Store Operations', () => {
     const mockProjects = Array.from({ length: 10 }, (_, i) => generateTestProject(i));
     mockInvoke.mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     expect(get(store).items.length).toBe(10);
@@ -775,11 +769,11 @@ describe('Store Operations', () => {
     const mockProjects = Array.from({ length: 10 }, (_, i) => generateTestProject(i));
     mockInvoke.mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
 
@@ -798,11 +792,11 @@ describe('Store Operations', () => {
     const mockProjects = Array.from({ length: 10 }, (_, i) => generateTestProject(i));
     mockInvoke.mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     expect(get(store).items.length).toBe(10);
@@ -827,11 +821,11 @@ describe('Store Operations', () => {
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 2, 50))
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 1, 50)); // Reset
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     await actions.loadInitialPage();
     await actions.loadNextPage();
@@ -863,11 +857,11 @@ describe('Background Loading', () => {
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 2, 50))
       .mockResolvedValueOnce(createPaginatedResponse(mockProjects, 3, 50));
 
-    const { store, actions } = createPaginatedStore<Project>(
-      async (page, pageSize) => {
-        return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<PaginatedResponse<Project>>;
-      }
-    );
+    const { store, actions } = createPaginatedStore<Project>(async (page, pageSize) => {
+      return mockInvoke('get_projects_page', { page, page_size: pageSize }) as Promise<
+        PaginatedResponse<Project>
+      >;
+    });
 
     // Initial load
     await actions.loadInitialPage();

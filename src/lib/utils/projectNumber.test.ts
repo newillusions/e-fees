@@ -8,7 +8,7 @@ describe('parseProjectNumber', () => {
       year: 25,
       country: 971,
       seq: 5,
-      id: '25-97105',
+      id: '25-97105'
     });
   });
 
@@ -18,7 +18,7 @@ describe('parseProjectNumber', () => {
       year: 26,
       country: 966,
       seq: 6,
-      id: '26-96606',
+      id: '26-96606'
     });
   });
 
@@ -28,7 +28,7 @@ describe('parseProjectNumber', () => {
       year: 25,
       country: 971,
       seq: 1,
-      id: '25-97101',
+      id: '25-97101'
     });
   });
 
@@ -62,7 +62,7 @@ describe('buildProjectPayload', () => {
       area: 'Dubai Islands',
       city: 'Dubai',
       country: 'U.A.E.',
-      folder: '25-97105 Dubai Islands',
+      folder: '25-97105 Dubai Islands'
     };
 
     const projectNumber = parseProjectNumber('25-97105');
@@ -88,7 +88,7 @@ describe('buildProjectPayload', () => {
       area: 'A',
       city: 'C',
       country: 'X',
-      folder: '25-97101 T',
+      folder: '25-97101 T'
     };
 
     const pn = parseProjectNumber('25-97101');

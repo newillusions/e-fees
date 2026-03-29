@@ -163,8 +163,8 @@
             class:blur-active={isBlurMode}
             style="color: var(--emittiv-light);"
             onclick={toggleBlurMode}
-            aria-label={isBlurMode ? "Show content" : "Hide sensitive content"}
-            title={isBlurMode ? "Show content (privacy mode on)" : "Hide sensitive content"}
+            aria-label={isBlurMode ? 'Show content' : 'Hide sensitive content'}
+            title={isBlurMode ? 'Show content (privacy mode on)' : 'Hide sensitive content'}
           >
             {#if isBlurMode}
               <!-- Eye with slash - privacy mode ON -->
@@ -196,9 +196,7 @@
           </button>
 
           <!-- Notifications dropdown -->
-          <NotificationsDropdown
-            bind:isOpen={isNotificationsOpen}
-          />
+          <NotificationsDropdown bind:isOpen={isNotificationsOpen} />
 
           <!-- Settings button -->
           <button
@@ -239,10 +237,7 @@
 <SettingsModal bind:isOpen={isSettingsOpen} />
 
 <!-- Global Search Modal -->
-<GlobalSearchModal
-  bind:isOpen={isSearchOpen}
-  onclose={closeSearch}
-/>
+<GlobalSearchModal bind:isOpen={isSearchOpen} onclose={closeSearch} />
 
 <style>
   /* Custom hover effects for header buttons */

@@ -93,7 +93,7 @@ export const statusToFolder: Record<string, string> = {
   lost: '00 Inactive',
   'no response': '00 Inactive',
   'on hold': '00 Inactive',
-  superseded: '00 Inactive',
+  superseded: '00 Inactive'
 };
 
 export const folderToStatus: Record<string, string> = {

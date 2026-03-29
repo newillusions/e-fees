@@ -117,54 +117,68 @@
 
 <div class="dashboard-scroll-wrapper">
   <div class="dashboard-container">
-  <!-- Quick Actions -->
-  <section class="dashboard-section">
-    <QuickActions onopenModal={handleModalOpen} />
-  </section>
-  
-  <!-- Stats Grid -->
-  <section class="dashboard-section">
-    <div class="stats-grid">
-      {#each statCards as card}
-        <div class="stat-card" on:click={() => handleStatCardClick(card.route)} on:keydown={(e) => e.key === 'Enter' && handleStatCardClick(card.route)} role="button" tabindex="0">
-          {#if isLoadingStats}
-            <div class="stat-card-content">
-              <div class="stat-icon skeleton-icon"></div>
-              <div class="stat-info">
-                <div class="skeleton-number"></div>
-                <div class="skeleton-label"></div>
+    <!-- Quick Actions -->
+    <section class="dashboard-section">
+      <QuickActions onopenModal={handleModalOpen} />
+    </section>
+
+    <!-- Stats Grid -->
+    <section class="dashboard-section">
+      <div class="stats-grid">
+        {#each statCards as card}
+          <div
+            class="stat-card"
+            on:click={() => handleStatCardClick(card.route)}
+            on:keydown={e => e.key === 'Enter' && handleStatCardClick(card.route)}
+            role="button"
+            tabindex="0"
+          >
+            {#if isLoadingStats}
+              <div class="stat-card-content">
+                <div class="stat-icon skeleton-icon"></div>
+                <div class="stat-info">
+                  <div class="skeleton-number"></div>
+                  <div class="skeleton-label"></div>
+                </div>
               </div>
-            </div>
-          {:else}
-            <div class="stat-card-content">
-              <div class="stat-icon">
-                <svg class="{card.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={card.icon} />
-                </svg>
+            {:else}
+              <div class="stat-card-content">
+                <div class="stat-icon">
+                  <svg class={card.color} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d={card.icon}
+                    />
+                  </svg>
+                </div>
+                <div class="stat-info">
+                  <div class="stat-number">{stats[card.key]}</div>
+                  <div class="stat-label">{card.title}</div>
+                </div>
               </div>
-              <div class="stat-info">
-                <div class="stat-number">{stats[card.key]}</div>
-                <div class="stat-label">{card.title}</div>
-              </div>
-            </div>
-          {/if}
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Content Grid -->
+    <section class="dashboard-section">
+      <div class="content-grid">
+        <div class="content-panel">
+          <ActivityFeed
+            isLoading={$isLoadingStore}
+            onviewAll={() => (showActivityLogModal = true)}
+          />
         </div>
-      {/each}
-    </div>
-  </section>
-  
-  <!-- Content Grid -->
-  <section class="dashboard-section">
-    <div class="content-grid">
-      <div class="content-panel">
-        <ActivityFeed isLoading={$isLoadingStore} onviewAll={() => showActivityLogModal = true} />
+
+        <div class="content-panel">
+          <PendingProposals isLoading={$isLoadingStore} />
+        </div>
       </div>
-      
-      <div class="content-panel">
-        <PendingProposals isLoading={$isLoadingStore} />
-      </div>
-    </div>
-  </section>
+    </section>
   </div>
 </div>
 
@@ -172,27 +186,24 @@
 <NewProjectModal
   isOpen={showProjectModal}
   mode="create"
-  onclose={() => showProjectModal = false}
+  onclose={() => (showProjectModal = false)}
 />
 
 <ProposalModal
   isOpen={showFeeModal}
   mode="create"
   proposal={null}
-  onclose={() => showFeeModal = false}
+  onclose={() => (showFeeModal = false)}
 />
 
 <CompanyModal
   isOpen={showCompanyModal}
   mode="create"
   company={null}
-  onclose={() => showCompanyModal = false}
+  onclose={() => (showCompanyModal = false)}
 />
 
-<ActivityLogModal
-  isOpen={showActivityLogModal}
-  onclose={() => showActivityLogModal = false}
-/>
+<ActivityLogModal isOpen={showActivityLogModal} onclose={() => (showActivityLogModal = false)} />
 
 <style>
   .dashboard-scroll-wrapper {
@@ -262,9 +273,15 @@
     height: 24px;
   }
 
-  .text-info { color: var(--color-info); }
-  .text-success { color: var(--color-success); }
-  .text-contacts { color: var(--color-stat-contacts); }
+  .text-info {
+    color: var(--color-info);
+  }
+  .text-success {
+    color: var(--color-success);
+  }
+  .text-contacts {
+    color: var(--color-stat-contacts);
+  }
 
   .stat-info {
     flex: 1;
@@ -309,7 +326,8 @@
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -346,20 +364,20 @@
     .dashboard-container {
       padding: 16px;
     }
-    
+
     .dashboard-section {
       margin-bottom: 24px;
     }
-    
+
     .stats-grid {
       grid-template-columns: 1fr;
       gap: 16px;
     }
-    
+
     .stat-card {
       padding: 16px;
     }
-    
+
     .stat-number {
       font-size: 24px;
     }

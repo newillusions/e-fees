@@ -1,12 +1,26 @@
 <script lang="ts">
   import BaseModal from './BaseModal.svelte';
   import Button from './Button.svelte';
-  import { moveProjectFolder, getFolderForStatus, getStatusForFolder, type FolderOperationResult } from '$lib/api/folderManagement';
+  import {
+    moveProjectFolder,
+    getFolderForStatus,
+    getStatusForFolder,
+    type FolderOperationResult
+  } from '$lib/api/folderManagement';
   import { extractId } from '$lib/utils';
   import { logApiError } from '$lib/services/logger';
   import type { Project, Fee } from '../../types';
-  
-  let { isOpen = $bindable(false), project = null, proposal = null, newStatus = '', relatedFees = [], mode = 'project-primary', oncancel, onconfirm }: {
+
+  let {
+    isOpen = $bindable(false),
+    project = null,
+    proposal = null,
+    newStatus = '',
+    relatedFees = [],
+    mode = 'project-primary',
+    oncancel,
+    onconfirm
+  }: {
     isOpen?: boolean;
     project?: Project | null;
     proposal?: Fee | null;
@@ -16,35 +30,54 @@
     oncancel?: () => void;
     onconfirm?: (detail: Record<string, unknown>) => void;
   } = $props();
-  
+
   let isProcessing = $state(false);
   let operationResult: FolderOperationResult | null = $state(null);
   let selectedFeeUpdates: Record<string, boolean> = $state({});
   let selectedProjectUpdate: boolean = $state(false);
   let suggestedFeeStatus: string = $state('');
   let suggestedProjectStatus: string = $state('');
-  
+
   // Determine primary and secondary entities based on mode
   const primaryEntity = $derived(mode === 'project-primary' ? project : proposal);
-  const secondaryEntities = $derived(mode === 'project-primary' ? relatedFees : (project ? [project] : []));
+  const secondaryEntities = $derived(
+    mode === 'project-primary' ? relatedFees : project ? [project] : []
+  );
   const primaryType = $derived(mode === 'project-primary' ? 'project' : 'proposal');
   const secondaryType = $derived(mode === 'project-primary' ? 'proposal' : 'project');
 
   const currentFolder = $derived(project?.status ? getFolderForStatus(project.status) : '');
-  const newFolder = $derived(mode === 'project-primary'
-    ? (newStatus ? getFolderForStatus(newStatus) : '')
-    : (suggestedProjectStatus ? getFolderForStatus(suggestedProjectStatus) : ''));
+  const newFolder = $derived(
+    mode === 'project-primary'
+      ? newStatus
+        ? getFolderForStatus(newStatus)
+        : ''
+      : suggestedProjectStatus
+        ? getFolderForStatus(suggestedProjectStatus)
+        : ''
+  );
   const folderChangeRequired = $derived(currentFolder !== newFolder && currentFolder && newFolder);
-  const affectedFees = $derived(relatedFees.filter(fee =>
-    // Filter fees that might be affected by status change (exclude terminal statuses)
-    fee.status !== 'Accepted' && fee.status !== 'Rejected' && fee.status !== 'No Response' && fee.status !== 'Superseded'
-  ));
+  const affectedFees = $derived(
+    relatedFees.filter(
+      fee =>
+        // Filter fees that might be affected by status change (exclude terminal statuses)
+        fee.status !== 'Accepted' &&
+        fee.status !== 'Rejected' &&
+        fee.status !== 'No Response' &&
+        fee.status !== 'Superseded'
+    )
+  );
 
   // Determine suggested statuses based on primary entity change
   $effect(() => {
     if (mode === 'project-primary') {
       // Project is changing, suggest fee status updates
-      if (newStatus === 'Awarded' || newStatus === 'Design' || newStatus === 'Construction' || newStatus === 'Completed') {
+      if (
+        newStatus === 'Awarded' ||
+        newStatus === 'Design' ||
+        newStatus === 'Construction' ||
+        newStatus === 'Completed'
+      ) {
         suggestedFeeStatus = 'Accepted';
       } else if (newStatus === 'Cancelled' || newStatus === 'Lost') {
         suggestedFeeStatus = 'Rejected';
@@ -85,29 +118,31 @@
       }
     }
   });
-  
+
   function handleCancel() {
     isOpen = false;
     operationResult = null;
     oncancel?.();
   }
-  
+
   async function handleConfirm() {
     if (!primaryEntity || !newStatus) return;
-    
+
     isProcessing = true;
-    
+
     try {
       if (mode === 'project-primary') {
         // Collect fees that should be updated
-        const feesToUpdate = affectedFees.filter(fee => {
-          const feeId = extractId(fee.id);
-          return feeId && selectedFeeUpdates[feeId];
-        }).map(fee => ({
-          id: fee.id,
-          newStatus: suggestedFeeStatus
-        }));
-        
+        const feesToUpdate = affectedFees
+          .filter(fee => {
+            const feeId = extractId(fee.id);
+            return feeId && selectedFeeUpdates[feeId];
+          })
+          .map(fee => ({
+            id: fee.id,
+            newStatus: suggestedFeeStatus
+          }));
+
         // Call the confirm callback - parent will handle folder operations
         onconfirm?.({
           project,
@@ -119,10 +154,15 @@
         });
       } else {
         // Proposal-primary mode: collect project update if selected
-        const projectToUpdate = selectedProjectUpdate && project ? [{
-          id: project.id,
-          newStatus: suggestedProjectStatus
-        }] : [];
+        const projectToUpdate =
+          selectedProjectUpdate && project
+            ? [
+                {
+                  id: project.id,
+                  newStatus: suggestedProjectStatus
+                }
+              ]
+            : [];
 
         // Call the confirm callback - parent will handle folder operations
         onconfirm?.({
@@ -134,17 +174,16 @@
           suggestedProjectStatus
         });
       }
-      
     } catch (error) {
       logApiError('status change', error as Error);
     } finally {
       isProcessing = false;
     }
   }
-  
+
   function getStatusChangeDescription(): string {
     if (!project?.status || !newStatus) return '';
-    
+
     const statusChanges: Record<string, string> = {
       'Lead->RFP': 'Project entering RFP stage',
       'RFP->Submitted': 'Proposal submitted to client',
@@ -157,35 +196,35 @@
       'RFP->No Response': 'No response from client',
       'Submitted->No Response': 'No response to submission',
       'RFP->Cancelled': 'RFP cancelled',
-      'Cancelled->Lead': 'Reactivating cancelled project',
+      'Cancelled->Lead': 'Reactivating cancelled project'
     };
 
     const key = `${project.status}->${newStatus}`;
     return statusChanges[key] || `Changing status from ${project.status} to ${newStatus}`;
   }
-  
+
   function getImpactWarning(): string {
     if (affectedFees.length === 0) return '';
-    
+
     const warnings = [];
-    
+
     if (newStatus === 'Cancelled' || newStatus === 'Lost') {
       warnings.push(`${affectedFees.length} related proposal(s) may need status updates`);
     }
-    
+
     if (newStatus === 'Completed') {
       warnings.push(`${affectedFees.length} proposal(s) should be marked as accepted`);
     }
-    
+
     if (newStatus === 'On Hold') {
       warnings.push(`${affectedFees.length} proposal(s) may need to be marked as on hold`);
     }
-    
+
     return warnings.join('. ');
   }
 </script>
 
-<BaseModal 
+<BaseModal
   {isOpen}
   title="Confirm Status Change"
   maxWidth="600px"
@@ -206,7 +245,9 @@
         <div class="grid grid-cols-2 gap-2 text-xs">
           <div>
             <span class="text-emittiv-light">Current Status:</span>
-            <span class="text-emittiv-white ml-2">{mode === 'project-primary' ? project?.status : proposal?.status}</span>
+            <span class="text-emittiv-white ml-2"
+              >{mode === 'project-primary' ? project?.status : proposal?.status}</span
+            >
           </div>
           <div>
             <span class="text-emittiv-light">New Status:</span>
@@ -214,12 +255,22 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Status Change Description -->
       <div class="bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1">
         <div class="flex items-start gap-1.5">
-          <svg class="w-3 h-3 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            class="w-3 h-3 text-blue-400 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <div>
             <h4 class="text-xs font-medium text-blue-400">Status Change</h4>
@@ -227,19 +278,36 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Folder Movement Information -->
       {#if folderChangeRequired}
         <div class="bg-orange-500/10 border border-orange-500/20 rounded px-2 py-1">
           <div class="flex items-start gap-1.5">
-            <svg class="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2" />
+            <svg
+              class="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 5a2 2 0 012-2h4a2 2 0 012 2"
+              />
             </svg>
             <div class="flex-1">
               <h4 class="text-xs font-medium text-orange-400">Folder Movement</h4>
               <p class="text-xs text-emittiv-lighter mb-0.5">
-                Project folder will be moved from <span class="font-mono text-emittiv-white">{currentFolder}</span> 
+                Project folder will be moved from <span class="font-mono text-emittiv-white"
+                  >{currentFolder}</span
+                >
                 to <span class="font-mono text-emittiv-white">{newFolder}</span>
               </p>
               {#if newFolder === '11 Current'}
@@ -251,29 +319,43 @@
           </div>
         </div>
       {/if}
-      
+
       <!-- Downstream Impact -->
       {#if (mode === 'project-primary' && affectedFees.length > 0) || (mode === 'proposal-primary' && project)}
         <div class="bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-1">
           <div class="flex items-start gap-1.5">
-            <svg class="w-3 h-3 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.081 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              class="w-3 h-3 text-yellow-400 flex-shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.081 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
             <div class="flex-1">
               <h4 class="text-xs font-medium text-yellow-400">Downstream Impact</h4>
-              
+
               {#if mode === 'project-primary'}
                 <!-- Project changing → suggest fee updates -->
                 {#if suggestedFeeStatus}
                   <p class="text-xs text-emittiv-lighter mb-0.5">
-                    Suggested action: Update proposals to <span class="font-medium text-emittiv-white">{suggestedFeeStatus}</span>
+                    Suggested action: Update proposals to <span
+                      class="font-medium text-emittiv-white">{suggestedFeeStatus}</span
+                    >
                   </p>
                 {:else}
                   <p class="text-xs text-emittiv-lighter mb-0.5">{getImpactWarning()}</p>
                 {/if}
-                
+
                 <div class="space-y-0.5">
-                  <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">Select proposals to update:</h5>
+                  <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">
+                    Select proposals to update:
+                  </h5>
                   {#each affectedFees as fee}
                     {@const feeId = extractId(fee.id) ?? ''}
                     <label class="emittiv-checkbox-option">
@@ -295,7 +377,7 @@
                     </label>
                   {/each}
                 </div>
-                
+
                 {#if Object.values(selectedFeeUpdates).some(v => v)}
                   <p class="text-xs text-emittiv-splash mt-0.5">
                     ✓ Selected proposals will be automatically updated
@@ -305,21 +387,27 @@
                 <!-- Proposal changing → suggest project update -->
                 {#if suggestedProjectStatus}
                   <p class="text-xs text-emittiv-lighter mb-0.5">
-                    Suggested action: Update project to <span class="font-medium text-emittiv-white">{suggestedProjectStatus}</span>
+                    Suggested action: Update project to <span class="font-medium text-emittiv-white"
+                      >{suggestedProjectStatus}</span
+                    >
                   </p>
                 {/if}
-                
+
                 <div class="space-y-0.5">
-                  <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">Update related project:</h5>
+                  <h5 class="text-xs font-medium text-emittiv-light uppercase tracking-wider">
+                    Update related project:
+                  </h5>
                   <label class="emittiv-checkbox-option">
                     <input
                       type="checkbox"
                       bind:checked={selectedProjectUpdate}
-                      disabled={!suggestedProjectStatus || project?.status === suggestedProjectStatus}
+                      disabled={!suggestedProjectStatus ||
+                        project?.status === suggestedProjectStatus}
                       class="emittiv-checkbox emittiv-checkbox-sm"
                     />
                     <div class="flex-1 flex items-center justify-between">
-                      <span class="text-emittiv-white">{project?.number?.id} - {project?.name}</span>
+                      <span class="text-emittiv-white">{project?.number?.id} - {project?.name}</span
+                      >
                       <div class="flex items-center gap-2">
                         <span class="text-emittiv-lighter">{project?.status}</span>
                         {#if suggestedProjectStatus && project?.status !== suggestedProjectStatus && selectedProjectUpdate}
@@ -329,7 +417,7 @@
                     </div>
                   </label>
                 </div>
-                
+
                 {#if selectedProjectUpdate}
                   <p class="text-xs text-emittiv-splash mt-0.5">
                     ✓ Project will be automatically updated
@@ -340,18 +428,12 @@
           </div>
         </div>
       {/if}
-      
     </div>
   {/if}
-  
+
   <!-- Actions -->
   <div class="flex justify-end gap-2 mt-3 pt-2 border-t border-emittiv-dark/50">
-    <Button 
-      variant="ghost" 
-      size="sm"
-      on:click={handleCancel}
-      disabled={isProcessing}
-    >
+    <Button variant="ghost" size="sm" on:click={handleCancel} disabled={isProcessing}>
       Cancel
     </Button>
     <Button

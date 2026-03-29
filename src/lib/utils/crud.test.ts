@@ -1,6 +1,6 @@
 /**
  * Enhanced CRUD Utilities Test Suite
- * 
+ *
  * Comprehensive tests covering all CRUD operations, SurrealDB support,
  * optimistic updates, error handling, and professional logging integration.
  */
@@ -83,9 +83,10 @@ class MockTestApi implements CrudApi<TestEntity> {
   async search(query: string): Promise<TestEntity[]> {
     const lowerQuery = query.toLowerCase();
     return Promise.resolve(
-      this.items.filter(item => 
-        item.name.toLowerCase().includes(lowerQuery) ||
-        (item.description && item.description.toLowerCase().includes(lowerQuery))
+      this.items.filter(
+        item =>
+          item.name.toLowerCase().includes(lowerQuery) ||
+          (item.description && item.description.toLowerCase().includes(lowerQuery))
       )
     );
   }
@@ -116,11 +117,11 @@ class MockTestApi implements CrudApi<TestEntity> {
       const itemId = typeof item.id === 'string' ? item.id : (item.id as any)?.id || item.id;
       return itemId === id;
     });
-    
+
     if (index === -1) {
       throw new Error(`Item with id ${id} not found`);
     }
-    
+
     this.items[index] = { ...this.items[index], ...data };
     return Promise.resolve(this.items[index]);
   }
@@ -130,11 +131,11 @@ class MockTestApi implements CrudApi<TestEntity> {
       const itemId = typeof item.id === 'string' ? item.id : (item.id as any)?.id || item.id;
       return itemId === id;
     });
-    
+
     if (index === -1) {
       throw new Error(`Item with id ${id} not found`);
     }
-    
+
     const deletedItem = this.items[index];
     this.items.splice(index, 1);
     return Promise.resolve(deletedItem);
@@ -312,32 +313,32 @@ describe('Enhanced CRUD Utilities', () => {
 
     describe('Optimistic Updates', () => {
       it('should perform optimistic creates', async () => {
-        const { store, actions } = useCrudStore(mockApi, { 
-          enableOptimistic: true 
+        const { store, actions } = useCrudStore(mockApi, {
+          enableOptimistic: true
         });
 
         const newItemData = { name: 'Optimistic Item', status: 'active' as const };
-        
+
         // Start create operation but don't await yet
         const createPromise = actions.create(newItemData);
-        
+
         // Check that optimistic item appears immediately
         let state = get(store);
         expect(state.items.length).toBe(1);
         expect(state.items[0].name).toBe('Optimistic Item');
         expect(state.optimisticUpdates.size).toBe(1);
-        
+
         // Wait for completion
         await createPromise;
-        
+
         state = get(store);
         expect(state.items.length).toBe(1);
         expect(state.optimisticUpdates.size).toBe(0);
       });
 
       it('should rollback optimistic creates on error', async () => {
-        const { store, actions } = useCrudStore(mockErrorApi, { 
-          enableOptimistic: true 
+        const { store, actions } = useCrudStore(mockErrorApi, {
+          enableOptimistic: true
         });
 
         const newItemData = { name: 'Failing Item', status: 'active' as const };
@@ -358,24 +359,24 @@ describe('Enhanced CRUD Utilities', () => {
         const initialItem: TestEntity = { id: 'test_1', name: 'Item 1', status: 'active' };
         mockApi.seedData([initialItem]);
 
-        const { store, actions } = useCrudStore(mockApi, { 
-          enableOptimistic: true 
+        const { store, actions } = useCrudStore(mockApi, {
+          enableOptimistic: true
         });
         await actions.load();
 
         const updateData = { name: 'Optimistic Update' };
-        
+
         // Start update but don't await
         const updatePromise = actions.update('test_1', updateData);
-        
+
         // Check optimistic update
         let state = get(store);
         expect(state.items[0].name).toBe('Optimistic Update');
         expect(state.optimisticUpdates.size).toBe(1);
-        
+
         // Wait for completion
         await updatePromise;
-        
+
         state = get(store);
         expect(state.optimisticUpdates.size).toBe(0);
       });
@@ -384,10 +385,10 @@ describe('Enhanced CRUD Utilities', () => {
         const initialItem: TestEntity = { id: 'test_1', name: 'Item 1', status: 'active' };
         mockApi.seedData([initialItem]);
 
-        const { store, actions } = useCrudStore(mockErrorApi, { 
-          enableOptimistic: true 
+        const { store, actions } = useCrudStore(mockErrorApi, {
+          enableOptimistic: true
         });
-        
+
         // Manually set initial state since load will fail
         store.update(state => ({
           ...state,
@@ -413,7 +414,7 @@ describe('Enhanced CRUD Utilities', () => {
         const slowMockApi: CrudApi<TestEntity> = {
           getAll: () => mockApi.getAll(),
           update: (id, data) => mockApi.update(id, data),
-          delete: (id) => mockApi.delete(id),
+          delete: id => mockApi.delete(id),
           async create(data: Omit<TestEntity, 'id'>): Promise<TestEntity> {
             // Add delay to simulate slower API
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -426,23 +427,23 @@ describe('Enhanced CRUD Utilities', () => {
         });
 
         const newItemData = { name: 'Rollback Test', status: 'active' as const };
-        
+
         // Start optimistic create
         const createPromise = actions.create(newItemData);
-        
+
         // Wait a bit for optimistic update to take effect
         await new Promise(resolve => setTimeout(resolve, 10));
-        
+
         // Rollback before completion
         actions.rollback();
-        
+
         let state = get(store);
         expect(state.items).toEqual([]);
         expect(state.optimisticUpdates.size).toBe(0);
-        
+
         // Wait for actual completion
         const createdItem = await createPromise;
-        
+
         // Should have real item now (rollback only removes optimistic, not real API results)
         state = get(store);
         expect(state.items.length).toBe(1);
@@ -453,7 +454,12 @@ describe('Enhanced CRUD Utilities', () => {
     describe('Search and Filtering', () => {
       beforeEach(async () => {
         const testItems: TestEntity[] = [
-          { id: 'test_1', name: 'Apple Product', description: 'Technology device', status: 'active' },
+          {
+            id: 'test_1',
+            name: 'Apple Product',
+            description: 'Technology device',
+            status: 'active'
+          },
           { id: 'test_2', name: 'Banana Food', description: 'Healthy fruit', status: 'inactive' },
           { id: 'test_3', name: 'Cherry Drink', description: 'Sweet beverage', status: 'active' }
         ];
@@ -524,11 +530,11 @@ describe('Enhanced CRUD Utilities', () => {
 
         await actions.search('Apple');
         await actions.applyFilters({ status: 'active' });
-        
+
         // Check that we have the expected initial state
         let state = get(store);
         expect(state.items.length).toBe(3); // All items loaded from mock
-        
+
         actions.resetFilters();
         state = get(store);
 
@@ -602,7 +608,7 @@ describe('Enhanced CRUD Utilities', () => {
 
       it('should clear all data', () => {
         const { store, actions } = useCrudStore(mockApi);
-        
+
         // Set some state
         store.update(state => ({
           ...state,
@@ -638,15 +644,15 @@ describe('Enhanced CRUD Utilities', () => {
         };
 
         const { store, actions } = useCrudStore(mockApi, options);
-        
+
         // Test that optimistic updates are disabled
         const newItemData = { name: 'Non-optimistic Item', status: 'active' as const };
         const createPromise = actions.create(newItemData);
-        
+
         // Should not appear optimistically
         const state = get(store);
         expect(state.items.length).toBe(0);
-        
+
         await createPromise;
         // Should appear only after completion
         const finalState = get(store);
@@ -659,7 +665,7 @@ describe('Enhanced CRUD Utilities', () => {
         };
 
         const { actions, destroy } = useCrudStore(mockApi, autoRefreshOptions);
-        
+
         let loadCallCount = 0;
         const originalLoad = actions.load;
         actions.load = vi.fn().mockImplementation(() => {
@@ -681,9 +687,9 @@ describe('Enhanced CRUD Utilities', () => {
     describe('Cleanup', () => {
       it('should cleanup auto-refresh on destroy', () => {
         const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-        
-        const { destroy } = useCrudStore(mockApi, { 
-          autoRefresh: 1000 
+
+        const { destroy } = useCrudStore(mockApi, {
+          autoRefresh: 1000
         });
 
         destroy();
@@ -735,28 +741,28 @@ describe('Enhanced CRUD Utilities', () => {
       }
 
       async update(id: string, data: Partial<TestEntity>): Promise<TestEntity> {
-        const index = this.items.findIndex(item => 
-          (typeof item.id === 'string' ? item.id : (item.id as any)?.id) === id
+        const index = this.items.findIndex(
+          item => (typeof item.id === 'string' ? item.id : (item.id as any)?.id) === id
         );
-        
+
         if (index === -1) {
           this.handleError('update', new Error('Item not found'), { id });
         }
-        
+
         this.items[index] = { ...this.items[index], ...data };
         this.logSuccess('update', this.items[index]);
         return Promise.resolve(this.items[index]);
       }
 
       async delete(id: string): Promise<TestEntity> {
-        const index = this.items.findIndex(item => 
-          (typeof item.id === 'string' ? item.id : (item.id as any)?.id) === id
+        const index = this.items.findIndex(
+          item => (typeof item.id === 'string' ? item.id : (item.id as any)?.id) === id
         );
-        
+
         if (index === -1) {
           this.handleError('delete', new Error('Item not found'), { id });
         }
-        
+
         const deletedItem = this.items[index];
         this.items.splice(index, 1);
         this.logSuccess('delete', deletedItem);
@@ -778,30 +784,31 @@ describe('Enhanced CRUD Utilities', () => {
     it('should handle successful operations with logging', async () => {
       const api = new TestCrudApi('test');
       const newItem = await api.create({ name: 'Test Item', status: 'active' });
-      
+
       expect(newItem.name).toBe('Test Item');
       expect(newItem.id).toBeDefined();
     });
 
     it('should handle errors with proper logging', async () => {
       const api = new TestCrudApi('test');
-      
-      await expect(api.update('nonexistent', { name: 'Updated' }))
-        .rejects.toThrow('Item not found');
+
+      await expect(api.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        'Item not found'
+      );
     });
 
     it('should throw error for unimplemented search', async () => {
       const api = new TestCrudApi('test');
-      
-      await expect(api.search?.('query'))
-        .rejects.toThrow('Search not implemented for test');
+
+      await expect(api.search?.('query')).rejects.toThrow('Search not implemented for test');
     });
 
     it('should throw error for unimplemented filter', async () => {
       const api = new TestCrudApi('test');
-      
-      await expect(api.filter?.({ status: 'active' }))
-        .rejects.toThrow('Filter not implemented for test');
+
+      await expect(api.filter?.({ status: 'active' })).rejects.toThrow(
+        'Filter not implemented for test'
+      );
     });
   });
 
@@ -897,7 +904,7 @@ describe('Enhanced CRUD Utilities', () => {
       actions.setMessage('Test message');
       actions.setError('Test error');
       actions.clearMessages();
-      
+
       const state = get(store);
       expect(state.message).toBe('');
       expect(state.error).toBe(null);
@@ -909,7 +916,7 @@ describe('Enhanced CRUD Utilities', () => {
       actions.setLoading(true);
       actions.setMessage('Test message');
       actions.reset();
-      
+
       const state = get(store);
       expect(state.loading).toBe(false);
       expect(state.message).toBe('');
@@ -931,8 +938,9 @@ describe('Enhanced CRUD Utilities', () => {
       const { actions } = useOperationState();
       const mockOperation = vi.fn().mockRejectedValue(new Error('Operation failed'));
 
-      await expect(withLoadingState(mockOperation, actions, 'saving'))
-        .rejects.toThrow('Operation failed');
+      await expect(withLoadingState(mockOperation, actions, 'saving')).rejects.toThrow(
+        'Operation failed'
+      );
     });
   });
 

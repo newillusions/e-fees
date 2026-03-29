@@ -14,7 +14,13 @@
   import type { Contact, ContactCreate } from '../../types';
   import type { FormFieldConfig } from './base/types';
 
-  let { isOpen = $bindable(false), contact = null, mode = 'create', zIndex = 100, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    contact = null,
+    mode = 'create',
+    zIndex = 100,
+    onclose
+  }: {
     isOpen?: boolean;
     contact?: Contact | null;
     mode?: 'create' | 'edit';

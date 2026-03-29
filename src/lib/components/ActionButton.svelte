@@ -1,5 +1,13 @@
 <script lang="ts">
-  let { type = 'custom', href = '', ariaLabel = '', size = 16, customIcon = '', class: className = '', onclick }: {
+  let {
+    type = 'custom',
+    href = '',
+    ariaLabel = '',
+    size = 16,
+    customIcon = '',
+    class: className = '',
+    onclick
+  }: {
     type?: 'edit' | 'view' | 'delete' | 'email' | 'phone' | 'custom';
     href?: string;
     ariaLabel?: string;
@@ -33,11 +41,7 @@
 </script>
 
 {#if href}
-  <a
-    {href}
-    class="emittiv-icon-btn {className}"
-    aria-label={ariaLabel}
-  >
+  <a {href} class="emittiv-icon-btn {className}" aria-label={ariaLabel}>
     <svg
       style="width: {size}px; height: {size}px;"
       fill="none"
@@ -48,11 +52,7 @@
     </svg>
   </a>
 {:else}
-  <button
-    onclick={handleClick}
-    class="emittiv-icon-btn {className}"
-    aria-label={ariaLabel}
-  >
+  <button onclick={handleClick} class="emittiv-icon-btn {className}" aria-label={ariaLabel}>
     <svg
       style="width: {size}px; height: {size}px;"
       fill="none"

@@ -5,7 +5,7 @@
     statuses = [] as string[],
     onstatuschange,
     ondelete,
-    onclear,
+    onclear
   }: {
     selectedCount: number;
     entityType: string;
@@ -65,7 +65,8 @@
 {#if selectedCount > 0}
   <div class="emittiv-bulk-bar">
     <span class="emittiv-bulk-bar__count">
-      {selectedCount} {entityType} selected
+      {selectedCount}
+      {entityType} selected
     </span>
 
     {#if statuses.length > 0}
@@ -92,16 +93,17 @@
     {/if}
 
     <button
-      class="emittiv-btn emittiv-btn--sm {confirming === 'delete' ? 'emittiv-btn--danger' : 'emittiv-btn--secondary'}"
+      class="emittiv-btn emittiv-btn--sm {confirming === 'delete'
+        ? 'emittiv-btn--danger'
+        : 'emittiv-btn--secondary'}"
       onclick={handleDelete}
     >
-      {confirming === 'delete' ? `Delete ${selectedCount} ${selectedCount === 1 ? entityLabel : entityType}` : 'Delete'}
+      {confirming === 'delete'
+        ? `Delete ${selectedCount} ${selectedCount === 1 ? entityLabel : entityType}`
+        : 'Delete'}
     </button>
 
-    <button
-      class="emittiv-btn emittiv-btn--sm emittiv-btn--ghost"
-      onclick={handleClear}
-    >
+    <button class="emittiv-btn emittiv-btn--sm emittiv-btn--ghost" onclick={handleClear}>
       Clear
     </button>
   </div>

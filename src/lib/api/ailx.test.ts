@@ -252,7 +252,10 @@ describe('AilxApiClient', () => {
       const result = await client.searchProducts({});
 
       expect(result).toEqual(mockSearchResponse);
-      expect(mockFetch).toHaveBeenCalledWith('http://10.0.21.11:3000/api/products/search', expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://10.0.21.11:3000/api/products/search',
+        expect.any(Object)
+      );
     });
 
     it('should handle all search filter parameters', async () => {
@@ -275,7 +278,7 @@ describe('AilxApiClient', () => {
 
       await client.searchProducts(params);
 
-      const calledUrl = (mockFetch.mock.calls[0][0] as string);
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain('q=LED');
       expect(calledUrl).toContain('manufacturer=WAC');
       expect(calledUrl).toContain('product_type=Downlight');
@@ -294,7 +297,9 @@ describe('AilxApiClient', () => {
         json: async () => ({ error: 'Search Error', message: 'Elasticsearch query failed' })
       } as Response);
 
-      await expect(client.searchProducts({ q: 'test' })).rejects.toThrow('Elasticsearch query failed');
+      await expect(client.searchProducts({ q: 'test' })).rejects.toThrow(
+        'Elasticsearch query failed'
+      );
     });
   });
 
@@ -341,7 +346,7 @@ describe('AilxApiClient', () => {
 
       await client.recommendProducts(params);
 
-      const calledUrl = (mockFetch.mock.calls[0][0] as string);
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain('mounting_type=Surface');
       expect(calledUrl).toContain('min_wattage=5');
       expect(calledUrl).toContain('max_wattage=25');
@@ -463,10 +468,15 @@ describe('AilxApiClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
-        json: async () => ({ error: 'Validation Error', message: 'part_number query parameter is required' })
+        json: async () => ({
+          error: 'Validation Error',
+          message: 'part_number query parameter is required'
+        })
       } as Response);
 
-      await expect(client.checkDuplicate({ part_number: '' })).rejects.toThrow('part_number query parameter is required');
+      await expect(client.checkDuplicate({ part_number: '' })).rejects.toThrow(
+        'part_number query parameter is required'
+      );
     });
   });
 
@@ -644,7 +654,7 @@ describe('AilxApiClient', () => {
         offset: undefined
       });
 
-      const calledUrl = (mockFetch.mock.calls[0][0] as string);
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain('q=test');
       expect(calledUrl).toContain('limit=20');
       expect(calledUrl).not.toContain('manufacturer');
@@ -659,7 +669,7 @@ describe('AilxApiClient', () => {
 
       await client.searchProducts({});
 
-      const calledUrl = (mockFetch.mock.calls[0][0] as string);
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toBe('http://10.0.21.11:3000/api/products/search');
     });
 
@@ -674,7 +684,7 @@ describe('AilxApiClient', () => {
         manufacturer: 'WAC & Co.'
       });
 
-      const calledUrl = (mockFetch.mock.calls[0][0] as string);
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain('q=LED+4%22+Round');
       expect(calledUrl).toContain('manufacturer=WAC+%26+Co.');
     });

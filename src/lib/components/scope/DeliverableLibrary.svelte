@@ -5,7 +5,7 @@
   let {
     allDeliverables = [],
     activeIds = new Set(),
-    onAdd,
+    onAdd
   }: {
     allDeliverables: Deliverable[];
     activeIds: Set<string>;
@@ -14,21 +14,14 @@
 
   let searchQuery = $state('');
 
-  let availableDeliverables = $derived(
-    allDeliverables.filter((d) => !activeIds.has(d.id))
-  );
+  let availableDeliverables = $derived(allDeliverables.filter(d => !activeIds.has(d.id)));
 
   let filteredDeliverables = $derived.by(() => {
     if (!searchQuery.trim()) return availableDeliverables;
 
     const q = searchQuery.toLowerCase();
-    return availableDeliverables.filter((d) => {
-      const fields = [
-        d.title,
-        d.short_name,
-        d.body,
-        ...(d.tags || []),
-      ].filter(Boolean);
+    return availableDeliverables.filter(d => {
+      const fields = [d.title, d.short_name, d.body, ...(d.tags || [])].filter(Boolean);
       return fields.some((f: string) => f.toLowerCase().includes(q));
     });
   });
@@ -75,19 +68,18 @@
       <div
         class="emittiv-library-item"
         draggable="true"
-        ondragstart={(e) => handleDragStart(e, deliverable)}
+        ondragstart={e => handleDragStart(e, deliverable)}
       >
-        <span class="layer-badge {deliverable.layer}" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;">
+        <span
+          class="layer-badge {deliverable.layer}"
+          style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;"
+        >
           {layerLabel(deliverable)}
         </span>
         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           {deliverable.short_name}
         </span>
-        <button
-          class="add-btn"
-          onclick={() => onAdd?.(deliverable)}
-          title="Add to scope"
-        >
+        <button class="add-btn" onclick={() => onAdd?.(deliverable)} title="Add to scope">
           +
         </button>
       </div>

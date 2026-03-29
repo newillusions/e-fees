@@ -29,7 +29,12 @@
     projectShortName: string;
   }
 
-  let { isOpen = $bindable(false), mode = 'create', zIndex = 100, onclose }: {
+  let {
+    isOpen = $bindable(false),
+    mode = 'create',
+    zIndex = 100,
+    onclose
+  }: {
     isOpen?: boolean;
     mode?: 'create';
     zIndex?: number;
@@ -390,7 +395,10 @@
   });
 
   // Typeahead handlers
-  function handleCountrySelect(data: { id: string; option: { id: string; [key: string]: unknown } }) {
+  function handleCountrySelect(data: {
+    id: string;
+    option: { id: string; [key: string]: unknown };
+  }) {
     formData.country = data.option.name as string;
     countrySearchText = data.option.name as string; // Keep search text in sync
     // Don't clear area and city automatically - let user decide
@@ -434,9 +442,7 @@
   <form on:submit={handleSubmit} class="emittiv-form-section emittiv-form-section--wide">
     <!-- PROJECT INFORMATION SECTION -->
     <div>
-      <h3 class="emittiv-form-section__title">
-        Project Information
-      </h3>
+      <h3 class="emittiv-form-section__title">Project Information</h3>
       <div class="emittiv-form-section">
         <!-- Project Name -->
         <FormInput
@@ -526,9 +532,7 @@
 
     <!-- LOCATION DETAILS SECTION -->
     <div>
-      <h3 class="emittiv-form-section__title">
-        Location Details
-      </h3>
+      <h3 class="emittiv-form-section__title">Location Details</h3>
       <div class="emittiv-form-section">
         <!-- Country Selection -->
         <TypeaheadSelect

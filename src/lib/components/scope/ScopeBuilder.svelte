@@ -4,14 +4,14 @@
     getStages,
     getDeliverables,
     assembleDeliverables,
-    saveScopeBuilder,
+    saveScopeBuilder
   } from '$lib/api/scope';
   import { logApiError } from '$lib/services/logger';
   import type {
     StageConfig,
     Deliverable,
     StageDisplay,
-    ScopeDeliverableEntry,
+    ScopeDeliverableEntry
   } from '$lib/types/scope';
   import StageSection from './StageSection.svelte';
   import DeliverableLibrary from './DeliverableLibrary.svelte';
@@ -19,7 +19,7 @@
   import { SvelteSet } from 'svelte/reactivity';
 
   let {
-    params = {},
+    params = {}
   }: {
     params?: { id?: string };
   } = $props();
@@ -52,12 +52,12 @@
   // Derived: stages with labels for display
   let stageConfigs = $derived(
     stages
-      .filter((s) => s.status === 'active')
+      .filter(s => s.status === 'active')
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((s) => ({
+      .map(s => ({
         canonical_name: s.canonical_name,
         label: s.default_label || s.canonical_name,
-        sort_order: s.sort_order,
+        sort_order: s.sort_order
       }))
   );
 
@@ -74,10 +74,7 @@
     try {
       // Fetch stages and all deliverables in parallel
       // API returns { data: [...], total: N } wrapper
-      const [stagesResp, deliverablesResp] = await Promise.all([
-        getStages(),
-        getDeliverables(),
-      ]);
+      const [stagesResp, deliverablesResp] = await Promise.all([getStages(), getDeliverables()]);
 
       stages = stagesResp.data;
       libraryDeliverables = deliverablesResp.data;
@@ -96,7 +93,7 @@
     try {
       const result = await assembleDeliverables({
         fee_id: feeId,
-        disciplines: ['lighting'],
+        disciplines: ['lighting']
       });
       const byStage: Record<string, Deliverable[]> = {};
 
@@ -126,7 +123,7 @@
             deliverable_id: d.id,
             stage: stageName,
             sort_order: idx + 1,
-            wording_override: null,
+            wording_override: null
           });
         }
       }
@@ -140,7 +137,7 @@
       await saveScopeBuilder({
         fee_id: feeId,
         deliverables,
-        stage_labels: stageLabels,
+        stage_labels: stageLabels
       });
 
       saveMessage = 'Scope saved successfully';
@@ -168,7 +165,7 @@
   function handleRemove(deliverable: Deliverable) {
     const updated = { ...activeByStage };
     for (const [stage, items] of Object.entries(updated)) {
-      updated[stage] = items.filter((d) => d.id !== deliverable.id);
+      updated[stage] = items.filter(d => d.id !== deliverable.id);
     }
     activeByStage = updated;
   }
@@ -185,7 +182,7 @@
     // Update the deliverable in the active set
     const newByStage = { ...activeByStage };
     for (const [stage, items] of Object.entries(newByStage)) {
-      const idx = items.findIndex((d) => d.id === updated.id);
+      const idx = items.findIndex(d => d.id === updated.id);
       if (idx >= 0) {
         newByStage[stage] = [...items];
         newByStage[stage][idx] = updated;
@@ -206,21 +203,20 @@
     const current = activeByStage[stage.canonical_name] || [];
     activeByStage = {
       ...activeByStage,
-      [stage.canonical_name]: [...current, deliverable],
+      [stage.canonical_name]: [...current, deliverable]
     };
   }
 
   function handleAddFromLibrary(deliverable: Deliverable, _targetStage?: string) {
     // Add to the deliverable's native stage, or the first available stage
-    const targetStage =
-      _targetStage || deliverable.stage || stageConfigs[0]?.canonical_name;
+    const targetStage = _targetStage || deliverable.stage || stageConfigs[0]?.canonical_name;
     if (!targetStage) return;
     if (activeIds.has(deliverable.id)) return;
 
     const current = activeByStage[targetStage] || [];
     activeByStage = {
       ...activeByStage,
-      [targetStage]: [...current, deliverable],
+      [targetStage]: [...current, deliverable]
     };
   }
 
@@ -261,11 +257,15 @@
 
   <!-- Content -->
   {#if loading}
-    <div style="display: flex; align-items: center; justify-content: center; flex: 1; color: var(--emittiv-light); font-size: 14px;">
+    <div
+      style="display: flex; align-items: center; justify-content: center; flex: 1; color: var(--emittiv-light); font-size: 14px;"
+    >
       Loading scope data...
     </div>
   {:else if error}
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px;">
+    <div
+      style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px;"
+    >
       <p style="color: var(--color-error); font-size: 14px; margin: 0;">{error}</p>
       <button class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm" onclick={loadData}>
         Retry
@@ -287,7 +287,9 @@
         {/each}
 
         {#if stageConfigs.length === 0}
-          <p style="font-size: 13px; color: var(--emittiv-light); text-align: center; padding: 32px;">
+          <p
+            style="font-size: 13px; color: var(--emittiv-light); text-align: center; padding: 32px;"
+          >
             No stage configurations found.
           </p>
         {/if}
@@ -296,7 +298,7 @@
       <!-- Library (right panel) -->
       <DeliverableLibrary
         allDeliverables={libraryDeliverables}
-        activeIds={activeIds}
+        {activeIds}
         onAdd={handleAddFromLibrary}
       />
     </div>

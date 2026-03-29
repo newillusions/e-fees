@@ -162,10 +162,7 @@ async fn main() {
             "/clauses",
             get(routes::clauses::list_clauses).post(routes::clauses::create_clause),
         )
-        .route(
-            "/clauses/categories",
-            get(routes::clauses::list_categories),
-        )
+        .route("/clauses/categories", get(routes::clauses::list_categories))
         .route(
             "/clauses/{id}",
             get(routes::clauses::get_clause)
@@ -177,7 +174,10 @@ async fn main() {
             get(routes::corpus::list_corpus).post(routes::corpus::ingest),
         )
         .route("/corpus/ingest-batch", post(routes::corpus::ingest_batch))
-        .route("/corpus/extract-clauses", post(routes::corpus::extract_clauses))
+        .route(
+            "/corpus/extract-clauses",
+            post(routes::corpus::extract_clauses),
+        )
         .route("/corpus/search", get(routes::corpus::search_corpus))
         .route("/corpus/{id}", get(routes::corpus::get_corpus_doc))
         .route("/scope/generate", post(routes::scope::generate_scope))
@@ -189,18 +189,12 @@ async fn main() {
             "/scope/{fee_id}/regenerate",
             post(routes::scope::regenerate_scope),
         )
-        .route(
-            "/scope/{fee_id}/export",
-            get(routes::scope::export_scope),
-        )
+        .route("/scope/{fee_id}/export", get(routes::scope::export_scope))
         .route(
             "/scope/assemble",
             post(routes::assembly::assemble_deliverables),
         )
-        .route(
-            "/scope/save",
-            post(routes::assembly::save_scope_builder),
-        )
+        .route("/scope/save", post(routes::assembly::save_scope_builder))
         .route(
             "/scope/{fee_id}/deliverables",
             get(routes::assembly::get_scope_deliverables),
@@ -212,7 +206,8 @@ async fn main() {
         )
         .route(
             "/deliverables",
-            get(routes::deliverables::list_deliverables).post(routes::deliverables::create_deliverable),
+            get(routes::deliverables::list_deliverables)
+                .post(routes::deliverables::create_deliverable),
         )
         .route(
             "/deliverables/analytics",

@@ -8,7 +8,12 @@
   import { paginatedCompaniesStore, companiesActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import {
+    createFilterFunction,
+    getUniqueFieldValues,
+    hasActiveFilters,
+    clearAllFilters
+  } from '$lib/utils/filters';
   import type { AdvancedFilters } from '$lib/utils/filters';
   import { createCompanyFilterConfig } from '$lib/utils/search';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
@@ -35,7 +40,8 @@
 
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
@@ -69,13 +75,15 @@
 
   // Effect to sync paginated store state to local runes
   $effect(() => {
-    const unsubscribe = paginatedCompaniesStore.store.subscribe((state: PaginatedStoreState<Company>) => {
-      companies = state.items;
-      isLoading = state.pagination.isLoading;
-      hasMore = state.pagination.hasMore;
-      totalRecords = state.pagination.totalRecords;
-      initialized = state.initialized;
-    });
+    const unsubscribe = paginatedCompaniesStore.store.subscribe(
+      (state: PaginatedStoreState<Company>) => {
+        companies = state.items;
+        isLoading = state.pagination.isLoading;
+        hasMore = state.pagination.hasMore;
+        totalRecords = state.pagination.totalRecords;
+        initialized = state.initialized;
+      }
+    );
     return unsubscribe;
   });
 
@@ -110,7 +118,7 @@
         city: (company: Company) => company.city
       },
       dateFieldExtractor: (company: Company) => company.time?.updated_at || '',
-      dateFieldFormat: 'iso' as const,
+      dateFieldFormat: 'iso' as const
     };
   })();
 
@@ -120,47 +128,53 @@
   });
 
   // Reactive filtered companies using optimized filter function
-  const filteredCompanies = $derived(createFilterFunction(companies, searchQuery, filters, filterConfig, advanced));
+  const filteredCompanies = $derived(
+    createFilterFunction(companies, searchQuery, filters, filterConfig, advanced)
+  );
 
   // Get unique values for filters using optimized functions
-  const uniqueCountries = $derived(getUniqueFieldValues(companies, (company) => company.country).filter(Boolean));
-  const uniqueCities = $derived(getUniqueFieldValues(companies, (company) => company.city).filter(Boolean));
-  
+  const uniqueCountries = $derived(
+    getUniqueFieldValues(companies, company => company.country).filter(Boolean)
+  );
+  const uniqueCities = $derived(
+    getUniqueFieldValues(companies, company => company.city).filter(Boolean)
+  );
+
   // Modal states
   let isCompanyModalOpen = $state(false);
   let isCompanyDetailOpen = $state(false);
   let selectedCompany: Company | null = $state(null);
   let modalMode: 'create' | 'edit' = $state('create');
-  
+
   function handleAddCompany() {
     selectedCompany = null;
     modalMode = 'create';
     isCompanyModalOpen = true;
   }
-  
+
   function handleEditCompany(company: Company) {
     selectedCompany = company;
     modalMode = 'edit';
     isCompanyModalOpen = true;
   }
-  
+
   function handleViewCompany(company: Company) {
     selectedCompany = company;
     isCompanyDetailOpen = true;
   }
-  
+
   function handleCloseModal() {
     isCompanyModalOpen = false;
     selectedCompany = null;
     // Refresh companies list after modal closes
     companiesActions.load();
   }
-  
+
   function handleCloseDetail() {
     isCompanyDetailOpen = false;
     selectedCompany = null;
   }
-  
+
   function handleEditFromDetail(company: Company | null) {
     // Close detail view and open edit modal
     isCompanyDetailOpen = false;
@@ -168,7 +182,7 @@
     modalMode = 'edit';
     isCompanyModalOpen = true;
   }
-  
+
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
     dateFrom = '';
@@ -200,12 +214,14 @@
           class="emittiv-search-input"
         />
       </div>
-      <button
-        class="emittiv-search-button"
-        aria-label="Search"
-      >
+      <button class="emittiv-search-button" aria-label="Search">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
       </button>
       <ResultsCounter
@@ -214,19 +230,29 @@
         hasFilters={hasFiltersActive}
         entityName="companies"
         loadedItems={companies.length}
-        hasMore={hasMore}
+        {hasMore}
         inline={true}
         onclearfilters={clearFilters}
       />
     </div>
     <button
-      class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'} flex-shrink-0"
-      onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+      class="emittiv-btn emittiv-btn--sm {selectMode
+        ? 'emittiv-btn--primary'
+        : 'emittiv-btn--secondary'} flex-shrink-0"
+      onclick={() => {
+        selectMode = !selectMode;
+        if (!selectMode) clearSelection();
+      }}
       aria-label="Toggle selection mode"
       title="Multi-select"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+        />
       </svg>
     </button>
     <button
@@ -239,14 +265,11 @@
       </svg>
     </button>
   </div>
-  
+
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Country Filter -->
-    <select
-      bind:value={filters.country}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.country} class="emittiv-filter-select">
       <option value="">All Countries</option>
       {#each uniqueCountries as country}
         <option value={country}>{country}</option>
@@ -254,10 +277,7 @@
     </select>
 
     <!-- City Filter -->
-    <select
-      bind:value={filters.city}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.city} class="emittiv-filter-select">
       <option value="">All Cities</option>
       {#each uniqueCities as city}
         <option value={city}>{city}</option>
@@ -266,8 +286,7 @@
 
     <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
   </div>
-  
-  
+
   {#if isLoading && companies.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
@@ -284,17 +303,22 @@
     />
   {:else if filteredCompanies.length === 0}
     <div class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No companies found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button
-        onclick={clearFilters}
-        class="emittiv-link text-sm"
-      >
-        Clear all filters
-      </button>
+      <button onclick={clearFilters} class="emittiv-link text-sm"> Clear all filters </button>
     </div>
   {:else}
     <!-- Bulk Action Bar -->
@@ -306,17 +330,14 @@
     />
 
     <!-- Scrollable container for infinite scroll -->
-    <div
-      bind:this={scrollContainer}
-      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
-    >
+    <div bind:this={scrollContainer} class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1">
       {#each filteredCompanies as company}
         <CompanyCard
           {company}
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(company.id || ''))}
-          onedit={(company) => handleEditCompany(company)}
-          onview={(company) => handleViewCompany(company)}
+          onedit={company => handleEditCompany(company)}
+          onview={company => handleViewCompany(company)}
           onselect={() => toggleSelect(extractIdFromRelation(company.id || ''))}
         />
       {/each}
@@ -341,7 +362,7 @@
 </div>
 
 <!-- Company Modal -->
-<CompanyModal 
+<CompanyModal
   bind:isOpen={isCompanyModalOpen}
   company={selectedCompany}
   mode={modalMode}

@@ -252,7 +252,12 @@ async fn vision_extract_page(
     result["response"]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| format!("Ollama vision response missing 'response' for page {}", page_num))
+        .ok_or_else(|| {
+            format!(
+                "Ollama vision response missing 'response' for page {}",
+                page_num
+            )
+        })
 }
 
 /// Step 3: Verification pass — send extracted text through text-only LLM
@@ -302,7 +307,10 @@ async fn verify_extraction(
     if !res.status().is_success() {
         let status = res.status();
         let text = res.text().await.unwrap_or_default();
-        return Err(format!("Ollama verification returned HTTP {}: {}", status, text));
+        return Err(format!(
+            "Ollama verification returned HTTP {}: {}",
+            status, text
+        ));
     }
 
     let result: Value = res
@@ -334,17 +342,29 @@ async fn extract_via_vision(
     let pdf_bytes = std::fs::read(file_path)
         .map_err(|e| format!("Failed to read PDF file '{}': {}", file_path, e))?;
 
-    info!("Vision pipeline: converting {} to PNG pages via Stirling", filename);
+    info!(
+        "Vision pipeline: converting {} to PNG pages via Stirling",
+        filename
+    );
 
     // Step 1: PDF → PNGs via Stirling
     let pages = pdf_to_pngs(http, stirling_url, &pdf_bytes, &filename).await?;
-    info!("Vision pipeline: {} pages extracted from {}", pages.len(), filename);
+    info!(
+        "Vision pipeline: {} pages extracted from {}",
+        pages.len(),
+        filename
+    );
 
     // Step 2: Vision extraction per page
     let mut page_texts = Vec::with_capacity(pages.len());
     for (i, png_bytes) in pages.iter().enumerate() {
         let page_num = i + 1;
-        info!("Vision pipeline: extracting page {}/{} of {}", page_num, pages.len(), filename);
+        info!(
+            "Vision pipeline: extracting page {}/{} of {}",
+            page_num,
+            pages.len(),
+            filename
+        );
         let text = vision_extract_page(http, ollama_url, model, png_bytes, page_num).await?;
         page_texts.push(text);
     }
@@ -476,7 +496,10 @@ async fn do_ingest(
 
     match docs.into_iter().next() {
         Some(doc) => {
-            info!("Ingested corpus document: {} (method: {})", filename, method_name);
+            info!(
+                "Ingested corpus document: {} (method: {})",
+                filename, method_name
+            );
             Ok(corpus_to_json(&doc))
         }
         None => Err(ApiError::internal(
@@ -508,7 +531,13 @@ pub async fn ingest(
         return Err(ApiError::bad_request("file_path must not be empty"));
     }
 
-    let doc = do_ingest(&state, &body.file_path, body.project_name.as_deref(), &body.method).await?;
+    let doc = do_ingest(
+        &state,
+        &body.file_path,
+        body.project_name.as_deref(),
+        &body.method,
+    )
+    .await?;
 
     Ok(Json(json!({ "data": doc })))
 }
@@ -620,7 +649,10 @@ pub async fn extract_clauses(
         .unwrap_or("");
 
     let (query, needs_bind) = if filter.is_empty() {
-        ("SELECT * FROM proposal_corpus ORDER BY created_at DESC LIMIT 10".to_string(), false)
+        (
+            "SELECT * FROM proposal_corpus ORDER BY created_at DESC LIMIT 10".to_string(),
+            false,
+        )
     } else {
         ("SELECT * FROM proposal_corpus WHERE project_number = $pn ORDER BY created_at DESC LIMIT 10".to_string(), true)
     };
@@ -809,9 +841,7 @@ pub async fn extract_clauses(
     ),
     security(("api_key" = []))
 )]
-pub async fn list_corpus(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Value>, ApiError> {
+pub async fn list_corpus(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
     let mut response = state
         .db
         .query("SELECT * FROM proposal_corpus ORDER BY created_at DESC")
@@ -875,12 +905,7 @@ pub async fn search_corpus(
     State(state): State<Arc<AppState>>,
     params: Query<CorpusSearchParams>,
 ) -> Result<Json<Value>, ApiError> {
-    let query_text = params
-        .q
-        .as_deref()
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    let query_text = params.q.as_deref().unwrap_or("").trim().to_string();
 
     if query_text.is_empty() {
         return Err(ApiError::bad_request("Query parameter 'q' is required"));
@@ -891,11 +916,7 @@ pub async fn search_corpus(
                  ORDER BY created_at DESC \
                  LIMIT 20";
 
-    let mut response = state
-        .db
-        .query(query)
-        .bind(("query", query_text))
-        .await?;
+    let mut response = state.db.query(query).bind(("query", query_text)).await?;
     let docs: Vec<ProposalCorpus> = response.take(0)?;
     let total = docs.len();
 

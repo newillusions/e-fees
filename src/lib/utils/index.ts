@@ -98,9 +98,12 @@ export function extractFullId(id: SurrealId | UnknownSurrealThing): string {
 
   // v2 format
   if (isSurrealThing(id)) {
-    const idPart = typeof id.id === 'string'
-      ? id.id
-      : (id.id && typeof id.id === 'object' && 'String' in id.id ? id.id.String : '');
+    const idPart =
+      typeof id.id === 'string'
+        ? id.id
+        : id.id && typeof id.id === 'object' && 'String' in id.id
+          ? id.id.String
+          : '';
     return idPart ? `${id.tb}:${idPart}` : '';
   }
 
@@ -110,7 +113,10 @@ export function extractFullId(id: SurrealId | UnknownSurrealThing): string {
 /**
  * Compares two IDs, handling string, v2 Thing, and v3 RecordId formats
  */
-export function compareIds(id1: SurrealId | UnknownSurrealThing, id2: SurrealId | UnknownSurrealThing): boolean {
+export function compareIds(
+  id1: SurrealId | UnknownSurrealThing,
+  id2: SurrealId | UnknownSurrealThing
+): boolean {
   const extractedId1 = extractId(id1);
   const extractedId2 = extractId(id2);
 
@@ -139,7 +145,9 @@ export function findEntityById<T extends { id?: SurrealId | UnknownSurrealThing 
  * @param entity - The entity to get name from
  * @returns The display name
  */
-export function getEntityDisplayName(entity: { name?: string; name_short?: string } | undefined): string {
+export function getEntityDisplayName(
+  entity: { name?: string; name_short?: string } | undefined
+): string {
   if (!entity) return 'Unknown';
   return entity.name_short || entity.name || 'Unknown';
 }

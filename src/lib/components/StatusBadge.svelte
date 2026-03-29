@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { status, type = 'general', onclick }: {
+  let {
+    status,
+    type = 'general',
+    onclick
+  }: {
     status: string;
     type?: 'project' | 'proposal' | 'general';
     onclick?: (status: string) => void;

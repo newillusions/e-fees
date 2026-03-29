@@ -25,9 +25,7 @@ const PUBLIC_PATHS: &[&str] = &["/health", "/api/health", "/help", "/openapi.jso
         (status = 503, description = "Service unhealthy"),
     )
 )]
-pub async fn health(
-    State(state): State<Arc<AppState>>,
-) -> (StatusCode, Json<HealthResponse>) {
+pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<HealthResponse>) {
     let start = Instant::now();
     let db_result = tokio::time::timeout(Duration::from_secs(3), state.db.health()).await;
     let db_ok = matches!(&db_result, Ok(Ok(_)));

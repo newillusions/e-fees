@@ -5,7 +5,10 @@
   import { fade, slide } from 'svelte/transition';
   import { logApiError } from '$lib/services/logger';
 
-  let { isOpen = $bindable(false), oncomplete }: {
+  let {
+    isOpen = $bindable(false),
+    oncomplete
+  }: {
     isOpen?: boolean;
     oncomplete?: () => void;
   } = $props();
@@ -45,9 +48,10 @@
       // Check if we have valid configuration
       // Settings now return has_password boolean instead of actual password
       const settings = await getSettings();
-      const hasValidConfig = settings?.surrealdb_user &&
-                            settings.surrealdb_user !== 'placeholder' &&
-                            settings.has_password;
+      const hasValidConfig =
+        settings?.surrealdb_user &&
+        settings.surrealdb_user !== 'placeholder' &&
+        settings.has_password;
       if (!hasValidConfig) {
         isOpen = true;
       }
@@ -154,9 +158,7 @@
     >
       <!-- Header -->
       <div class="p-3 pb-2 border-b flex-shrink-0" style="border-color: var(--emittiv-dark);">
-        <h2 class="text-lg font-bold" style="color: var(--emittiv-white);">
-          Welcome to E-Fees
-        </h2>
+        <h2 class="text-lg font-bold" style="color: var(--emittiv-white);">Welcome to E-Fees</h2>
         <p class="text-xs mt-1" style="color: var(--emittiv-light);">
           Let's set up your application for first use
         </p>

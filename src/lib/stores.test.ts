@@ -1,6 +1,6 @@
 /**
  * Store Management Tests
- * 
+ *
  * Comprehensive test suite for Svelte stores including data stores,
  * derived stores, and store actions.
  */
@@ -124,10 +124,10 @@ describe('Store Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     // Reset all stores to initial state and clear optimistic updates
     clearAllData();
-    
+
     // Also reset the exported stores for backward compatibility
     projectsStore.set([]);
     projectsError.set(null);
@@ -137,7 +137,7 @@ describe('Store Management', () => {
     contactsError.set(null);
     feesStore.set([]);
     feesError.set(null);
-    
+
     const initialConnectionState: ConnectionState = {
       isConnected: false,
       status: 'Disconnected'
@@ -152,7 +152,7 @@ describe('Store Management', () => {
   describe('Connection Store', () => {
     it('should initialize with disconnected state', () => {
       const state = get(connectionStore);
-      
+
       expect(state.isConnected).toBe(false);
       expect(state.status).toBe('Disconnected');
       expect(state.lastChecked).toBeUndefined();
@@ -203,7 +203,7 @@ describe('Store Management', () => {
       it('should store projects data', () => {
         const mockProjects = [mockProject];
         projectsStore.set(mockProjects);
-        
+
         const projects = get(projectsStore);
         expect(projects).toEqual(mockProjects);
         expect(projects).toHaveLength(1);
@@ -212,7 +212,7 @@ describe('Store Management', () => {
       it('should handle error states', () => {
         const errorMessage = 'Failed to load projects';
         projectsError.set(errorMessage);
-        
+
         const error = get(projectsError);
         expect(error).toBe(errorMessage);
       });
@@ -258,7 +258,7 @@ describe('Store Management', () => {
             id: '25-97102'
           }
         };
-        
+
         const createdProject = { ...mockProject, ...newProject, id: 'projects:new_project' };
         vi.mocked(api.createProjectWithTemplate).mockResolvedValueOnce(createdProject);
         vi.mocked(api.getProjects).mockResolvedValueOnce([mockProject, createdProject]);
@@ -273,7 +273,7 @@ describe('Store Management', () => {
         // Reset stores to ensure clean state
         projectsStore.set([]);
         projectsError.set(null);
-        
+
         const errorMessage = 'Project creation failed';
         const newProject = {
           name: 'Failed Project',
@@ -296,13 +296,13 @@ describe('Store Management', () => {
 
         // The create action should throw an error and set the error state
         await expect(projectsActions.create(newProject)).rejects.toThrow(errorMessage);
-        
+
         // Verify that the action was called with the correct parameter
         expect(api.createProjectWithTemplate).toHaveBeenCalledWith(newProject);
-        
+
         // Verify that the error state was set correctly
         expect(get(projectsError)).toContain(errorMessage);
-        
+
         // Verify that the store was not updated with invalid data
         expect(get(projectsStore)).toEqual([]);
       });
@@ -311,10 +311,10 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getProjects).mockResolvedValueOnce([mockProject]);
         await projectsActions.load();
-        
+
         const updates = { status: 'Completed' as const };
         const updatedProject = { ...mockProject, ...updates };
-        
+
         vi.mocked(api.updateProject).mockResolvedValueOnce(updatedProject);
         vi.mocked(api.getProjects).mockResolvedValueOnce([updatedProject]);
 
@@ -325,10 +325,10 @@ describe('Store Management', () => {
       });
 
       it('should delete project successfully', async () => {
-        // Set up initial data through the CRUD system  
+        // Set up initial data through the CRUD system
         vi.mocked(api.getProjects).mockResolvedValueOnce([mockProject]);
         await projectsActions.load();
-        
+
         vi.mocked(api.deleteProject).mockResolvedValueOnce(mockProject);
         vi.mocked(api.getProjects).mockResolvedValueOnce([]);
 
@@ -361,7 +361,7 @@ describe('Store Management', () => {
           city: 'Dubai',
           country: 'U.A.E.'
         };
-        
+
         const createdCompany = { ...mockCompany, ...newCompany, id: 'company:NEW' };
         vi.mocked(api.createCompany).mockResolvedValueOnce(createdCompany);
         vi.mocked(api.getCompanies).mockResolvedValueOnce([mockCompany, createdCompany]);
@@ -376,10 +376,10 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getCompanies).mockResolvedValueOnce([mockCompany]);
         await companiesActions.load();
-        
+
         const updates = { name: 'Updated Company Name' };
         const updatedCompany = { ...mockCompany, ...updates };
-        
+
         vi.mocked(api.updateCompany).mockResolvedValueOnce(updatedCompany);
         vi.mocked(api.getCompanies).mockResolvedValueOnce([updatedCompany]);
 
@@ -393,7 +393,7 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getCompanies).mockResolvedValueOnce([mockCompany]);
         await companiesActions.load();
-        
+
         vi.mocked(api.deleteCompany).mockResolvedValueOnce(mockCompany);
         vi.mocked(api.getCompanies).mockResolvedValueOnce([]);
 
@@ -428,7 +428,7 @@ describe('Store Management', () => {
           position: 'Director',
           company: 'company:TEST'
         };
-        
+
         const createdContact = {
           ...mockContact,
           ...newContact,
@@ -448,10 +448,10 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getContacts).mockResolvedValueOnce([mockContact]);
         await contactsActions.load();
-        
+
         const updates = { position: 'Senior Manager' };
         const updatedContact = { ...mockContact, ...updates };
-        
+
         vi.mocked(api.updateContact).mockResolvedValueOnce(updatedContact);
         vi.mocked(api.getContacts).mockResolvedValueOnce([updatedContact]);
 
@@ -465,7 +465,7 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getContacts).mockResolvedValueOnce([mockContact]);
         await contactsActions.load();
-        
+
         vi.mocked(api.deleteContact).mockResolvedValueOnce(mockContact);
         vi.mocked(api.getContacts).mockResolvedValueOnce([]);
 
@@ -501,7 +501,7 @@ describe('Store Management', () => {
           issue_date: '250816',
           revisions: []
         };
-        
+
         const createdFee = { ...mockFee, ...newFee, id: 'fee:new_fee' };
         vi.mocked(api.createFee).mockResolvedValueOnce(createdFee);
         vi.mocked(api.getFees).mockResolvedValueOnce([mockFee, createdFee]);
@@ -516,10 +516,10 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getFees).mockResolvedValueOnce([mockFee]);
         await feesActions.load();
-        
+
         const updates = { status: 'Sent' as const };
         const updatedFee = { ...mockFee, ...updates };
-        
+
         vi.mocked(api.updateFee).mockResolvedValueOnce(updatedFee);
         vi.mocked(api.getFees).mockResolvedValueOnce([updatedFee]);
 
@@ -533,7 +533,7 @@ describe('Store Management', () => {
         // Set up initial data through the CRUD system
         vi.mocked(api.getFees).mockResolvedValueOnce([mockFee]);
         await feesActions.load();
-        
+
         vi.mocked(api.deleteFee).mockResolvedValueOnce(mockFee);
         vi.mocked(api.getFees).mockResolvedValueOnce([]);
 
@@ -621,7 +621,9 @@ describe('Store Management', () => {
         feesStore.set([]);
 
         let totals = get(statisticsStore);
-        expect(totals.totalProjects + totals.totalCompanies + totals.totalContacts + totals.totalFees).toBe(0);
+        expect(
+          totals.totalProjects + totals.totalCompanies + totals.totalContacts + totals.totalFees
+        ).toBe(0);
 
         // Add data to stores
         projectsStore.set([mockProject]);
@@ -685,7 +687,7 @@ describe('Store Management', () => {
   describe('Store Reactivity', () => {
     it('should trigger reactive updates when data changes', () => {
       let updateCount = 0;
-      
+
       // Subscribe to store changes
       const unsubscribe = projectsStore.subscribe(() => {
         updateCount++;
@@ -707,7 +709,7 @@ describe('Store Management', () => {
 
     it('should handle derived store updates', () => {
       let updateCount = 0;
-      
+
       const unsubscribe = statisticsStore.subscribe(() => {
         updateCount++;
       });

@@ -9,10 +9,10 @@
  * Type of inconsistency detected between DB and file system
  */
 export type InconsistencyType =
-  | 'wrong_location'    // Folder exists but in different status folder
-  | 'missing'           // No folder found anywhere
-  | 'orphan'            // Folder exists but no matching DB record
-  | 'duplicate';        // Same project folder in multiple locations
+  | 'wrong_location' // Folder exists but in different status folder
+  | 'missing' // No folder found anywhere
+  | 'orphan' // Folder exists but no matching DB record
+  | 'duplicate'; // Same project folder in multiple locations
 
 /**
  * Represents a single folder/DB inconsistency
@@ -100,7 +100,7 @@ export const STATUS_TO_FOLDER: Record<string, string> = {
   rfp: '01 RFPs',
   active: '11 Current',
   completed: '99 Completed',
-  cancelled: '00 Inactive',
+  cancelled: '00 Inactive'
 };
 
 /**
@@ -110,5 +110,5 @@ export const FOLDER_TO_STATUS: Record<string, string> = {
   '01 RFPs': 'rfp',
   '11 Current': 'active',
   '99 Completed': 'completed',
-  '00 Inactive': 'cancelled',
+  '00 Inactive': 'cancelled'
 };

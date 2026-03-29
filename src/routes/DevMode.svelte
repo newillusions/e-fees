@@ -17,14 +17,14 @@
     ReimbursableCost,
     PaymentSchedule,
     PricingConfig,
-    PricingBreakdown,
+    PricingBreakdown
   } from '../types/database';
   import {
     createDefaultDisciplines,
     createDefaultDesignStages,
     createDefaultPostContractStages,
     calculatePricingTotals,
-    DEFAULT_PRICING_CONFIG,
+    DEFAULT_PRICING_CONFIG
   } from '../types/database';
 
   // Form modal states
@@ -35,23 +35,27 @@
 
   // Scope builder navigation
   let scopeFeeId = $state('');
-  function navigateToScope() { if (scopeFeeId.trim()) push(`/scope/${scopeFeeId.trim()}`); }
+  function navigateToScope() {
+    if (scopeFeeId.trim()) push(`/scope/${scopeFeeId.trim()}`);
+  }
 
   // ============================================================================
   // PRICING MODULE STATE
   // ============================================================================
-  let activeTab = $state<'disciplines' | 'stages' | 'costs' | 'calculator' | 'payments'>('disciplines');
+  let activeTab = $state<'disciplines' | 'stages' | 'costs' | 'calculator' | 'payments'>(
+    'disciplines'
+  );
 
   // Initialize with defaults
   let config = $state<PricingConfig>({
     ...DEFAULT_PRICING_CONFIG,
     target_fee: 250000,
-    quoted_fee: 263158,
+    quoted_fee: 263158
   });
   let disciplines = $state<Discipline[]>(createDefaultDisciplines());
   let stages = $state<Stage[]>([
     ...createDefaultDesignStages(),
-    ...createDefaultPostContractStages(),
+    ...createDefaultPostContractStages()
   ]);
   let cells = $state<PricingCell[]>([]);
   let postContractItems = $state<PostContractItem[]>([]);
@@ -60,17 +64,13 @@
     entries: [],
     total_invoiced: 0,
     total_paid: 0,
-    total_outstanding: 0,
+    total_outstanding: 0
   });
 
   // Calculate totals reactively
-  const totals = $derived(calculatePricingTotals(
-    cells,
-    postContractItems,
-    reimbursableCosts,
-    config,
-    stages,
-  ));
+  const totals = $derived(
+    calculatePricingTotals(cells, postContractItems, reimbursableCosts, config, stages)
+  );
 
   // Build pricing breakdown for summary bar
   const pricingBreakdown = $derived<PricingBreakdown>({
@@ -79,7 +79,7 @@
     stages,
     cells,
     costs: reimbursableCosts,
-    ...totals,
+    ...totals
   });
 
   // Update handlers for pricing panels
@@ -124,11 +124,31 @@
 
   // Tab config
   const tabs = [
-    { id: 'disciplines' as const, label: 'Disciplines', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-    { id: 'stages' as const, label: 'Stages', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
-    { id: 'costs' as const, label: 'Costs', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { id: 'calculator' as const, label: 'Calculator', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
-    { id: 'payments' as const, label: 'Payments', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' },
+    {
+      id: 'disciplines' as const,
+      label: 'Disciplines',
+      icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
+    },
+    {
+      id: 'stages' as const,
+      label: 'Stages',
+      icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'
+    },
+    {
+      id: 'costs' as const,
+      label: 'Costs',
+      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+    },
+    {
+      id: 'calculator' as const,
+      label: 'Calculator',
+      icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'
+    },
+    {
+      id: 'payments' as const,
+      label: 'Payments',
+      icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'
+    }
   ];
 
   // Form modal handlers
@@ -177,8 +197,18 @@
     <div class="pricing-header">
       <h2 class="section-title">Fee Pricing Module</h2>
       <button class="reset-btn" onclick={resetPricingData}>
-        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        <svg
+          style="width: 14px; height: 14px;"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
         </svg>
         Reset
       </button>
@@ -196,7 +226,7 @@
           type="button"
           class="emittiv-tab"
           class:emittiv-tab--active={activeTab === tab.id}
-          onclick={() => activeTab = tab.id}
+          onclick={() => (activeTab = tab.id)}
         >
           <svg class="emittiv-tab__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={tab.icon} />
@@ -209,21 +239,11 @@
     <!-- Tab Content -->
     <div class="pricing-content">
       {#if activeTab === 'disciplines'}
-        <DisciplinesPanel
-          bind:disciplines
-          onUpdate={handleDisciplinesUpdate}
-        />
+        <DisciplinesPanel bind:disciplines onUpdate={handleDisciplinesUpdate} />
       {:else if activeTab === 'stages'}
-        <StagesPanel
-          bind:stages
-          onUpdateStages={handleStagesUpdate}
-        />
+        <StagesPanel bind:stages onUpdateStages={handleStagesUpdate} />
       {:else if activeTab === 'costs'}
-        <CostsPanel
-          bind:costs={reimbursableCosts}
-          {stages}
-          onUpdate={handleCostsUpdate}
-        />
+        <CostsPanel bind:costs={reimbursableCosts} {stages} onUpdate={handleCostsUpdate} />
       {:else if activeTab === 'calculator'}
         <PricingCalculatorPanel
           bind:config
@@ -252,11 +272,20 @@
   <section class="dev-section">
     <h2 class="section-title">CRUD Form Testing</h2>
     <div class="form-cards-grid">
-      <button class="form-card" class:active={activeForm === 'company'} onclick={() => openForm('company')}>
+      <button
+        class="form-card"
+        class:active={activeForm === 'company'}
+        onclick={() => openForm('company')}
+      >
         <div class="form-card-content">
           <div class="form-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
             </svg>
           </div>
           <div class="form-info">
@@ -266,11 +295,20 @@
         </div>
       </button>
 
-      <button class="form-card" class:active={activeForm === 'contact'} onclick={() => openForm('contact')}>
+      <button
+        class="form-card"
+        class:active={activeForm === 'contact'}
+        onclick={() => openForm('contact')}
+      >
         <div class="form-card-content">
           <div class="form-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
             </svg>
           </div>
           <div class="form-info">
@@ -280,11 +318,20 @@
         </div>
       </button>
 
-      <button class="form-card" class:active={activeForm === 'project'} onclick={() => openForm('project')}>
+      <button
+        class="form-card"
+        class:active={activeForm === 'project'}
+        onclick={() => openForm('project')}
+      >
         <div class="form-card-content">
           <div class="form-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
             </svg>
           </div>
           <div class="form-info">
@@ -303,7 +350,11 @@
       <div class="dev-tool-header">
         <div class="dev-tool-info">
           <div class="dev-tool-title">Scope Builder</div>
-          <div class="dev-tool-desc">Open the scope builder for a fee proposal by ID (e.g. <code class="dev-code">24_96606_1</code>)</div>
+          <div class="dev-tool-desc">
+            Open the scope builder for a fee proposal by ID (e.g. <code class="dev-code"
+              >24_96606_1</code
+            >)
+          </div>
         </div>
       </div>
       <div class="dev-tool-body">
@@ -313,7 +364,9 @@
             type="text"
             placeholder="Fee ID (e.g. 24_96606_1)"
             bind:value={scopeFeeId}
-            onkeydown={(e) => { if (e.key === 'Enter' && scopeFeeId.trim()) navigateToScope(); }}
+            onkeydown={e => {
+              if (e.key === 'Enter' && scopeFeeId.trim()) navigateToScope();
+            }}
           />
           <button
             class="emittiv-btn emittiv-btn--primary"
@@ -323,7 +376,10 @@
             Open Scope Builder
           </button>
         </div>
-        <p class="dev-tool-note">Note: Scope service connectivity from AI server is still WIP — use for UI/design validation only.</p>
+        <p class="dev-tool-note">
+          Note: Scope service connectivity from AI server is still WIP — use for UI/design
+          validation only.
+        </p>
       </div>
     </div>
   </section>
@@ -332,7 +388,6 @@
   <section class="dev-section">
     <h2 class="section-title">Design System — Color Palette</h2>
     <div class="color-test-grid">
-
       <!-- Core brand tokens -->
       <div class="color-group">
         <h3 class="color-group-title">Core Brand Tokens</h3>
@@ -378,7 +433,12 @@
       <!-- Catppuccin Mocha — full accent palette -->
       <div class="color-group">
         <h3 class="color-group-title">Catppuccin Mocha — Accent Colours</h3>
-        <p class="color-group-note">The full Mocha accent palette. All 14 named colours available as <code class="dev-code">--ctp-mocha-*</code> tokens alongside the emittiv splash. The dark surface/overlay shades are listed separately below.</p>
+        <p class="color-group-note">
+          The full Mocha accent palette. All 14 named colours available as <code class="dev-code"
+            >--ctp-mocha-*</code
+          > tokens alongside the emittiv splash. The dark surface/overlay shades are listed separately
+          below.
+        </p>
         <div class="color-swatches">
           <div class="color-swatch">
             <div class="swatch-block" style="background: #f5e0dc;"></div>
@@ -456,7 +516,11 @@
       <!-- Catppuccin Mocha — surface / text shades -->
       <div class="color-group">
         <h3 class="color-group-title">Catppuccin Mocha — Surface &amp; Text</h3>
-        <p class="color-group-note">The Mocha dark surfaces and text ramp. Note how the Base/Mantle/Crust sit in the same territory as the existing emittiv dark palette — these could align or be used as alternatives.</p>
+        <p class="color-group-note">
+          The Mocha dark surfaces and text ramp. Note how the Base/Mantle/Crust sit in the same
+          territory as the existing emittiv dark palette — these could align or be used as
+          alternatives.
+        </p>
         <div class="color-swatches">
           <div class="color-swatch">
             <div class="swatch-block" style="background: #cdd6f4;"></div>
@@ -523,8 +587,14 @@
 
       <!-- Proposed semantic mappings -->
       <div class="color-group">
-        <h3 class="color-group-title">Proposed Semantic Mappings <span class="color-group-badge">Pending approval</span></h3>
-        <p class="color-group-note">Suggested Mocha colours for each semantic role in the app. Keeping <code class="dev-code">--emittiv-splash</code> (#ff9900) as the primary brand accent.</p>
+        <h3 class="color-group-title">
+          Proposed Semantic Mappings <span class="color-group-badge">Pending approval</span>
+        </h3>
+        <p class="color-group-note">
+          Suggested Mocha colours for each semantic role in the app. Keeping <code class="dev-code"
+            >--emittiv-splash</code
+          > (#ff9900) as the primary brand accent.
+        </p>
         <div class="color-swatches">
           <div class="color-swatch">
             <div class="swatch-block" style="background: #a6e3a1;"></div>
@@ -567,7 +637,9 @@
 
       <!-- Status badge colours -->
       <div class="color-group">
-        <h3 class="color-group-title">Proposed Status Colours <span class="color-group-badge">Pending approval</span></h3>
+        <h3 class="color-group-title">
+          Proposed Status Colours <span class="color-group-badge">Pending approval</span>
+        </h3>
         <p class="color-group-note">Project and proposal status badges mapped to Mocha accents.</p>
         <div class="color-swatches">
           <div class="color-swatch">
@@ -602,7 +674,6 @@
           </div>
         </div>
       </div>
-
     </div>
   </section>
 

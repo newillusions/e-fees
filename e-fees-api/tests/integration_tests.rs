@@ -7,8 +7,8 @@
 //!
 //! Run with: `cargo test -p e-fees-api --test integration_tests`
 
-use reqwest::Client;
 use chrono;
+use reqwest::Client;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,7 +82,10 @@ async fn test_health_response_format() {
     assert!(body["version"].is_string(), "missing 'version' field");
     assert!(body["uptime"].is_number(), "missing 'uptime' field");
     assert!(body["checked_at"].is_string(), "missing 'checked_at' field");
-    assert!(body["dependencies"].is_object(), "missing 'dependencies' field");
+    assert!(
+        body["dependencies"].is_object(),
+        "missing 'dependencies' field"
+    );
 }
 
 #[tokio::test]
@@ -97,8 +100,14 @@ async fn test_health_has_uptime() {
         .json()
         .await
         .unwrap();
-    assert!(body["uptime"].is_number(), "missing 'uptime' field (should be seconds as number)");
-    assert!(body["uptime"].as_f64().unwrap() >= 0.0, "uptime must be non-negative");
+    assert!(
+        body["uptime"].is_number(),
+        "missing 'uptime' field (should be seconds as number)"
+    );
+    assert!(
+        body["uptime"].as_f64().unwrap() >= 0.0,
+        "uptime must be non-negative"
+    );
 }
 
 #[tokio::test]
@@ -115,7 +124,11 @@ async fn test_health_has_checked_at() {
         .unwrap();
     assert!(body["checked_at"].is_string(), "missing 'checked_at' field");
     let ts = body["checked_at"].as_str().unwrap();
-    assert!(chrono::DateTime::parse_from_rfc3339(ts).is_ok(), "checked_at must be RFC3339: got {}", ts);
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(ts).is_ok(),
+        "checked_at must be RFC3339: got {}",
+        ts
+    );
 }
 
 #[tokio::test]
@@ -130,9 +143,18 @@ async fn test_health_has_dependencies() {
         .json()
         .await
         .unwrap();
-    assert!(body["dependencies"].is_object(), "missing 'dependencies' object");
-    assert!(body["dependencies"]["surrealdb"].is_object(), "missing 'surrealdb' dependency");
-    assert!(body["dependencies"]["surrealdb"]["status"].is_string(), "missing dependency status");
+    assert!(
+        body["dependencies"].is_object(),
+        "missing 'dependencies' object"
+    );
+    assert!(
+        body["dependencies"]["surrealdb"].is_object(),
+        "missing 'surrealdb' dependency"
+    );
+    assert!(
+        body["dependencies"]["surrealdb"]["status"].is_string(),
+        "missing dependency status"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -230,15 +252,24 @@ async fn test_projects_paginated_response() {
     assert!(body["data"].is_array(), "response must have 'data' array");
     assert!(body["total"].is_number(), "response must have 'total'");
     assert!(body["page"].is_number(), "response must have 'page'");
-    assert!(body["page_size"].is_number(), "response must have 'page_size'");
-    assert!(body["total_pages"].is_number(), "response must have 'total_pages'");
+    assert!(
+        body["page_size"].is_number(),
+        "response must have 'page_size'"
+    );
+    assert!(
+        body["total_pages"].is_number(),
+        "response must have 'total_pages'"
+    );
 
     // Default page should be 1
     assert_eq!(body["page"], 1);
     // Default page_size should be 50
     assert_eq!(body["page_size"], 50);
     // Total should be > 0 (we have data in dev DB)
-    assert!(body["total"].as_u64().unwrap_or(0) > 0, "expected at least one project");
+    assert!(
+        body["total"].as_u64().unwrap_or(0) > 0,
+        "expected at least one project"
+    );
 }
 
 #[tokio::test]
@@ -360,9 +391,18 @@ async fn test_stats_with_auth() {
     assert_eq!(resp.status(), 200);
 
     let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
-    assert!(body["total_projects"].is_number(), "missing 'total_projects'");
-    assert!(body["total_companies"].is_number(), "missing 'total_companies'");
-    assert!(body["total_contacts"].is_number(), "missing 'total_contacts'");
+    assert!(
+        body["total_projects"].is_number(),
+        "missing 'total_projects'"
+    );
+    assert!(
+        body["total_companies"].is_number(),
+        "missing 'total_companies'"
+    );
+    assert!(
+        body["total_contacts"].is_number(),
+        "missing 'total_contacts'"
+    );
     assert!(body["total_fees"].is_number(), "missing 'total_fees'");
     assert!(body["active_fees"].is_number(), "missing 'active_fees'");
 }
@@ -444,7 +484,10 @@ async fn test_company_crud_lifecycle() {
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
     let company_id = body["data"]["id"].as_str().unwrap().to_string();
-    assert!(company_id.starts_with("company:"), "ID should have table prefix");
+    assert!(
+        company_id.starts_with("company:"),
+        "ID should have table prefix"
+    );
     assert_eq!(body["data"]["name"], "DELETE ME - Test Company API");
 
     // Extract just the key part (after "company:")
@@ -556,7 +599,10 @@ async fn test_contact_crud_lifecycle() {
         .expect("Failed to delete contact");
 
     assert_eq!(resp.status(), 200);
-    assert_eq!(resp.json::<serde_json::Value>().await.unwrap()["deleted"], true);
+    assert_eq!(
+        resp.json::<serde_json::Value>().await.unwrap()["deleted"],
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -638,10 +684,19 @@ async fn test_openapi_spec_accessible() {
     assert_eq!(spec["info"]["title"], "E-Fees API");
     assert!(spec["paths"].is_object(), "spec must have paths");
     // Verify all entity paths exist
-    assert!(spec["paths"]["/projects"].is_object(), "missing /projects path");
+    assert!(
+        spec["paths"]["/projects"].is_object(),
+        "missing /projects path"
+    );
     assert!(spec["paths"]["/fees"].is_object(), "missing /fees path");
-    assert!(spec["paths"]["/companies"].is_object(), "missing /companies path");
-    assert!(spec["paths"]["/contacts"].is_object(), "missing /contacts path");
+    assert!(
+        spec["paths"]["/companies"].is_object(),
+        "missing /companies path"
+    );
+    assert!(
+        spec["paths"]["/contacts"].is_object(),
+        "missing /contacts path"
+    );
     assert!(spec["paths"]["/health"].is_object(), "missing /health path");
     assert!(spec["paths"]["/stats"].is_object(), "missing /stats path");
 }
@@ -700,7 +755,12 @@ async fn test_project_crud_lifecycle() {
         .await
         .expect("Failed to create project");
 
-    assert_eq!(resp.status(), 200, "create project failed: {:?}", resp.text().await);
+    assert_eq!(
+        resp.status(),
+        200,
+        "create project failed: {:?}",
+        resp.text().await
+    );
     let body: serde_json::Value = client
         .get(format!("{}/projects/{}", base_url(), expected_key))
         .send()
@@ -789,7 +849,10 @@ async fn test_fee_crud_lifecycle() {
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
     let company_full_id = body["data"]["id"].as_str().unwrap().to_string();
-    let company_key = company_full_id.strip_prefix("company:").unwrap().to_string();
+    let company_key = company_full_id
+        .strip_prefix("company:")
+        .unwrap()
+        .to_string();
 
     // 2. Create prerequisite: Contact
     let contact_body = serde_json::json!({
@@ -810,7 +873,10 @@ async fn test_fee_crud_lifecycle() {
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
     let contact_full_id = body["data"]["id"].as_str().unwrap().to_string();
-    let contact_key = contact_full_id.strip_prefix("contacts:").unwrap().to_string();
+    let contact_key = contact_full_id
+        .strip_prefix("contacts:")
+        .unwrap()
+        .to_string();
 
     // 3. Create prerequisite: Project
     let seq = (ts % 900 + 100) as i64;
@@ -1422,8 +1488,14 @@ async fn test_contact_response_fields() {
 
     if let Some(first) = body["data"].as_array().and_then(|a| a.first()) {
         assert!(first["id"].is_string(), "contact missing 'id'");
-        assert!(first["first_name"].is_string(), "contact missing 'first_name'");
-        assert!(first["last_name"].is_string(), "contact missing 'last_name'");
+        assert!(
+            first["first_name"].is_string(),
+            "contact missing 'first_name'"
+        );
+        assert!(
+            first["last_name"].is_string(),
+            "contact missing 'last_name'"
+        );
     }
 }
 
@@ -1578,7 +1650,9 @@ async fn test_companies_filter_by_name() {
     let body: serde_json::Value = resp.json().await.unwrap();
     let matches = body["data"].as_array().unwrap();
     assert!(
-        matches.iter().any(|c| c["name"].as_str().unwrap().contains("Filter Test")),
+        matches
+            .iter()
+            .any(|c| c["name"].as_str().unwrap().contains("Filter Test")),
         "filter should find the created company"
     );
 
@@ -1616,7 +1690,10 @@ async fn test_contacts_filter_by_company() {
     assert_eq!(resp.status(), 200);
     let company_created: serde_json::Value = resp.json().await.unwrap();
     let company_full_id = company_created["data"]["id"].as_str().unwrap().to_string();
-    let company_key = company_full_id.strip_prefix("company:").unwrap().to_string();
+    let company_key = company_full_id
+        .strip_prefix("company:")
+        .unwrap()
+        .to_string();
 
     // Create contact linked to that company
     let contact_body = serde_json::json!({
@@ -1637,7 +1714,10 @@ async fn test_contacts_filter_by_company() {
     assert_eq!(resp.status(), 200);
     let contact_created: serde_json::Value = resp.json().await.unwrap();
     let contact_full_id = contact_created["data"]["id"].as_str().unwrap().to_string();
-    let contact_key = contact_full_id.strip_prefix("contacts:").unwrap_or(&contact_full_id).to_string();
+    let contact_key = contact_full_id
+        .strip_prefix("contacts:")
+        .unwrap_or(&contact_full_id)
+        .to_string();
 
     // Filter contacts by company key
     let resp = client
@@ -1650,13 +1730,24 @@ async fn test_contacts_filter_by_company() {
     let body: serde_json::Value = resp.json().await.unwrap();
     let matches = body["data"].as_array().unwrap();
     assert!(
-        matches.iter().any(|c| c["company_id"].as_str().unwrap_or("").contains(&company_key)),
+        matches.iter().any(|c| c["company_id"]
+            .as_str()
+            .unwrap_or("")
+            .contains(&company_key)),
         "filter should return contacts for that company"
     );
 
     // Cleanup
-    client.delete(format!("{}/contacts/{}", base_url(), contact_key)).send().await.ok();
-    client.delete(format!("{}/companies/{}", base_url(), company_key)).send().await.ok();
+    client
+        .delete(format!("{}/contacts/{}", base_url(), contact_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/companies/{}", base_url(), company_key))
+        .send()
+        .await
+        .ok();
 }
 
 #[tokio::test]
@@ -1665,7 +1756,10 @@ async fn test_filter_with_pagination() {
 
     let client = authed_client();
     let resp = client
-        .get(format!("{}/projects?status=Lead&page=1&page_size=5", base_url()))
+        .get(format!(
+            "{}/projects?status=Lead&page=1&page_size=5",
+            base_url()
+        ))
         .send()
         .await
         .expect("Failed to send request");
@@ -1684,7 +1778,10 @@ async fn test_empty_filter_result() {
     let client = authed_client();
     // "Superseded" is a valid status but likely has 0 results
     let resp = client
-        .get(format!("{}/projects?status=Superseded&page=999", base_url()))
+        .get(format!(
+            "{}/projects?status=Superseded&page=999",
+            base_url()
+        ))
         .send()
         .await
         .expect("Failed to send request");
@@ -1716,7 +1813,11 @@ async fn test_next_number_uae() {
     // Format: YY-CCCNN  e.g. "26-97105"
     assert!(number.len() >= 7, "number too short: {}", number);
     assert!(number.contains("-"), "number missing dash: {}", number);
-    assert!(number.contains("971"), "UAE number must contain 971: {}", number);
+    assert!(
+        number.contains("971"),
+        "UAE number must contain 971: {}",
+        number
+    );
 
     assert!(body["year"].is_u64());
     assert_eq!(body["country_code"], 971);
@@ -1729,7 +1830,10 @@ async fn test_next_number_invalid_country_400() {
 
     let client = authed_client();
     let resp = client
-        .get(format!("{}/projects/next-number?country=Narnia", base_url()))
+        .get(format!(
+            "{}/projects/next-number?country=Narnia",
+            base_url()
+        ))
         .send()
         .await
         .expect("Failed to send request");
@@ -1773,7 +1877,12 @@ async fn test_create_project_auto_number() {
         .await
         .expect("Failed to create project");
 
-    assert_eq!(resp.status(), 200, "auto-number create failed: {:?}", resp.text().await);
+    assert_eq!(
+        resp.status(),
+        200,
+        "auto-number create failed: {:?}",
+        resp.text().await
+    );
 
     // Verify the project was created with the expected auto-number
     let resp = client
@@ -1785,12 +1894,22 @@ async fn test_create_project_auto_number() {
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
     let number = body["data"]["number"].as_str().unwrap();
-    assert!(number.contains("971"), "auto-number should use UAE dial code 971");
-    assert!(number.contains("-"), "auto-number should have YY-CCCNN format");
+    assert!(
+        number.contains("971"),
+        "auto-number should use UAE dial code 971"
+    );
+    assert!(
+        number.contains("-"),
+        "auto-number should have YY-CCCNN format"
+    );
     assert_eq!(number, expected_number);
 
     // Cleanup
-    client.delete(format!("{}/projects/{}", base_url(), expected_key)).send().await.ok();
+    client
+        .delete(format!("{}/projects/{}", base_url(), expected_key))
+        .send()
+        .await
+        .ok();
 }
 
 #[tokio::test]
@@ -1825,7 +1944,12 @@ async fn test_create_project_explicit_number_backward_compat() {
         .await
         .expect("Failed to create project");
 
-    assert_eq!(resp.status(), 200, "explicit number create failed: {:?}", resp.text().await);
+    assert_eq!(
+        resp.status(),
+        200,
+        "explicit number create failed: {:?}",
+        resp.text().await
+    );
 
     // Verify the project exists at the expected key
     let resp = client
@@ -1839,7 +1963,11 @@ async fn test_create_project_explicit_number_backward_compat() {
     assert_eq!(body["data"]["number"], project_id_str);
 
     // Cleanup
-    client.delete(format!("{}/projects/{}", base_url(), expected_key)).send().await.ok();
+    client
+        .delete(format!("{}/projects/{}", base_url(), expected_key))
+        .send()
+        .await
+        .ok();
 }
 
 #[tokio::test]
@@ -1848,7 +1976,10 @@ async fn test_next_number_with_explicit_year() {
 
     let client = authed_client();
     let resp = client
-        .get(format!("{}/projects/next-number?country=UAE&year=25", base_url()))
+        .get(format!(
+            "{}/projects/next-number?country=UAE&year=25",
+            base_url()
+        ))
         .send()
         .await
         .expect("Failed to get next number");
@@ -1857,7 +1988,11 @@ async fn test_next_number_with_explicit_year() {
     let body: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(body["year"], 25);
     let number = body["number"].as_str().unwrap();
-    assert!(number.starts_with("25-"), "number should start with year 25: {}", number);
+    assert!(
+        number.starts_with("25-"),
+        "number should start with year 25: {}",
+        number
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1909,7 +2044,10 @@ async fn test_create_folder_returns_expected_fields() {
     assert_eq!(list_resp.status(), 200);
     let list: serde_json::Value = list_resp.json().await.unwrap();
     let projects = list["data"].as_array().expect("data should be array");
-    assert!(!projects.is_empty(), "Need at least one project in DB for this test");
+    assert!(
+        !projects.is_empty(),
+        "Need at least one project in DB for this test"
+    );
 
     let project_id = projects[0]["id"].as_str().unwrap();
     let key = project_id.strip_prefix("projects:").unwrap();
@@ -1927,7 +2065,10 @@ async fn test_create_folder_returns_expected_fields() {
     if status == 200 {
         // Full success — SSH worked
         assert_eq!(body["status"], "created");
-        assert!(body["project"].as_str().is_some(), "should have project number");
+        assert!(
+            body["project"].as_str().is_some(),
+            "should have project number"
+        );
         assert!(body["path"].as_str().is_some(), "should have path");
     } else if status == 503 {
         // SSH not available in test env — acceptable
@@ -1952,8 +2093,14 @@ async fn test_api_health_alias() {
         .expect("Failed to send request");
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
-    assert!(body["status"].is_string(), "/api/health must return same schema as /health");
-    assert!(body["uptime"].is_number(), "/api/health must include uptime");
+    assert!(
+        body["status"].is_string(),
+        "/api/health must return same schema as /health"
+    );
+    assert!(
+        body["uptime"].is_number(),
+        "/api/health must include uptime"
+    );
 }
 
 #[tokio::test]
@@ -1990,7 +2137,10 @@ async fn test_help_endpoint() {
     assert!(body["version"].is_string(), "must have 'version'");
     assert!(body["description"].is_string(), "must have 'description'");
     assert!(body["endpoints"].is_array(), "must have 'endpoints' array");
-    assert!(!body["endpoints"].as_array().unwrap().is_empty(), "endpoints must not be empty");
+    assert!(
+        !body["endpoints"].as_array().unwrap().is_empty(),
+        "endpoints must not be empty"
+    );
 }
 
 #[tokio::test]

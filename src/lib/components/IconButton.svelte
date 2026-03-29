@@ -4,7 +4,16 @@
    * Uses fixed px values for desktop app OS scaling
    */
 
-  let { icon = 'plus', label = '', variant = 'secondary', size = 'sm', disabled = false, title = '', className = '', onclick }: {
+  let {
+    icon = 'plus',
+    label = '',
+    variant = 'secondary',
+    size = 'sm',
+    disabled = false,
+    title = '',
+    className = '',
+    onclick
+  }: {
     icon?: 'plus' | 'minus' | 'trash' | 'check' | 'x' | 'edit' | 'split';
     label?: string;
     variant?: 'primary' | 'secondary' | 'danger';
@@ -27,16 +36,12 @@
   };
 
   // Build class string - uses fixed px in CSS
-  const buttonClass = $derived(`emittiv-icon-btn emittiv-icon-btn--${variant} emittiv-icon-btn--${size} ${className}`);
+  const buttonClass = $derived(
+    `emittiv-icon-btn emittiv-icon-btn--${variant} emittiv-icon-btn--${size} ${className}`
+  );
 </script>
 
-<button
-  type="button"
-  class={buttonClass}
-  {disabled}
-  {title}
-  {onclick}
->
+<button type="button" class={buttonClass} {disabled} {title} {onclick}>
   <svg class="emittiv-icon-btn__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icons[icon]} />
   </svg>

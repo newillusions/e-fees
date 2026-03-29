@@ -87,33 +87,48 @@
   // Get icon for action type
   function getActionIcon(action: string): string {
     switch (action) {
-      case 'create': return 'M12 6v6m0 0v6m0-6h6m-6 0H6';
-      case 'update': return 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
-      case 'delete': return 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
-      case 'status_change': return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
-      default: return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+      case 'create':
+        return 'M12 6v6m0 0v6m0-6h6m-6 0H6';
+      case 'update':
+        return 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
+      case 'delete':
+        return 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
+      case 'status_change':
+        return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
+      default:
+        return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
     }
   }
 
   // Get color class for action type
   function getActionColor(action: string): string {
     switch (action) {
-      case 'create': return 'emittiv-badge--green';
-      case 'update': return 'emittiv-badge--blue';
-      case 'delete': return 'emittiv-badge--red';
-      case 'status_change': return 'emittiv-badge--orange';
-      default: return 'emittiv-badge--gray';
+      case 'create':
+        return 'emittiv-badge--green';
+      case 'update':
+        return 'emittiv-badge--blue';
+      case 'delete':
+        return 'emittiv-badge--red';
+      case 'status_change':
+        return 'emittiv-badge--orange';
+      default:
+        return 'emittiv-badge--gray';
     }
   }
 
   // Get border color CSS variable for action type
   function getActionBorderColor(action: string): string {
     switch (action) {
-      case 'create': return 'var(--color-success)';
-      case 'update': return 'var(--color-info)';
-      case 'delete': return 'var(--color-error)';
-      case 'status_change': return 'var(--color-warning)';
-      default: return 'var(--color-status-no-response)';
+      case 'create':
+        return 'var(--color-success)';
+      case 'update':
+        return 'var(--color-info)';
+      case 'delete':
+        return 'var(--color-error)';
+      case 'status_change':
+        return 'var(--color-warning)';
+      default:
+        return 'var(--color-status-no-response)';
     }
   }
 
@@ -163,7 +178,6 @@
     { value: 'company', label: 'Companies' },
     { value: 'contact', label: 'Contacts' }
   ];
-
 </script>
 
 <div class="activity-feed">
@@ -192,8 +206,12 @@
     {:else if error}
       <div class="error-state">
         <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
         </svg>
         <p class="error-message">{error}</p>
         <button class="retry-button" on:click={() => loadActivities()}>Retry</button>
@@ -211,7 +229,12 @@
           >
             <div class="activity-icon {getActionColor(activity.action)}">
               <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getActionIcon(activity.action)} />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d={getActionIcon(activity.action)}
+                />
               </svg>
             </div>
 
@@ -229,7 +252,12 @@
                 <div class="activity-change">
                   <span class="old-value">{activity.old_value}</span>
                   <svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
                   </svg>
                   <span class="new-value">{activity.new_value}</span>
                 </div>
@@ -265,7 +293,9 @@
           />
         </svg>
         <p class="empty-message">No activity logged yet</p>
-        <p class="empty-hint">Activities will appear here as you create, update, or change entities</p>
+        <p class="empty-hint">
+          Activities will appear here as you create, update, or change entities
+        </p>
       </div>
     {/if}
   </div>
@@ -599,7 +629,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .end-of-list {

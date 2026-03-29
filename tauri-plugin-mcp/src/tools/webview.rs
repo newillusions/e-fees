@@ -6,7 +6,7 @@ use tauri::{AppHandle, Error as TauriError, Listener, Manager, Runtime, WebviewW
 
 // Custom error enum for the get_dom_text command
 #[derive(Debug)] // Add Serialize for the enum itself if it needs to be directly serialized
-// For now, we serialize its string representation
+                 // For now, we serialize its string representation
 pub enum GetDomError {
     WebviewOperation(String),
     JavaScriptError(String),
@@ -253,7 +253,6 @@ pub async fn handle_send_text_to_element<R: Runtime>(
     let payload = serde_json::from_value::<SendTextToElementPayload>(payload).map_err(|e| {
         crate::error::Error::Anyhow(format!("Invalid payload for send_text_to_element: {}", e))
     })?;
-
 
     // Create a channel to receive the result
     let (tx, rx) = mpsc::channel();

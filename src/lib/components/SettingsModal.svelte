@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { settingsStore, settingsLoading, settingsError, settingsActions, type AppSettings } from '$lib/stores/settings';
+  import {
+    settingsStore,
+    settingsLoading,
+    settingsError,
+    settingsActions,
+    type AppSettings
+  } from '$lib/stores/settings';
   import { invoke } from '@tauri-apps/api/core';
   import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
   import { loadAllData } from '$lib/stores';
@@ -9,7 +15,10 @@
   // Folder sync modal state
   let showFolderSyncModal = $state(false);
 
-  let { isOpen = $bindable(false), onclose }: {
+  let {
+    isOpen = $bindable(false),
+    onclose
+  }: {
     isOpen?: boolean;
     onclose?: () => void;
   } = $props();
@@ -86,11 +95,11 @@
       logApiError('set log level', e as Error);
     }
   }
-  
+
   async function loadSettings() {
     await settingsActions.load();
   }
-  
+
   async function saveSettingsForm() {
     isSaving = true;
     saveMessage = '';
@@ -131,26 +140,25 @@
       setTimeout(() => {
         closeModal();
       }, 3000);
-
     } catch (error) {
       saveMessage = `Error: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       isSaving = false;
     }
   }
-  
+
   function closeModal() {
     isOpen = false;
     saveMessage = '';
     onclose?.();
   }
-  
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       closeModal();
     }
   }
-  
+
   async function selectFolder() {
     try {
       // Import the API function
@@ -200,14 +208,14 @@
     class="emittiv-backdrop flex items-center justify-center p-4"
     style="z-index: 80;"
     on:click={closeModal}
-    on:keydown={(e) => e.key === 'Escape' && closeModal()}
+    on:keydown={e => e.key === 'Escape' && closeModal()}
     role="dialog"
     aria-modal="true"
     aria-labelledby="settings-title"
     tabindex="-1"
   >
     <!-- Modal Content -->
-    <div 
+    <div
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full overflow-y-auto"
       style="padding: 16px; max-width: 450px; max-height: 90vh;"
       on:click|stopPropagation
@@ -216,32 +224,53 @@
     >
       <!-- Header -->
       <div class="flex items-center justify-between" style="margin-bottom: 20px;">
-        <h2 id="settings-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">Application Settings</h2>
-        <button 
+        <h2 id="settings-title" class="font-semibold text-emittiv-white" style="font-size: 16px;">
+          Application Settings
+        </h2>
+        <button
           on:click={closeModal}
           class="p-1 rounded-lg text-emittiv-light hover:text-emittiv-white hover:bg-emittiv-dark transition-smooth"
           aria-label="Close settings"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
 
       {#if $settingsLoading}
         <div class="flex items-center justify-center py-8">
-          <div class="emittiv-spinner emittiv-spinner--lg" style="border-color: var(--emittiv-splash); border-top-color: transparent;"></div>
+          <div
+            class="emittiv-spinner emittiv-spinner--lg"
+            style="border-color: var(--emittiv-splash); border-top-color: transparent;"
+          ></div>
           <span class="ml-2 text-emittiv-light">Loading settings...</span>
         </div>
       {:else}
-        <form on:submit|preventDefault={saveSettingsForm} style="display: flex; flex-direction: column; gap: 24px;">
-          
+        <form
+          on:submit|preventDefault={saveSettingsForm}
+          style="display: flex; flex-direction: column; gap: 24px;"
+        >
           <!-- SurrealDB Connection Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 12px;">SurrealDB Connection</h3>
+            <h3
+              class="font-medium text-emittiv-white"
+              style="font-size: 14px; margin-bottom: 12px;"
+            >
+              SurrealDB Connection
+            </h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <div>
-                <label for="surrealdb_url" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                <label
+                  for="surrealdb_url"
+                  class="block font-medium text-emittiv-lighter"
+                  style="font-size: 12px; margin-bottom: 4px;"
+                >
                   Database URL *
                 </label>
                 <input
@@ -253,10 +282,14 @@
                   class="emittiv-input"
                 />
               </div>
-              
+
               <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
-                  <label for="surrealdb_ns" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="surrealdb_ns"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Namespace *
                   </label>
                   <input
@@ -268,9 +301,13 @@
                     class="emittiv-input"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="surrealdb_db" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="surrealdb_db"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Database *
                   </label>
                   <input
@@ -283,10 +320,14 @@
                   />
                 </div>
               </div>
-              
+
               <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
-                  <label for="surrealdb_user" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="surrealdb_user"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Username
                   </label>
                   <input
@@ -297,9 +338,13 @@
                     class="emittiv-input"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="surrealdb_pass" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="surrealdb_pass"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Password {hasExistingPassword && !passwordChanged ? '(configured)' : ''}
                   </label>
                   <input
@@ -307,7 +352,9 @@
                     type="password"
                     bind:value={settings.surrealdb_pass}
                     on:input={onPasswordInput}
-                    placeholder={hasExistingPassword ? 'Leave empty to keep existing' : 'Enter password'}
+                    placeholder={hasExistingPassword
+                      ? 'Leave empty to keep existing'
+                      : 'Enter password'}
                     class="emittiv-input"
                   />
                 </div>
@@ -323,17 +370,34 @@
                   style="gap: 6px;"
                 >
                   {#if isTesting}
-                    <div class="emittiv-spinner" style="border-color: var(--emittiv-light); border-top-color: transparent;"></div>
+                    <div
+                      class="emittiv-spinner"
+                      style="border-color: var(--emittiv-light); border-top-color: transparent;"
+                    ></div>
                     <span>Reconnecting...</span>
                   {:else}
-                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      style="width: 14px; height: 14px;"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     <span>Reconnect</span>
                   {/if}
                 </button>
                 {#if testMessage}
-                  <span class="text-xs {testMessage.includes('failed') ? 'text-red-400' : 'text-green-400'}">
+                  <span
+                    class="text-xs {testMessage.includes('failed')
+                      ? 'text-red-400'
+                      : 'text-green-400'}"
+                  >
                     {testMessage}
                   </span>
                 {/if}
@@ -343,12 +407,20 @@
 
           <!-- Staff Information Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Staff Information</h3>
-            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Used for RFP generation and signatures</p>
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">
+              Staff Information
+            </h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">
+              Used for RFP generation and signatures
+            </p>
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
-                  <label for="staff_name" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="staff_name"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Full Name
                   </label>
                   <input
@@ -359,9 +431,13 @@
                     class="emittiv-input"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="staff_position" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="staff_position"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Position
                   </label>
                   <input
@@ -373,10 +449,14 @@
                   />
                 </div>
               </div>
-              
+
               <div class="grid grid-cols-2" style="gap: 12px;">
                 <div>
-                  <label for="staff_email" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="staff_email"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Email
                   </label>
                   <input
@@ -387,9 +467,13 @@
                     class="emittiv-input"
                   />
                 </div>
-                
+
                 <div>
-                  <label for="staff_phone" class="block font-medium text-emittiv-lighter" style="font-size: 12px; margin-bottom: 4px;">
+                  <label
+                    for="staff_phone"
+                    class="block font-medium text-emittiv-lighter"
+                    style="font-size: 12px; margin-bottom: 4px;"
+                  >
                     Phone
                   </label>
                   <input
@@ -406,8 +490,12 @@
 
           <!-- Project Folder Path Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Project Folder Path</h3>
-            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Root folder where project files are stored</p>
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">
+              Project Folder Path
+            </h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">
+              Root folder where project files are stored
+            </p>
             <div class="flex" style="gap: 12px;">
               <input
                 id="project_folder_path"
@@ -427,15 +515,25 @@
             <!-- Folder Sync Button -->
             <button
               type="button"
-              on:click={() => showFolderSyncModal = true}
+              on:click={() => (showFolderSyncModal = true)}
               class="emittiv-btn emittiv-btn--md emittiv-btn--dark"
               style="margin-top: 12px; width: 100%; gap: 8px;"
               style:opacity={!settings.project_folder_path ? '0.5' : '1'}
               style:cursor={!settings.project_folder_path ? 'not-allowed' : 'pointer'}
               disabled={!settings.project_folder_path}
             >
-              <svg style="width: 14px; height: 14px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                style="width: 14px; height: 14px; flex-shrink: 0;"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
               Check Folder Consistency
             </button>
@@ -443,13 +541,20 @@
 
           <!-- Developer Options Section -->
           <div>
-            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">Developer Options</h3>
-            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">Advanced settings for debugging and development</p>
+            <h3 class="font-medium text-emittiv-white" style="font-size: 14px; margin-bottom: 6px;">
+              Developer Options
+            </h3>
+            <p class="text-emittiv-light" style="font-size: 11px; margin-bottom: 12px;">
+              Advanced settings for debugging and development
+            </p>
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <!-- Log Level -->
               <div>
-                <label class="text-emittiv-white" style="font-size: 12px; display: block; margin-bottom: 4px;">Log Level</label>
+                <label
+                  class="text-emittiv-white"
+                  style="font-size: 12px; display: block; margin-bottom: 4px;">Log Level</label
+                >
                 <select
                   bind:value={settings.log_level}
                   on:change={handleLogLevelChange}
@@ -462,20 +567,21 @@
                   <option value="trace">Trace</option>
                 </select>
                 <p class="text-emittiv-light" style="font-size: 11px; margin-top: 4px;">
-                  Controls log verbosity. Changes take effect immediately. Stream logs with: curl -N http://localhost:3100/api/logs/stream
+                  Controls log verbosity. Changes take effect immediately. Stream logs with: curl -N
+                  http://localhost:3100/api/logs/stream
                 </p>
               </div>
 
               <!-- Dev Mode checkbox -->
               <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  bind:checked={settings.dev_mode}
-                  class="emittiv-checkbox"
-                />
+                <input type="checkbox" bind:checked={settings.dev_mode} class="emittiv-checkbox" />
                 <div>
-                  <span class="text-emittiv-white" style="font-size: 12px;">Updater Verbose Mode</span>
-                  <p class="text-emittiv-light" style="font-size: 11px;">Enable verbose logging for auto-updater. Logs written to /tmp/e-fees-updater.log</p>
+                  <span class="text-emittiv-white" style="font-size: 12px;"
+                    >Updater Verbose Mode</span
+                  >
+                  <p class="text-emittiv-light" style="font-size: 11px;">
+                    Enable verbose logging for auto-updater. Logs written to /tmp/e-fees-updater.log
+                  </p>
                 </div>
               </label>
             </div>
@@ -483,13 +589,20 @@
 
           <!-- Save Message -->
           {#if saveMessage}
-            <div class="emittiv-alert emittiv-alert--sm {saveMessage.startsWith('Error') ? 'emittiv-alert--error' : 'emittiv-alert--success'}">
+            <div
+              class="emittiv-alert emittiv-alert--sm {saveMessage.startsWith('Error')
+                ? 'emittiv-alert--error'
+                : 'emittiv-alert--success'}"
+            >
               {saveMessage}
             </div>
           {/if}
 
           <!-- Action Buttons -->
-          <div class="flex justify-end border-t border-emittiv-dark" style="gap: 12px; padding-top: 16px; margin-top: 8px;">
+          <div
+            class="flex justify-end border-t border-emittiv-dark"
+            style="gap: 12px; padding-top: 16px; margin-top: 8px;"
+          >
             <button
               type="button"
               on:click={closeModal}
@@ -519,7 +632,4 @@
 {/if}
 
 <!-- Folder Sync Modal (rendered outside main modal for proper z-index) -->
-<FolderSyncModal
-  isOpen={showFolderSyncModal}
-  onclose={() => showFolderSyncModal = false}
-/>
+<FolderSyncModal isOpen={showFolderSyncModal} onclose={() => (showFolderSyncModal = false)} />

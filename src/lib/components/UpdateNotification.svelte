@@ -108,7 +108,10 @@
             }
             // Log progress every 10%
             if (downloadProgress % 10 === 0) {
-              log('debug', `Download progress: ${downloadProgress}% (${downloadedBytes}/${totalBytes} bytes)`);
+              log(
+                'debug',
+                `Download progress: ${downloadProgress}% (${downloadedBytes}/${totalBytes} bytes)`
+              );
             }
             break;
           case 'Finished':
@@ -123,7 +126,6 @@
       // After download completes, prompt for restart
       readyToInstall = true;
       downloading = false;
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       const errorStack = err instanceof Error ? err.stack : undefined;
@@ -193,15 +195,25 @@
     <div
       class="bg-emittiv-darker border border-emittiv-dark rounded w-full max-w-md pointer-events-auto"
       style="padding: 24px;"
-      on:click={(e) => e.stopPropagation()}
+      on:click={e => e.stopPropagation()}
       in:scale={{ duration: 250, start: 0.95, easing: cubicOut }}
       out:scale={{ duration: 200, start: 0.95, easing: cubicOut }}
     >
       <!-- Header -->
       <div class="flex items-center gap-3 mb-4">
         <div class="p-2 bg-emittiv-accent bg-opacity-20 rounded-lg">
-          <svg class="w-6 h-6 text-emittiv-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          <svg
+            class="w-6 h-6 text-emittiv-accent"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
           </svg>
         </div>
         <div>
@@ -216,7 +228,9 @@
 
       <!-- Release notes -->
       {#if updateInfo?.notes}
-        <div class="mb-4 p-3 bg-emittiv-dark rounded text-sm text-emittiv-light max-h-32 overflow-y-auto">
+        <div
+          class="mb-4 p-3 bg-emittiv-dark rounded text-sm text-emittiv-light max-h-32 overflow-y-auto"
+        >
           {updateInfo.notes}
         </div>
       {/if}

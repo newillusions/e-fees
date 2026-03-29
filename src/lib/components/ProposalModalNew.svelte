@@ -8,7 +8,11 @@
   import { feesActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
   import { extractSurrealId, getEntityId } from '$lib/utils/surrealdb';
   import { CommonValidationRules } from '$lib/utils/validation';
-  import { createProjectTypeaheadSearch, createCompanyTypeaheadSearch, createContactTypeaheadSearch } from '$lib/utils/search';
+  import {
+    createProjectTypeaheadSearch,
+    createCompanyTypeaheadSearch,
+    createContactTypeaheadSearch
+  } from '$lib/utils/search';
   import { get } from 'svelte/store';
   import { PROPOSAL_STATUS_OPTIONS } from '$lib/constants';
   import CrudModal from './base/CrudModal.svelte';
@@ -20,13 +24,17 @@
   const searchCompanies = createCompanyTypeaheadSearch(extractSurrealId);
   const searchContacts = createContactTypeaheadSearch(extractSurrealId);
 
-  let { isOpen = $bindable(false), proposal = null, mode = 'create', onclose }: {
+  let {
+    isOpen = $bindable(false),
+    proposal = null,
+    mode = 'create',
+    onclose
+  }: {
     isOpen?: boolean;
     proposal?: Fee | null;
     mode?: 'create' | 'edit';
     onclose?: () => void;
   } = $props();
-
 
   // Form field configuration
   const fields: FormFieldConfig[] = [
@@ -133,7 +141,7 @@
   // Save handler
   async function handleSave(formData: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
-    
+
     if (mode === 'create') {
       const proposalData = {
         ...formData,
@@ -155,7 +163,7 @@
       if (!proposalId) {
         throw new Error('Invalid proposal ID');
       }
-      
+
       const proposalData = {
         ...formData,
         time: {

@@ -10,7 +10,15 @@
     icon: string;
   }
 
-  let { isOpen = false, title = '', canEdit = true, customActions = [], show = true, onedit, onclose }: {
+  let {
+    isOpen = false,
+    title = '',
+    canEdit = true,
+    customActions = [],
+    show = true,
+    onedit,
+    onclose
+  }: {
     isOpen?: boolean;
     title?: string;
     canEdit?: boolean;
@@ -84,11 +92,7 @@
         {/each}
         {#if canEdit}
           <!-- Edit Button -->
-          <button
-            onclick={handleEdit}
-            class="emittiv-icon-btn"
-            aria-label="Edit {title}"
-          >
+          <button onclick={handleEdit} class="emittiv-icon-btn" aria-label="Edit {title}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
@@ -100,11 +104,7 @@
           </button>
         {/if}
         <!-- Close Button -->
-        <button
-          onclick={closePanel}
-          class="emittiv-icon-btn"
-          aria-label="Close detail view"
-        >
+        <button onclick={closePanel} class="emittiv-icon-btn" aria-label="Close detail view">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"

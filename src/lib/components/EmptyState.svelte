@@ -1,5 +1,11 @@
 <script lang="ts">
-  let { icon, title, description, actionText = '', onAction = null }: {
+  let {
+    icon,
+    title,
+    description,
+    actionText = '',
+    onAction = null
+  }: {
     icon: string;
     title: string;
     description: string;

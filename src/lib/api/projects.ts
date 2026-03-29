@@ -6,12 +6,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type {
-  Project,
-  ProjectCreate,
-  ProjectUpdate,
-  PaginatedResponse
-} from '../../types';
+import type { Project, ProjectCreate, ProjectUpdate, PaginatedResponse } from '../../types';
 import { logApiError } from '../services/logger';
 
 /**

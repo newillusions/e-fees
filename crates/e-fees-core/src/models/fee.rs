@@ -400,9 +400,9 @@ pub struct PricingRevision {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::common::TimeStamps;
     use surrealdb::types::RecordId;
     use surrealdb_types::Datetime;
-    use crate::models::common::TimeStamps;
 
     fn make_fee() -> Fee {
         Fee {
@@ -477,8 +477,22 @@ mod tests {
         fee.pricing = Some(json_to_dbvalue(&json));
 
         let new_stages = vec![
-            Stage { id: "sd-01".to_string(), name: "Schematic Design".to_string(), code: "SD".to_string(), percentage: 25.0, order: 1, is_post_contract: false },
-            Stage { id: "bim-01".to_string(), name: "BIM Coordination".to_string(), code: "BC".to_string(), percentage: 0.0, order: 2, is_post_contract: false },
+            Stage {
+                id: "sd-01".to_string(),
+                name: "Schematic Design".to_string(),
+                code: "SD".to_string(),
+                percentage: 25.0,
+                order: 1,
+                is_post_contract: false,
+            },
+            Stage {
+                id: "bim-01".to_string(),
+                name: "BIM Coordination".to_string(),
+                code: "BC".to_string(),
+                percentage: 0.0,
+                order: 2,
+                is_post_contract: false,
+            },
         ];
         fee.set_pricing_stages(new_stages);
 

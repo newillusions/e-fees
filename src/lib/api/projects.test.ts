@@ -141,16 +141,19 @@ describe('Projects API Module', () => {
 
       const result = await createProject(projectData);
 
-      expect(mockInvoke).toHaveBeenCalledWith('create_project', expect.objectContaining({
-        project: expect.objectContaining({
-          name: 'New Project',
-          id: null,
-          time: expect.objectContaining({
-            created_at: expect.any(String),
-            updated_at: expect.any(String)
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'create_project',
+        expect.objectContaining({
+          project: expect.objectContaining({
+            name: 'New Project',
+            id: null,
+            time: expect.objectContaining({
+              created_at: expect.any(String),
+              updated_at: expect.any(String)
+            })
           })
         })
-      }));
+      );
       expect(result).toEqual(mockProject);
     });
 
@@ -168,7 +171,10 @@ describe('Projects API Module', () => {
       const update: ProjectUpdate = { name: 'Updated Name' };
       const result = await updateProject('test', update);
 
-      expect(mockInvoke).toHaveBeenCalledWith('update_project', { id: 'test', projectUpdate: update });
+      expect(mockInvoke).toHaveBeenCalledWith('update_project', {
+        id: 'test',
+        projectUpdate: update
+      });
       expect(result).toEqual(mockProject);
     });
   });
@@ -215,7 +221,9 @@ describe('Projects API Module', () => {
 
       const result = await validateProjectNumber('25-97101');
 
-      expect(mockInvoke).toHaveBeenCalledWith('validate_project_number', { projectNumber: '25-97101' });
+      expect(mockInvoke).toHaveBeenCalledWith('validate_project_number', {
+        projectNumber: '25-97101'
+      });
       expect(result).toBe(true);
     });
   });

@@ -12,7 +12,12 @@
   import { get } from 'svelte/store';
   import { SvelteSet } from 'svelte/reactivity';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import {
+    createFilterFunction,
+    getUniqueFieldValues,
+    hasActiveFilters,
+    clearAllFilters
+  } from '$lib/utils/filters';
   import type { AdvancedFilters } from '$lib/utils/filters';
   import { createContactFilterConfig } from '$lib/utils/search';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -39,7 +44,8 @@
 
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
@@ -78,13 +84,15 @@
 
   // Effect to sync paginated store state to local runes
   $effect(() => {
-    const unsubscribe = paginatedContactsStore.store.subscribe((state: PaginatedStoreState<Contact>) => {
-      contacts = state.items;
-      isLoading = state.pagination.isLoading;
-      hasMore = state.pagination.hasMore;
-      totalRecords = state.pagination.totalRecords;
-      initialized = state.initialized;
-    });
+    const unsubscribe = paginatedContactsStore.store.subscribe(
+      (state: PaginatedStoreState<Contact>) => {
+        contacts = state.items;
+        isLoading = state.pagination.isLoading;
+        hasMore = state.pagination.hasMore;
+        totalRecords = state.pagination.totalRecords;
+        initialized = state.initialized;
+      }
+    );
     return unsubscribe;
   });
 
@@ -114,14 +122,16 @@
 
   // Filter configuration for contacts - uses unified search module
   // This enables searching by company code (e.g., "ptg") and company name
-  const filterConfig = $derived((() => {
-    const baseConfig = createContactFilterConfig({ companyLookup });
-    return {
-      ...baseConfig,
-      dateFieldExtractor: (contact: Contact) => contact.time?.updated_at || '',
-      dateFieldFormat: 'iso' as const,
-    };
-  })());
+  const filterConfig = $derived(
+    (() => {
+      const baseConfig = createContactFilterConfig({ companyLookup });
+      return {
+        ...baseConfig,
+        dateFieldExtractor: (contact: Contact) => contact.time?.updated_at || '',
+        dateFieldFormat: 'iso' as const
+      };
+    })()
+  );
 
   // Build advanced filters from state
   const advanced: AdvancedFilters = $derived({
@@ -129,48 +139,54 @@
   });
 
   // Reactive filtered contacts using optimized filter function
-  const filteredContacts = $derived(createFilterFunction(contacts, searchQuery, filters, filterConfig, advanced));
+  const filteredContacts = $derived(
+    createFilterFunction(contacts, searchQuery, filters, filterConfig, advanced)
+  );
 
   // Get unique values for filters using optimized functions
-  const uniqueCompanies = $derived(getUniqueFieldValues(contacts, (contact) =>
-    companyLookup.getCompanyShortName(contact.company)
-  ).filter(name => name !== 'N/A'));
+  const uniqueCompanies = $derived(
+    getUniqueFieldValues(contacts, contact =>
+      companyLookup.getCompanyShortName(contact.company)
+    ).filter(name => name !== 'N/A')
+  );
 
-  const uniqueCountries = $derived(getUniqueFieldValues(contacts, (contact) =>
-    companyLookup.getCompanyCountry(contact.company)
-  ).filter(country => country !== 'N/A'));
+  const uniqueCountries = $derived(
+    getUniqueFieldValues(contacts, contact =>
+      companyLookup.getCompanyCountry(contact.company)
+    ).filter(country => country !== 'N/A')
+  );
 
-  const uniquePositions = $derived(getUniqueFieldValues(contacts, (contact) => contact.position));
-  
+  const uniquePositions = $derived(getUniqueFieldValues(contacts, contact => contact.position));
+
   function handleAddContact() {
     selectedContact = null;
     modalMode = 'create';
     isContactModalOpen = true;
   }
-  
+
   function handleEditContact(contact: Contact) {
     selectedContact = contact;
     modalMode = 'edit';
     isContactModalOpen = true;
   }
-  
+
   function handleViewContact(contact: Contact) {
     selectedContact = contact;
     isContactDetailOpen = true;
   }
-  
+
   function handleCloseDetail() {
     isContactDetailOpen = false;
     selectedContact = null;
   }
-  
+
   function handleEditFromDetail(contact: Contact | null) {
     // Keep detail view open and show edit modal on top
     selectedContact = contact;
     modalMode = 'edit';
     isContactModalOpen = true;
   }
-  
+
   function handleCloseModal() {
     isContactModalOpen = false;
     // Refresh contacts list after modal closes
@@ -222,12 +238,14 @@
           class="emittiv-search-input"
         />
       </div>
-      <button
-        class="emittiv-search-button"
-        aria-label="Search"
-      >
+      <button class="emittiv-search-button" aria-label="Search">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
       </button>
       <ResultsCounter
@@ -236,19 +254,29 @@
         hasFilters={hasFiltersActive}
         entityName="contacts"
         loadedItems={contacts.length}
-        hasMore={hasMore}
+        {hasMore}
         inline={true}
         onclearfilters={clearFilters}
       />
     </div>
     <button
-      class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'} flex-shrink-0"
-      onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+      class="emittiv-btn emittiv-btn--sm {selectMode
+        ? 'emittiv-btn--primary'
+        : 'emittiv-btn--secondary'} flex-shrink-0"
+      onclick={() => {
+        selectMode = !selectMode;
+        if (!selectMode) clearSelection();
+      }}
       aria-label="Toggle selection mode"
       title="Multi-select"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+        />
       </svg>
     </button>
     <button
@@ -261,14 +289,11 @@
       </svg>
     </button>
   </div>
-  
+
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Company Filter -->
-    <select
-      bind:value={filters.company}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.company} class="emittiv-filter-select">
       <option value="">All Companies</option>
       {#each uniqueCompanies as company}
         <option value={company}>{company}</option>
@@ -276,10 +301,7 @@
     </select>
 
     <!-- Country Filter -->
-    <select
-      bind:value={filters.country}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.country} class="emittiv-filter-select">
       <option value="">All Countries</option>
       {#each uniqueCountries as country}
         <option value={country}>{country}</option>
@@ -287,10 +309,7 @@
     </select>
 
     <!-- Position Filter -->
-    <select
-      bind:value={filters.position}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.position} class="emittiv-filter-select">
       <option value="">All Positions</option>
       {#each uniquePositions as position}
         <option value={position}>{position}</option>
@@ -299,8 +318,7 @@
 
     <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
   </div>
-  
-  
+
   {#if isLoading && contacts.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
@@ -317,17 +335,22 @@
     />
   {:else if filteredContacts.length === 0}
     <div class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No contacts found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button
-        onclick={clearFilters}
-        class="emittiv-link text-sm"
-      >
-        Clear all filters
-      </button>
+      <button onclick={clearFilters} class="emittiv-link text-sm"> Clear all filters </button>
     </div>
   {:else}
     <!-- Bulk Action Bar -->
@@ -339,20 +362,17 @@
     />
 
     <!-- Scrollable container for infinite scroll -->
-    <div
-      bind:this={scrollContainer}
-      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
-    >
+    <div bind:this={scrollContainer} class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1">
       {#each filteredContacts as contact}
         <ContactCard
           {contact}
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(contact.id || ''))}
           companyName={companyLookup.getCompanyShortName(contact.company)}
-          onedit={(contact) => handleEditContact(contact)}
-          onview={(contact) => handleViewContact(contact)}
+          onedit={contact => handleEditContact(contact)}
+          onview={contact => handleViewContact(contact)}
           onselect={() => toggleSelect(extractIdFromRelation(contact.id || ''))}
-          oncompanyclick={(name) => {
+          oncompanyclick={name => {
             filters.company = filters.company === name ? '' : name;
           }}
         />
@@ -378,7 +398,7 @@
 </div>
 
 <!-- Contact Modal -->
-<ContactModal 
+<ContactModal
   bind:isOpen={isContactModalOpen}
   contact={selectedContact}
   mode={modalMode}

@@ -19,7 +19,7 @@ import type {
   ScopeAssembly,
   ScopeDeliverableEntry,
   PaginatedResponse,
-  DeliverableAnalytics,
+  DeliverableAnalytics
 } from '$lib/types/scope';
 
 const SCOPE_API_URL = import.meta.env.VITE_SCOPE_API_URL || 'http://10.0.21.81:3201';
@@ -35,8 +35,8 @@ async function scopeRequest<T>(path: string, options: RequestInit = {}): Promise
     headers: {
       'Content-Type': 'application/json',
       'X-API-Key': SCOPE_API_KEY,
-      ...options.headers,
-    },
+      ...options.headers
+    }
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
@@ -58,10 +58,13 @@ export async function getStages(): Promise<PaginatedResponse<StageConfig>> {
 }
 
 /** Update a stage configuration by canonical name. */
-export async function updateStage(canonicalName: string, data: UpdateStageConfig): Promise<StageConfig> {
+export async function updateStage(
+  canonicalName: string,
+  data: UpdateStageConfig
+): Promise<StageConfig> {
   return scopeRequest<StageConfig>(`/stages/${canonicalName}`, {
     method: 'PUT',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 
@@ -70,7 +73,9 @@ export async function updateStage(canonicalName: string, data: UpdateStageConfig
 // =============================================================================
 
 /** List deliverables with optional query filters (stage, layer, discipline). */
-export async function getDeliverables(params?: Record<string, string>): Promise<PaginatedResponse<Deliverable>> {
+export async function getDeliverables(
+  params?: Record<string, string>
+): Promise<PaginatedResponse<Deliverable>> {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return scopeRequest<PaginatedResponse<Deliverable>>(`/deliverables${qs}`);
 }
@@ -84,7 +89,7 @@ export async function getDeliverable(id: string): Promise<Deliverable> {
 export async function createDeliverable(data: NewDeliverable): Promise<Deliverable> {
   return scopeRequest<Deliverable>('/deliverables', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 
@@ -92,7 +97,7 @@ export async function createDeliverable(data: NewDeliverable): Promise<Deliverab
 export async function updateDeliverable(id: string, data: UpdateDeliverable): Promise<Deliverable> {
   return scopeRequest<Deliverable>(`/deliverables/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 
@@ -114,7 +119,7 @@ export async function getDeliverableAnalytics(): Promise<DeliverableAnalytics[]>
 export async function assembleDeliverables(data: AssembleRequest): Promise<AssembleResponse> {
   return scopeRequest<AssembleResponse>('/scope/assemble', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 
@@ -122,7 +127,7 @@ export async function assembleDeliverables(data: AssembleRequest): Promise<Assem
 export async function saveScopeBuilder(data: SaveScopeBuilderRequest): Promise<ScopeAssembly> {
   return scopeRequest<ScopeAssembly>('/scope/save', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 
@@ -136,11 +141,14 @@ export async function getScopeDeliverables(feeId: string): Promise<ScopeDelivera
 // =============================================================================
 
 /** Generate scope text from clauses (LLM-powered). */
-export async function generateScope(data: GenerateScopeRequest, signal?: AbortSignal): Promise<ScopeAssembly> {
+export async function generateScope(
+  data: GenerateScopeRequest,
+  signal?: AbortSignal
+): Promise<ScopeAssembly> {
   return scopeRequest<ScopeAssembly>('/scope/generate', {
     method: 'POST',
     body: JSON.stringify(data),
-    signal,
+    signal
   });
 }
 
@@ -160,7 +168,7 @@ export async function getScope(feeId: string): Promise<ScopeAssembly | null> {
 export async function updateScope(feeId: string, data: UpdateScopeRequest): Promise<ScopeAssembly> {
   return scopeRequest<ScopeAssembly>(`/scope/${feeId}`, {
     method: 'PUT',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data)
   });
 }
 

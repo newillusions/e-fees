@@ -66,9 +66,11 @@ pub async fn upload_document(
     let mut original_filename: Option<String> = None;
     let mut subfolder_raw: Option<String> = None;
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| {
-        ApiError::bad_request(format!("Multipart parse error: {}", e))
-    })? {
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| ApiError::bad_request(format!("Multipart parse error: {}", e)))?
+    {
         match field.name() {
             Some("file") => {
                 original_filename = field.file_name().map(|s| s.to_string());
@@ -158,9 +160,7 @@ fn sanitize_filename(name: &str) -> Result<String, ApiError> {
     // Reject shell-unsafe characters
     const UNSAFE_CHARS: &[char] = &[';', '`', '$', '|', '&', '<', '>', '\'', '"', '\\'];
     if basename.chars().any(|c| UNSAFE_CHARS.contains(&c)) {
-        return Err(ApiError::bad_request(
-            "Filename contains unsafe characters",
-        ));
+        return Err(ApiError::bad_request("Filename contains unsafe characters"));
     }
 
     Ok(basename)
@@ -196,18 +196,12 @@ mod tests {
 
     #[test]
     fn test_sanitize_filename_strips_path() {
-        assert_eq!(
-            sanitize_filename("path/to/file.pdf").unwrap(),
-            "file.pdf"
-        );
+        assert_eq!(sanitize_filename("path/to/file.pdf").unwrap(), "file.pdf");
     }
 
     #[test]
     fn test_sanitize_filename_strips_backslash_path() {
-        assert_eq!(
-            sanitize_filename("path\\to\\file.pdf").unwrap(),
-            "file.pdf"
-        );
+        assert_eq!(sanitize_filename("path\\to\\file.pdf").unwrap(), "file.pdf");
     }
 
     #[test]
@@ -257,10 +251,7 @@ mod tests {
 
     #[test]
     fn test_validate_subfolder_simple() {
-        assert_eq!(
-            validate_subfolder("Documents").unwrap(),
-            "Documents"
-        );
+        assert_eq!(validate_subfolder("Documents").unwrap(), "Documents");
     }
 
     #[test]

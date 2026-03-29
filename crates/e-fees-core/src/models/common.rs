@@ -38,9 +38,7 @@ pub fn dbvalue_to_json(v: &DbValue) -> serde_json::Value {
             }
         },
         DbValue::String(s) => serde_json::Value::String(s.to_string()),
-        DbValue::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(dbvalue_to_json).collect())
-        }
+        DbValue::Array(arr) => serde_json::Value::Array(arr.iter().map(dbvalue_to_json).collect()),
         DbValue::Object(obj) => {
             let map: serde_json::Map<String, serde_json::Value> = obj
                 .iter()
@@ -70,12 +68,9 @@ pub fn json_to_dbvalue(v: &serde_json::Value) -> DbValue {
             }
         }
         serde_json::Value::String(s) => DbValue::String(s.clone()),
-        serde_json::Value::Array(arr) => DbValue::Array(
-            arr.iter()
-                .map(json_to_dbvalue)
-                .collect::<Vec<_>>()
-                .into(),
-        ),
+        serde_json::Value::Array(arr) => {
+            DbValue::Array(arr.iter().map(json_to_dbvalue).collect::<Vec<_>>().into())
+        }
         serde_json::Value::Object(obj) => {
             let map: std::collections::BTreeMap<String, DbValue> = obj
                 .iter()

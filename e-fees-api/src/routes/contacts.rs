@@ -111,10 +111,12 @@ pub async fn create_contact(
 
     let mut response = state
         .db
-        .query("CREATE contacts SET first_name = $first_name, last_name = $last_name, \
+        .query(
+            "CREATE contacts SET first_name = $first_name, last_name = $last_name, \
                 full_name = $full_name, email = $email, phone = $phone, position = $position, \
                 company = type::record('company', $company), \
-                time = { created_at: time::now(), updated_at: time::now() }")
+                time = { created_at: time::now(), updated_at: time::now() }",
+        )
         .bind(("first_name", body.first_name))
         .bind(("last_name", body.last_name))
         .bind(("full_name", full_name))
@@ -189,7 +191,9 @@ pub async fn delete_contact(
     let deleted: Option<Contact> = state.db.delete(("contacts", key)).await?;
 
     match deleted {
-        Some(_) => Ok(Json(json!({ "deleted": true, "id": format!("contacts:{}", key) }))),
+        Some(_) => Ok(Json(
+            json!({ "deleted": true, "id": format!("contacts:{}", key) }),
+        )),
         None => Err(ApiError::not_found("Contact", &id)),
     }
 }

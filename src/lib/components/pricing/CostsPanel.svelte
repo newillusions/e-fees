@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { ReimbursableCost, Stage } from '../../../types/database';
-  import { generatePricingId, calculateCostWithMarkup, DEFAULT_COST_MARKUP_PERCENT } from '../../../types/database';
+  import {
+    generatePricingId,
+    calculateCostWithMarkup,
+    DEFAULT_COST_MARKUP_PERCENT
+  } from '../../../types/database';
   import { formatNumber, formatPercent } from '$lib/utils/format';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
@@ -37,7 +41,7 @@
       base_cost: 0,
       markup_percent: defaultMarkup,
       cost_to_client: 0,
-      date_incurred: new Date().toISOString().split('T')[0],
+      date_incurred: new Date().toISOString().split('T')[0]
     };
     const updated = [...costs, newCost];
     costs = updated;
@@ -77,7 +81,7 @@
     const updated = costs.map(cost => ({
       ...cost,
       markup_percent: defaultMarkup,
-      cost_to_client: calculateCostWithMarkup(cost.base_cost, defaultMarkup),
+      cost_to_client: calculateCostWithMarkup(cost.base_cost, defaultMarkup)
     }));
     costs = updated;
     onUpdate(updated);
@@ -129,7 +133,7 @@
               type="text"
               class="emittiv-table-input emittiv-table-input--left"
               value={cost.description}
-              onchange={(e) => updateCost(cost.id, 'description', e.currentTarget.value)}
+              onchange={e => updateCost(cost.id, 'description', e.currentTarget.value)}
             />
           {:else}
             <span class="text-emittiv-white">{cost.description}</span>
@@ -142,7 +146,7 @@
             <select
               class="emittiv-select"
               value={cost.stage_id}
-              onchange={(e) => updateCost(cost.id, 'stage_id', e.currentTarget.value)}
+              onchange={e => updateCost(cost.id, 'stage_id', e.currentTarget.value)}
             >
               {#each allStages as stage}
                 <option value={stage.id}>{stage.name}</option>
@@ -160,7 +164,11 @@
               type="text"
               inputmode="numeric"
               class="emittiv-table-input emittiv-table-input--lg"
-              use:formattedNumber={{ value: cost.base_cost, onChange: (v) => updateCost(cost.id, 'base_cost', v), min: 0 }}
+              use:formattedNumber={{
+                value: cost.base_cost,
+                onChange: v => updateCost(cost.id, 'base_cost', v),
+                min: 0
+              }}
             />
           {:else}
             <span class="text-emittiv-white">{formatNumber(cost.base_cost)}</span>
@@ -177,7 +185,8 @@
               step="5"
               class="emittiv-table-input emittiv-table-input--lg"
               value={cost.markup_percent}
-              onchange={(e) => updateCost(cost.id, 'markup_percent', parseFloat(e.currentTarget.value) || 0)}
+              onchange={e =>
+                updateCost(cost.id, 'markup_percent', parseFloat(e.currentTarget.value) || 0)}
             />
             <span class="text-emittiv-light">%</span>
           {:else}
@@ -193,7 +202,13 @@
         <!-- Remove -->
         {#if !readonly}
           <div class="emittiv-sortable-col--action">
-            <IconButton icon="trash" variant="danger" size="sm" title="Remove" onclick={() => removeCost(cost.id)} />
+            <IconButton
+              icon="trash"
+              variant="danger"
+              size="sm"
+              title="Remove"
+              onclick={() => removeCost(cost.id)}
+            />
           </div>
         {/if}
       </div>
@@ -226,7 +241,7 @@
             step="5"
             class="emittiv-table-input emittiv-table-input--md"
             value={defaultMarkup}
-            onchange={(e) => defaultMarkup = parseFloat(e.currentTarget.value) || 0}
+            onchange={e => (defaultMarkup = parseFloat(e.currentTarget.value) || 0)}
           />
           <span class="emittiv-field-suffix__unit">%</span>
         </div>

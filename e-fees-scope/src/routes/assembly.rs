@@ -9,9 +9,7 @@ use serde_json::{json, Value};
 use e_fees_core::models::{dbvalue_to_json, record_key_string};
 
 use crate::error::ApiError;
-use crate::models::{
-    AssembleRequest, Deliverable, SaveScopeBuilderRequest, StageConfig,
-};
+use crate::models::{AssembleRequest, Deliverable, SaveScopeBuilderRequest, StageConfig};
 use crate::AppState;
 
 /// Helper to strip "fee:" prefix from a fee ID string.
@@ -87,9 +85,7 @@ pub async fn assemble_deliverables(
             // Empty list → all active stages
             let mut res = state
                 .db
-                .query(
-                    "SELECT * FROM stage_config WHERE status = 'active' ORDER BY sort_order ASC",
-                )
+                .query("SELECT * FROM stage_config WHERE status = 'active' ORDER BY sort_order ASC")
                 .await?;
             res.take(0)?
         } else {

@@ -4,7 +4,7 @@
 
   let {
     section,
-    onupdate,
+    onupdate
   }: {
     section: ScopeSection;
     onupdate?: (clauseId: string, field: 'title' | 'body', value: string) => void;
@@ -34,7 +34,10 @@
     tabindex="0"
     title="Click to expand/collapse"
   >
-    <span class="emittiv-scope-section__chevron" class:emittiv-scope-section__chevron--collapsed={!isExpanded}>
+    <span
+      class="emittiv-scope-section__chevron"
+      class:emittiv-scope-section__chevron--collapsed={!isExpanded}
+    >
       ▼
     </span>
     <span class="emittiv-scope-section__number">{section.number}</span>

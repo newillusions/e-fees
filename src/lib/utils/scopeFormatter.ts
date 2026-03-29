@@ -15,13 +15,11 @@ import type { ScopeSection } from '$lib/types/scope';
  */
 export function formatSectionsAsText(sections: ScopeSection[]): string {
   return sections
-    .map((section) => {
+    .map(section => {
       const header = `${section.number} ${section.title.toUpperCase()}`;
       if (section.clauses.length === 0) return header;
 
-      const clauseLines = section.clauses
-        .map((c) => `${c.number} ${c.title} — ${c.body}`)
-        .join('\n');
+      const clauseLines = section.clauses.map(c => `${c.number} ${c.title} — ${c.body}`).join('\n');
 
       return `${header}\n\n${clauseLines}`;
     })

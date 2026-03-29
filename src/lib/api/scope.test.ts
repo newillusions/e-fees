@@ -14,7 +14,7 @@ describe('scope API', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({ message: 'Not found' }),
+        json: () => Promise.resolve({ message: 'Not found' })
       });
 
       const { getScope } = await import('./scope');
@@ -30,13 +30,13 @@ describe('scope API', () => {
         generated_text: '1.0 ADMIN',
         llm_polished: true,
         created_at: '2026-01-01',
-        updated_at: '2026-01-01',
+        updated_at: '2026-01-01'
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: mockScope }),
+        json: () => Promise.resolve({ data: mockScope })
       });
 
       const { getScope } = await import('./scope');
@@ -49,7 +49,7 @@ describe('scope API', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        json: () => Promise.resolve({ message: 'DB error' }),
+        json: () => Promise.resolve({ message: 'DB error' })
       });
 
       const { getScope } = await import('./scope');
@@ -63,20 +63,20 @@ describe('scope API', () => {
         clauses: [{ number: '1.0', title: 'Admin', clauses: [] }],
         generated_text: '1.0 ADMIN',
         llm_polished: false,
-        stages_snapshot: ['Schematic Design'],
+        stages_snapshot: ['Schematic Design']
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: mockResult }),
+        json: () => Promise.resolve({ data: mockResult })
       });
 
       const { generateScope } = await import('./scope');
       const result = await generateScope({
         fee_id: '25_97101_1',
         polish: false,
-        stages: [{ name: 'Schematic Design', code: 'SD', is_post_contract: false, order: 1 }],
+        stages: [{ name: 'Schematic Design', code: 'SD', is_post_contract: false, order: 1 }]
       });
 
       expect(result.stages_snapshot).toEqual(['Schematic Design']);
@@ -92,13 +92,13 @@ describe('scope API', () => {
         generated_text: 'During Schematic Design...',
         llm_polished: true,
         stages_snapshot: ['Schematic Design', 'Design Development'],
-        current_revision: 1,
+        current_revision: 1
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: mockResult }),
+        json: () => Promise.resolve({ data: mockResult })
       });
 
       const { generateScope } = await import('./scope');
@@ -107,8 +107,8 @@ describe('scope API', () => {
         polish: true,
         stages: [
           { name: 'Schematic Design', code: 'SD', is_post_contract: false, order: 1 },
-          { name: 'Design Development', code: 'DD', is_post_contract: false, order: 2 },
-        ],
+          { name: 'Design Development', code: 'DD', is_post_contract: false, order: 2 }
+        ]
       });
 
       expect(result.stages_snapshot).toEqual(['Schematic Design', 'Design Development']);

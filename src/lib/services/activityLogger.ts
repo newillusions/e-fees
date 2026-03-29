@@ -45,13 +45,19 @@ export function getEntityDisplayName(entityType: EntityType, entity: LoggableEnt
       return entity.name || entity.project_number || 'Unknown Project';
     case 'fee':
       // Fee.number is a string
-      return entity.name || (typeof entity.number === 'string' ? entity.number : undefined) || 'Unknown Fee';
+      return (
+        entity.name ||
+        (typeof entity.number === 'string' ? entity.number : undefined) ||
+        'Unknown Fee'
+      );
     case 'company':
       return entity.name || 'Unknown Company';
     case 'contact':
-      return entity.full_name ||
-             `${entity.first_name || ''} ${entity.last_name || ''}`.trim() ||
-             'Unknown Contact';
+      return (
+        entity.full_name ||
+        `${entity.first_name || ''} ${entity.last_name || ''}`.trim() ||
+        'Unknown Contact'
+      );
     default:
       return 'Unknown Entity';
   }
@@ -95,7 +101,11 @@ export async function logActivity(log: ActivityLogCreate): Promise<void> {
     await createActivityLog(log);
   } catch (error) {
     // Log the error but don't throw - activity logging should never block operations
-    activityServiceLogger.warn('Failed to log activity', { action: log.action, entityType: log.entity_type, error });
+    activityServiceLogger.warn('Failed to log activity', {
+      action: log.action,
+      entityType: log.entity_type,
+      error
+    });
   }
 }
 
@@ -130,9 +140,10 @@ export async function logUpdate(
   metadata?: Record<string, unknown>
 ): Promise<void> {
   const entityName = getEntityDisplayName(entityType, entity);
-  const description = changedFields && changedFields.length > 0
-    ? `Updated ${entityType}: ${entityName} (${changedFields.join(', ')})`
-    : generateDescription('update', entityType, entityName);
+  const description =
+    changedFields && changedFields.length > 0
+      ? `Updated ${entityType}: ${entityName} (${changedFields.join(', ')})`
+      : generateDescription('update', entityType, entityName);
 
   await logActivity({
     action: 'update',
@@ -229,7 +240,11 @@ function createEntityLoggerWithStatus(entityType: EntityType): EntityLoggerWithS
   const baseLogger = createEntityLogger(entityType);
   return {
     ...baseLogger,
-    async onStatusChange(entity: LoggableEntity, oldStatus: string, newStatus: string): Promise<void> {
+    async onStatusChange(
+      entity: LoggableEntity,
+      oldStatus: string,
+      newStatus: string
+    ): Promise<void> {
       const id = extractSurrealId(entity.id as UnknownSurrealThing) || 'unknown';
       const name = getEntityDisplayName(entityType, entity);
       await logStatusChange(entityType, id, name, oldStatus, newStatus);

@@ -20,13 +20,15 @@
   );
 
   // Convert the amount
-  const convertedAmount = $derived(
-    config ? convertToClientCurrency(amount, config) : undefined
-  );
+  const convertedAmount = $derived(config ? convertToClientCurrency(amount, config) : undefined);
 
   // Determine what to display based on level and quoting direction
-  const showConverted = $derived(level === 'summary' && isQuotingInClient && convertedAmount !== undefined);
-  const displayAmount = $derived(showConverted && convertedAmount !== undefined ? convertedAmount : amount);
+  const showConverted = $derived(
+    level === 'summary' && isQuotingInClient && convertedAmount !== undefined
+  );
+  const displayAmount = $derived(
+    showConverted && convertedAmount !== undefined ? convertedAmount : amount
+  );
   const displayCurrency = $derived(showConverted && clientCurrency ? clientCurrency : currency);
 
   // Tooltip: show the "other" currency
@@ -34,7 +36,8 @@
     !!clientCurrency && clientCurrency !== currency && convertedAmount !== undefined
   );
   const tooltipText = $derived.by(() => {
-    if (!hasTooltip || !config?.exchange_rate || !clientCurrency || convertedAmount === undefined) return '';
+    if (!hasTooltip || !config?.exchange_rate || !clientCurrency || convertedAmount === undefined)
+      return '';
     if (showConverted) {
       // Showing client currency — tooltip shows base
       return `${formatCurrency(amount, currency)} @ ${config.exchange_rate} ${clientCurrency}/${currency}`;

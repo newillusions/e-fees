@@ -7,7 +7,9 @@
   import CurrencyAmount from '$lib/components/CurrencyAmount.svelte';
   import type { UnknownSurrealThing, Fee } from '../../../types';
 
-  let { isLoading = false }: {
+  let {
+    isLoading = false
+  }: {
     isLoading?: boolean;
   } = $props();
 
@@ -30,15 +32,19 @@
   }
 
   // Filter for pending proposals (Sent + Draft - not closed)
-  const pendingProposals = $derived($feesStore
-    .filter(fee => fee.status === 'Sent' || fee.status === 'Draft' || fee.status === 'Negotiation')
-    .filter(fee => fee.time) // Filter out fees without time info
-    .sort(
-      (a, b) =>
-        new Date(b.time!.updated_at || b.time!.created_at).getTime() -
-        new Date(a.time!.updated_at || a.time!.created_at).getTime()
-    )
-    .slice(0, 8)); // Show top 8 pending
+  const pendingProposals = $derived(
+    $feesStore
+      .filter(
+        fee => fee.status === 'Sent' || fee.status === 'Draft' || fee.status === 'Negotiation'
+      )
+      .filter(fee => fee.time) // Filter out fees without time info
+      .sort(
+        (a, b) =>
+          new Date(b.time!.updated_at || b.time!.created_at).getTime() -
+          new Date(a.time!.updated_at || a.time!.created_at).getTime()
+      )
+      .slice(0, 8)
+  ); // Show top 8 pending
 
   // Calculate total pending count
   const totalPendingCount = $derived(pendingProposals.length);
@@ -98,10 +104,7 @@
 
             {#if fee.pricing?.grand_total}
               <div class="proposal-amount">
-                <CurrencyAmount
-                  amount={fee.pricing.grand_total}
-                  config={fee.pricing.config}
-                />
+                <CurrencyAmount amount={fee.pricing.grand_total} config={fee.pricing.config} />
               </div>
             {/if}
 

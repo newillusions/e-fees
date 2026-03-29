@@ -377,5 +377,5 @@ export const UI_CHECK_ORDER: UiCheckName[] = [
   'keyboard_nav_2',
   'keyboard_nav_3',
   'keyboard_nav_4',
-  'keyboard_nav_5',
+  'keyboard_nav_5'
 ];

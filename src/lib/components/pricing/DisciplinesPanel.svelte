@@ -15,9 +15,7 @@
   let { disciplines = $bindable([]), onUpdate, readonly = false }: Props = $props();
 
   // Calculate total percentage
-  const totalPercentage = $derived(
-    disciplines.reduce((sum, d) => sum + d.percentage, 0)
-  );
+  const totalPercentage = $derived(disciplines.reduce((sum, d) => sum + d.percentage, 0));
 
   // Validation state — round to 2 decimals before comparison to handle floating point
   const isValid = $derived(Math.abs(Math.round(totalPercentage * 100) - 10000) === 0);
@@ -27,7 +25,13 @@
 
   /** Generate a short code from a discipline name (first letter of each word, uppercase). */
   function generateCode(name: string): string {
-    return name.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 4) || 'ND';
+    return (
+      name
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase())
+        .join('')
+        .slice(0, 4) || 'ND'
+    );
   }
 
   function addDiscipline() {
@@ -36,20 +40,22 @@
       name: 'New Discipline',
       code: generateCode('New Discipline'),
       percentage: 0,
-      order: disciplines.length + 1,
+      order: disciplines.length + 1
     };
     const updated = [...disciplines, newDiscipline];
     onUpdate(updated);
   }
 
   function removeDiscipline(id: string) {
-    const updated = disciplines
-      .filter(d => d.id !== id)
-      .map((d, i) => ({ ...d, order: i + 1 }));
+    const updated = disciplines.filter(d => d.id !== id).map((d, i) => ({ ...d, order: i + 1 }));
     onUpdate(updated);
   }
 
-  function updateDiscipline(id: string, field: 'name' | 'percentage' | 'code', value: string | number) {
+  function updateDiscipline(
+    id: string,
+    field: 'name' | 'percentage' | 'code',
+    value: string | number
+  ) {
     const updated = disciplines.map(d => {
       if (d.id !== id) return d;
       const patch: Partial<Discipline> = { [field]: value };
@@ -65,7 +71,7 @@
   function loadDefaults() {
     const defaults: Discipline[] = DEFAULT_DISCIPLINES.map((d, i) => ({
       ...d,
-      id: generatePricingId('disc'),
+      id: generatePricingId('disc')
     }));
     onUpdate(defaults);
   }
@@ -75,9 +81,10 @@
     const evenPercent = Math.floor((100 / disciplines.length) * 100) / 100;
     const updated = disciplines.map((d, i) => ({
       ...d,
-      percentage: i === disciplines.length - 1
-        ? Math.round((100 - evenPercent * (disciplines.length - 1)) * 100) / 100
-        : evenPercent,
+      percentage:
+        i === disciplines.length - 1
+          ? Math.round((100 - evenPercent * (disciplines.length - 1)) * 100) / 100
+          : evenPercent
     }));
     onUpdate(updated);
   }
@@ -93,7 +100,11 @@
     {#if !readonly}
       <div class="flex items-center gap-2">
         {#if disciplines.length === 0}
-          <button type="button" class="emittiv-text-btn emittiv-text-btn--primary" onclick={loadDefaults}>
+          <button
+            type="button"
+            class="emittiv-text-btn emittiv-text-btn--primary"
+            onclick={loadDefaults}
+          >
             Load Defaults
           </button>
         {:else}
@@ -133,19 +144,19 @@
           items: sorted,
           onReorder: handleReorder,
           dragClass: 'emittiv-sortable-dragging',
-          overClass: 'emittiv-drag-over',
+          overClass: 'emittiv-drag-over'
         }}
       >
         {#each sorted as discipline (discipline.id)}
           <div class="emittiv-sortable-row" data-sortable-id={discipline.id}>
             <div class="emittiv-sortable-col--handle">
               <svg class="emittiv-drag-handle" fill="currentColor" viewBox="0 0 16 16">
-                <circle cx="5" cy="3" r="1.2"/>
-                <circle cx="11" cy="3" r="1.2"/>
-                <circle cx="5" cy="8" r="1.2"/>
-                <circle cx="11" cy="8" r="1.2"/>
-                <circle cx="5" cy="13" r="1.2"/>
-                <circle cx="11" cy="13" r="1.2"/>
+                <circle cx="5" cy="3" r="1.2" />
+                <circle cx="11" cy="3" r="1.2" />
+                <circle cx="5" cy="8" r="1.2" />
+                <circle cx="11" cy="8" r="1.2" />
+                <circle cx="5" cy="13" r="1.2" />
+                <circle cx="11" cy="13" r="1.2" />
               </svg>
             </div>
             <div class="emittiv-sortable-col--grow">
@@ -153,7 +164,7 @@
                 type="text"
                 class="emittiv-table-input emittiv-table-input--left"
                 value={discipline.name}
-                onchange={(e) => updateDiscipline(discipline.id, 'name', e.currentTarget.value)}
+                onchange={e => updateDiscipline(discipline.id, 'name', e.currentTarget.value)}
               />
             </div>
             <div class="emittiv-sortable-col--code">
@@ -162,7 +173,8 @@
                 maxlength="4"
                 class="emittiv-table-input emittiv-table-input--center"
                 value={discipline.code}
-                onchange={(e) => updateDiscipline(discipline.id, 'code', e.currentTarget.value.toUpperCase())}
+                onchange={e =>
+                  updateDiscipline(discipline.id, 'code', e.currentTarget.value.toUpperCase())}
               />
             </div>
             <div class="emittiv-sortable-col--pct">
@@ -173,7 +185,12 @@
                 step="0.5"
                 class="emittiv-table-input emittiv-table-input--lg"
                 value={discipline.percentage}
-                onchange={(e) => updateDiscipline(discipline.id, 'percentage', parseFloat(e.currentTarget.value) || 0)}
+                onchange={e =>
+                  updateDiscipline(
+                    discipline.id,
+                    'percentage',
+                    parseFloat(e.currentTarget.value) || 0
+                  )}
               />
               <span class="text-emittiv-light">%</span>
             </div>
@@ -219,8 +236,18 @@
           {formatPercent(totalPercentage, 1)}
         </span>
         {#if isValid}
-          <svg class="emittiv-icon-check total-valid" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          <svg
+            class="emittiv-icon-check total-valid"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         {:else}
           <span class="total-invalid text-xxs">(must equal 100%)</span>

@@ -50,19 +50,16 @@ async fn fetch_fee_with_links(
     };
 
     let project: Option<Project> = state.db.select(("projects", &*project_key)).await?;
-    let project = project.ok_or_else(|| {
-        ApiError::not_found("Project", &format!("projects:{}", project_key))
-    })?;
+    let project = project
+        .ok_or_else(|| ApiError::not_found("Project", &format!("projects:{}", project_key)))?;
 
     let company: Option<Company> = state.db.select(("company", &*company_key)).await?;
-    let company = company.ok_or_else(|| {
-        ApiError::not_found("Company", &format!("company:{}", company_key))
-    })?;
+    let company = company
+        .ok_or_else(|| ApiError::not_found("Company", &format!("company:{}", company_key)))?;
 
     let contact: Option<Contact> = state.db.select(("contacts", &*contact_key)).await?;
-    let contact = contact.ok_or_else(|| {
-        ApiError::not_found("Contact", &format!("contacts:{}", contact_key))
-    })?;
+    let contact = contact
+        .ok_or_else(|| ApiError::not_found("Contact", &format!("contacts:{}", contact_key)))?;
 
     Ok((fee, project, company, contact))
 }
@@ -112,7 +109,10 @@ pub async fn export_fee_json(
     // Build filesystem paths
     let number = clean_number_for_path(&project.number.id);
     let name = &project.name;
-    let proposal_dir = format!("{}/01 RFPs/{} {}/02 Proposal", folder_config.nc_base_path, number, name);
+    let proposal_dir = format!(
+        "{}/01 RFPs/{} {}/02 Proposal",
+        folder_config.nc_base_path, number, name
+    );
     let var_path = format!("{}/{}-var.json", proposal_dir, number);
     let template_path = format!("{}/{}-var Default Values.json", proposal_dir, number);
 
@@ -141,7 +141,10 @@ pub async fn export_fee_json(
         let archive_path = format!("{}/{}-var-{}.json", archive_dir, number, timestamp);
         ssh.rename(&var_path, &archive_path).await?;
         archived_previous = true;
-        info!("Archived previous var.json for {} to {}", number, archive_path);
+        info!(
+            "Archived previous var.json for {} to {}",
+            number, archive_path
+        );
     }
 
     // Serialize and write the new JSON
@@ -160,13 +163,19 @@ pub async fn export_fee_json(
         .unwrap_or(0);
 
     // Best-effort NC rescan — don't fail the request on rescan errors
-    let rescan_subpath = format!("/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/{} {}/02 Proposal", number, name);
+    let rescan_subpath = format!(
+        "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/{} {}/02 Proposal",
+        number, name
+    );
     if let Err(e) = ssh.nc_rescan(&rescan_subpath).await {
         warn!("NC rescan failed (non-fatal): {}", e.message);
     }
 
     let fee_id_str = format!("fee:{}", key);
-    let relative_path = format!("01 RFPs/{} {}/02 Proposal/{}-var.json", number, name, number);
+    let relative_path = format!(
+        "01 RFPs/{} {}/02 Proposal/{}-var.json",
+        number, name, number
+    );
 
     info!(
         "Exported fee JSON for {} to {} ({} fields populated)",

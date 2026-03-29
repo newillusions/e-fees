@@ -135,9 +135,9 @@ pub async fn get_next_number(
     State(state): State<Arc<AppState>>,
     params: Query<NextNumberParams>,
 ) -> Result<Json<Value>, ApiError> {
-    let year = params.year.unwrap_or_else(|| {
-        (chrono::Utc::now().year() % 100) as u8
-    });
+    let year = params
+        .year
+        .unwrap_or_else(|| (chrono::Utc::now().year() % 100) as u8);
 
     let (_canonical_name, country_code) = resolve_country(&state.db, &params.country).await?;
     let seq = next_sequence(&state.db, country_code, year).await?;
@@ -208,12 +208,15 @@ pub async fn create_project(
         .bind(("city", body.city))
         .bind(("country", canonical_country))
         .bind(("folder", body.folder))
-        .bind(("number", json!({
-            "year": number.year,
-            "country": number.country,
-            "seq": number.seq,
-            "id": number.id,
-        })))
+        .bind((
+            "number",
+            json!({
+                "year": number.year,
+                "country": number.country,
+                "seq": number.seq,
+                "id": number.id,
+            }),
+        ))
         .await?;
     let created: Option<Project> = response.take(0)?;
 
@@ -287,10 +290,9 @@ pub(crate) async fn resolve_country(
                 .ok_or_else(|| ApiError::bad_request("resolve_country returned invalid data"))?
                 .to_string();
 
-            let dial_code_raw = v
-                .get("dial_code")
-                .and_then(|d| d.as_u64())
-                .ok_or_else(|| ApiError::bad_request("resolve_country returned invalid dial_code"))?;
+            let dial_code_raw = v.get("dial_code").and_then(|d| d.as_u64()).ok_or_else(|| {
+                ApiError::bad_request("resolve_country returned invalid dial_code")
+            })?;
 
             let dial_code = u16::try_from(dial_code_raw).map_err(|_| {
                 ApiError::bad_request(format!(
@@ -320,7 +322,11 @@ async fn next_sequence(db: &Surreal<Client>, country_code: u16, year: u8) -> Res
 
     let next = results
         .first()
-        .and_then(|r| r.get("number").and_then(|n| n.get("seq")).and_then(|s| s.as_u64()))
+        .and_then(|r| {
+            r.get("number")
+                .and_then(|n| n.get("seq"))
+                .and_then(|s| s.as_u64())
+        })
         .map(|seq| seq + 1)
         .unwrap_or(1);
 
@@ -394,7 +400,9 @@ pub async fn delete_project(
     let deleted: Option<Project> = state.db.delete(("projects", &*id)).await?;
 
     match deleted {
-        Some(_) => Ok(Json(json!({ "deleted": true, "id": format!("projects:{}", id) }))),
+        Some(_) => Ok(Json(
+            json!({ "deleted": true, "id": format!("projects:{}", id) }),
+        )),
         None => Err(ApiError::not_found("Project", &id)),
     }
 }

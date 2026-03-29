@@ -1,18 +1,13 @@
 /**
  * Migrated Stores Implementation
- * 
+ *
  * This module contains the new store implementations using the enhanced CRUD utilities.
  * It provides identical API contracts to the original stores while reducing code
  * duplication and adding enhanced features like optimistic updates and professional logging.
  */
 
 import { writable, derived, get } from 'svelte/store';
-import type {
-  Project,
-  Company,
-  Contact,
-  Fee,
-} from '../types';
+import type { Project, Company, Contact, Fee } from '../types';
 import { createEntityStore } from './utils/crud';
 import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
 import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
@@ -50,10 +45,7 @@ type EntityWithId = { id?: UnknownSurrealThing };
  * Factory function to create entity stores with auto-sync to external stores.
  * Eliminates code duplication across projects, companies, contacts, and fees.
  */
-function createSyncedEntityStore<T extends EntityWithId>(
-  api: CrudApi<T>,
-  entityName: string
-) {
+function createSyncedEntityStore<T extends EntityWithId>(api: CrudApi<T>, entityName: string) {
   const { store: internalStore, actions: internalActions } = createEntityStore<T>(api, entityName, {
     enableOptimistic: true,
     enableLogging: true
@@ -112,29 +104,27 @@ export const statisticsStore = derived(
   ([projects, fees, companies, contacts]) => ({
     totalProjects: projects.length,
     // Count fees that are current/in-play (Draft, Sent, Negotiation)
-    activeFees: fees.filter(f => (ACTIVE_PROPOSAL_STATUSES as readonly string[]).includes(f.status)).length,
+    activeFees: fees.filter(f => (ACTIVE_PROPOSAL_STATUSES as readonly string[]).includes(f.status))
+      .length,
     totalCompanies: companies.length,
     totalContacts: contacts.length,
-    totalFees: fees.length,
+    totalFees: fees.length
   })
 );
 
 // Active projects (currently in progress)
-export const activeProjectsStore = derived(
-  projectsStore,
-  $projects => $projects.filter(project => (ACTIVE_PROJECT_STATUSES as readonly string[]).includes(project.status))
+export const activeProjectsStore = derived(projectsStore, $projects =>
+  $projects.filter(project =>
+    (ACTIVE_PROJECT_STATUSES as readonly string[]).includes(project.status)
+  )
 );
 
 // Recent fees (last 30 days)
-export const recentFeesStore = derived(
-  feesStore,
-  $fees => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return $fees.filter(fee => fee.time && new Date(fee.time.created_at) > thirtyDaysAgo);
-  }
-);
-
+export const recentFeesStore = derived(feesStore, $fees => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  return $fees.filter(fee => fee.time && new Date(fee.time.created_at) > thirtyDaysAgo);
+});
 
 // Companies with contact counts
 // Optimized: O(n+m) instead of O(n*m) by pre-computing contact counts
@@ -160,8 +150,7 @@ export const companiesWithContactsStore = derived(
 // Loading state for any data operation
 export const isLoadingStore = derived(
   [projectsLoading, companiesLoading, contactsLoading, feesLoading],
-  ([projects, companies, contacts, fees]) =>
-    projects || companies || contacts || fees
+  ([projects, companies, contacts, fees]) => projects || companies || contacts || fees
 );
 
 // Global error state
@@ -273,7 +262,8 @@ export const contactsActions = {
 
   async delete(id: string) {
     const contact = contactsActionsInternal.getById(id);
-    const contactName = contact?.full_name ||
+    const contactName =
+      contact?.full_name ||
       `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim() ||
       'Unknown Contact';
     const result = await contactsActionsInternal.delete(id);
@@ -356,8 +346,6 @@ export const feesActions = {
   }
 };
 
-
-
 // ============================================================================
 // GLOBAL ACTIONS
 // ============================================================================
@@ -436,7 +424,7 @@ export const getCurrentData = (): CurrentDataSnapshot => ({
   contacts: get(contactsStore),
   fees: get(feesStore),
   connection: get(connectionStore),
-  statistics: get(statisticsStore),
+  statistics: get(statisticsStore)
 });
 
 // Check if data is loaded
@@ -470,7 +458,7 @@ export {
   DEFAULT_PAGE_SIZE,
   BACKGROUND_LOAD_DELAY,
   type PaginatedStoreState,
-  type PaginatedStoreActions,
+  type PaginatedStoreActions
 } from './stores/pagination';
 
 // Export pagination adapters
@@ -479,7 +467,7 @@ export {
   companiesPaginationApi,
   contactsPaginationApi,
   feesPaginationApi,
-  type PaginationApi,
+  type PaginationApi
 } from './stores/adapters';
 
 // Import for creating paginated stores
@@ -488,7 +476,7 @@ import {
   projectsPaginationApi as _projectsPagApi,
   companiesPaginationApi as _companiesPagApi,
   contactsPaginationApi as _contactsPagApi,
-  feesPaginationApi as _feesPagApi,
+  feesPaginationApi as _feesPagApi
 } from './stores/adapters';
 
 // ============================================================================
@@ -499,29 +487,29 @@ import {
  * Paginated projects store with lazy loading support.
  * Use this instead of projectsStore when pagination is needed.
  */
-export const paginatedProjectsStore = createPaginatedStore<Project>(
-  (page, pageSize) => _projectsPagApi.getPage(page, pageSize)
+export const paginatedProjectsStore = createPaginatedStore<Project>((page, pageSize) =>
+  _projectsPagApi.getPage(page, pageSize)
 );
 
 /**
  * Paginated companies store with lazy loading support.
  */
-export const paginatedCompaniesStore = createPaginatedStore<Company>(
-  (page, pageSize) => _companiesPagApi.getPage(page, pageSize)
+export const paginatedCompaniesStore = createPaginatedStore<Company>((page, pageSize) =>
+  _companiesPagApi.getPage(page, pageSize)
 );
 
 /**
  * Paginated contacts store with lazy loading support.
  */
-export const paginatedContactsStore = createPaginatedStore<Contact>(
-  (page, pageSize) => _contactsPagApi.getPage(page, pageSize)
+export const paginatedContactsStore = createPaginatedStore<Contact>((page, pageSize) =>
+  _contactsPagApi.getPage(page, pageSize)
 );
 
 /**
  * Paginated fees store with lazy loading support.
  */
-export const paginatedFeesStore = createPaginatedStore<Fee>(
-  (page, pageSize) => _feesPagApi.getPage(page, pageSize)
+export const paginatedFeesStore = createPaginatedStore<Fee>((page, pageSize) =>
+  _feesPagApi.getPage(page, pageSize)
 );
 
 // ============================================================================
@@ -531,21 +519,20 @@ export const paginatedFeesStore = createPaginatedStore<Fee>(
 /**
  * On-demand company loader for fetching companies not in paginated store.
  */
-export const companyOnDemandLoader = createOnDemandLoader<Company>(
-  (id) => _companiesPagApi.getById!(id)
+export const companyOnDemandLoader = createOnDemandLoader<Company>(id =>
+  _companiesPagApi.getById!(id)
 );
 
 /**
  * On-demand contact loader for fetching contacts not in paginated store.
  */
-export const contactOnDemandLoader = createOnDemandLoader<Contact>(
-  (id) => _contactsPagApi.getById!(id)
+export const contactOnDemandLoader = createOnDemandLoader<Contact>(id =>
+  _contactsPagApi.getById!(id)
 );
 
 /**
  * On-demand project loader for fetching projects not in paginated store.
  */
-export const projectOnDemandLoader = createOnDemandLoader<Project>(
-  (id) => _projectsPagApi.getById!(id)
+export const projectOnDemandLoader = createOnDemandLoader<Project>(id =>
+  _projectsPagApi.getById!(id)
 );
-

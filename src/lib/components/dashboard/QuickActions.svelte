@@ -4,7 +4,8 @@
   import { openFolderInExplorer } from '$lib/api/filesystem';
   import { logApiError } from '$lib/services/logger';
 
-  let { onopenModal }: { onopenModal?: (data: { type: 'project' | 'fee' | 'company' }) => void } = $props();
+  let { onopenModal }: { onopenModal?: (data: { type: 'project' | 'fee' | 'company' }) => void } =
+    $props();
 
   // Inline folder error state
   let folderError = $state('');
@@ -30,7 +31,7 @@
     } catch (error) {
       logApiError('access project folders', error as Error);
       folderError = 'Failed to access project folders: ' + (error as Error).message;
-      setTimeout(() => folderError = '', 5000);
+      setTimeout(() => (folderError = ''), 5000);
     }
   }
 
@@ -146,10 +147,18 @@
     height: 24px;
   }
 
-  .action-icon--info { color: var(--color-info); }
-  .action-icon--splash { color: var(--emittiv-splash); }
-  .action-icon--success { color: var(--color-success); }
-  .action-icon--contacts { color: var(--color-stat-contacts); }
+  .action-icon--info {
+    color: var(--color-info);
+  }
+  .action-icon--splash {
+    color: var(--emittiv-splash);
+  }
+  .action-icon--success {
+    color: var(--color-success);
+  }
+  .action-icon--contacts {
+    color: var(--color-stat-contacts);
+  }
 
   .action-button:hover .action-icon {
     transform: scale(1.05);

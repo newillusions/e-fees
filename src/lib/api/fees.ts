@@ -7,7 +7,12 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type { Fee, FeeCreate, FeeUpdate, PaginatedResponse } from '../../types';
-import type { PricingBreakdown, PostContractItem, ReimbursableCost, PaymentSchedule } from '../../types/database';
+import type {
+  PricingBreakdown,
+  PostContractItem,
+  ReimbursableCost,
+  PaymentSchedule
+} from '../../types/database';
 import { logApiError } from '../services/logger';
 
 /**

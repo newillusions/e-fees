@@ -1,6 +1,6 @@
 /**
  * ProposalModal Component Tests
- * 
+ *
  * Tests for the Fee Proposal modal component including CRUD operations,
  * project/company/contact relationships, form validation, and business logic.
  */
@@ -51,7 +51,7 @@ vi.mock('$lib/stores/settings', () => ({
 // Mock utilities
 vi.mock('$lib/utils/surrealdb', () => ({
   extractSurrealId: vi.fn(),
-  getEntityId: vi.fn((entity) => {
+  getEntityId: vi.fn(entity => {
     if (!entity) return '';
     if (typeof entity === 'string') return entity;
     if (entity.id) return typeof entity.id === 'string' ? entity.id : '';
@@ -69,25 +69,25 @@ vi.mock('$lib/utils/validation', () => ({
     alphanumeric: /^[a-zA-Z0-9]+$/,
     numeric: /^\d+$/,
     projectNumber: /^\d{2}-\d{3}\d{2}$/,
-    dateYYMMDD: /^\d{6}$/,
+    dateYYMMDD: /^\d{6}$/
   },
   CommonValidationRules: {
     company: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
       email: { field: 'email', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ }
     },
     contact: {
       firstName: { field: 'first_name', required: true, minLength: 1, maxLength: 50 },
       lastName: { field: 'last_name', required: true, minLength: 1, maxLength: 50 },
       email: { field: 'email', required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ },
+      phone: { field: 'phone', pattern: /^[\+]?[1-9][\d]{0,15}$/ }
     },
     project: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
       nameShort: { field: 'name_short', required: true, minLength: 1, maxLength: 50 },
       city: { field: 'city', required: true, minLength: 1, maxLength: 50 },
-      country: { field: 'country', required: true, minLength: 1, maxLength: 50 },
+      country: { field: 'country', required: true, minLength: 1, maxLength: 50 }
     },
     fee: {
       name: { field: 'name', required: true, minLength: 2, maxLength: 100 },
@@ -95,8 +95,8 @@ vi.mock('$lib/utils/validation', () => ({
       issueDate: { field: 'issue_date', required: true, pattern: /^\d{6}$/ },
       projectId: { field: 'project_id', required: true },
       companyId: { field: 'company_id', required: true },
-      contactId: { field: 'contact_id', required: true },
-    },
+      contactId: { field: 'contact_id', required: true }
+    }
   }
 }));
 
@@ -105,7 +105,14 @@ vi.mock('$lib/utils/crud', () => ({
   withLoadingState: vi.fn()
 }));
 
-import { feesActions, feesStore, projectsActions, projectsStore, companiesStore, contactsStore } from '$lib/stores';
+import {
+  feesActions,
+  feesStore,
+  projectsActions,
+  projectsStore,
+  companiesStore,
+  contactsStore
+} from '$lib/stores';
 import { settingsStore } from '$lib/stores/settings';
 import { extractSurrealId } from '$lib/utils/surrealdb';
 import { validateForm, hasValidationErrors } from '$lib/utils/validation';
@@ -254,36 +261,36 @@ describe('ProposalModal Component', () => {
     vi.clearAllMocks();
 
     // Setup store mocks - return a function directly (Svelte Unsubscriber is () => void)
-    vi.mocked(projectsStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(projectsStore.subscribe).mockImplementation(callback => {
       callback(mockProjects);
       return vi.fn();
     });
 
-    vi.mocked(companiesStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(companiesStore.subscribe).mockImplementation(callback => {
       callback(mockCompanies);
       return vi.fn();
     });
 
-    vi.mocked(contactsStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(contactsStore.subscribe).mockImplementation(callback => {
       callback(mockContacts);
       return vi.fn();
     });
 
-    vi.mocked(feesStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(feesStore.subscribe).mockImplementation(callback => {
       callback([]);
       return vi.fn();
     });
 
-    vi.mocked(settingsStore.subscribe).mockImplementation((callback) => {
+    vi.mocked(settingsStore.subscribe).mockImplementation(callback => {
       callback(mockSettings);
       return vi.fn();
     });
-    
+
     // Setup utility mocks
     vi.mocked(validateForm).mockReturnValue({});
     vi.mocked(hasValidationErrors).mockReturnValue(false);
     vi.mocked(extractSurrealId).mockReturnValue('test123');
-    vi.mocked(withLoadingState).mockImplementation(async (fn) => await fn());
+    vi.mocked(withLoadingState).mockImplementation(async fn => await fn());
     vi.mocked(useOperationState).mockReturnValue({
       store: mockOperationState as any,
       actions: mockOperationActions
@@ -320,22 +327,22 @@ describe('ProposalModal Component', () => {
       expect(screen.getByText('Project & Client Information')).toBeInTheDocument();
       expect(screen.getByText('Basic Information')).toBeInTheDocument();
       expect(screen.getByText('Staff Information')).toBeInTheDocument();
-      
+
       // Project selection - using placeholder text to avoid ambiguity
       expect(screen.getByPlaceholderText('Search projects...')).toBeInTheDocument();
-      
+
       // Company selection - using placeholder text
       expect(screen.getByPlaceholderText('Search companies...')).toBeInTheDocument();
-      
+
       // Contact selection - using placeholder text
       expect(screen.getByPlaceholderText('Search contacts...')).toBeInTheDocument();
-      
+
       // Basic proposal fields - check for presence of labels/text
       expect(screen.getByText('Proposal Number')).toBeInTheDocument();
       expect(screen.getByText('Proposal Name')).toBeInTheDocument();
       expect(screen.getByText('Issue Date')).toBeInTheDocument();
       expect(screen.getByText('Status')).toBeInTheDocument();
-      
+
       // Staff information - check for presence of labels/text
       expect(screen.getByText('Staff Name')).toBeInTheDocument();
       expect(screen.getByText('Staff Email')).toBeInTheDocument();
@@ -353,14 +360,14 @@ describe('ProposalModal Component', () => {
   describe('Project Selection', () => {
     it('should show project typeahead search', () => {
       render(ProposalModal, { isOpen: true, mode: 'create' });
-      
+
       const projectInput = screen.getByPlaceholderText('Search projects...');
       expect(projectInput).toBeInTheDocument();
     });
 
     it('should show add project button', () => {
       render(ProposalModal, { isOpen: true, mode: 'create' });
-      
+
       const addProjectButton = screen.getByRole('button', { name: 'Add new project' });
       expect(addProjectButton).toBeInTheDocument();
     });
@@ -377,9 +384,9 @@ describe('ProposalModal Component', () => {
 
     it('should update existing proposal', async () => {
       const user = userEvent.setup();
-      
+
       vi.mocked(feesActions.update).mockResolvedValue(mockFee);
-      
+
       render(ProposalModal, {
         isOpen: true,
         mode: 'edit',
@@ -394,7 +401,7 @@ describe('ProposalModal Component', () => {
 
     it('should show delete confirmation', async () => {
       const user = userEvent.setup();
-      
+
       render(ProposalModal, {
         isOpen: true,
         mode: 'edit',
@@ -404,7 +411,9 @@ describe('ProposalModal Component', () => {
       const deleteButton = screen.getByRole('button', { name: 'Delete' });
       await user.click(deleteButton);
 
-      expect(screen.getByText('Are you sure you want to delete this proposal?')).toBeInTheDocument();
+      expect(
+        screen.getByText('Are you sure you want to delete this proposal?')
+      ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Confirm Delete' })).toBeInTheDocument();
     });
 
@@ -412,7 +421,7 @@ describe('ProposalModal Component', () => {
       const user = userEvent.setup();
 
       vi.mocked(feesActions.delete).mockResolvedValue(mockFee);
-      
+
       render(ProposalModal, {
         isOpen: true,
         mode: 'edit',
@@ -471,7 +480,7 @@ describe('ProposalModal Component', () => {
 
       const createButton = screen.getByRole('button', { name: 'Create Proposal' });
       expect(createButton).toBeDisabled();
-      
+
       // Loading spinner should be present
       const spinner = createButton.querySelector('.emittiv-spinner-sm');
       expect(spinner).toBeInTheDocument();
@@ -482,7 +491,12 @@ describe('ProposalModal Component', () => {
     it('should display error messages', () => {
       const errorState = {
         subscribe: vi.fn((callback: (value: any) => void) => {
-          callback({ saving: false, deleting: false, error: 'Something went wrong', message: null });
+          callback({
+            saving: false,
+            deleting: false,
+            error: 'Something went wrong',
+            message: null
+          });
           return vi.fn();
         }),
         set: vi.fn(),
@@ -502,7 +516,12 @@ describe('ProposalModal Component', () => {
     it('should display success messages', () => {
       const messageState = {
         subscribe: vi.fn((callback: (value: any) => void) => {
-          callback({ saving: false, deleting: false, error: null, message: 'Fee proposal created successfully' });
+          callback({
+            saving: false,
+            deleting: false,
+            error: null,
+            message: 'Fee proposal created successfully'
+          });
           return vi.fn();
         }),
         set: vi.fn(),
@@ -523,22 +542,22 @@ describe('ProposalModal Component', () => {
   describe('Modal Interactions', () => {
     it('should render cancel button for modal close', async () => {
       const user = userEvent.setup();
-      
+
       render(ProposalModal, { isOpen: true, mode: 'create' });
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       expect(cancelButton).toBeInTheDocument();
-      
+
       // Test clicking cancel button
       await user.click(cancelButton);
-      
+
       // Button should be clickable (this tests the functionality without $on)
       expect(cancelButton).toBeInTheDocument();
     });
 
     it('should have operation state utilities available', () => {
       render(ProposalModal, { isOpen: true, mode: 'create' });
-      
+
       // Component has access to operation actions from useOperationState
       expect(useOperationState).toHaveBeenCalled();
     });

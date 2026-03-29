@@ -18,7 +18,12 @@
   import { logger, logApiError } from '$lib/services/logger';
   import StatusChips from '$lib/components/StatusChips.svelte';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
-  import { createFilterFunction, getUniqueFieldValues, hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
+  import {
+    createFilterFunction,
+    getUniqueFieldValues,
+    hasActiveFilters,
+    clearAllFilters
+  } from '$lib/utils/filters';
   import type { AdvancedFilters } from '$lib/utils/filters';
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import { createProjectFilterConfig } from '$lib/utils/search';
@@ -56,7 +61,8 @@
 
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     selectedIds = next;
     if (next.size === 0) selectMode = false;
   }
@@ -100,13 +106,15 @@
 
   // Effect to sync paginated store state to local runes
   $effect(() => {
-    const unsubscribe = paginatedProjectsStore.store.subscribe((state: PaginatedStoreState<Project>) => {
-      projects = state.items;
-      isLoading = state.pagination.isLoading;
-      hasMore = state.pagination.hasMore;
-      totalRecords = state.pagination.totalRecords;
-      initialized = state.initialized;
-    });
+    const unsubscribe = paginatedProjectsStore.store.subscribe(
+      (state: PaginatedStoreState<Project>) => {
+        projects = state.items;
+        isLoading = state.pagination.isLoading;
+        hasMore = state.pagination.hasMore;
+        totalRecords = state.pagination.totalRecords;
+        initialized = state.initialized;
+      }
+    );
     return unsubscribe;
   });
 
@@ -130,8 +138,7 @@
       return () => scrollContainer?.removeEventListener('scroll', handleScroll);
     }
   });
-  
-  
+
   // Filter configuration for projects - uses unified search module
   const filterConfig = (() => {
     const baseConfig = createProjectFilterConfig();
@@ -143,7 +150,7 @@
         city: (project: Project) => project.city
       },
       dateFieldExtractor: (project: Project) => project.time?.updated_at || '',
-      dateFieldFormat: 'iso' as const,
+      dateFieldFormat: 'iso' as const
     };
   })();
 
@@ -154,35 +161,35 @@
   });
 
   // Reactive filtered projects using optimized filter function
-  const filteredProjects = $derived(createFilterFunction(projects, searchQuery, filters, filterConfig, advanced));
-  
+  const filteredProjects = $derived(
+    createFilterFunction(projects, searchQuery, filters, filterConfig, advanced)
+  );
 
-  
   function handleNewProject() {
     selectedProject = null;
     showNewProjectModal = true;
   }
-  
+
   function handleNewProjectClosed() {
     showNewProjectModal = false;
   }
-  
+
   function handleEditProject(project: Project) {
     selectedProject = project;
     projectModalMode = 'edit';
     showProjectModal = true;
   }
-  
+
   function handleViewProject(project: Project) {
     selectedProject = project;
     isProjectDetailOpen = true;
   }
-  
+
   function handleCloseDetail() {
     isProjectDetailOpen = false;
     selectedProject = null;
   }
-  
+
   function handleEditFromDetail(project: Project | null) {
     // Close detail panel and open edit modal
     isProjectDetailOpen = false;
@@ -190,14 +197,14 @@
     projectModalMode = 'edit';
     showProjectModal = true;
   }
-  
+
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
     statusSelected = new SvelteSet();
     dateFrom = '';
     dateTo = '';
   }
-  
+
   // Load projects and settings on mount
   onMount(() => {
     // Load first page of projects using pagination
@@ -208,15 +215,14 @@
     }
     settingsActions.load();
   });
-  
-  
+
   // Check if any filters are active
   const hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery, advanced));
-  
+
   // Get unique values for dropdown filters
-  const uniqueCountries = $derived(getUniqueFieldValues(projects, (project) => project.country));
-  const uniqueCities = $derived(getUniqueFieldValues(projects, (project) => project.city));
-  
+  const uniqueCountries = $derived(getUniqueFieldValues(projects, project => project.country));
+  const uniqueCities = $derived(getUniqueFieldValues(projects, project => project.city));
+
   // Function to get full project folder path
   function getFullProjectPath(project: Project): string {
     const basePath = $settingsStore.project_folder_path;
@@ -228,7 +234,11 @@
 
     // Normalize base path (remove trailing separators)
     let normalizedBase = basePath;
-    while (normalizedBase.endsWith(separator) || normalizedBase.endsWith('/') || normalizedBase.endsWith('\\')) {
+    while (
+      normalizedBase.endsWith(separator) ||
+      normalizedBase.endsWith('/') ||
+      normalizedBase.endsWith('\\')
+    ) {
       normalizedBase = normalizedBase.slice(0, -1);
     }
 
@@ -245,13 +255,13 @@
 
     return `${normalizedBase}${separator}${statusFolder}${separator}${normalizedFolder}`;
   }
-  
+
   // Function to open project folder in explorer
   async function openProjectFolder(project: Project) {
     const projectFolderPath = $settingsStore.project_folder_path;
     if (!projectFolderPath) {
       folderError = 'Project folder path not configured. Please set it in Settings.';
-      setTimeout(() => folderError = '', 5000);
+      setTimeout(() => (folderError = ''), 5000);
       return;
     }
 
@@ -261,12 +271,12 @@
       const result = await openFolderInExplorer(fullPath);
       if (result.includes('Failed')) {
         folderError = 'Failed to open project folder. Please check the path exists.';
-        setTimeout(() => folderError = '', 5000);
+        setTimeout(() => (folderError = ''), 5000);
       }
     } catch (error) {
       logApiError('open project folder', error as Error);
       folderError = 'Failed to open project folder. Please check the path exists.';
-      setTimeout(() => folderError = '', 5000);
+      setTimeout(() => (folderError = ''), 5000);
     }
   }
 </script>
@@ -286,11 +296,16 @@
       {#if searchQuery}
         <button
           class="emittiv-icon-btn"
-          onclick={() => searchQuery = ''}
+          onclick={() => (searchQuery = '')}
           aria-label="Clear search"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       {/if}
@@ -300,19 +315,29 @@
         hasFilters={hasFiltersActive}
         entityName="projects"
         loadedItems={projects.length}
-        hasMore={hasMore}
+        {hasMore}
         inline={true}
         onclearfilters={clearFilters}
       />
     </div>
     <button
-      class="emittiv-btn emittiv-btn--sm {selectMode ? 'emittiv-btn--primary' : 'emittiv-btn--secondary'} flex-shrink-0"
-      onclick={() => { selectMode = !selectMode; if (!selectMode) clearSelection(); }}
+      class="emittiv-btn emittiv-btn--sm {selectMode
+        ? 'emittiv-btn--primary'
+        : 'emittiv-btn--secondary'} flex-shrink-0"
+      onclick={() => {
+        selectMode = !selectMode;
+        if (!selectMode) clearSelection();
+      }}
       aria-label="Toggle selection mode"
       title="Multi-select"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+        />
       </svg>
     </button>
     <button
@@ -325,14 +350,11 @@
       </svg>
     </button>
   </div>
-  
+
   <!-- Filter Options -->
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <!-- Country Filter -->
-    <select
-      bind:value={filters.country}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.country} class="emittiv-filter-select">
       <option value="">All Countries</option>
       {#each uniqueCountries as country}
         <option value={country}>{country}</option>
@@ -340,10 +362,7 @@
     </select>
 
     <!-- City Filter -->
-    <select
-      bind:value={filters.city}
-      class="emittiv-filter-select"
-    >
+    <select bind:value={filters.city} class="emittiv-filter-select">
       <option value="">All Cities</option>
       {#each uniqueCities as city}
         <option value={city}>{city}</option>
@@ -355,9 +374,12 @@
 
   <!-- Status Chips -->
   <div class="mb-4">
-    <StatusChips statuses={PROJECT_STATUSES} bind:selected={statusSelected} activePreset={ACTIVE_PROJECT_STATUSES} />
+    <StatusChips
+      statuses={PROJECT_STATUSES}
+      bind:selected={statusSelected}
+      activePreset={ACTIVE_PROJECT_STATUSES}
+    />
   </div>
-  
 
   {#if isLoading && projects.length === 0}
     <!-- Initial loading state -->
@@ -366,7 +388,7 @@
       <p class="text-emittiv-light text-sm">Loading projects...</p>
     </div>
   {:else if projects.length === 0}
-    <EmptyState 
+    <EmptyState
       icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
       title="No Projects Yet"
       description="Create your first project to get started with managing your proposals and tracking progress."
@@ -375,17 +397,22 @@
     />
   {:else if filteredProjects.length === 0}
     <div class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-emittiv-light opacity-40"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
       <h3 class="text-lg font-medium text-emittiv-light mb-2">No projects found</h3>
       <p class="text-emittiv-light opacity-60 mb-4">Try adjusting your search or filters</p>
-      <button 
-        onclick={clearFilters}
-        class="emittiv-link text-sm"
-      >
-        Clear all filters
-      </button>
+      <button onclick={clearFilters} class="emittiv-link text-sm"> Clear all filters </button>
     </div>
   {:else}
     {#if folderError}
@@ -403,20 +430,17 @@
     />
 
     <!-- Scrollable container for infinite scroll -->
-    <div
-      bind:this={scrollContainer}
-      class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1"
-    >
+    <div bind:this={scrollContainer} class="grid gap-3 max-h-scroll overflow-y-auto pr-2 pt-1">
       {#each filteredProjects as project}
         <ProjectCard
           {project}
           selectable={selectMode}
           selected={selectedIds.has(extractIdFromRelation(project.id || ''))}
           onFolderClick={openProjectFolder}
-          onedit={(project) => handleEditProject(project)}
-          onview={(project) => handleViewProject(project)}
+          onedit={project => handleEditProject(project)}
+          onview={project => handleViewProject(project)}
           onselect={() => toggleSelect(extractIdFromRelation(project.id || ''))}
-          onstatusclick={(status) => {
+          onstatusclick={status => {
             const next = new SvelteSet(statusSelected);
             if (next.has(status)) next.delete(status);
             else next.add(status);
@@ -445,17 +469,14 @@
 </div>
 
 <!-- New Project Modal -->
-<NewProjectModal
-  bind:isOpen={showNewProjectModal}
-  onclose={handleNewProjectClosed}
-/>
+<NewProjectModal bind:isOpen={showNewProjectModal} onclose={handleNewProjectClosed} />
 
 <!-- Edit Project Modal -->
-<ProjectModal 
+<ProjectModal
   bind:isOpen={showProjectModal}
   project={selectedProject}
   mode={projectModalMode}
-  onclose={() => showProjectModal = false}
+  onclose={() => (showProjectModal = false)}
 />
 
 <!-- Project Detail Panel -->

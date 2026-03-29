@@ -593,7 +593,7 @@ export const REGRESSION_CHECK_ORDER = [
   'companyIdExtract',
   'feeStatusLegacy',
   'projectStatusLegacy',
-  'navOrder',
+  'navOrder'
 ] as const;
 
-export type RegressionCheckName = typeof REGRESSION_CHECK_ORDER[number];
+export type RegressionCheckName = (typeof REGRESSION_CHECK_ORDER)[number];

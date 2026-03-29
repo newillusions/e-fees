@@ -3,9 +3,10 @@
   import { logo } from '../../assets';
   import { getAppVersion } from '../utils';
   import { logger } from '$lib/services/logger';
-  
-  
-  let { onComplete }: {
+
+  let {
+    onComplete
+  }: {
     onComplete: () => void;
   } = $props();
 
@@ -14,11 +15,11 @@
   let isConnecting = $state(true);
   let progress = $state(0);
   let appVersion = $state('...');
-  
+
   // Animated dots for connecting message
   let dotInterval: number;
   let progressInterval: number;
-  
+
   const connectionMessages = [
     'Initializing application...',
     'Loading configuration...',
@@ -28,9 +29,9 @@
     'Loading data...',
     'Almost ready...'
   ];
-  
+
   let messageIndex = $state(0);
-  
+
   onMount(() => {
     // Load app version (async but not blocking)
     getAppVersion().then(version => {
@@ -49,7 +50,7 @@
         if (progress > 90) progress = 90;
       }
     }, 300);
-    
+
     // Cycle through connection messages
     const messageInterval = setInterval(() => {
       if (messageIndex < connectionMessages.length - 1) {
@@ -57,7 +58,7 @@
         connectionText = connectionMessages[messageIndex];
       }
     }, 800);
-    
+
     // Simple timeout-based completion (ConnectionStatus will handle actual connection monitoring)
     // Just show the splash for a reasonable amount of time
     setTimeout(() => {
@@ -68,7 +69,7 @@
         onComplete();
       }, 500);
     }, 3000); // 3 second splash display
-    
+
     // Fallback timeout to ensure splash screen doesn't hang
     setTimeout(() => {
       if (isConnecting) {
@@ -78,7 +79,7 @@
         onComplete();
       }
     }, 8000); // 8 second max
-    
+
     // Cleanup intervals
     return () => {
       clearInterval(dotInterval);
@@ -88,7 +89,7 @@
   });
 </script>
 
-<div 
+<div
   class="fixed inset-0 z-90 flex items-center justify-center transition-all duration-500"
   style="background: linear-gradient(135deg, #000, #333);"
   class:opacity-0={!isConnecting}
@@ -96,9 +97,12 @@
 >
   <!-- Background Pattern -->
   <div class="absolute inset-0 opacity-5">
-    <div class="absolute inset-0" style="background-image: radial-gradient(circle at 25% 25%, #ff9900 2px, transparent 2px); background-size: 50px 50px;"></div>
+    <div
+      class="absolute inset-0"
+      style="background-image: radial-gradient(circle at 25% 25%, #ff9900 2px, transparent 2px); background-size: 50px 50px;"
+    ></div>
   </div>
-  
+
   <!-- Main Content -->
   <div class="relative z-10 text-center px-8 max-w-md">
     <!-- Logo -->
@@ -129,10 +133,7 @@
     <!-- Progress Bar -->
     <div class="mb-6">
       <div class="splash-progress-track">
-        <div
-          class="splash-progress-fill"
-          style="width: {progress}%;"
-        ></div>
+        <div class="splash-progress-fill" style="width: {progress}%;"></div>
       </div>
     </div>
 
@@ -147,9 +148,18 @@
   <!-- Animated Background Elements -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
     <!-- Floating circles -->
-    <div class="splash-ping" style="top: 25%; left: 25%; width: 8px; height: 8px; animation-delay: 0s; animation-duration: 3s;"></div>
-    <div class="splash-ping" style="top: 75%; right: 25%; width: 4px; height: 4px; animation-delay: 1s; animation-duration: 4s;"></div>
-    <div class="splash-ping" style="top: 50%; left: 16.67%; width: 6px; height: 6px; animation-delay: 2s; animation-duration: 3.5s;"></div>
+    <div
+      class="splash-ping"
+      style="top: 25%; left: 25%; width: 8px; height: 8px; animation-delay: 0s; animation-duration: 3s;"
+    ></div>
+    <div
+      class="splash-ping"
+      style="top: 75%; right: 25%; width: 4px; height: 4px; animation-delay: 1s; animation-duration: 4s;"
+    ></div>
+    <div
+      class="splash-ping"
+      style="top: 50%; left: 16.67%; width: 6px; height: 6px; animation-delay: 2s; animation-duration: 3.5s;"
+    ></div>
   </div>
 </div>
 
@@ -222,7 +232,8 @@
   }
 
   @keyframes ping {
-    75%, 100% {
+    75%,
+    100% {
       transform: scale(2);
       opacity: 0;
     }

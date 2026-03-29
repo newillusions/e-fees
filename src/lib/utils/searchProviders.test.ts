@@ -4,7 +4,7 @@ import {
   searchCompanies,
   searchContacts,
   searchFees,
-  type SearchResult,
+  type SearchResult
 } from './searchProviders';
 import type { Project, Company, Contact, Fee } from '../../types';
 import { createCompanyLookup } from './companyLookup';
@@ -23,7 +23,7 @@ const mockProjects: Project[] = [
     country: 'U.A.E.',
     area: 'Dubai Islands',
     status: 'Design',
-    time: { created_at: '2025-01-01', updated_at: '2025-06-01' },
+    time: { created_at: '2025-01-01', updated_at: '2025-06-01' }
   } as unknown as Project,
   {
     id: 'projects:26-96606',
@@ -35,8 +35,8 @@ const mockProjects: Project[] = [
     country: 'Saudi Arabia',
     area: 'KAFD',
     status: 'Lead',
-    time: { created_at: '2026-01-01', updated_at: '2026-03-01' },
-  } as unknown as Project,
+    time: { created_at: '2026-01-01', updated_at: '2026-03-01' }
+  } as unknown as Project
 ];
 
 const mockCompanies: Company[] = [
@@ -47,7 +47,7 @@ const mockCompanies: Company[] = [
     abbreviation: 'PTG',
     city: 'Dubai',
     country: 'U.A.E.',
-    time: { created_at: '2025-01-01', updated_at: '2025-06-01' },
+    time: { created_at: '2025-01-01', updated_at: '2025-06-01' }
   } as unknown as Company,
   {
     id: 'company:dar',
@@ -56,8 +56,8 @@ const mockCompanies: Company[] = [
     abbreviation: 'DAR',
     city: 'Beirut',
     country: 'Lebanon',
-    time: { created_at: '2025-02-01', updated_at: '2025-05-01' },
-  } as unknown as Company,
+    time: { created_at: '2025-02-01', updated_at: '2025-05-01' }
+  } as unknown as Company
 ];
 
 const mockContacts: Contact[] = [
@@ -70,7 +70,7 @@ const mockContacts: Contact[] = [
     phone: '+971501234567',
     position: 'Director',
     company: 'company:ptg',
-    time: { created_at: '2025-01-01', updated_at: '2025-06-01' },
+    time: { created_at: '2025-01-01', updated_at: '2025-06-01' }
   } as unknown as Contact,
   {
     id: 'contacts:sara',
@@ -81,8 +81,8 @@ const mockContacts: Contact[] = [
     phone: '+9611234567',
     position: 'Architect',
     company: 'company:dar',
-    time: { created_at: '2025-02-01', updated_at: '2025-05-01' },
-  } as unknown as Contact,
+    time: { created_at: '2025-02-01', updated_at: '2025-05-01' }
+  } as unknown as Contact
 ];
 
 const mockFees: Fee[] = [
@@ -97,7 +97,7 @@ const mockFees: Fee[] = [
     issue_date: '250601',
     company_id: 'company:ptg',
     project_id: 'projects:25-97101',
-    time: { created_at: '2025-06-01', updated_at: '2025-06-15' },
+    time: { created_at: '2025-06-01', updated_at: '2025-06-15' }
   } as unknown as Fee,
   {
     id: 'fee:26_96606_1',
@@ -110,8 +110,8 @@ const mockFees: Fee[] = [
     issue_date: '260301',
     company_id: 'company:dar',
     project_id: 'projects:26-96606',
-    time: { created_at: '2026-03-01', updated_at: '2026-03-10' },
-  } as unknown as Fee,
+    time: { created_at: '2026-03-01', updated_at: '2026-03-10' }
+  } as unknown as Fee
 ];
 
 // --- Tests ---

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { hasActiveFilters, clearAllFilters } from '$lib/utils/filters';
-  
+
   // Props using Svelte 5 syntax
   let {
     searchQuery = $bindable(''),
@@ -27,10 +27,10 @@
     totalCount?: number;
     itemName?: string;
   } = $props();
-  
+
   // Internal state
   let hasFiltersActive = $derived(hasActiveFilters(filters, searchQuery));
-  
+
   function clearFilters() {
     searchQuery = clearAllFilters(filters);
   }
@@ -42,47 +42,45 @@
     <div class="flex-1 max-w-2xl">
       <div class="flex items-center gap-2">
         <div class="relative flex-1">
-          <input
-            type="text"
-            {placeholder}
-            bind:value={searchQuery}
-            class="emittiv-search-input"
-          />
+          <input type="text" {placeholder} bind:value={searchQuery} class="emittiv-search-input" />
         </div>
         {#if searchQuery}
           <button
             class="emittiv-icon-btn"
-            onclick={() => searchQuery = ''}
+            onclick={() => (searchQuery = '')}
             aria-label="Clear search"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         {/if}
       </div>
     </div>
     {#if onAdd}
-      <button
-        class="emittiv-fab ml-4"
-        onclick={onAdd}
-        aria-label={addLabel}
-      >
+      <button class="emittiv-fab ml-4" onclick={onAdd} aria-label={addLabel}>
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
         </svg>
       </button>
     {/if}
   </div>
-  
+
   <!-- Filter Options -->
   {#if filterOptions.length > 0}
     <div class="flex flex-wrap items-center gap-2">
       {#each filterOptions as filterOption}
-        <select 
-          bind:value={filters[filterOption.key]} 
-          class="emittiv-filter-select"
-        >
+        <select bind:value={filters[filterOption.key]} class="emittiv-filter-select">
           <option value="">{filterOption.label}</option>
           {#each filterOption.options as option}
             <option value={option}>{option}</option>
@@ -98,16 +96,28 @@
       {#if hasFiltersActive}
         Showing {resultCount} of {totalCount} {itemName}
       {:else if totalCount > 0}
-        {totalCount} {itemName.replace(/ies$/, 'y').replace(/s$/, '')}{totalCount === 1 ? '' : totalCount > 1 && itemName.endsWith('ies') ? 'ies' : 's'}
+        {totalCount}
+        {itemName.replace(/ies$/, 'y').replace(/s$/, '')}{totalCount === 1
+          ? ''
+          : totalCount > 1 && itemName.endsWith('ies')
+            ? 'ies'
+            : 's'}
       {/if}
     </div>
     {#if hasFiltersActive}
-      <button 
-        onclick={clearFilters}
-        class="emittiv-chip emittiv-chip--btn"
-      >
-        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      <button onclick={clearFilters} class="emittiv-chip emittiv-chip--btn">
+        <svg
+          style="width: 18px; height: 18px;"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
         Clear
       </button>

@@ -5,7 +5,7 @@ import {
   optimisticCreate,
   optimisticUpdate,
   optimisticDelete,
-  recomputeFiltered,
+  recomputeFiltered
 } from './crudOptimistic';
 
 // Minimal test entity
@@ -15,7 +15,9 @@ interface TestEntity {
 }
 
 // Test helpers
-function createTestStore(items: TestEntity[] = []): ReturnType<typeof writable<CrudState<TestEntity>>> {
+function createTestStore(
+  items: TestEntity[] = []
+): ReturnType<typeof writable<CrudState<TestEntity>>> {
   return writable<CrudState<TestEntity>>({
     items,
     filteredItems: [...items],
@@ -26,7 +28,7 @@ function createTestStore(items: TestEntity[] = []): ReturnType<typeof writable<C
     filters: {},
     sort: null,
     lastUpdated: null,
-    optimisticUpdates: new Map(),
+    optimisticUpdates: new Map()
   });
 }
 
@@ -37,7 +39,10 @@ const noopSort = (items: TestEntity[]) => items;
 describe('crudOptimistic', () => {
   describe('recomputeFiltered', () => {
     it('applies filter and sort to items using current state', () => {
-      const store = createTestStore([{ id: 'a', name: 'Alpha' }, { id: 'b', name: 'Beta' }]);
+      const store = createTestStore([
+        { id: 'a', name: 'Alpha' },
+        { id: 'b', name: 'Beta' }
+      ]);
       const reverseSort = (items: TestEntity[]) => [...items].reverse();
 
       recomputeFiltered(store, noopFilter, reverseSort);
@@ -52,7 +57,13 @@ describe('crudOptimistic', () => {
     it('adds temporary item to store immediately', () => {
       const store = createTestStore([{ id: '1', name: 'Existing' }]);
 
-      const result = optimisticCreate(store, { name: 'New Item' }, testIdExtractor, noopFilter, noopSort);
+      const result = optimisticCreate(
+        store,
+        { name: 'New Item' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
 
       const state = get(store);
       expect(state.items).toHaveLength(2);
@@ -63,7 +74,13 @@ describe('crudOptimistic', () => {
     it('commit replaces temp item with real item', () => {
       const store = createTestStore([]);
 
-      const { commit } = optimisticCreate(store, { name: 'Temp' }, testIdExtractor, noopFilter, noopSort);
+      const { commit } = optimisticCreate(
+        store,
+        { name: 'Temp' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
       commit({ id: 'real-1', name: 'Real Item' });
 
       const state = get(store);
@@ -76,7 +93,13 @@ describe('crudOptimistic', () => {
     it('rollback removes temp item on failure', () => {
       const store = createTestStore([{ id: '1', name: 'Existing' }]);
 
-      const { rollback } = optimisticCreate(store, { name: 'Will Fail' }, testIdExtractor, noopFilter, noopSort);
+      const { rollback } = optimisticCreate(
+        store,
+        { name: 'Will Fail' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
       rollback();
 
       const state = get(store);
@@ -99,7 +122,14 @@ describe('crudOptimistic', () => {
     it('commit finalizes with server response', () => {
       const store = createTestStore([{ id: '1', name: 'Original' }]);
 
-      const { commit } = optimisticUpdate(store, '1', { name: 'Optimistic' }, testIdExtractor, noopFilter, noopSort);
+      const { commit } = optimisticUpdate(
+        store,
+        '1',
+        { name: 'Optimistic' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
       commit({ id: '1', name: 'Server Response' });
 
       const state = get(store);
@@ -110,7 +140,14 @@ describe('crudOptimistic', () => {
     it('rollback restores original item on failure', () => {
       const store = createTestStore([{ id: '1', name: 'Original' }]);
 
-      const { rollback } = optimisticUpdate(store, '1', { name: 'Will Fail' }, testIdExtractor, noopFilter, noopSort);
+      const { rollback } = optimisticUpdate(
+        store,
+        '1',
+        { name: 'Will Fail' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
       rollback();
 
       const state = get(store);
@@ -121,7 +158,14 @@ describe('crudOptimistic', () => {
     it('returns null originalItem when id not found', () => {
       const store = createTestStore([{ id: '1', name: 'Only' }]);
 
-      const { originalItem } = optimisticUpdate(store, 'nonexistent', { name: 'X' }, testIdExtractor, noopFilter, noopSort);
+      const { originalItem } = optimisticUpdate(
+        store,
+        'nonexistent',
+        { name: 'X' },
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
 
       expect(originalItem).toBeNull();
     });
@@ -131,7 +175,7 @@ describe('crudOptimistic', () => {
     it('removes item from store immediately', () => {
       const store = createTestStore([
         { id: '1', name: 'First' },
-        { id: '2', name: 'Second' },
+        { id: '2', name: 'Second' }
       ]);
 
       optimisticDelete(store, '1', testIdExtractor, noopFilter, noopSort);
@@ -156,7 +200,7 @@ describe('crudOptimistic', () => {
       const store = createTestStore([
         { id: '1', name: 'First' },
         { id: '2', name: 'Second' },
-        { id: '3', name: 'Third' },
+        { id: '3', name: 'Third' }
       ]);
 
       const { rollback } = optimisticDelete(store, '2', testIdExtractor, noopFilter, noopSort);
@@ -170,7 +214,13 @@ describe('crudOptimistic', () => {
     it('returns null deletedItem when id not found', () => {
       const store = createTestStore([{ id: '1', name: 'Only' }]);
 
-      const { deletedItem } = optimisticDelete(store, 'nonexistent', testIdExtractor, noopFilter, noopSort);
+      const { deletedItem } = optimisticDelete(
+        store,
+        'nonexistent',
+        testIdExtractor,
+        noopFilter,
+        noopSort
+      );
 
       expect(deletedItem).toBeNull();
     });

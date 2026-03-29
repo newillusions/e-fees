@@ -23,13 +23,7 @@
  * If any check returns { ABORT: true }, stop execution immediately and report error.
  */
 
-import {
-  crudCompany,
-  crudContact,
-  crudProject,
-  crudFee,
-  crudCleanup,
-} from './helpers/crud-checks';
+import { crudCompany, crudContact, crudProject, crudFee, crudCleanup } from './helpers/crud-checks';
 
 import {
   modalOpenClose,
@@ -41,7 +35,7 @@ import {
   keyboardNav3,
   keyboardNav4,
   keyboardNav5,
-  bulkSelect,
+  bulkSelect
 } from './helpers/ui-state-checks';
 
 import {
@@ -50,7 +44,7 @@ import {
   connectionIndicator,
   entityCountConsistency,
   settingsModal,
-  detailPanel,
+  detailPanel
 } from './helpers/integration-checks';
 
 import {
@@ -61,7 +55,7 @@ import {
   companyIdExtract,
   feeStatusLegacy,
   projectStatusLegacy,
-  navOrder,
+  navOrder
 } from './helpers/regression-checks';
 
 export const CHECKS = {
@@ -185,7 +179,7 @@ export const CHECKS = {
   company_id_extract: companyIdExtract,
   fee_status_legacy: feeStatusLegacy,
   project_status_legacy: projectStatusLegacy,
-  nav_order: navOrder,
+  nav_order: navOrder
 };
 
 /**
@@ -199,22 +193,49 @@ export const CHECK_ORDER = [
   // Phase 1: Safety
   'safety',
   // Phase 2: Infrastructure
-  'db_connection', 'data_loaded',
+  'db_connection',
+  'data_loaded',
   // Phase 3: Data validation
-  'project_statuses', 'fee_statuses', 'entity_counts',
+  'project_statuses',
+  'fee_statuses',
+  'entity_counts',
   // Phase 4: Navigation
-  'navigate_dashboard', 'navigate_projects', 'navigate_proposals',
-  'navigate_companies', 'navigate_contacts',
+  'navigate_dashboard',
+  'navigate_projects',
+  'navigate_proposals',
+  'navigate_companies',
+  'navigate_contacts',
   // Phase 5: UI State
-  'modal_open_close', 'form_validation', 'search_filter', 'dropdown_filter',
-  'keyboard_nav_1', 'keyboard_nav_2', 'keyboard_nav_3',
-  'keyboard_nav_4', 'keyboard_nav_5', 'bulk_select',
+  'modal_open_close',
+  'form_validation',
+  'search_filter',
+  'dropdown_filter',
+  'keyboard_nav_1',
+  'keyboard_nav_2',
+  'keyboard_nav_3',
+  'keyboard_nav_4',
+  'keyboard_nav_5',
+  'bulk_select',
   // Phase 6: CRUD (sequential pipeline)
-  'crud_company', 'crud_contact', 'crud_project', 'crud_fee', 'crud_cleanup',
+  'crud_company',
+  'crud_contact',
+  'crud_project',
+  'crud_fee',
+  'crud_cleanup',
   // Phase 7: Integration
-  'status_transition', 'fee_project_mapping', 'connection_indicator',
-  'entity_count_consistency', 'settings_modal', 'detail_panel',
+  'status_transition',
+  'fee_project_mapping',
+  'connection_indicator',
+  'entity_count_consistency',
+  'settings_modal',
+  'detail_panel',
   // Phase 8: Regression
-  'recordid_v3', 'fee_no_infinity', 'contact_full_name', 'fee_deser',
-  'company_id_extract', 'fee_status_legacy', 'project_status_legacy', 'nav_order',
+  'recordid_v3',
+  'fee_no_infinity',
+  'contact_full_name',
+  'fee_deser',
+  'company_id_extract',
+  'fee_status_legacy',
+  'project_status_legacy',
+  'nav_order'
 ] as const;

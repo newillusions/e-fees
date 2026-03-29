@@ -66,7 +66,6 @@
       }
     }
   }
-
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
