@@ -73,7 +73,7 @@ pub async fn get_db_info(state: State<'_, AppState>) -> Result<serde_json::Value
             "dns_issue": format!("If you see 'No such host is known', the server {} cannot be resolved", config.url),
             "network_check": format!("Try pinging the server: ping {}", config.url.replace("ws://", "").replace(":8000", "")),
             "surrealdb_check": format!("Verify SurrealDB is running: telnet {} 8000", config.url.replace("ws://", "").replace(":8000", "")),
-            "config_source": "Configuration loaded from .env file or environment variables"
+            "config_source": "Configuration loaded from e-fees.config file"
         }
     });
 

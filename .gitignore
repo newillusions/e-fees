@@ -12,8 +12,11 @@ dist
 dist-ssr
 *.local
 
-# Environment variables - NEVER commit these files
+# Application config - NEVER commit these files
 # Exception: Template and example files are allowed
+e-fees.config
+e-fees.config.dev
+e-fees.config.local
 .env
 .env.local
 .env.dev
@@ -24,6 +27,8 @@ dist-ssr
 .env.production
 .env.production.local
 # Allow example and template files
+!e-fees.config.example
+!e-fees.config.template
 !.env.example
 !.env.*.example
 !.env.template

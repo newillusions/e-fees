@@ -1,5 +1,5 @@
 # E-Fees Development Environment Configuration Template
-# Copy this file to .env or .env.dev and fill in your actual values
+# Copy this file to e-fees.config or e-fees.config.dev and fill in your actual values
 
 # Database Settings
 # For development: Use your local or development SurrealDB instance
@@ -27,9 +27,9 @@ PROJECT_FOLDERS_PATH=/path/to/your/projects
 PROJECT_ARCHIVES_PATH=/path/to/your/archives
 
 # Security Notes:
-# - NEVER commit .env, .env.dev, or .env.local files to version control
+# - NEVER commit e-fees.config, e-fees.config.dev, or e-fees.config.local to version control
 # - Use strong, unique passwords for database access
 # - Keep database credentials secure and rotate them regularly
 # - Ensure your SurrealDB instance is properly secured
-# - Use environment-specific .env files (.env.dev, .env.prod, etc.)
-# - The .gitignore file should exclude all .env* files except .env.example
+# - Use environment-specific config files (e-fees.config.dev, etc.)
+# - The .gitignore file should exclude all config files except examples/templates

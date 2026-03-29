@@ -10,7 +10,7 @@
 //! - Works on Windows, macOS, and Linux
 //!
 //! ## Path Configuration
-//! Paths are read from the app settings (`.env` / `.env.dev` file):
+//! Paths are read from the app settings (`e-fees.config` / `e-fees.config.dev` file):
 //! - `PROJECT_FOLDER_PATH`: Base path for all project folders
 
 use crate::commands::get_settings;
@@ -52,7 +52,7 @@ async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, Strin
         .map_err(|e| format!("Failed to get settings: {}", e))?;
 
     let base_path = settings.project_folder_path.ok_or_else(|| {
-        "PROJECT_FOLDER_PATH not configured in settings. Please set it in the .env file."
+        "PROJECT_FOLDER_PATH not configured in settings. Please set it in the Settings panel."
             .to_string()
     })?;
 

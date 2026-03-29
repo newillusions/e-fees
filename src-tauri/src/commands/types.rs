@@ -67,7 +67,7 @@ pub struct ProjectUpdate {
 ///
 /// This struct represents all configurable settings that can be modified
 /// through the application's settings interface. Settings are persisted
-/// to the `.env` file in the project root.
+/// to the `e-fees.config` file in the app data directory.
 ///
 /// **SECURITY NOTE:** This struct contains sensitive data (password) and should
 /// only be used internally. Use `AppSettingsPublic` when returning data to frontend.

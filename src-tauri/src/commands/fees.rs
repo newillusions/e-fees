@@ -188,7 +188,7 @@ pub async fn write_fee_to_json(
             .map_err(|e| format!("Failed to fetch contact: {}", e))?
             .ok_or_else(|| "Contact not found for fee".to_string())?;
 
-        // Get project folder path from settings (.env file)
+        // Get project folder path from settings (config file)
         let app_settings = get_settings_internal(&app_handle).await?;
         let project_folder_path = app_settings.project_folder_path.unwrap_or_default();
 
@@ -301,7 +301,7 @@ pub async fn write_fee_to_json_safe(
                 "Data integrity error: The contact linked to this fee no longer exists.".to_string()
             })?;
 
-        // Get project folder path from settings (.env file)
+        // Get project folder path from settings (config file)
         let app_settings = get_settings_internal(&app_handle).await?;
         let project_folder_path = app_settings.project_folder_path.unwrap_or_default();
 

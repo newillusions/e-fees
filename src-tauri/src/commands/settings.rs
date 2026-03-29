@@ -12,7 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use super::{AppSettings, AppSettingsPublic, AppState};
 
-/// Internal function to read full application settings from .env file.
+/// Internal function to read full application settings from config file.
 ///
 /// This function returns the complete settings including sensitive data
 /// like passwords. It should only be used internally by other Rust code
@@ -21,19 +21,19 @@ use super::{AppSettings, AppSettingsPublic, AppState};
 /// **SECURITY:** This is NOT a Tauri command - never expose directly to frontend.
 /// For frontend access, use the `get_settings` command which returns `AppSettingsPublic`.
 pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings, String> {
-    info!("Reading settings from .env file (internal)");
+    info!("Reading settings from config file (internal)");
 
     // Log the current working directory
     if let Ok(cwd) = std::env::current_dir() {
         info!("Current working directory: {:?}", cwd);
     }
 
-    // Use app data directory for .env file when running from app bundle
-    // In debug mode, use .env.dev to separate dev and production configs
+    // Use app data directory for config file when running from app bundle
+    // In debug mode, use e-fees.config.dev to separate dev and production configs
     let env_filename = if cfg!(debug_assertions) {
-        ".env.dev"
+        "e-fees.config.dev"
     } else {
-        ".env"
+        "e-fees.config"
     };
 
     let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
@@ -43,12 +43,12 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         PathBuf::from(env_filename)
     };
 
-    // Log which .env file is being loaded
-    info!("Loading environment configuration from: {:?}", env_path);
+    // Log which config file is being loaded
+    info!("Loading configuration from: {:?}", env_path);
     if cfg!(debug_assertions) {
-        info!("Running in DEBUG mode - using .env.dev");
+        info!("Running in DEBUG mode - using e-fees.config.dev");
     } else {
-        info!("Running in RELEASE mode - using .env");
+        info!("Running in RELEASE mode - using e-fees.config");
     }
 
     let mut settings = AppSettings {
@@ -68,17 +68,17 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         scope_api_key: None,
     };
 
-    info!("Looking for .env file at: {:?}", env_path);
+    info!("Looking for config file at: {:?}", env_path);
 
     if env_path.exists() {
-        info!(".env file found, reading contents");
+        info!("Config file found, reading contents");
         match fs::read_to_string(&env_path) {
             Ok(content) => {
                 info!(
-                    "Successfully read .env file, parsing {} lines",
+                    "Successfully read config file, parsing {} lines",
                     content.lines().count()
                 );
-                // Parse .env file line by line
+                // Parse config file line by line
                 for line in content.lines() {
                     let line = line.trim();
                     if line.is_empty() || line.starts_with('#') {
@@ -111,18 +111,18 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
                         }
                     }
                 }
-                info!("Successfully loaded settings from .env file");
+                info!("Successfully loaded settings from config file");
                 if let Some(ref url) = settings.surrealdb_url {
                     info!("Database URL loaded: {}", url);
                 }
             }
             Err(e) => {
-                error!("Failed to read .env file: {}", e);
-                return Err(format!("Failed to read .env file: {}", e));
+                error!("Failed to read config file: {}", e);
+                return Err(format!("Failed to read config file: {}", e));
             }
         }
     } else {
-        info!("No .env file found, returning empty settings");
+        info!("No config file found, returning empty settings");
     }
 
     info!("Returning internal settings: staff_name={:?}, staff_email={:?}, staff_phone={:?}, staff_position={:?}",
@@ -131,10 +131,10 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
     Ok(settings)
 }
 
-/// Read current application settings from .env file (public/safe version).
+/// Read current application settings from config file (public/safe version).
 ///
 /// This command loads all configurable application settings from the
-/// `.env` file located in the project root directory. Settings include
+/// `e-fees.config` file located in the app data directory. Settings include
 /// database configuration, staff information, and file system paths.
 ///
 /// # Returns
@@ -155,15 +155,15 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
 /// ```
 #[tauri::command]
 pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettingsPublic, String> {
-    info!("Reading settings from .env file (public)");
+    info!("Reading settings from config file (public)");
     let settings = get_settings_internal(&app_handle).await?;
     Ok(AppSettingsPublic::from(&settings))
 }
 
-/// Save application settings to .env file.
+/// Save application settings to config file.
 ///
-/// This command writes application settings to the `.env` file, preserving
-/// existing environment variables that are not managed by the application.
+/// This command writes application settings to the `e-fees.config` file, preserving
+/// existing variables that are not managed by the application.
 /// The settings are organized into logical sections with comments.
 ///
 /// # Parameters
@@ -174,7 +174,7 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettingsPublic, St
 /// - `Err(String)`: File write error or permission issue
 ///
 /// # File Management Strategy
-/// 1. Read existing .env file to preserve other variables
+/// 1. Read existing config file to preserve other variables
 /// 2. Remove old application-managed variables
 /// 3. Add new settings in organized sections
 /// 4. Write complete file atomically
@@ -190,7 +190,7 @@ pub async fn get_settings(app_handle: AppHandle) -> Result<AppSettingsPublic, St
 /// ```
 #[tauri::command]
 pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Result<String, String> {
-    info!("Saving settings to .env file");
+    info!("Saving settings to config file");
 
     // Preserve existing password when frontend omits it (security: password never sent to frontend)
     let settings = if settings.surrealdb_pass.is_none() {
@@ -203,14 +203,14 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     };
 
     // Use same filename logic as get_settings for consistency
-    // In debug mode, use .env.dev to separate dev and production configs
+    // In debug mode, use e-fees.config.dev to separate dev and production configs
     let env_filename = if cfg!(debug_assertions) {
-        ".env.dev"
+        "e-fees.config.dev"
     } else {
-        ".env"
+        "e-fees.config"
     };
 
-    // Use app data directory for .env file when running from app bundle
+    // Use app data directory for config file when running from app bundle
     let env_path = if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
         let env_file_path = app_data_dir.join(env_filename);
 
@@ -227,10 +227,10 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
         PathBuf::from(env_filename)
     };
 
-    info!("Using .env file path: {:?}", env_path);
+    info!("Using config file path: {:?}", env_path);
     let mut lines = Vec::new();
 
-    // Read existing .env file to preserve other variables
+    // Read existing config file to preserve other variables
     if env_path.exists() {
         match fs::read_to_string(&env_path) {
             Ok(content) => {
@@ -285,8 +285,8 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                 }
             }
             Err(e) => {
-                error!("Failed to read existing .env file: {}", e);
-                return Err(format!("Failed to read existing .env file: {}", e));
+                error!("Failed to read existing config file: {}", e);
+                return Err(format!("Failed to read existing config file: {}", e));
             }
         }
     }
@@ -366,12 +366,12 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
     let content = lines.join("\n");
     match fs::write(&env_path, content) {
         Ok(_) => {
-            info!("Successfully saved settings to .env file");
+            info!("Successfully saved settings to config file");
             Ok("Settings saved successfully".to_string())
         }
         Err(e) => {
-            error!("Failed to write .env file: {}", e);
-            Err(format!("Failed to write .env file: {}", e))
+            error!("Failed to write config file: {}", e);
+            Err(format!("Failed to write config file: {}", e))
         }
     }
 }
@@ -399,10 +399,10 @@ pub async fn get_dev_mode(app_handle: AppHandle) -> Result<bool, String> {
     Ok(settings.dev_mode.unwrap_or(false))
 }
 
-/// Reload database configuration from the .env file and reinitialize connection.
+/// Reload database configuration from the config file and reinitialize connection.
 ///
 /// This command allows the application to pick up new database settings without
-/// requiring a restart. It reloads settings from the .env file and reconfigures
+/// requiring a restart. It reloads settings from the config file and reconfigures
 /// the database manager with the new connection parameters.
 ///
 /// # Returns
@@ -423,9 +423,9 @@ pub async fn reload_database_config(
     state: State<'_, AppState>,
     app_handle: AppHandle,
 ) -> Result<String, String> {
-    info!("Reloading database configuration from .env file");
+    info!("Reloading database configuration from config file");
 
-    // Load fresh settings from the .env file (using internal function for password access)
+    // Load fresh settings from the config file (using internal function for password access)
     let settings = get_settings_internal(&app_handle).await?;
 
     // Extract database configuration

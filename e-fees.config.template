@@ -1,5 +1,5 @@
-# Fee Proposal Management System - Environment Configuration Template
-# Copy this file to .env and fill in your actual values
+# Fee Proposal Management System - Configuration Template
+# Copy this file to e-fees.config and fill in your actual values
 
 # Database Configuration (All Required)
 SURREALDB_URL=ws://localhost:8000
@@ -22,7 +22,7 @@ SURREALDB_ACCEPT_INVALID_HOSTNAMES=false
 # PROJECT_FOLDER_PATH=/path/to/your/projects/
 
 # Security Notes:
-# - Never commit the actual .env file to version control
+# - Never commit the actual e-fees.config file to version control
 # - Use strong passwords for database access
 # - Ensure your SurrealDB instance is properly secured
 # - Consider using TLS/SSL in production environments

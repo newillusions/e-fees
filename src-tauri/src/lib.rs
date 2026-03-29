@@ -184,9 +184,14 @@ pub fn run() {
 
             info!("Initializing Fee Proposal Management Application");
 
-            // Load environment variables as fallback for development
-            if let Err(e) = dotenvy::dotenv() {
-                info!("No .env file found or error loading it: {}", e);
+            // Load config file as fallback for development
+            let config_filename = if cfg!(debug_assertions) {
+                "e-fees.config.dev"
+            } else {
+                "e-fees.config"
+            };
+            if let Err(e) = dotenvy::from_filename(config_filename) {
+                info!("No config file ({}) found or error loading it: {}", config_filename, e);
                 info!("Will try settings system for production");
             }
 
