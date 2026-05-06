@@ -9,6 +9,7 @@
   import { generatePricingId } from '../../../types/database';
   import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
   import { roundWithConfig, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
+  import { buildPaymentSchedule } from '$lib/utils/paymentSchedule';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -83,51 +84,41 @@
     };
   }
 
-  // Generate schedule from pricing using actual rounded stage totals
+  // Generate schedule from pricing using actual rounded stage totals.
+  // Mobilisation rebate is split equally across stages (per Martin's business
+  // rule, see src/lib/utils/paymentSchedule.ts).
   function generateFromPricing() {
-    const entries: PaymentScheduleEntry[] = [];
-
-    // Calculate design subtotal from actual rounded stage totals
-    const designSubtotal = designStages.reduce(
-      (sum, stage) => sum + getRoundedStageTotal(stage.id),
-      0
+    const result = buildPaymentSchedule(
+      designStages.map(stage => ({
+        id: stage.id,
+        name: stage.name,
+        total: getRoundedStageTotal(stage.id)
+      })),
+      config.mobilisation_percent
     );
 
-    // Mobilisation based on design subtotal
-    const mobilisationAmount = designSubtotal * (config.mobilisation_percent / 100);
-    const mobilisationPercent =
-      designSubtotal > 0 ? (mobilisationAmount / designSubtotal) * 100 : 0;
-    entries.push({
-      id: generatePricingId('pay'),
-      type: 'mobilisation',
-      description: `Mobilisation (${config.mobilisation_percent}%)`,
-      amount: mobilisationAmount,
-      percentage_of_total: mobilisationPercent,
-      status: 'pending'
-    });
-
-    // Milestone payments using actual rounded stage totals
-    // Each stage payment = quoted stage value minus its share of mobilisation
-    const remainingAmount = designSubtotal - mobilisationAmount;
-
-    for (const stage of designStages) {
-      const stageTotal = getRoundedStageTotal(stage.id);
-      // Payment = stage's proportion of remaining (after mobilisation deduction)
-      const stageAmount = designSubtotal > 0 ? remainingAmount * (stageTotal / designSubtotal) : 0;
-      const stagePercent = designSubtotal > 0 ? (stageAmount / designSubtotal) * 100 : 0;
-
-      entries.push({
+    const subtotal = result.design_subtotal;
+    const entries: PaymentScheduleEntry[] = [
+      {
         id: generatePricingId('pay'),
-        type: 'milestone',
-        description: `${stage.name} Submittal`,
-        stage_id: stage.id,
-        stage_percentage: 100,
-        amount: stageAmount,
-        quoted_stage_amount: stageTotal,
-        percentage_of_total: stagePercent,
+        type: 'mobilisation',
+        description: `Mobilisation (${config.mobilisation_percent}%)`,
+        amount: result.mobilisation,
+        percentage_of_total: subtotal > 0 ? (result.mobilisation / subtotal) * 100 : 0,
         status: 'pending'
-      });
-    }
+      },
+      ...result.stages.map(stage => ({
+        id: generatePricingId('pay'),
+        type: 'milestone' as const,
+        description: `${stage.stage_name} Submittal`,
+        stage_id: stage.stage_id,
+        stage_percentage: 100,
+        amount: stage.amount,
+        quoted_stage_amount: stage.quoted_stage_amount,
+        percentage_of_total: subtotal > 0 ? (stage.amount / subtotal) * 100 : 0,
+        status: 'pending' as const
+      }))
+    ];
 
     const newSchedule = recalculateTotals(entries);
     schedule = newSchedule;
