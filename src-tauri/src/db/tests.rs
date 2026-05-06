@@ -972,8 +972,10 @@ mod tests {
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
-            username: "martin".to_string(),
-            password: "th38ret3ch".to_string(),
+            username: &std::env::var("EFEES_SURREALDB_USER")
+                .expect("EFEES_SURREALDB_USER must be set to run this PROD test"),
+            password: &std::env::var("EFEES_SURREALDB_PASS")
+                .expect("EFEES_SURREALDB_PASS must be set to run this PROD test"),
         })
         .await
         .expect("Failed to sign in");
@@ -1057,8 +1059,10 @@ mod tests {
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
-            username: "martin".to_string(),
-            password: "th38ret3ch".to_string(),
+            username: &std::env::var("EFEES_SURREALDB_USER")
+                .expect("EFEES_SURREALDB_USER must be set to run this PROD test"),
+            password: &std::env::var("EFEES_SURREALDB_PASS")
+                .expect("EFEES_SURREALDB_PASS must be set to run this PROD test"),
         })
         .await
         .expect("Failed to sign in");

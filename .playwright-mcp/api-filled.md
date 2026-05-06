@@ -464,7 +464,7 @@
             - definition [ref=e426]:
               - generic [ref=e427]:
                 - generic [ref=e428]:
-                  - textbox [ref=e429]: th38ret3ch
+                  - textbox [ref=e429]: <redacted-rotated-2026-05-06>
                   - generic [ref=e430]:
                     - button "Edit" [ref=e431] [cursor=pointer]
                     - button "Remove" [ref=e432] [cursor=pointer]

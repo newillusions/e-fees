@@ -11,7 +11,7 @@
         "SURREALDB_NS": "emittiv",
         "SURREALDB_DB": "projects",
         "SURREALDB_USER": "martin",
-        "SURREALDB_PASS": "th38ret3ch"
+        "SURREALDB_PASS": "<redacted-rotated-2026-05-06>"
       },
       "disabled": false,
       "autoApprove": []

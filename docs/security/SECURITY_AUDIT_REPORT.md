@@ -65,7 +65,7 @@ gh secret set GITEA_TOKEN --repo newillusions/e-fees
 **Patterns found in history**:
 - Gitea token: `ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f`
 - Private IPs: `10.0.1.17`, `10.0.0.131`
-- Database password: `th38ret3ch`
+- Database password: `<redacted-rotated-2026-05-06>`
 - Private server: `forge.mms.name`
 
 **Choose one option**:
@@ -97,7 +97,7 @@ git clone --mirror https://github.com/newillusions/e-fees.git
 # Create file with secrets to remove
 cat > passwords.txt << EOF
 ba7daa3d4ab6fd3ac6825b2bf939fb58bc7ab01f
-th38ret3ch
+<redacted-rotated-2026-05-06>
 EOF
 
 # Remove sensitive files and replace secrets
@@ -192,7 +192,7 @@ Run these before making public:
 
 ```bash
 # Check for remaining secrets in working tree
-git ls-files | xargs grep -i -E "(password|token|secret|th38ret3ch)" || echo "✓ Clean"
+git ls-files | xargs grep -i -E "(password|token|secret|<redacted-rotated-2026-05-06>)" || echo "✓ Clean"
 
 # Check git history (after cleaning)
 git log --all --oneline | wc -l  # Should be 1 if using fresh start

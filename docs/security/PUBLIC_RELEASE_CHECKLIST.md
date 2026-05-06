@@ -69,7 +69,7 @@ git push --force
 
 ```bash
 # Search for any remaining sensitive patterns
-git log -p | grep -E "(password|token|secret|10\.0\.[01]\.|th38ret3ch)" || echo "✓ Clean"
+git log -p | grep -E "(password|token|secret|10\.0\.[01]\.|<redacted-rotated-2026-05-06>)" || echo "✓ Clean"
 
 # Check repo visibility
 gh repo view newillusions/e-fees --json visibility

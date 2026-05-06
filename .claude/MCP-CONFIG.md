@@ -107,8 +107,8 @@ claude --mcp-config .mcp-config.json
       "SURREALDB_URL": "ws://10.0.21.8:8000/rpc",
       "SURREALDB_NS": "emittiv",
       "SURREALDB_DB": "projects",
-      "SURREALDB_USER": "martin",
-      "SURREALDB_PASS": "th38ret3ch"
+      "SURREALDB_USER_FROM": "EFEES_SURREALDB_USER",
+      "SURREALDB_PASS_FROM": "EFEES_SURREALDB_PASS"
     }
   }
 }

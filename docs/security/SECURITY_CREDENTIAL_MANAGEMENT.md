@@ -6,7 +6,7 @@ This document outlines secure credential management practices for the Fee Propos
 ## Critical Security Issues Resolved
 
 ### Issue: Hardcoded Credentials in Git History
-**Problem**: The password `th38ret3ch` and related credentials appeared in multiple git commits and documentation files.
+**Problem**: The password `<redacted-rotated-2026-05-06>` and related credentials appeared in multiple git commits and documentation files.
 
 **Actions Taken**:
 1. ✅ Removed hardcoded credentials from all current `.env` files
@@ -114,7 +114,7 @@ npm run tauri:dev  # Should work normally
 ## Archive of Security Actions
 
 ### Git History Cleanup Status
-- 🔍 **Analyzed**: Found 13 instances of `th38ret3ch` in git history
+- 🔍 **Analyzed**: Found 13 instances of `<redacted-rotated-2026-05-06>` in git history
 - 🛡️ **Protected**: git-secrets installed to prevent future leaks  
 - ⚠️ **Note**: Complete git history cleanup requires additional tools (BFG) - consider for production deployment
 

@@ -105,7 +105,7 @@ This task is a Claude Code task agent invocation. The agent:
 You are a data import agent for E-Fees. Your job is to scan project folders and extract pricing data from Excel files into SurrealDB.
 
 ## Connection
-- SurrealDB: ws://10.0.21.8:8000, namespace: emittiv, database: projects, auth: martin/th38ret3ch
+- SurrealDB: ws://10.0.21.8:8000, namespace: emittiv, database: projects, auth: martin/<redacted-rotated-2026-05-06>
 
 ## Source Folders
 Base: /Volumes/svrroot/user/emittiv/nc/__groupfolders/1/01 Projects/

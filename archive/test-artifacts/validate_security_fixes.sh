@@ -23,7 +23,7 @@ test_result() {
 echo "📋 TEST 1: CREDENTIAL MANAGEMENT"
 
 # Check .env files don't contain hardcoded password
-if grep -q "th38ret3ch" .env 2>/dev/null; then
+if grep -q "<redacted-rotated-2026-05-06>" .env 2>/dev/null; then
     test_result 1 "Hardcoded credentials removed from .env" "Found hardcoded password in .env"
 else
     test_result 0 "Hardcoded credentials removed from .env" "No hardcoded credentials found"

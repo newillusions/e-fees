@@ -43,13 +43,13 @@ DEFINE INDEX venue_country ON venue FIELDS location.country;
 
 **Step 2: Run DDL against dev DB**
 
-Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:th38ret3ch" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/001-create-venue-table.surql`
+Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:<redacted-rotated-2026-05-06>" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/001-create-venue-table.surql`
 
 Expected: All statements return `"status": "OK"`
 
 **Step 3: Verify table exists**
 
-Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:th38ret3ch" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" -d "INFO FOR TABLE venue;"`
+Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:<redacted-rotated-2026-05-06>" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" -d "INFO FOR TABLE venue;"`
 
 Expected: Shows field definitions matching the DDL
 
@@ -90,13 +90,13 @@ DEFINE FIELD status ON fee TYPE string DEFAULT 'Draft' ASSERT $value INSIDE [
 
 **Step 2: Run DDL against dev DB**
 
-Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:th38ret3ch" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/002-update-project-fee-schemas.surql`
+Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:<redacted-rotated-2026-05-06>" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/002-update-project-fee-schemas.surql`
 
 Expected: All statements return `"status": "OK"`
 
 **Step 3: Verify both schemas updated**
 
-Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:th38ret3ch" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" -d "INFO FOR TABLE projects; INFO FOR TABLE fee;" | python3 -c "import sys,json; [print(r['result'].get('fields',{}).get('status','')) for r in json.load(sys.stdin)]"`
+Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:<redacted-rotated-2026-05-06>" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" -d "INFO FOR TABLE projects; INFO FOR TABLE fee;" | python3 -c "import sys,json; [print(r['result'].get('fields',{}).get('status','')) for r in json.load(sys.stdin)]"`
 
 Expected: Both show the new ASSERT lists
 
@@ -158,7 +158,7 @@ Expected fee counts: Lost=21, Completed=4, Awarded=3, Revised=3
 
 **Step 3: Run migration**
 
-Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:th38ret3ch" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/003-data-migration.surql`
+Run: `curl -s -X POST "http://10.0.23.11:8000/sql" -u "martin:<redacted-rotated-2026-05-06>" -H "surreal-ns: emittiv" -H "surreal-db: projects" -H "Accept: application/json" -H "Content-Type: text/plain" --data-binary @scripts/migration/003-data-migration.surql`
 
 **Step 4: Verify new status distribution**
 

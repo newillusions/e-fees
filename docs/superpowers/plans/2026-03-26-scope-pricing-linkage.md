@@ -81,7 +81,7 @@ DEFINE FIELD stages_snapshot  ON scope_assembly TYPE option<array<string>>;
 
 ```bash
 curl -s -X POST "http://10.0.23.12:8000/rpc" \
-  -u "martin:th38ret3ch" \
+  -u "martin:<redacted-rotated-2026-05-06>" \
   -H "surreal-ns: emittiv" -H "surreal-db: projects" \
   -H "Accept: application/json" -H "Content-Type: application/json" \
   -d '{"method":"query","params":["<paste schema additions>"]}'
@@ -348,7 +348,7 @@ Expected: 200 OK with scope data. Verify `stages_snapshot` is stored:
 
 ```bash
 curl -s -X POST "http://10.0.23.12:8000/rpc" \
-  -u "martin:th38ret3ch" \
+  -u "martin:<redacted-rotated-2026-05-06>" \
   -H "surreal-ns: emittiv" -H "surreal-db: projects" \
   -H "Accept: application/json" -H "Content-Type: application/json" \
   -d '{"method":"query","params":["SELECT stages_snapshot FROM scope_assembly LIMIT 1;"]}'
@@ -1024,7 +1024,7 @@ Test via curl: generate scope twice for the same fee, then check revisions exist
 
 ```bash
 curl -s -X POST "http://10.0.23.12:8000/rpc" \
-  -u "martin:th38ret3ch" \
+  -u "martin:<redacted-rotated-2026-05-06>" \
   -H "surreal-ns: emittiv" -H "surreal-db: projects" \
   -H "Accept: application/json" -H "Content-Type: application/json" \
   -d '{"method":"query","params":["SELECT fee_id, revision, trigger, saved_at FROM scope_revision ORDER BY saved_at DESC LIMIT 5;"]}'

@@ -261,10 +261,10 @@ Use this pattern for creating test contacts:
 ### Verify Contact Structure
 ```bash
 # Count contacts
-curl -X POST "http://10.0.1.17:8000/sql" -H "Content-Type: text/plain" -u "martin:th38ret3ch" -d "SELECT count() FROM contacts GROUP ALL;"
+curl -X POST "http://10.0.1.17:8000/sql" -H "Content-Type: text/plain" -u "martin:<redacted-rotated-2026-05-06>" -d "SELECT count() FROM contacts GROUP ALL;"
 
 # Check contact fields
-curl -X POST "http://10.0.1.17:8000/sql" -H "Content-Type: text/plain" -u "martin:th38ret3ch" -d "SELECT id, first_name, last_name, email FROM contacts LIMIT 3;"
+curl -X POST "http://10.0.1.17:8000/sql" -H "Content-Type: text/plain" -u "martin:<redacted-rotated-2026-05-06>" -d "SELECT id, first_name, last_name, email FROM contacts LIMIT 3;"
 ```
 
 ### Test Contact Creation

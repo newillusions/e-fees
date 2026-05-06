@@ -106,7 +106,7 @@ Append all UPDATE statements to the migration file.
 ```bash
 # Use /rpc endpoint (not /sql) per KB rule for complex text
 curl -s -X POST "http://10.0.23.11:8000/rpc" \
-  -u "martin:th38ret3ch" \
+  -u "martin:<redacted-rotated-2026-05-06>" \
   -H "surreal-ns: emittiv" \
   -H "surreal-db: projects" \
   -H "Accept: application/json" \
@@ -122,7 +122,7 @@ Expected: All statements return `"status": "OK"`.
 # Test key inputs
 for input in "UAE" "AE" "ARE" "U.A.E." "KSA" "SA" "India" "GB" "uk" "XYZZY"; do
   curl -s -X POST "http://10.0.23.11:8000/rpc" \
-    -u "martin:th38ret3ch" \
+    -u "martin:<redacted-rotated-2026-05-06>" \
     -H "surreal-ns: emittiv" \
     -H "surreal-db: projects" \
     -H "Accept: application/json" \
@@ -604,7 +604,7 @@ curl -s -X POST "http://10.0.21.80:3200/api/companies" \
 
 ```bash
 curl -s -X POST "http://10.0.23.11:8000/rpc" \
-  -u "martin:th38ret3ch" \
+  -u "martin:<redacted-rotated-2026-05-06>" \
   -H "surreal-ns: emittiv" \
   -H "surreal-db: projects" \
   -H "Accept: application/json" \

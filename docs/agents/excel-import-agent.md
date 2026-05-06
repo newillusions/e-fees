@@ -22,7 +22,7 @@
   - Namespace: `emittiv`
   - Database: `projects`
   - Username: `martin`
-  - Password: `th38ret3ch`
+  - Password: `<redacted-rotated-2026-05-06>`
 
 ### Target Environment
 - Base path: `/Volumes/svrroot/user/emittiv/nc/__groupfolders/1/01 Projects/`
@@ -829,7 +829,7 @@ If project_code not found in DB:
 
 ### Current State (2026-02-16)
 
-- **DB connection**: `http://10.0.21.8:8000` (namespace: emittiv, database: projects, user: martin, password: th38ret3ch)
+- **DB connection**: `http://10.0.21.8:8000` (namespace: emittiv, database: projects, user: martin, password: <redacted-rotated-2026-05-06>)
 - **62 projects** in DB, **29 fee records** (none have pricing data from import, 2 have app-created pricing)
 - **77 Excel files** found, ~59 processable after template/archive filtering
 - **Only `25-97109`** (Mapletree Warehouse) has no matching project in DB

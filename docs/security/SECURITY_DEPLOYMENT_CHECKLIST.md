@@ -12,7 +12,7 @@ All critical security vulnerabilities identified by the comprehensive code revie
 
 #### 1. **Hardcoded Credentials Removed** ✅
 - **Status**: Fixed and validated
-- **Action**: Removed `th38ret3ch` password from `.env` files
+- **Action**: Removed `<redacted-rotated-2026-05-06>` password from `.env` files
 - **Files Modified**: `.env`, `src-tauri/.env`
 - **Protection**: Environment files protected by `.gitignore`
 - **Template**: `.env.example` created with security warnings
@@ -60,7 +60,7 @@ All critical security vulnerabilities identified by the comprehensive code revie
 
 ### **Immediate Actions Required** 🚨
 
-- [ ] **Credential Rotation**: Change database password from compromised `th38ret3ch`
+- [ ] **Credential Rotation**: Change database password from compromised `<redacted-rotated-2026-05-06>`
 - [ ] **Database Server Setup**: Configure SurrealDB server for WSS connections
 - [ ] **SSL Certificate**: Install valid SSL certificate on database server  
 - [ ] **Git History Cleanup**: Use BFG Repo-Cleaner to remove credentials from history
@@ -146,7 +146,7 @@ The following security documentation has been created:
 ## ⚠️ Important Security Notes
 
 ### **Git History Risk** 🚨
-The git repository history still contains the compromised password `th38ret3ch`. For production deployment:
+The git repository history still contains the compromised password `<redacted-rotated-2026-05-06>`. For production deployment:
 1. Use BFG Repo-Cleaner to permanently remove credentials from history
 2. Force-push cleaned repository
 3. Require all team members to re-clone the repository
