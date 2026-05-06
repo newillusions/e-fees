@@ -1,16 +1,17 @@
 # E-Fees Project Handover
 
 ## Current Status
-v0.16.0 released. InDesign workbook export feature complete — generates 6-sheet xlsx for InDesign table linking. All tests passing (25 in e-fees-core).
+e-fees-api v0.3.1 deployed (PATCH /projects/{id} added, 405→200; folder script restored on Primary, 503→200; pa-core RFP intake unblocked). Active password literal scrub committed (47d7bbf) ahead of 2026-05-06 rotation. Desktop app v0.16.0 unchanged.
 
-- **Version**: 0.16.0 (desktop app + API)
+- **Versions**: desktop 0.16.0, e-fees-api 0.3.1
+- **Image**: forge.mms.name/emittiv/e-fees-api:v0.3.1 (sha256:313c3da...)
 - **Branch**: main
 - **Database**: SurrealDB v3.0.4 surrealkv @ ws://10.0.23.11:8000 (emittiv/projects)
 - **Dev Database**: SurrealDB v3.0.4 @ ws://10.0.23.12:8000
 
 ## Last Session
-**Date**: 2026-04-02
-**Summary**: Context load only - no work performed. Handover current from 2026-03-31 session (v0.14.3 config diagnosis, upgrade to v0.16.0).
+**Date**: 2026-05-06
+**Summary**: Comprehensive folder API fix end-to-end (pa P7 hub msg:moox1tgdtqqoosbr033k) + password scrub (dev P7 hub msg:bo94tqxsms0jhcijrp9f). PATCH route added (axum), Dockerfile bumped to rust:1.90-slim, image rebuilt + pushed, Unraid container updated, Bermuda Beach (projects:26_97101) folder created and verified. Restored missing `nc-project-create.sh` on Primary at `/mnt/user/appdata/scripts/`. `th38ret3ch` literal scrubbed from 14 active files, worktree branches left frozen. Replied to pa, dev (×2). Three commits: afb2c4c (PATCH + orphan cleanup), 47d7bbf (security scrub), 557b8cd (Dockerfile rust 1.90).
 
 ## Key Context
 | Resource | Value |
@@ -50,10 +51,10 @@ v0.16.0 released. InDesign workbook export feature complete — generates 6-shee
 3. **SurrealValue i64**: Use `i64` not `Option<i64>` for fields with DEFAULT 0
 4. **InDesign MCP**: Requires UXP bridge running (node bridge/server.js in indesign-uxp-server) + UXP plugin loaded in InDesign
 
-## Pending Hub Actions (loaded 2026-05-06)
-- **ailx P8** message:9a3hw83prc2gt5rqpat2 — mobilisation rebate formula bug, PaymentSchedulePanel.svelte:95-126
-- **dev P5** message:fmnqez3f3wow2ugmtkv8 — container standards migration (api+scope)
-- **Security** — `<redacted-rotated-2026-05-06>` password literal still in 13+ files (db rotation 2026-05-06); originally flagged via dev P7 hub msg
+## Pending Hub Actions
+- **ailx P8** message:9a3hw83prc2gt5rqpat2 — mobilisation rebate formula bug, PaymentSchedulePanel.svelte:95-126 (accepted, not yet shipped)
+- **dev P5** message:fmnqez3f3wow2ugmtkv8 — container standards migration (api side already on emittiv-container-utils + health endpoints; scope side outstanding)
+- **dev P5** message:drk1bp2myaunm4rbo2zh — Opus 4.7 audit (review work, not started)
 
 ---
 *Updated: 2026-05-06*
