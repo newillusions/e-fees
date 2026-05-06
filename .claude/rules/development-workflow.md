@@ -11,13 +11,16 @@ These rules ensure consistent, high-quality development practices across the e-f
 
 ---
 
-## 🧠 Sub-Agent Usage (MANDATORY)
+## 🧠 Sub-Agent Usage
 
-### Rule 1: Always Use Sub-Agents for Specialized Tasks
+### Rule 1: Use sub-agents when they actually pay off
 
-**When working with Claude Code, you MUST delegate specialized tasks to sub-agents.**
+Direct execution is the default. Reach for a sub-agent when one of these holds:
+- The work will produce >500 lines of output (verbose tests, long lookups, large code reviews) and would otherwise burn the main context window.
+- Two or more genuinely independent workstreams need to run in parallel and don't share state.
+- A red-team / second-opinion pass on a plan or change with multi-system blast radius.
 
-#### Required Delegation:
+#### Specialist references (use when the criteria above are met):
 
 | Task Type | Sub-Agent | Location |
 |-----------|-----------|----------|
@@ -27,20 +30,13 @@ These rules ensure consistent, high-quality development practices across the e-f
 | Database queries | Database Specialist | `.claude/subagents/subagent-database-specialist.md` |
 | Code reviews | Code Reviewer | `.claude/subagents/subagent-code-reviewer.md` |
 
-#### Parallel Workflows
+#### When NOT to delegate
 
-When working on multiple independent features:
-```markdown
-**WRONG** ❌ - Serial processing in main conversation:
-1. Fix contact bug
-2. Add company feature
-3. Update invoice logic
+- Single-file edits or one-line changes — direct work is faster and produces less context churn.
+- Sequential steps that share state — handing off mid-flow loses context the spawn prompt has to rebuild.
+- Quick lookups (one grep, one read) — direct execution is cheaper than spawning.
 
-**CORRECT** ✅ - Parallel sub-agent workflows:
-- Sub-agent 1 (Tauri): Fix contact bug
-- Sub-agent 2 (Database): Add company feature
-- Sub-agent 3 (Code Review): Update invoice logic
-```
+Skip the specialists for routine project work; pull them in when the criteria above genuinely apply.
 
 ---
 
