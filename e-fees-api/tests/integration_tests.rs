@@ -1324,6 +1324,99 @@ async fn test_update_project_invalid_status() {
 }
 
 // ---------------------------------------------------------------------------
+// PATCH /projects/{id} — pa-core sends PATCH to overwrite folder field after
+// auto-derivation. Must accept the same body shape as PUT (partial merge).
+// Regression for hub message:moox1tgdtqqoosbr033k (2026-05-06 Bermuda Beach).
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_patch_project_accepts_folder_field() {
+    verify_not_production();
+
+    let client = authed_client();
+
+    // Create a throwaway project so PATCH has something real to merge into.
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let create_body = serde_json::json!({
+        "name": format!("DELETE ME - PATCH Test {}", ts),
+        "country": "UAE",
+        "city": "Dubai",
+        "status": "Lead"
+    });
+
+    let create_resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&create_body)
+        .send()
+        .await
+        .expect("Failed to create project");
+    assert_eq!(create_resp.status(), 200);
+    let created: serde_json::Value = create_resp.json().await.unwrap();
+    let key = created["data"]["number"].as_str().unwrap().replace('-', "_");
+
+    // PATCH overrides the auto-derived folder field — pa-core's exact use case.
+    let patch_body = serde_json::json!({
+        "folder": format!("{}-Bermuda-Beach", &key.replace('_', "-"))
+    });
+
+    let resp = client
+        .patch(format!("{}/projects/{}", base_url(), key))
+        .json(&patch_body)
+        .send()
+        .await
+        .expect("Failed to PATCH project");
+
+    assert_eq!(
+        resp.status(),
+        200,
+        "PATCH /projects/{{id}} must return 200, not 405 (method not allowed)"
+    );
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        body["data"]["folder"]
+            .as_str()
+            .unwrap()
+            .ends_with("-Bermuda-Beach"),
+        "folder field should be merged: {:?}",
+        body["data"]["folder"]
+    );
+
+    // Cleanup
+    let _ = client
+        .delete(format!("{}/projects/{}", base_url(), key))
+        .send()
+        .await;
+}
+
+#[tokio::test]
+async fn test_patch_project_method_allowed() {
+    // Regression test: ensure PATCH is registered for /projects/{id}.
+    // A 405 here means the PATCH route was not added back (axum returns 405,
+    // not 404, when the path matches but the method doesn't).
+    verify_not_production();
+
+    let client = authed_client();
+    let resp = client
+        .patch(format!("{}/projects/nonexistent_xyz", base_url()))
+        .json(&serde_json::json!({"folder": "noop"}))
+        .send()
+        .await
+        .expect("Failed to send PATCH");
+
+    assert_ne!(
+        resp.status(),
+        405,
+        "PATCH /projects/{{id}} returned 405 — the route is missing the .patch() handler"
+    );
+    // Expected: 404 (project doesn't exist), not 405.
+    assert_eq!(resp.status(), 404);
+}
+
+// ---------------------------------------------------------------------------
 // OpenAPI spec completeness — verify all CRUD operations are documented
 // ---------------------------------------------------------------------------
 

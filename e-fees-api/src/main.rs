@@ -186,6 +186,7 @@ async fn main() {
             "/projects/{id}",
             get(routes::projects::get_project)
                 .put(routes::projects::update_project)
+                .patch(routes::projects::update_project)
                 .delete(routes::projects::delete_project),
         )
         .route(
