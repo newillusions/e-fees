@@ -18,6 +18,7 @@
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
+  import { exportIndesignWorkbook } from '$lib/api/revisions';
   import { logger, logApiError } from '$lib/services/logger';
   import { PROPOSAL_STATUS_OPTIONS, type ProposalStatus } from '$lib/constants';
   import BaseModal from './BaseModal.svelte';
@@ -119,6 +120,9 @@
 
   // Auto-export checkbox state (activated by default for new proposals)
   let autoExportToJson = $state(true);
+
+  // InDesign workbook export in-flight flag (edit-mode action)
+  let exportingIndesignWorkbook = $state(false);
 
   // Nested modal states
   let showNewProjectModal = $state(false);
@@ -681,6 +685,34 @@
   function handleJsonExportDismiss() {
     showJsonExportAlert = false;
     doClose();
+  }
+
+  // Handle "Export InDesign Workbook" button — saves an .xlsx with all
+  // pricing tables linked from the project's 02 Proposal folder (or temp
+  // dir as fallback). Backend reveals the saved file in Finder.
+  async function handleExportIndesignWorkbook() {
+    const activeProposal = proposal || originalProposal;
+    if (!activeProposal) {
+      operationActions.setError('No proposal data available for export');
+      return;
+    }
+
+    const proposalId = getEntityId(activeProposal);
+    if (!proposalId) {
+      operationActions.setError('Could not extract proposal ID for export');
+      return;
+    }
+
+    exportingIndesignWorkbook = true;
+    try {
+      const path = await exportIndesignWorkbook(proposalId);
+      operationActions.setMessage(`InDesign workbook exported to:\n${path}`);
+    } catch (error) {
+      logApiError('exportIndesignWorkbook', error as Error);
+      operationActions.setError(`InDesign workbook export failed: ${error}`);
+    } finally {
+      exportingIndesignWorkbook = false;
+    }
   }
 
   // Form management
@@ -1318,6 +1350,33 @@
         <p class="text-emittiv-light text-xs mt-2">
           When enabled, the proposal data will be safely exported to the project's JSON file with
           automatic backup of existing data.
+        </p>
+      </div>
+    {/if}
+
+    <!-- Exports (Edit Mode Only) -->
+    {#if mode === 'edit'}
+      <div class="emittiv-form-section">
+        <h3 class="emittiv-form-section__title">Exports</h3>
+        <div class="emittiv-form-row items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            on:click={handleExportIndesignWorkbook}
+            disabled={exportingIndesignWorkbook ||
+              $operationState.saving ||
+              $operationState.deleting}
+          >
+            {#if exportingIndesignWorkbook}
+              <div class="emittiv-spinner-sm"></div>
+            {/if}
+            Export InDesign Workbook
+          </Button>
+        </div>
+        <p class="text-emittiv-light text-xs mt-2">
+          Generates a linked pricing .xlsx workbook saved to the project's 02 Proposal folder
+          (or system temp directory if the folder is missing). The file is revealed in Finder
+          after export.
         </p>
       </div>
     {/if}

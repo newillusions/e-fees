@@ -72,7 +72,7 @@ export {
 } from './filesystem';
 
 // Revision and template export operations
-export { cloneFeeRevision, getFeesForProject, exportFeeTemplate } from './revisions';
+export { cloneFeeRevision, getFeesForProject, exportFeeTemplate, exportIndesignWorkbook } from './revisions';
 
 // Settings operations
 export { getSettings, saveSettings, reloadDatabaseConfig, reconnectDatabase } from './settings';

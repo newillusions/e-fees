@@ -59,3 +59,27 @@ export async function exportFeeTemplate(feeId: string, outputPath?: string): Pro
     throw error;
   }
 }
+
+/**
+ * Export a fee proposal as an InDesign-linked pricing workbook (.xlsx)
+ *
+ * Saves to `<proposal_dir>/<project_number>-IDW Pricing.xlsx` in the project
+ * folder when one exists; falls back to the system temp directory otherwise.
+ * The returned path is also revealed in Finder by the backend.
+ *
+ * @param feeId - ID of the fee to export (string ID, e.g. 'fee:abc123')
+ * @param outputPath - Optional explicit save path (e.g. from a Save As dialog)
+ * @returns Promise resolving to the path the workbook was written to
+ * @throws Error if the fee is missing or the workbook cannot be generated
+ */
+export async function exportIndesignWorkbook(
+  feeId: string,
+  outputPath?: string
+): Promise<string> {
+  try {
+    return await invoke<string>('export_indesign_workbook', { feeId, outputPath });
+  } catch (error) {
+    logApiError('exportIndesignWorkbook', error as Error, { component: 'ExportApi' });
+    throw error;
+  }
+}
