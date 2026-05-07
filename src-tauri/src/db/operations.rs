@@ -352,7 +352,7 @@ impl DatabaseManager {
     pub async fn get_fees_for_project(&self, project_id: &str) -> Result<Vec<Fee>, Error> {
         let client = self.get_client()?;
         let mut result = client.query_bind(
-            "SELECT * OMIT import_source FROM fee WHERE project_id = projects:$pid ORDER BY rev DESC",
+            "SELECT * OMIT import_source FROM fee WHERE project_id = type::record('projects', $pid) ORDER BY rev DESC",
             ("pid", project_id.to_string())
         ).await?;
         let fees: Vec<Fee> = result.take(0)?;
@@ -678,18 +678,26 @@ impl DatabaseManager {
             log.action, log.entity_type, log.entity_name
         );
 
-        let action = log.action.clone();
-        let entity_type = log.entity_type.clone();
-        let entity_id = log.entity_id.clone();
-        let entity_name = log.entity_name.clone();
-        let description = log.description.clone();
-        let old_value = log.old_value.clone();
-        let new_value = log.new_value.clone();
         let user = log.user.unwrap_or_else(|| "system".to_string());
-        let metadata_json = log
-            .metadata
-            .map(|m| m.to_string())
-            .unwrap_or_else(|| "null".to_string());
+
+        // Optional fields use SurrealDB's NONE literal when absent. SurrealDB v3
+        // rejects JSON null for `option<T>` fields (see KB obs:x3jaqd4tpktm876nme6h),
+        // so we either omit the field or pass NONE inline.
+        let metadata_clause = if log.metadata.is_some() {
+            "metadata: $metadata"
+        } else {
+            "metadata: NONE"
+        };
+        let old_value_clause = if log.old_value.is_some() {
+            "old_value: $old_value"
+        } else {
+            "old_value: NONE"
+        };
+        let new_value_clause = if log.new_value.is_some() {
+            "new_value: $new_value"
+        } else {
+            "new_value: NONE"
+        };
 
         let query = format!(
             r#"CREATE activity_log CONTENT {{
@@ -698,18 +706,44 @@ impl DatabaseManager {
                 entity_id: $entity_id,
                 entity_name: $entity_name,
                 description: $description,
-                old_value: $old_value,
-                new_value: $new_value,
+                {old_value_clause},
+                {new_value_clause},
                 user: $user,
-                metadata: {}
-            }}"#,
-            metadata_json
+                {metadata_clause}
+            }}"#
         );
 
-        let mut response = client.query(&query).await?;
+        let mut bindings = serde_json::Map::new();
+        bindings.insert("action".into(), serde_json::Value::String(log.action));
+        bindings.insert(
+            "entity_type".into(),
+            serde_json::Value::String(log.entity_type),
+        );
+        bindings.insert(
+            "entity_id".into(),
+            serde_json::Value::String(log.entity_id),
+        );
+        bindings.insert(
+            "entity_name".into(),
+            serde_json::Value::String(log.entity_name),
+        );
+        bindings.insert(
+            "description".into(),
+            serde_json::Value::String(log.description),
+        );
+        bindings.insert("user".into(), serde_json::Value::String(user));
+        if let Some(v) = log.old_value {
+            bindings.insert("old_value".into(), serde_json::Value::String(v));
+        }
+        if let Some(v) = log.new_value {
+            bindings.insert("new_value".into(), serde_json::Value::String(v));
+        }
+        if let Some(m) = log.metadata {
+            bindings.insert("metadata".into(), m);
+        }
 
-        // Note: Binding would require access to the underlying client
-        // For now, use direct string interpolation (already sanitized in caller)
+        let mut response = client.query_bind_map(&query, bindings).await?;
+
         let result: Option<ActivityLog> = response.take(0)?;
 
         result.ok_or_else(|| self.not_found_error("create activity log"))

@@ -972,9 +972,9 @@ mod tests {
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
-            username: &std::env::var("EFEES_SURREALDB_USER")
+            username: std::env::var("EFEES_SURREALDB_USER")
                 .expect("EFEES_SURREALDB_USER must be set to run this PROD test"),
-            password: &std::env::var("EFEES_SURREALDB_PASS")
+            password: std::env::var("EFEES_SURREALDB_PASS")
                 .expect("EFEES_SURREALDB_PASS must be set to run this PROD test"),
         })
         .await
@@ -1059,9 +1059,9 @@ mod tests {
             .expect("Failed to connect to PROD WS");
 
         db.signin(Root {
-            username: &std::env::var("EFEES_SURREALDB_USER")
+            username: std::env::var("EFEES_SURREALDB_USER")
                 .expect("EFEES_SURREALDB_USER must be set to run this PROD test"),
-            password: &std::env::var("EFEES_SURREALDB_PASS")
+            password: std::env::var("EFEES_SURREALDB_PASS")
                 .expect("EFEES_SURREALDB_PASS must be set to run this PROD test"),
         })
         .await
@@ -1215,5 +1215,105 @@ mod tests {
         println!("SUCCESS: All {} fees serialize to JSON", all_fees.len());
 
         println!("ALL PAGINATED CHECKS PASSED");
+    }
+
+    // ============================================================================
+    // BUG REGRESSION TESTS — DatabaseManager integration paths
+    //
+    // Failing-test-first guards for two bugs surfaced via dev build on 2026-05-07:
+    //   1. get_fees_for_project() — `projects:$pid` is invalid SurrealDB v3 syntax,
+    //      use `type::record('projects', $pid)` (matches client.rs:586 pattern).
+    //   2. create_activity_log() — query references $action/$entity_type/... but
+    //      calls client.query() instead of query_bind_map(), so all params resolve
+    //      to NONE and schema's required action: string fails coercion.
+    //
+    // Run against dev DB to avoid prod activity_log pollution:
+    //   EFEES_SURREALDB_USER=martin EFEES_SURREALDB_PASS=... \
+    //     cargo test -p app --lib test_get_fees_for_project_bug -- --ignored --nocapture
+    //   EFEES_SURREALDB_USER=martin EFEES_SURREALDB_PASS=... \
+    //     cargo test -p app --lib test_create_activity_log_bug -- --ignored --nocapture
+    // ============================================================================
+
+    fn dev_db_config() -> crate::db::DatabaseConfig {
+        crate::db::DatabaseConfig {
+            url: "ws://10.0.23.12:8000".to_string(),
+            namespace: "emittiv".to_string(),
+            database: "projects".to_string(),
+            username: std::env::var("EFEES_SURREALDB_USER")
+                .expect("EFEES_SURREALDB_USER must be set to run this dev DB test"),
+            password: std::env::var("EFEES_SURREALDB_PASS")
+                .expect("EFEES_SURREALDB_PASS must be set to run this dev DB test"),
+            verify_certificates: true,
+            accept_invalid_hostnames: false,
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_get_fees_for_project_bug() {
+        // BUG: SurrealDB v3 rejects `projects:$pid` with
+        //   "Parse error: Unexpected token `$param` expected a record-id key".
+        // FIX: use `type::record('projects', $pid)` (canonical pattern).
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        // Project number from the failing dev session log (project_id is the key form).
+        let result = manager.get_fees_for_project("26_96801").await;
+        assert!(
+            result.is_ok(),
+            "get_fees_for_project should not return a parse error; got: {:?}",
+            result.err()
+        );
+        let fees = result.unwrap();
+        println!(
+            "get_fees_for_project('26_96801') succeeded with {} fees (count is informational)",
+            fees.len()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_create_activity_log_bug() {
+        // BUG: query references $action/$entity_type/... but uses client.query()
+        // (no binding), so SurrealDB sees all fields as NONE and rejects
+        // required action: string with "Expected `string` but found `NONE`".
+        // FIX: use query_bind_map() with all params bound.
+        use crate::db::ActivityLogCreate;
+
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let log = ActivityLogCreate {
+            action: "update".to_string(), // valid per schema ASSERT
+            entity_type: "project".to_string(), // valid per schema ASSERT
+            entity_id: format!("DELETE-ME-{}", stamp),
+            entity_name: format!("DELETE ME - tdd activity_log test {}", stamp),
+            description: "DELETE ME - tdd integration test for create_activity_log".to_string(),
+            old_value: None,
+            new_value: Some("DELETE ME".to_string()),
+            user: Some("tdd-test".to_string()),
+            metadata: None,
+        };
+
+        let result = manager.create_activity_log(log).await;
+        assert!(
+            result.is_ok(),
+            "create_activity_log should succeed; got: {:?}",
+            result.err()
+        );
+        let created = result.unwrap();
+        assert_eq!(created.action, "update", "action should round-trip");
+        assert_eq!(created.entity_type, "project");
+        println!("Created activity_log id: {:?}", created.id);
     }
 }
