@@ -270,8 +270,8 @@ Test before committing: `cargo test -p app --lib` (Rust), `npm test` (frontend).
 4. `/lamp-off` — Save context, update HANDOVER.md, close KB session
 
 ---
-**Last Updated**: March 15, 2026
-**Version**: 0.13.8
+**Last Updated**: May 7, 2026
+**Version**: 0.16.0
 **Status**: Production-ready. Auto-updater working. KB integration active.
 
 ## Planning & Strategy Documentation

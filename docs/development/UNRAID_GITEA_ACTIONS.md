@@ -14,7 +14,7 @@ Your Forgejo instance is running in Docker on Unraid. To enable Forgejo Actions 
 
 **What We Need:**
 - **Act Runner Container**: `gitea/act_runner:latest` (Forgejo-compatible)
-- **Registration Token**: `hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE`
+- **Registration Token**: `<your-runner-registration-token>` (see .claude/.credentials.env)
 - **Repository**: `emittiv/fee-prop`
 
 ---
@@ -52,7 +52,7 @@ Add these environment variables:
 | Variable | Value |
 |----------|-------|
 | `GITEA_INSTANCE_URL` | `https://forge.mms.name` |
-| `GITEA_RUNNER_REGISTRATION_TOKEN` | `hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE` |
+| `GITEA_RUNNER_REGISTRATION_TOKEN` | `${GITEA_RUNNER_REGISTRATION_TOKEN}` (env var) |
 | `GITEA_RUNNER_NAME` | `unraid-runner-01` |
 | `GITEA_RUNNER_LABELS` | `ubuntu-latest,macos-latest,windows-latest` |
 
@@ -86,7 +86,7 @@ services:
     restart: always
     environment:
       - GITEA_INSTANCE_URL=https://forge.mms.name
-      - GITEA_RUNNER_REGISTRATION_TOKEN=hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE
+      - GITEA_RUNNER_REGISTRATION_TOKEN=${GITEA_RUNNER_REGISTRATION_TOKEN}
       - GITEA_RUNNER_NAME=unraid-runner-01
       - GITEA_RUNNER_LABELS=ubuntu-latest:docker://node:20-bullseye,macos-latest:docker://node:20-bullseye,windows-latest:docker://node:20-bullseye
     volumes:
@@ -117,7 +117,7 @@ docker run -d \
   --name gitea-act-runner \
   --restart always \
   -e GITEA_INSTANCE_URL=https://forge.mms.name \
-  -e GITEA_RUNNER_REGISTRATION_TOKEN=hDLXLBGCQ25cj2wHW5lz6SyOmGUHfHihZSoV4BnE \
+  -e GITEA_RUNNER_REGISTRATION_TOKEN=${GITEA_RUNNER_REGISTRATION_TOKEN} \
   -e GITEA_RUNNER_NAME=unraid-runner-01 \
   -v /mnt/user/appdata/gitea-runner:/data \
   -v /var/run/docker.sock:/var/run/docker.sock \
