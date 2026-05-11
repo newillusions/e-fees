@@ -28,6 +28,8 @@ const SCOPE_API_KEY = import.meta.env.VITE_SCOPE_API_KEY || 'efees-scope-2026-s7
 /**
  * Authenticated request helper for the scope service.
  * Attaches the API key header and handles error responses.
+ * Returns the raw response body — use scopeRequestData for endpoints that
+ * wrap their payload in a `{ data: ... }` envelope.
  */
 async function scopeRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${SCOPE_API_URL}${path}`, {
@@ -48,6 +50,18 @@ async function scopeRequest<T>(path: string, options: RequestInit = {}): Promise
   return response.json();
 }
 
+/**
+ * Same as scopeRequest, but unwraps the `{ data: T }` envelope used by most
+ * single-item endpoints (`/stages/{n}`, `/deliverables/{id}`, `/scope/...`,
+ * etc.). Use scopeRequest directly for paginated list endpoints (which need
+ * the `{ data, total }` shape) and for endpoints that return a flat shape
+ * like `/scope/assemble` (`{ stages: [...] }`) or `/scope/{id}/export`.
+ */
+async function scopeRequestData<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const envelope = await scopeRequest<{ data: T }>(path, options);
+  return envelope.data;
+}
+
 // =============================================================================
 // STAGE CONFIG
 // =============================================================================
@@ -62,7 +76,7 @@ export async function updateStage(
   canonicalName: string,
   data: UpdateStageConfig
 ): Promise<StageConfig> {
-  return scopeRequest<StageConfig>(`/stages/${canonicalName}`, {
+  return scopeRequestData<StageConfig>(`/stages/${canonicalName}`, {
     method: 'PUT',
     body: JSON.stringify(data)
   });
@@ -82,12 +96,12 @@ export async function getDeliverables(
 
 /** Fetch a single deliverable by ID. */
 export async function getDeliverable(id: string): Promise<Deliverable> {
-  return scopeRequest<Deliverable>(`/deliverables/${id}`);
+  return scopeRequestData<Deliverable>(`/deliverables/${id}`);
 }
 
 /** Create a new deliverable. */
 export async function createDeliverable(data: NewDeliverable): Promise<Deliverable> {
-  return scopeRequest<Deliverable>('/deliverables', {
+  return scopeRequestData<Deliverable>('/deliverables', {
     method: 'POST',
     body: JSON.stringify(data)
   });
@@ -95,7 +109,7 @@ export async function createDeliverable(data: NewDeliverable): Promise<Deliverab
 
 /** Update an existing deliverable by ID. */
 export async function updateDeliverable(id: string, data: UpdateDeliverable): Promise<Deliverable> {
-  return scopeRequest<Deliverable>(`/deliverables/${id}`, {
+  return scopeRequestData<Deliverable>(`/deliverables/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)
   });
@@ -108,7 +122,7 @@ export async function deleteDeliverable(id: string): Promise<void> {
 
 /** Get deliverable usage analytics. */
 export async function getDeliverableAnalytics(): Promise<DeliverableAnalytics[]> {
-  return scopeRequest<DeliverableAnalytics[]>('/deliverables/analytics');
+  return scopeRequestData<DeliverableAnalytics[]>('/deliverables/analytics');
 }
 
 // =============================================================================
@@ -125,7 +139,7 @@ export async function assembleDeliverables(data: AssembleRequest): Promise<Assem
 
 /** Save scope builder state (selected deliverables per stage). */
 export async function saveScopeBuilder(data: SaveScopeBuilderRequest): Promise<ScopeAssembly> {
-  return scopeRequest<ScopeAssembly>('/scope/save', {
+  return scopeRequestData<ScopeAssembly>('/scope/save', {
     method: 'POST',
     body: JSON.stringify(data)
   });
@@ -145,7 +159,7 @@ export async function generateScope(
   data: GenerateScopeRequest,
   signal?: AbortSignal
 ): Promise<ScopeAssembly> {
-  return scopeRequest<ScopeAssembly>('/scope/generate', {
+  return scopeRequestData<ScopeAssembly>('/scope/generate', {
     method: 'POST',
     body: JSON.stringify(data),
     signal
@@ -155,7 +169,7 @@ export async function generateScope(
 /** Get scope for a fee proposal. Returns null if no scope exists (404). */
 export async function getScope(feeId: string): Promise<ScopeAssembly | null> {
   try {
-    return await scopeRequest<ScopeAssembly>(`/scope/${feeId}`);
+    return await scopeRequestData<ScopeAssembly>(`/scope/${feeId}`);
   } catch (err: any) {
     if (err.status === 404) {
       return null;
@@ -166,7 +180,7 @@ export async function getScope(feeId: string): Promise<ScopeAssembly | null> {
 
 /** Update scope for a fee proposal. */
 export async function updateScope(feeId: string, data: UpdateScopeRequest): Promise<ScopeAssembly> {
-  return scopeRequest<ScopeAssembly>(`/scope/${feeId}`, {
+  return scopeRequestData<ScopeAssembly>(`/scope/${feeId}`, {
     method: 'PUT',
     body: JSON.stringify(data)
   });
@@ -174,7 +188,7 @@ export async function updateScope(feeId: string, data: UpdateScopeRequest): Prom
 
 /** Regenerate scope for a fee proposal. */
 export async function regenerateScope(feeId: string): Promise<ScopeAssembly> {
-  return scopeRequest<ScopeAssembly>(`/scope/${feeId}/regenerate`, { method: 'POST' });
+  return scopeRequestData<ScopeAssembly>(`/scope/${feeId}/regenerate`, { method: 'POST' });
 }
 
 /** Export scope as formatted text. */
