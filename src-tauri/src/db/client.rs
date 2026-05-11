@@ -132,7 +132,16 @@ impl DatabaseClient {
 
                     match Surreal::new::<Http>(&http_url).await {
                         Ok(connection) => {
-                            info!("Successfully established HTTP fallback connection");
+                            warn!(
+                                "Connected via HTTP fallback ({}). Heads-up: the \
+                                 SurrealDB Rust SDK v3.0.4 does not refresh its JWT \
+                                 on HTTP transport, so after the server-side \
+                                 DURATION FOR TOKEN elapses (1h on the standard \
+                                 efees_app user) every subsequent query will return \
+                                 401. If you see auth failures after extended use, \
+                                 restart the app to reconnect.",
+                                http_url
+                            );
                             Ok(DatabaseClient::Http(connection))
                         }
                         Err(http_err) => {
@@ -148,7 +157,16 @@ impl DatabaseClient {
             info!("Connecting via HTTP to {}", url);
             match Surreal::new::<Http>(url).await {
                 Ok(connection) => {
-                    info!("Successfully established HTTP connection");
+                    warn!(
+                        "Connected via HTTP transport. Heads-up: the SurrealDB \
+                         Rust SDK v3.0.4 does not refresh its JWT on HTTP \
+                         transport, so after the server-side DURATION FOR TOKEN \
+                         elapses (1h on the standard efees_app user) every \
+                         subsequent query will return 401. Prefer ws:// in \
+                         SURREALDB_URL for sessions longer than ~1h. If you see \
+                         auth failures after extended use, restart the app to \
+                         reconnect."
+                    );
                     Ok(DatabaseClient::Http(connection))
                 }
                 Err(err) => {
