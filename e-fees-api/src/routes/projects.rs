@@ -7,7 +7,9 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use chrono::Datelike;
-use e_fees_core::models::{record_id_string, Company, Fee, NewProjectApi, Project, ProjectNumber};
+use e_fees_core::models::{
+    record_id_string, record_key_string, Company, Fee, NewProjectApi, Project, ProjectNumber,
+};
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
@@ -161,7 +163,7 @@ async fn resolve_client_for_project(
         return Ok(Value::Null);
     };
 
-    let company_key = fee.company_id.key().to_string();
+    let company_key = record_key_string(&fee.company_id.key);
     let company: Option<Company> = db.select(("company", &*company_key)).await?;
 
     Ok(match company {
