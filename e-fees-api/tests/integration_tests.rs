@@ -1003,6 +1003,217 @@ async fn test_fee_crud_lifecycle() {
 }
 
 // ---------------------------------------------------------------------------
+// GET /projects/{id}?include=client — embeds latest non-superseded fee's
+// company as a nested `client: { id, name }` object on the response.
+// Consumer: cad-export (avoids a second-hop fees+companies fetch at preflight).
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_project_with_include_client() {
+    verify_not_production();
+
+    let client = authed_client();
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    // Seed: company → contact → project → fee (linking project to company)
+    let company_body = serde_json::json!({
+        "name": "DELETE ME - Include Client Co",
+        "name_short": "DELETE ME - ICC",
+        "abbreviation": "DMICC",
+        "city": "Dubai",
+        "country": "UAE",
+        "reg_no": null,
+        "tax_no": null
+    });
+    let resp = client
+        .post(format!("{}/companies", base_url()))
+        .json(&company_body)
+        .send()
+        .await
+        .expect("seed company");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let company_full_id = body["data"]["id"].as_str().unwrap().to_string();
+    let company_key = company_full_id.strip_prefix("company:").unwrap().to_string();
+
+    let contact_body = serde_json::json!({
+        "first_name": "DELETE ME",
+        "last_name": "Include Client",
+        "email": "delete-me-include@example.com",
+        "phone": "+971500000003",
+        "position": "Test",
+        "company": company_key
+    });
+    let resp = client
+        .post(format!("{}/contacts", base_url()))
+        .json(&contact_body)
+        .send()
+        .await
+        .expect("seed contact");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let contact_full_id = body["data"]["id"].as_str().unwrap().to_string();
+    let contact_key = contact_full_id.strip_prefix("contacts:").unwrap().to_string();
+
+    let seq = (ts % 900 + 100) as i64;
+    let project_number_id = format!("26-971{}", seq);
+    let project_key = project_number_id.replace('-', "_");
+
+    let project_body = serde_json::json!({
+        "name": "DELETE ME - Include Client Project",
+        "name_short": "DELETE ME - ICP",
+        "status": "Lead",
+        "area": "0",
+        "city": "Dubai",
+        "country": "UAE",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": seq, "id": project_number_id }
+    });
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&project_body)
+        .send()
+        .await
+        .expect("seed project");
+    assert_eq!(resp.status(), 200);
+
+    let fee_body = serde_json::json!({
+        "name": "DELETE ME - Include Client Fee",
+        "number": "FP-IC1",
+        "rev": 1,
+        "status": "Draft",
+        "issue_date": "202603",
+        "activity": "Lighting Design",
+        "package": "Full Scope",
+        "project_id": project_number_id,
+        "company_id": company_key,
+        "contact_id": contact_key,
+        "staff_name": "Test Staff",
+        "staff_email": "test@emittiv.com",
+        "staff_phone": "+971500000004",
+        "staff_position": "Associate",
+        "strap_line": "Professional Lighting Consultancy",
+        "revisions": []
+    });
+    let resp = client
+        .post(format!("{}/fees", base_url()))
+        .json(&fee_body)
+        .send()
+        .await
+        .expect("seed fee");
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(status, 200, "seed fee failed: {}", body);
+    let fee_full_id = body["data"]["id"].as_str().unwrap().to_string();
+    let fee_key = fee_full_id.strip_prefix("fee:").unwrap().to_string();
+
+    // 1) GET without ?include → no client field
+    let resp = client
+        .get(format!("{}/projects/{}", base_url(), project_key))
+        .send()
+        .await
+        .expect("GET project (no include)");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        body["data"].get("client").is_none(),
+        "without ?include=client the response must not contain a `client` field, got: {}",
+        body
+    );
+
+    // 2) GET with ?include=client → nested client { id, name } object
+    let resp = client
+        .get(format!(
+            "{}/projects/{}?include=client",
+            base_url(),
+            project_key
+        ))
+        .send()
+        .await
+        .expect("GET project (include=client)");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(
+        body["data"]["client"]["id"], company_full_id,
+        "client.id must match the seeded company record-id, got: {}",
+        body
+    );
+    assert_eq!(
+        body["data"]["client"]["name"], "DELETE ME - Include Client Co",
+        "client.name must match the seeded company name, got: {}",
+        body
+    );
+
+    // 3) GET with ?include=client on a project with NO fees → client: null
+    let bare_seq = ((ts + 1) % 900 + 100) as i64;
+    let bare_number_id = format!("26-971{}", bare_seq);
+    let bare_key = bare_number_id.replace('-', "_");
+    let bare_body = serde_json::json!({
+        "name": "DELETE ME - Bare Project (no fees)",
+        "name_short": "DELETE ME - BP",
+        "status": "Lead",
+        "area": "0",
+        "city": "Dubai",
+        "country": "UAE",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": bare_seq, "id": bare_number_id }
+    });
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&bare_body)
+        .send()
+        .await
+        .expect("seed bare project");
+    assert_eq!(resp.status(), 200);
+    let resp = client
+        .get(format!(
+            "{}/projects/{}?include=client",
+            base_url(),
+            bare_key
+        ))
+        .send()
+        .await
+        .expect("GET bare project (include=client)");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert!(
+        body["data"]["client"].is_null(),
+        "bare project with no fees must return client: null, got: {}",
+        body
+    );
+
+    // Cleanup (reverse order)
+    client
+        .delete(format!("{}/projects/{}", base_url(), bare_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/fees/{}", base_url(), fee_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/projects/{}", base_url(), project_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/contacts/{}", base_url(), contact_key))
+        .send()
+        .await
+        .ok();
+    client
+        .delete(format!("{}/companies/{}", base_url(), company_key))
+        .send()
+        .await
+        .ok();
+}
+
+// ---------------------------------------------------------------------------
 // 404 on nonexistent contact
 // ---------------------------------------------------------------------------
 

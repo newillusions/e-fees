@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use chrono::Datelike;
-use e_fees_core::models::{record_id_string, NewProjectApi, Project, ProjectNumber};
+use e_fees_core::models::{record_id_string, Company, Fee, NewProjectApi, Project, ProjectNumber};
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
@@ -28,6 +28,15 @@ pub struct ProjectListParams {
     pub status: Option<String>,
     /// Case-insensitive substring search across name, name_short, and number.id.
     pub search: Option<String>,
+}
+
+/// Query parameters for `GET /projects/{id}`.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct ProjectDetailParams {
+    /// Comma-separated expansion list. Currently supported: `client` — embeds
+    /// the latest non-superseded fee's company as a nested
+    /// `client: { id, name } | null` object on the response.
+    pub include: Option<String>,
 }
 
 /// List projects with pagination and optional status filter.
@@ -91,7 +100,10 @@ pub async fn list_projects(
     get,
     path = "/projects/{id}",
     tag = "Projects",
-    params(("id" = String, Path, description = "Project record key (e.g. 25_97105)")),
+    params(
+        ("id" = String, Path, description = "Project record key (e.g. 25_97105)"),
+        ProjectDetailParams,
+    ),
     responses(
         (status = 200, description = "Project found", body = schemas::SingleResponse<schemas::ProjectResponse>),
         (status = 404, description = "Project not found", body = schemas::ErrorResponse),
@@ -101,13 +113,64 @@ pub async fn list_projects(
 pub async fn get_project(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
+    Query(params): Query<ProjectDetailParams>,
 ) -> Result<Json<Value>, ApiError> {
     let project: Option<Project> = state.db.select(("projects", &*id)).await?;
 
-    match project {
-        Some(p) => Ok(Json(json!({ "data": project_to_json(&p) }))),
-        None => Err(ApiError::not_found("Project", &id)),
+    let project = match project {
+        Some(p) => p,
+        None => return Err(ApiError::not_found("Project", &id)),
+    };
+
+    let mut data = project_to_json(&project);
+
+    if has_include(&params.include, "client") {
+        data["client"] = resolve_client_for_project(&state.db, &id).await?;
     }
+
+    Ok(Json(json!({ "data": data })))
+}
+
+/// Parse a comma-separated include list and check if `needle` is present.
+fn has_include(include: &Option<String>, needle: &str) -> bool {
+    include
+        .as_deref()
+        .map(|s| s.split(',').any(|t| t.trim() == needle))
+        .unwrap_or(false)
+}
+
+/// Resolve the "client" of a project as the company of the latest
+/// non-superseded fee. Returns `{ id, name }` JSON object, or `null` if the
+/// project has no qualifying fees (or the linked company is missing).
+async fn resolve_client_for_project(
+    db: &Surreal<Client>,
+    project_key: &str,
+) -> Result<Value, ApiError> {
+    let mut result = db
+        .query(
+            "SELECT * FROM fee \
+             WHERE project_id = type::record('projects', $pkey) \
+               AND status != 'Superseded' \
+             ORDER BY time.created DESC LIMIT 1",
+        )
+        .bind(("pkey", project_key.to_string()))
+        .await?;
+    let fees: Vec<Fee> = result.take(0)?;
+
+    let Some(fee) = fees.into_iter().next() else {
+        return Ok(Value::Null);
+    };
+
+    let company_key = fee.company_id.key().to_string();
+    let company: Option<Company> = db.select(("company", &*company_key)).await?;
+
+    Ok(match company {
+        Some(c) => json!({
+            "id": record_id_string(&fee.company_id),
+            "name": c.name,
+        }),
+        None => Value::Null,
+    })
 }
 
 /// Query parameters for the next-number preview endpoint.
