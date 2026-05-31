@@ -18,6 +18,14 @@ COPY crates/ crates/
 COPY e-fees-api/ e-fees-api/
 RUN sed -i 's|path = "../../../container-utils/rust"|path = "/container-utils/rust"|' e-fees-api/Cargo.toml
 
+# Copy the workspace lockfile so the build resolves the SAME (tested) dependency
+# tree as local — notably keeping surrealdb's transitive deps pinned and
+# diskann-free. Without this, a fresh resolve pulls diskann 0.52.0, which fails
+# to compile under the builder's rustc. Build unlocked (the regenerated minimal
+# workspace manifest lists fewer members than the lock, so --locked would reject
+# it); cargo still reuses the pinned versions for the deps it needs.
+COPY Cargo.lock ./Cargo.lock
+
 # Build release binary
 RUN cargo build --release -p e-fees-api
 
