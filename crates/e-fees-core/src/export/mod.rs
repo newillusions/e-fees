@@ -3,6 +3,7 @@
 //! This module contains pure functions for formatting and building fee JSON data
 //! for InDesign variable data export. No I/O, no DB access — pure logic only.
 
+pub mod fee_template;
 pub mod indesign_workbook;
 
 use chrono::Utc;

@@ -131,6 +131,43 @@ impl SshOps {
         Ok(output.trim() == "yes")
     }
 
+    /// Read a remote file's raw bytes via `cat` (binary-safe — captures stdout
+    /// as `Vec<u8>`, not lossy UTF-8).
+    pub async fn read_file(&self, remote_path: &str) -> Result<Vec<u8>, ApiError> {
+        let user_host = format!("{}@{}", self.user, self.host);
+        let remote_cmd = format!("cat {}", shell_quote(remote_path));
+        let output = Command::new("ssh")
+            .args(self.ssh_args())
+            .arg(&user_host)
+            .arg(&remote_cmd)
+            .output()
+            .await
+            .map_err(|e| {
+                ApiError::service_unavailable(format!("SSH connection failed: {}", e))
+            })?;
+        if output.status.success() {
+            Ok(output.stdout)
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(ApiError::service_unavailable(format!(
+                "Remote read of {} failed: {}",
+                remote_path,
+                stderr.trim()
+            )))
+        }
+    }
+
+    /// List entry names (non-recursive) in a remote directory. Missing dir → empty.
+    pub async fn list_dir(&self, remote_path: &str) -> Result<Vec<String>, ApiError> {
+        let remote_cmd = format!("ls -1 {} 2>/dev/null || true", shell_quote(remote_path));
+        let out = self.exec(&remote_cmd).await?;
+        Ok(out
+            .lines()
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .collect())
+    }
+
     /// Copy a remote file from `from` to `to`.
     pub async fn copy_file(&self, from: &str, to: &str) -> Result<(), ApiError> {
         let remote_cmd = format!("cp {} {}", shell_quote(from), shell_quote(to));

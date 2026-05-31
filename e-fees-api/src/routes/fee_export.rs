@@ -19,8 +19,8 @@ use serde_json::{json, Value};
 use tracing::{info, warn};
 
 use e_fees_core::export::{
-    build_fee_json, clean_number_for_path, indesign_workbook::generate_indesign_workbook,
-    is_placeholder,
+    build_fee_json, clean_number_for_path, fee_template::generate_fee_template,
+    indesign_workbook::generate_indesign_workbook, is_placeholder,
 };
 use e_fees_core::models::{record_id_string, Company, Contact, Fee, Project};
 
@@ -114,6 +114,31 @@ impl ProposalPaths {
             rescan_subpath,
         }
     }
+}
+
+/// Given a proposal-folder listing and the safe project number, return the
+/// latest existing `{number}-(PRI|FP)-NN Pricing.xlsx` filename (the source to
+/// base the next version on) and the next version number. Mirrors the desktop
+/// `find_latest_pri_file`. Pure string parsing — no regex.
+fn latest_pri_source_and_version(filenames: &[String], number: &str) -> (Option<String>, i32) {
+    let mut best_ver = 0i32;
+    let mut best: Option<String> = None;
+    for name in filenames {
+        for tag in ["PRI", "FP"] {
+            let prefix = format!("{number}-{tag}-");
+            if let Some(rest) = name.strip_prefix(&prefix) {
+                if let Some(num_str) = rest.strip_suffix(" Pricing.xlsx") {
+                    if let Ok(v) = num_str.parse::<i32>() {
+                        if v > best_ver {
+                            best_ver = v;
+                            best = Some(name.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (best, best_ver + 1)
 }
 
 /// Export fee JSON to the Nextcloud project folder.
@@ -295,6 +320,116 @@ pub async fn fee_json_status(
 }
 
 // ============================================================================
+// PRICING TEMPLATE (-PRI) EXPORT ENDPOINT
+// ============================================================================
+
+/// Export the internal `-PRI` pricing workbook to the Nextcloud proposal folder.
+///
+/// Mirrors the desktop "Export Pricing Template" action: scans the proposal
+/// folder for the latest `{number}-(PRI|FP)-NN Pricing.xlsx`, uses it as the
+/// source (or the embedded blank template), populates the fee's pricing data
+/// while preserving the template's formulas, and writes the next version
+/// `{number}-PRI-{NN+1} Pricing.xlsx` back to the folder.
+#[utoipa::path(
+    post,
+    path = "/fees/{id}/export/template",
+    tag = "Fees",
+    params(("id" = String, Path, description = "Fee record key (fee: prefix stripped if present)")),
+    responses(
+        (status = 200, description = "PRI workbook exported to the proposal folder"),
+        (status = 404, description = "Fee or project not found", body = crate::schemas::ErrorResponse),
+        (status = 422, description = "Fee has no pricing data", body = crate::schemas::ErrorResponse),
+        (status = 503, description = "Folder config not set or SSH error", body = crate::schemas::ErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
+pub async fn export_template(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let key = id.strip_prefix("fee:").unwrap_or(&id);
+    validate_id(key)?;
+
+    // Fetch fee (carries pricing) and its project (for the folder path).
+    let fee: Option<Fee> = state.db.select(("fee", key)).await?;
+    let fee = fee.ok_or_else(|| ApiError::not_found("Fee", key))?;
+    let project_key = {
+        let s = record_id_string(&fee.project_id);
+        s.splitn(2, ':').nth(1).unwrap_or("").to_string()
+    };
+    let project: Option<Project> = state.db.select(("projects", &*project_key)).await?;
+    let project = project
+        .ok_or_else(|| ApiError::not_found("Project", &format!("projects:{}", project_key)))?;
+
+    let folder_config = state.folder_config.as_ref().ok_or_else(|| {
+        ApiError::service_unavailable("Folder export not configured (NC_SSH_HOST not set)")
+    })?;
+
+    let number = clean_number_for_path(&project.number.id);
+    let paths = ProposalPaths::new(&folder_config.nc_base_path, &number, &project.name_short);
+    let ssh = SshOps::from_folder_config(folder_config);
+    ssh.mkdir_p(&paths.proposal_dir).await?;
+
+    // Pick the latest existing PRI/FP as the source + the next version number.
+    let listing = ssh.list_dir(&paths.proposal_dir).await?;
+    let (source_name, next_version) = latest_pri_source_and_version(&listing, &number);
+
+    // Stage the source (if any) to a local temp file for umya to read.
+    let tmp_dir = std::env::temp_dir();
+    let source_local: Option<std::path::PathBuf> = match &source_name {
+        Some(name) => {
+            let remote = format!("{}/{}", paths.proposal_dir, name);
+            let bytes = ssh.read_file(&remote).await?;
+            let local = tmp_dir.join(format!("efees-pri-src-{}.xlsx", key));
+            std::fs::write(&local, &bytes)
+                .map_err(|e| ApiError::service_unavailable(format!("temp write failed: {e}")))?;
+            Some(local)
+        }
+        None => None,
+    };
+
+    // Generate into a local temp output, then read the bytes back.
+    let out_local = tmp_dir.join(format!("efees-pri-out-{}.xlsx", key));
+    let gen = generate_fee_template(&fee, &out_local, source_local.as_deref());
+    // Clean the source temp regardless of outcome.
+    if let Some(s) = &source_local {
+        let _ = std::fs::remove_file(s);
+    }
+    gen.map_err(|e| ApiError {
+        status: StatusCode::UNPROCESSABLE_ENTITY,
+        code: "export_failed".into(),
+        message: e,
+    })?;
+    let out_bytes = std::fs::read(&out_local)
+        .map_err(|e| ApiError::service_unavailable(format!("temp read failed: {e}")))?;
+    let _ = std::fs::remove_file(&out_local);
+
+    // Write the next-version PRI to the proposal folder.
+    let filename = format!("{}-PRI-{:02} Pricing.xlsx", number, next_version);
+    let remote_out = format!("{}/{}", paths.proposal_dir, filename);
+    ssh.write_file(&remote_out, &out_bytes).await?;
+
+    // Best-effort NC rescan.
+    if let Err(e) = ssh.nc_rescan(&paths.rescan_subpath).await {
+        warn!("NC rescan failed (non-fatal): {}", e.message);
+    }
+
+    let relative_path = format!(
+        "01 RFPs/{} {}/02 Proposal/{}",
+        number, project.name_short, filename
+    );
+    info!("Exported -PRI for fee:{} to {}", key, remote_out);
+
+    Ok(Json(json!({
+        "status": "exported",
+        "fee_id": format!("fee:{}", key),
+        "path": relative_path,
+        "version": next_version,
+        "source": source_name,
+    })))
+}
+
+// ============================================================================
 // TESTS
 // ============================================================================
 
@@ -334,6 +469,34 @@ mod tests {
             paths.rescan_subpath,
             "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal"
         );
+    }
+
+    #[test]
+    fn latest_pri_picks_highest_version_and_next() {
+        let files = vec![
+            "26-97104-FP-01 Pricing.xlsx".to_string(),
+            "26-97104-PRI-02 Pricing.xlsx".to_string(),
+            "26-97104-PRI-01 Pricing.xlsx".to_string(),
+            "26-97104-var.json".to_string(),
+        ];
+        let (src, next) = latest_pri_source_and_version(&files, "26-97104");
+        assert_eq!(src.as_deref(), Some("26-97104-PRI-02 Pricing.xlsx"));
+        assert_eq!(next, 3);
+    }
+
+    #[test]
+    fn latest_pri_empty_dir_starts_at_one() {
+        let (src, next) = latest_pri_source_and_version(&[], "26-97104");
+        assert_eq!(src, None);
+        assert_eq!(next, 1);
+    }
+
+    #[test]
+    fn latest_pri_falls_back_to_fp_source() {
+        let files = vec!["26-97104-FP-01 Pricing.xlsx".to_string()];
+        let (src, next) = latest_pri_source_and_version(&files, "26-97104");
+        assert_eq!(src.as_deref(), Some("26-97104-FP-01 Pricing.xlsx"));
+        assert_eq!(next, 2);
     }
 }
 

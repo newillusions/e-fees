@@ -38,7 +38,7 @@ pub struct AppState {
     info(
         title = "E-Fees API",
         description = "REST API for managing fee proposals, projects, companies, and contacts.",
-        version = "0.3.3",
+        version = "0.3.4",
         contact(name = "Emittiv", url = "https://emittiv.com"),
     ),
     paths(
@@ -59,6 +59,7 @@ pub struct AppState {
         routes::fee_export::export_fee_json,
         routes::fee_export::fee_json_status,
         routes::fee_export::export_indesign,
+        routes::fee_export::export_template,
         routes::companies::list_companies,
         routes::companies::get_company,
         routes::companies::create_company,
@@ -218,6 +219,10 @@ async fn main() {
         .route(
             "/fees/{id}/export/indesign",
             axum::routing::post(routes::fee_export::export_indesign),
+        )
+        .route(
+            "/fees/{id}/export/template",
+            axum::routing::post(routes::fee_export::export_template),
         )
         .route(
             "/companies",

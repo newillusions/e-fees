@@ -16,6 +16,7 @@ surrealdb = { version = "3.0.4", default-features = false }
 surrealdb-types = "3.0.4"
 utoipa = { version = "5", optional = true }
 rust_xlsxwriter = "0.82"
+umya-spreadsheet = "2.3"
 
 [dev-dependencies]
 zip = "2"
