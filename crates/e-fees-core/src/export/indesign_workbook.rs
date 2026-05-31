@@ -1,6 +1,6 @@
 //! InDesign workbook export — generates a multi-sheet XLSX workbook from a Fee.
 //!
-//! Each sheet corresponds to one InDesign data-merge table (T0–T4 + revisions).
+//! Each sheet corresponds to one InDesign data-merge table (T0–T5 + revisions).
 //! The workbook is returned as raw bytes (zip/xlsx) for embedding in Tauri IPC
 //! or writing to disk by the caller.
 //!
@@ -10,11 +10,12 @@
 //!   T2 Design Fees           — Stage / Milestone / Fee + Total row
 //!   T3 Post-Contract Fees    — Stage / Milestone / Unit / Est Qty / Price / Est. Fee + Total row
 //!   T4 Payment Schedule      — Stage / Milestone / Fee / Payment
+//!   T5 Reimbursable Costs    — Stage / Description / Base Cost / Markup / Cost to Client + Total row
 //!   Revisions                — Date / Release / Author / Reference
 
 use rust_xlsxwriter::{Format, FormatAlign, FormatBorder, Workbook, XlsxError};
 
-use crate::models::fee::{Fee, PaymentSchedule, PostContractItem, Stage};
+use crate::models::fee::{Fee, PaymentSchedule, PostContractItem, ReimbursableCost, Stage};
 
 // ============================================================================
 // PUBLIC API
@@ -232,6 +233,62 @@ pub fn generate_indesign_workbook(fee: &Fee) -> Result<Vec<u8>, String> {
         }
     }
 
+    // T5 — Reimbursable Costs / Provisional Sums
+    {
+        let ws = workbook.add_worksheet();
+        ws.set_name("T5 Reimbursable Costs")
+            .map_err(|e| e.to_string())?;
+        ws.write_with_format(0, 0, "Stage", &fmt_hdr)
+            .map_err(|e| e.to_string())?;
+        ws.write_with_format(0, 1, "Description", &fmt_hdr)
+            .map_err(|e| e.to_string())?;
+        ws.write_with_format(0, 2, "Base Cost", &fmt_hdr)
+            .map_err(|e| e.to_string())?;
+        ws.write_with_format(0, 3, "Markup", &fmt_hdr)
+            .map_err(|e| e.to_string())?;
+        ws.write_with_format(0, 4, "Cost to Client", &fmt_hdr)
+            .map_err(|e| e.to_string())?;
+
+        // Prefer the top-level `reimbursable_costs` (the source the desktop
+        // `-PRI` sheet renders); fall back to the pricing breakdown's `costs`.
+        let costs: &[ReimbursableCost] = match fee.reimbursable_costs.as_deref() {
+            Some(c) if !c.is_empty() => c,
+            _ => pricing.costs.as_slice(),
+        };
+
+        let mut grand_total = 0.0_f64;
+        for (row, cost) in costs.iter().enumerate() {
+            let r = (row + 1) as u32;
+            let stage_name = pricing
+                .stages
+                .iter()
+                .find(|s| s.id == cost.stage_id)
+                .map(|s| s.name.as_str())
+                .unwrap_or(&cost.stage_id);
+            let markup = format!("{:.0}%", cost.markup_percent);
+            grand_total += cost.cost_to_client;
+            ws.write_with_format(r, 0, stage_name, &fmt_txt)
+                .map_err(|e| e.to_string())?;
+            ws.write_with_format(r, 1, &cost.description, &fmt_txt)
+                .map_err(|e| e.to_string())?;
+            ws.write_with_format(r, 2, cost.base_cost, &fmt_cur)
+                .map_err(|e| e.to_string())?;
+            ws.write_with_format(r, 3, &markup, &fmt_txt)
+                .map_err(|e| e.to_string())?;
+            ws.write_with_format(r, 4, cost.cost_to_client, &fmt_cur)
+                .map_err(|e| e.to_string())?;
+        }
+        let total_row = (costs.len() + 1) as u32;
+        ws.write_with_format(total_row, 0, "Total", &fmt_tot)
+            .map_err(|e| e.to_string())?;
+        for col in 1..=3u16 {
+            ws.write_with_format(total_row, col, "", &fmt_tot)
+                .map_err(|e| e.to_string())?;
+        }
+        ws.write_with_format(total_row, 4, grand_total, &fmt_tot_cur)
+            .map_err(|e| e.to_string())?;
+    }
+
     // Revisions
     {
         let ws = workbook.add_worksheet();
@@ -328,7 +385,7 @@ mod tests {
         common::{json_to_dbvalue, TimeStamps},
         fee::{
             Fee, PaymentSchedule, PaymentScheduleEntry, PostContractItem, PricingBreakdown,
-            PricingCell, PricingConfig, Stage,
+            PricingCell, PricingConfig, ReimbursableCost, Stage,
         },
     };
     use surrealdb::types::RecordId;
@@ -512,6 +569,35 @@ mod tests {
         fee
     }
 
+    /// Full fee plus a top-level reimbursable cost (the source the desktop
+    /// `-PRI` sheet reads). Used to prove BUG 2: costs must reach the IDW merge.
+    fn make_fee_with_costs() -> Fee {
+        let mut fee = make_full_fee();
+        fee.reimbursable_costs = Some(vec![ReimbursableCost {
+            id: "rc-1".to_string(),
+            description: "Acoustics sub-consultant".to_string(),
+            stage_id: "sd".to_string(),
+            discipline_id: None,
+            base_cost: 50000.0,
+            markup_percent: 10.0,
+            cost_to_client: 55000.0,
+            date_incurred: "2026-05-30".to_string(),
+            notes: None,
+        }]);
+        fee
+    }
+
+    /// Read a single zip entry's bytes as a UTF-8 string.
+    fn read_zip_entry(bytes: &[u8], entry: &str) -> String {
+        use std::io::Read;
+        let cursor = std::io::Cursor::new(bytes);
+        let mut archive = zip::ZipArchive::new(cursor).expect("valid zip");
+        let mut file = archive.by_name(entry).expect("entry exists");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).expect("utf-8");
+        buf
+    }
+
     // ---- XLSX magic bytes ----
 
     /// XLSX files are ZIP archives — PK zip magic is 0x50 0x4B 0x03 0x04
@@ -564,7 +650,7 @@ mod tests {
     }
 
     #[test]
-    fn test_workbook_has_six_sheets() {
+    fn test_workbook_has_seven_sheets() {
         let fee = make_full_fee();
         let bytes = generate_indesign_workbook(&fee).unwrap();
         let cursor = std::io::Cursor::new(bytes);
@@ -577,11 +663,35 @@ mod tests {
                     .unwrap_or(false)
             })
             .count();
-        assert_eq!(sheet_count, 6, "expected 6 sheets");
+        assert_eq!(sheet_count, 7, "expected 7 sheets (T0–T5 + Revisions)");
+    }
+
+    // BUG 2 regression: reimbursable costs were structurally dropped from the
+    // IDW workbook (only stages/PC/payment/revisions were emitted), so anything
+    // in the costs section never reached the .indd client proposal merge.
+    #[test]
+    fn test_workbook_includes_reimbursable_costs_sheet() {
+        let fee = make_fee_with_costs();
+        let bytes = generate_indesign_workbook(&fee).unwrap();
+
+        // workbook.xml lists every sheet's display name
+        let workbook_xml = read_zip_entry(&bytes, "xl/workbook.xml");
+        assert!(
+            workbook_xml.contains("Reimbursable Costs"),
+            "workbook must contain a 'Reimbursable Costs' sheet, got names in: {}",
+            workbook_xml
+        );
+
+        // sharedStrings.xml holds the cell text — the cost description must land
+        let shared = read_zip_entry(&bytes, "xl/sharedStrings.xml");
+        assert!(
+            shared.contains("Acoustics sub-consultant"),
+            "cost description must be written into the costs sheet"
+        );
     }
 
     #[test]
-    fn test_design_only_still_has_six_sheets() {
+    fn test_design_only_still_has_seven_sheets() {
         let fee = make_design_only_fee();
         let bytes = generate_indesign_workbook(&fee).unwrap();
         let cursor = std::io::Cursor::new(bytes);
@@ -594,6 +704,9 @@ mod tests {
                     .unwrap_or(false)
             })
             .count();
-        assert_eq!(sheet_count, 6, "design-only should still have 6 sheets");
+        assert_eq!(
+            sheet_count, 7,
+            "design-only should still have 7 sheets (empty costs sheet included)"
+        );
     }
 }
