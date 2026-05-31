@@ -78,6 +78,44 @@ async fn fetch_fee_with_links(
 // EXPORT ENDPOINT
 // ============================================================================
 
+/// Filesystem paths for a proposal's var.json export, all derived from the
+/// project's **short name** (`name_short`) — never the legal/long `name`.
+///
+/// The canonical project folder is created as `{number} {name_short}` (see the
+/// desktop `template_ops.rs`), so every export path must use `name_short` to
+/// land in that folder instead of creating a stray `{number} {name}` sibling.
+struct ProposalPaths {
+    /// `{nc_base_path}/01 RFPs/{number} {name_short}/02 Proposal`
+    proposal_dir: String,
+    /// `{proposal_dir}/{number}-var.json`
+    var_path: String,
+    /// `{proposal_dir}/{number}-var Default Values.json`
+    template_path: String,
+    /// Path relative to the NC base, returned in the API response.
+    relative_path: String,
+    /// Subpath passed to the Nextcloud rescan (fixed groupfolder prefix).
+    rescan_subpath: String,
+}
+
+impl ProposalPaths {
+    fn new(nc_base_path: &str, number: &str, name_short: &str) -> Self {
+        let proposal_dir = format!("{nc_base_path}/01 RFPs/{number} {name_short}/02 Proposal");
+        let var_path = format!("{proposal_dir}/{number}-var.json");
+        let template_path = format!("{proposal_dir}/{number}-var Default Values.json");
+        let relative_path = format!("01 RFPs/{number} {name_short}/02 Proposal/{number}-var.json");
+        let rescan_subpath = format!(
+            "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/{number} {name_short}/02 Proposal"
+        );
+        Self {
+            proposal_dir,
+            var_path,
+            template_path,
+            relative_path,
+            rescan_subpath,
+        }
+    }
+}
+
 /// Export fee JSON to the Nextcloud project folder.
 ///
 /// Fetches the fee and its linked project/company/contact, builds the
@@ -116,32 +154,30 @@ pub async fn export_fee_json(
         ApiError::service_unavailable("Folder export not configured (NC_SSH_HOST not set)")
     })?;
 
-    // Build filesystem paths
+    // Build filesystem paths from the project's SHORT name — the canonical
+    // project folder is `{number} {name_short}`, never the legal/long `name`.
     let number = clean_number_for_path(&project.number.id);
-    let name = &project.name;
-    let proposal_dir = format!(
-        "{}/01 RFPs/{} {}/02 Proposal",
-        folder_config.nc_base_path, number, name
-    );
-    let var_path = format!("{}/{}-var.json", proposal_dir, number);
-    let template_path = format!("{}/{}-var Default Values.json", proposal_dir, number);
+    let paths = ProposalPaths::new(&folder_config.nc_base_path, &number, &project.name_short);
+    let proposal_dir = &paths.proposal_dir;
+    let var_path = &paths.var_path;
+    let template_path = &paths.template_path;
 
     let ssh = SshOps::from_folder_config(folder_config);
 
     // Ensure the proposal directory exists
-    ssh.mkdir_p(&proposal_dir).await?;
+    ssh.mkdir_p(proposal_dir).await?;
 
     // Archive logic:
     // 1. If template file exists and var.json does not → rename template to var.json
     // 2. If var.json already exists → archive it before overwriting
     let mut archived_previous = false;
 
-    let var_exists = ssh.path_exists(&var_path).await?;
-    let template_exists = ssh.path_exists(&template_path).await?;
+    let var_exists = ssh.path_exists(var_path).await?;
+    let template_exists = ssh.path_exists(template_path).await?;
 
     if !var_exists && template_exists {
         // First export: rename template placeholder to var.json
-        ssh.rename(&template_path, &var_path).await?;
+        ssh.rename(template_path, var_path).await?;
         info!("Renamed template to var.json for {}", number);
     } else if var_exists {
         // Archive the existing var.json before overwriting
@@ -149,7 +185,7 @@ pub async fn export_fee_json(
         let archive_dir = format!("{}/00 Archive", proposal_dir);
         ssh.mkdir_p(&archive_dir).await?;
         let archive_path = format!("{}/{}-var-{}.json", archive_dir, number, timestamp);
-        ssh.rename(&var_path, &archive_path).await?;
+        ssh.rename(var_path, &archive_path).await?;
         archived_previous = true;
         info!(
             "Archived previous var.json for {} to {}",
@@ -160,7 +196,7 @@ pub async fn export_fee_json(
     // Serialize and write the new JSON
     let json_bytes = serde_json::to_string_pretty(&json_data)
         .map_err(|e| ApiError::service_unavailable(format!("JSON serialization failed: {}", e)))?;
-    ssh.write_file(&var_path, json_bytes.as_bytes()).await?;
+    ssh.write_file(var_path, json_bytes.as_bytes()).await?;
 
     // Count populated fields for response
     let fields_populated = json_data
@@ -173,19 +209,11 @@ pub async fn export_fee_json(
         .unwrap_or(0);
 
     // Best-effort NC rescan — don't fail the request on rescan errors
-    let rescan_subpath = format!(
-        "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/{} {}/02 Proposal",
-        number, name
-    );
-    if let Err(e) = ssh.nc_rescan(&rescan_subpath).await {
+    if let Err(e) = ssh.nc_rescan(&paths.rescan_subpath).await {
         warn!("NC rescan failed (non-fatal): {}", e.message);
     }
 
     let fee_id_str = format!("fee:{}", key);
-    let relative_path = format!(
-        "01 RFPs/{} {}/02 Proposal/{}-var.json",
-        number, name, number
-    );
 
     info!(
         "Exported fee JSON for {} to {} ({} fields populated)",
@@ -195,7 +223,7 @@ pub async fn export_fee_json(
     Ok(Json(json!({
         "status": "exported",
         "fee_id": fee_id_str,
-        "path": relative_path,
+        "path": paths.relative_path,
         "fields_populated": fields_populated,
         "archived_previous": archived_previous,
     })))
@@ -267,13 +295,57 @@ pub async fn fee_json_status(
 }
 
 // ============================================================================
+// TESTS
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // BUG 1 regression: var.json export must land in the canonical
+    // `{number} {name_short}` folder — never the legal/long `{name}` folder.
+    // The project folder is created as `{number} {name_short}` (desktop
+    // template_ops.rs), so building paths from `name` writes to a stray folder.
+    #[test]
+    fn proposal_paths_use_name_short_not_legal_name() {
+        let paths = ProposalPaths::new(
+            "/mnt/user/emittiv",
+            "26-97104",
+            "Lulu-Island-AV", // name_short; legal name is "LULU ISLAND DEVELOPMENT"
+        );
+
+        assert_eq!(
+            paths.proposal_dir,
+            "/mnt/user/emittiv/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal"
+        );
+        assert_eq!(
+            paths.var_path,
+            "/mnt/user/emittiv/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal/26-97104-var.json"
+        );
+        assert_eq!(
+            paths.template_path,
+            "/mnt/user/emittiv/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal/26-97104-var Default Values.json"
+        );
+        assert_eq!(
+            paths.relative_path,
+            "01 RFPs/26-97104 Lulu-Island-AV/02 Proposal/26-97104-var.json"
+        );
+        assert_eq!(
+            paths.rescan_subpath,
+            "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal"
+        );
+    }
+}
+
+// ============================================================================
 // WORKBOOK EXPORT ENDPOINT
 // ============================================================================
 
 /// Export fee data as a multi-sheet XLSX workbook for InDesign data-merge.
 ///
-/// Generates a workbook with sheets T0–T4 (design/post-contract durations,
-/// design fees, post-contract fees, payment schedule) plus a Revisions sheet.
+/// Generates a workbook with sheets T0–T5 (design/post-contract durations,
+/// design fees, post-contract fees, payment schedule, reimbursable costs) plus
+/// a Revisions sheet.
 /// Returns raw xlsx bytes with appropriate Content-Type and Content-Disposition
 /// headers so the caller can download the file directly.
 #[utoipa::path(
