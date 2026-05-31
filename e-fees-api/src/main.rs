@@ -38,7 +38,7 @@ pub struct AppState {
     info(
         title = "E-Fees API",
         description = "REST API for managing fee proposals, projects, companies, and contacts.",
-        version = "0.2.0",
+        version = "0.3.3",
         contact(name = "Emittiv", url = "https://emittiv.com"),
     ),
     paths(
