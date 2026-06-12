@@ -30,12 +30,12 @@ model: sonnet              # Optional model override
 
 | Agent | Purpose | Key Responsibilities |
 |-------|---------|---------------------|
-| **tdd-enforcer** | TDD workflow gatekeeper | Ensures tests exist BEFORE implementation begins |
-| **test-planner** | Test specification design | Creates test specs, identifies edge cases, defines acceptance criteria |
+| **tdd-enforcer** | TDD workflow gatekeeper | (ARCHIVED 2026-06-12 - enforcement consolidated into CLAUDE.md + superpowers plugin) |
+| **test-planner** | Test specification design | (ARCHIVED 2026-06-12 - enforcement consolidated into CLAUDE.md + superpowers plugin) |
 | **testing-specialist** | E2E testing & test data management | "DELETE ME" pattern, test scenarios, test cleanup |
 | **surrealdb-specialist** | SurrealDB syntax & best practices | Correct query syntax, indexing, schema design |
 | **database-specialist** | Database queries & optimization | Thing objects, query optimization, schema design |
-| **frontend-specialist** | Svelte UI & DPI scaling | Components, Tailwind CSS, responsive design, DPI fixes |
+| **frontend-specialist** | Svelte UI & DPI scaling | (ARCHIVED 2026-06-12 - Tailwind-era guidance; do frontend work in main session) |
 | **tauri-developer** | Rust backend & desktop integration | Tauri commands, IPC, file system operations, window management |
 | **mcp-specialist** | MCP socket & protocol debugging | Socket health, tool registration, E2E test MCP failures |
 | **code-reviewer** | Code quality & architecture | Code smells, refactoring, best practices, consistency |
@@ -102,7 +102,7 @@ Located in `../subagents/archived/subagent-*.md`
 ```markdown
 **Sub-Agent Task: MCP Specialist**
 Context: Brief context
-[Include relevant subagent file: .claude/subagents/subagent-mcp-specialist.md]
+[Include relevant subagent file: .claude/subagents/mcp-specialist.md]
 ```
 
 **Problems:**

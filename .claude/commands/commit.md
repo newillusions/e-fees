@@ -8,7 +8,7 @@ When the user runs `/commit`, you should:
 
 1. **Check staged changes**: Run `git diff --cached --stat` to see what's staged
 2. **Analyze the changes**: Determine the appropriate commit type and scope
-3. **Generate commit message** following the Conventional Commits specification from `.claude/COMMIT_CONVENTIONS.md`
+3. **Generate commit message** following the Conventional Commits specification in CLAUDE.md
 4. **Present to user** for approval before committing
 
 ## Commit Message Format

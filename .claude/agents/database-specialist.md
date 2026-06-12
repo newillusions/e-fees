@@ -1,5 +1,6 @@
 ---
 name: database-specialist
+model: sonnet
 description: Optimize SurrealDB queries, design and modify database schema, handle Thing object patterns correctly, debug database connection issues, and improve query performance
 tools: [Bash, Read, Write, Edit, Grep]
 ---
@@ -698,22 +699,22 @@ command: "surreal export --endpoint http://localhost:8000 --namespace test --dat
 
 ### Works Best With
 
-**Tauri Developer** ([subagent-tauri-developer.md](./subagent-tauri-developer.md))
+**Tauri Developer** ([tauri-developer.md](./tauri-developer.md))
 - **When**: Tauri commands execute database queries
 - **Handoff**: When query is optimized but command interface needs work
 - **Collaboration**: You design queries → Tauri integrates them into commands
 
-**Testing Specialist** ([subagent-testing-specialist.md](./subagent-testing-specialist.md))
+**Testing Specialist** ([testing-specialist.md](./testing-specialist.md))
 - **When**: Test data cleanup, "DELETE ME" queries, data verification
 - **Handoff**: When cleanup logic is correct but test scenarios need work
 - **Collaboration**: You create efficient cleanup queries → Testing ensures safety
 
-**Code Reviewer** ([subagent-code-reviewer.md](./subagent-code-reviewer.md))
+**Code Reviewer** ([code-reviewer.md](./code-reviewer.md))
 - **When**: Schema design review, query optimization verification
 - **Handoff**: After implementing database changes → Code Reviewer ensures quality
 - **Collaboration**: You optimize data layer → Code Reviewer ensures maintainability
 
-**Frontend Specialist** ([subagent-frontend-specialist.md](./subagent-frontend-specialist.md))
+**Frontend Specialist** ([frontend-specialist.md](./frontend-specialist.md))
 - **When**: Thing object extraction, data display patterns
 - **Handoff**: When data structure is correct but UI needs adjustment
 - **Collaboration**: You define data shape → Frontend displays it effectively

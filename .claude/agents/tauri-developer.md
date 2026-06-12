@@ -1,5 +1,6 @@
 ---
 name: tauri-developer
+model: sonnet
 description: Implement Tauri commands, manage application state in Rust, handle file system operations, configure window properties, integrate native OS features, and optimize desktop performance
 tools: [Bash, Read, Write, Edit, Grep]
 ---
@@ -597,22 +598,22 @@ command: "cd /Volumes/base/dev/e-fees/src-tauri && cargo test"
 
 ### Works Best With
 
-**MCP Specialist** ([subagent-mcp-specialist.md](./subagent-mcp-specialist.md))
+**MCP Specialist** ([mcp-specialist.md](./mcp-specialist.md))
 - **When**: Exposing Tauri commands via MCP tools, E2E testing
 - **Handoff**: When command works but MCP tool definition needs updating
 - **Collaboration**: You create commands → MCP Specialist exposes them via MCP
 
-**Database Specialist** ([subagent-database-specialist.md](./subagent-database-specialist.md))
+**Database Specialist** ([database-specialist.md](./database-specialist.md))
 - **When**: Tauri commands execute database queries
 - **Handoff**: When query logic is complex or needs optimization
 - **Collaboration**: You handle IPC layer → Database Specialist optimizes queries
 
-**Frontend Specialist** ([subagent-frontend-specialist.md](./subagent-frontend-specialist.md))
+**Frontend Specialist** ([frontend-specialist.md](./frontend-specialist.md))
 - **When**: Frontend invokes commands, data serialization issues
 - **Handoff**: When IPC bridge works but UI needs improvement
 - **Collaboration**: You define command interface → Frontend uses it effectively
 
-**Code Reviewer** ([subagent-code-reviewer.md](./subagent-code-reviewer.md))
+**Code Reviewer** ([code-reviewer.md](./code-reviewer.md))
 - **When**: Refactoring Rust code, improving command architecture
 - **Handoff**: After implementing features → Code Reviewer ensures quality
 - **Collaboration**: You implement functionality → Code Reviewer optimizes patterns

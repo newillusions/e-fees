@@ -334,7 +334,7 @@ command here
 ## Related Documentation
 
 - **MCP Config**: `.claude/MCP-CONFIG.md` - Understanding MCP servers vs commands
-- **Quick Reference**: `.claude/quick-refs/commands.md` - Bash command reference
+- **Quick Reference**: `.claude/archive/quick-refs/commands.md` (archived) - Bash command reference
 - **Main Docs**: `CLAUDE.md` - Full project documentation
 - **Onboarding**: `.claude/ONBOARDING.md` - New session quick start
 

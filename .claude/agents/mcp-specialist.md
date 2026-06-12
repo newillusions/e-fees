@@ -1,5 +1,6 @@
 ---
 name: mcp-specialist
+model: sonnet
 description: Debug MCP socket issues, troubleshoot Unix socket communication, fix MCP server implementation bugs, optimize MCP tool definitions, resolve E2E test MCP failures, and trace message flow through the MCP protocol stack
 tools: [Bash, Read, Grep, Write, Edit]
 ---

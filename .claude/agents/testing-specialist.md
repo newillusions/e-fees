@@ -1,5 +1,6 @@
 ---
 name: testing-specialist
+model: sonnet
 description: Write E2E test scenarios using MCP framework, ensure "DELETE ME" test data pattern compliance, debug test failures, improve test stability, and manage test data isolation and cleanup
 tools: [Bash, Read, Write, Edit, Grep]
 ---
@@ -749,12 +750,12 @@ command: "cd /Volumes/base/dev/e-fees && npm run test:e2e:verify-clean"
 
 ### Works Best With
 
-**MCP Specialist** ([subagent-mcp-specialist.md](./subagent-mcp-specialist.md))
+**MCP Specialist** ([mcp-specialist.md](./mcp-specialist.md))
 - **When**: MCP-based E2E tests, test framework issues, socket problems
 - **Handoff**: When test scenario is correct but MCP communication fails
 - **Collaboration**: You write tests → MCP Specialist ensures MCP layer works
 
-**Database Specialist** ([subagent-database-specialist.md](./subagent-database-specialist.md))
+**Database Specialist** ([database-specialist.md](./database-specialist.md))
 - **When**: Test data cleanup, verifying data state, query-based assertions
 - **Handoff**: When cleanup queries are complex or performance-critical
 - **Collaboration**: You define cleanup requirements → Database creates efficient queries

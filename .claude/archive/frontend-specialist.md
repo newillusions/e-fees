@@ -1,6 +1,7 @@
 ---
 name: frontend-specialist
-description: Implement Svelte 5 components, fix UI/UX issues, resolve DPI scaling problems with Tailwind CSS, optimize frontend performance, and ensure responsive design across different display scales
+model: sonnet
+description: Implement Svelte 5 components, fix UI/UX issues, resolve DPI scaling problems (fixed px, OS-level scaling), optimize frontend performance, and ensure responsive design across different display scales
 tools: [Bash, Read, Write, Edit, Grep]
 ---
 

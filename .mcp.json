@@ -14,23 +14,11 @@
     },
     "tauri-mcp": {
       "command": "node",
-      "args": ["/Volumes/base/dev/app/e-fees/tauri-plugin-mcp/mcp-server-ts/build/index.js"]
-    },
-    "git": {
-      "command": "uvx",
-      "args": [
-        "mcp-server-git",
-        "--repository",
-        "/Volumes/base/dev/app/e-fees"
-      ]
+      "args": ["/Volumes/base/dev/claude/e-fees/tauri-plugin-mcp/mcp-server-ts/build/index.js"]
     },
     "desktop-commander": {
       "command": "npx",
       "args": ["-y", "@wonderwhy-er/desktop-commander"]
-    },
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
     },
     "github": {
       "command": "/Users/martin/.claude/scripts/mcp-with-creds.sh",

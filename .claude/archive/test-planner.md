@@ -1,5 +1,6 @@
 ---
 name: test-planner
+model: haiku
 description: Design test specifications and acceptance criteria BEFORE any implementation. Analyzes requirements, identifies edge cases, and creates comprehensive test plans that must pass before code is considered complete.
 tools: [Read, Grep, Glob, Write]
 ---

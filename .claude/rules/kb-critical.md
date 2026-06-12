@@ -6,13 +6,13 @@
 
 ---
 
-## E Fees Tailwind Usage Rules
+## E Fees Styling Rules (Tailwind removed)
 
 **Priority:** 10 | **Type:** pattern
 
-CRITICAL RULE for E-Fees frontend development: Tailwind must NEVER be used with massive inline class strings. Extract repeated patterns into components or CSS classes. Use existing emittiv-* classes. Use semantic text sizes (text-xs, text-xxs) not arbitrary values.
+Tailwind was fully removed from E-Fees 2026-02-16. Use semantic .emittiv-* classes from app.css; fixed px values (OS handles DPI scaling), never rem; extract patterns repeated 2+ times into components or CSS classes. Do not reintroduce utility-class frameworks.
 
-*Source: observation:hfruicpknmxiuobmmjiq | Scope: project | Access count: 401*
+*Source: observation:finsjti60gd3gg604h13 (supersedes hfruicpknmxiuobmmjiq) | Scope: project | manually patched 2026-06-12, regenerates on next lamp-on*
 
 ---
 

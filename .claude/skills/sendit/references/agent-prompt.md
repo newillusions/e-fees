@@ -133,7 +133,7 @@ fi
 
 COMMIT_MSG="${COMMIT_TYPE}(${SCOPE}): ${COMMIT_DESC}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
 
 echo "Message: $COMMIT_MSG"
 
@@ -304,7 +304,7 @@ if [ "$REVIEW_VERDICT" = "BLOCK" ]; then
     git add -A
     git commit -m "fix: address review findings
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
     REVIEW_VERDICT="PASS"
   else
     echo ""
@@ -421,7 +421,7 @@ else
   git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json Cargo.lock
   git commit -m "chore: bump version to $NEW_VERSION
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
   echo "✓ Version bump committed"
 fi
 ```

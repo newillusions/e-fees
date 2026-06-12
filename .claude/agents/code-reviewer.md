@@ -1,5 +1,6 @@
 ---
 name: code-reviewer
+model: sonnet
 description: Review code quality and architecture, identify code smells and anti-patterns, suggest refactoring improvements, ensure consistency across codebase, and validate best practices
 tools: [Bash, Read, Grep]
 ---
@@ -512,7 +513,7 @@ function createInvoice(params: InvoiceParams) {
 ### Escalate to Specialist When:
 
 **Frontend Issues:**
-> "Code quality is good, but the Tailwind scaling issue needs Frontend Specialist expertise. Component uses fixed pixel values that break at 150% scale."
+> "Code quality is good, but the DPI scaling issue needs Frontend Specialist expertise. Component hardcodes rem-based sizes that double-scale at 150% - convert to fixed px per project styling rules."
 
 **Database Performance:**
 > "Code structure is fine, but the query is slow. Need Database Specialist to optimize. Query scans 10K+ records without index."
@@ -718,27 +719,27 @@ command: "cd /Volumes/base/dev/e-fees && git diff main..feature-branch"
 
 **Common Collaboration Patterns**:
 
-**MCP Specialist** ([subagent-mcp-specialist.md](./subagent-mcp-specialist.md))
+**MCP Specialist** ([mcp-specialist.md](./mcp-specialist.md))
 - Review MCP server architecture and error handling
 - Ensure tool definitions follow consistent patterns
 - Verify socket lifecycle management
 
-**Tauri Developer** ([subagent-tauri-developer.md](./subagent-tauri-developer.md))
+**Tauri Developer** ([tauri-developer.md](./tauri-developer.md))
 - Review command architecture and security
 - Ensure proper error handling in Rust
 - Verify IPC patterns and state management
 
-**Testing Specialist** ([subagent-testing-specialist.md](./subagent-testing-specialist.md))
+**Testing Specialist** ([testing-specialist.md](./testing-specialist.md))
 - Review test architecture and coverage
 - Ensure tests follow "DELETE ME" pattern
 - Verify test isolation and maintainability
 
-**Database Specialist** ([subagent-database-specialist.md](./subagent-database-specialist.md))
+**Database Specialist** ([database-specialist.md](./database-specialist.md))
 - Review schema design and normalization
 - Ensure query efficiency and proper indexing
 - Verify data integrity patterns
 
-**Frontend Specialist** ([subagent-frontend-specialist.md](./subagent-frontend-specialist.md))
+**Frontend Specialist** ([frontend-specialist.md](./frontend-specialist.md))
 - Review component architecture and reusability
 - Ensure accessibility and DPI scaling compliance
 - Verify consistent UI patterns and design system usage

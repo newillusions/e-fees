@@ -1,5 +1,6 @@
 ---
 name: tdd-enforcer
+model: haiku
 description: Enforces Test-Driven Development workflow. MUST be invoked before any feature implementation. Ensures test specifications exist and tests are written BEFORE implementation code.
 tools: [Read, Grep, Glob]
 ---
