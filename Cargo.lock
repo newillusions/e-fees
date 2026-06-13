@@ -229,7 +229,6 @@ dependencies = [
  "tauri-plugin-updater",
  "tokio",
  "tower",
- "umya-spreadsheet",
  "uuid",
 ]
 
