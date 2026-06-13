@@ -82,7 +82,7 @@ export const crudCompany = `(async () => {
     for (const orphan of orphans) {
       const orphanId = extractId(orphan, 'company');
       if (orphanId) {
-        try { await invoke('delete_company', { id: orphanId }); } catch(_) {}
+        try { await invoke('delete_company', { id: stripTable(orphanId) }); } catch(_) {}
       }
     }
 
@@ -263,11 +263,20 @@ export const crudProject = `(async () => {
       : null;
     if (!found) throw new Error('Could not find created project with id: ' + createdId);
 
-    // Update
+    // Update — include all required SCHEMAFULL string fields to avoid NONE coercion error
+    // (SurrealDB v3 MERGE writes None fields as NONE, overwriting existing values)
     const updatedName = 'DELETE ME - Updated Project ' + Date.now();
     await invoke('update_project', {
-      id: createdId,
-      project: { name: updatedName }
+      id: stripTable(createdId),
+      projectUpdate: {
+        name: updatedName,
+        name_short: found.name_short || found.nameShort || 'DELME',
+        status: found.status || 'Lead',
+        area: found.area || 'Test',
+        city: found.city || 'Test',
+        country: found.country || 'Test',
+        folder: found.folder || ''
+      }
     });
 
     // Verify update
@@ -412,7 +421,7 @@ export const crudCleanup = `(async () => {
     // Delete in reverse dependency order
     if (ids.fee) {
       try {
-        await invoke('delete_fee', { id: ids.fee });
+        await invoke('delete_fee', { id: stripTable(ids.fee) });
         deleted.push(ids.fee);
       } catch(e) {
         errors.push('delete_fee(' + ids.fee + '): ' + (e instanceof Error ? e.message : String(e)));
@@ -421,7 +430,7 @@ export const crudCleanup = `(async () => {
 
     if (ids.project) {
       try {
-        await invoke('delete_project', { id: ids.project });
+        await invoke('delete_project', { id: stripTable(ids.project) });
         deleted.push(ids.project);
       } catch(e) {
         errors.push('delete_project(' + ids.project + '): ' + (e instanceof Error ? e.message : String(e)));
@@ -430,7 +439,7 @@ export const crudCleanup = `(async () => {
 
     if (ids.contact) {
       try {
-        await invoke('delete_contact', { id: ids.contact });
+        await invoke('delete_contact', { id: stripTable(ids.contact) });
         deleted.push(ids.contact);
       } catch(e) {
         errors.push('delete_contact(' + ids.contact + '): ' + (e instanceof Error ? e.message : String(e)));
@@ -439,7 +448,7 @@ export const crudCleanup = `(async () => {
 
     if (ids.company) {
       try {
-        await invoke('delete_company', { id: ids.company });
+        await invoke('delete_company', { id: stripTable(ids.company) });
         deleted.push(ids.company);
       } catch(e) {
         errors.push('delete_company(' + ids.company + '): ' + (e instanceof Error ? e.message : String(e)));
@@ -461,7 +470,7 @@ export const crudCleanup = `(async () => {
         const fId = extractId(fee, 'fee');
         if (fId && fId !== ids.fee) {
           try {
-            await invoke('delete_fee', { id: fId });
+            await invoke('delete_fee', { id: stripTable(fId) });
             orphanDeleted.push(fId);
           } catch(_) {}
         }
@@ -473,7 +482,7 @@ export const crudCleanup = `(async () => {
         const pId = extractId(project, 'projects');
         if (pId && pId !== ids.project) {
           try {
-            await invoke('delete_project', { id: pId });
+            await invoke('delete_project', { id: stripTable(pId) });
             orphanDeleted.push(pId);
           } catch(_) {}
         }
@@ -486,7 +495,7 @@ export const crudCleanup = `(async () => {
         const cId = extractId(contact, 'contacts');
         if (cId && cId !== ids.contact) {
           try {
-            await invoke('delete_contact', { id: cId });
+            await invoke('delete_contact', { id: stripTable(cId) });
             orphanDeleted.push(cId);
           } catch(_) {}
         }
@@ -498,7 +507,7 @@ export const crudCleanup = `(async () => {
         const coId = extractId(company, 'company');
         if (coId && coId !== ids.company) {
           try {
-            await invoke('delete_company', { id: coId });
+            await invoke('delete_company', { id: stripTable(coId) });
             orphanDeleted.push(coId);
           } catch(_) {}
         }

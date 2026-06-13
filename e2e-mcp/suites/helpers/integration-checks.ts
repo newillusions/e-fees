@@ -9,10 +9,12 @@
  * After executing a check, read the result with a second execute_js call:
  *   `window.__SMOKE_RESULT`
  *
- * ALL CHECKS ARE READ-ONLY — no invoke calls that create, update, or delete data.
+ * Checks are read-only EXCEPT statusTransition, which performs a live
+ * Lead->RFP->Lead round-trip on the throwaway CRUD project (window.__CRUD_IDS)
+ * and reverts it, so it must run after crud_fee and before crud_cleanup.
  *
  * CHECKS:
- * 1. statusTransition       — Verify fees have multiple statuses (Draft + non-Draft)
+ * 1. statusTransition       — Live status round-trip on the CRUD project (revertible)
  * 2. feeProjectMapping      — Verify Accepted fees link to Awarded projects
  * 3. connectionIndicator    — Verify connection status element exists in DOM
  * 4. entityCountConsistency — Verify get_stats counts match actual array lengths
@@ -33,30 +35,75 @@
  * Result: { check: 'status_transition', pass: boolean, details: { statuses, hasDraft, hasNonDraft } }
  */
 export const statusTransition = `(async () => {
+  function stripTable(fullId) {
+    if (!fullId) return fullId;
+    const idx = String(fullId).indexOf(':');
+    return idx >= 0 ? String(fullId).substring(idx + 1) : String(fullId);
+  }
   try {
     const invoke = window.__TAURI_INTERNALS__.invoke;
-    const fees = await invoke('get_fees');
+    const crudProjectId = window.__CRUD_IDS && window.__CRUD_IDS.project;
 
-    const foundStatuses = new Set();
-    if (Array.isArray(fees)) {
-      fees.forEach(fee => {
-        if (fee?.status) foundStatuses.add(fee.status);
+    if (crudProjectId) {
+      // Live transition test on the throwaway CRUD project:
+      // Lead -> RFP, verify it persisted, then revert to Lead.
+      // Runs before crud_cleanup, which deletes the project afterward.
+      //
+      // NOTE: SurrealDB v3 MERGE writes None/undefined fields as NONE, which fails
+      // the SCHEMAFULL `projects` table coercion for required string fields (area, city, etc).
+      // Read the current project first and pass all fields through to avoid this.
+      const key = stripTable(crudProjectId);
+      const allProjects = await invoke('get_projects');
+      const currentProject = Array.isArray(allProjects)
+        ? allProjects.find(p => {
+            const pid = p && p.id;
+            if (!pid) return false;
+            if (typeof pid === 'string') return pid === crudProjectId || stripTable(pid) === key;
+            const tb = pid.tb || pid.table || 'projects';
+            let k = (pid.key !== undefined) ? pid.key : pid.id;
+            if (k && typeof k === 'object') k = Object.values(k)[0];
+            return (tb + ':' + k) === crudProjectId;
+          })
+        : null;
+      if (!currentProject) throw new Error('Could not find CRUD project to read fields: ' + crudProjectId);
+
+      const baseUpdate = {
+        name: currentProject.name || currentProject.name,
+        name_short: currentProject.name_short || currentProject.nameShort || 'DELME',
+        area: currentProject.area || 'Test',
+        city: currentProject.city || 'Test',
+        country: currentProject.country || 'Test',
+        folder: currentProject.folder || ''
+      };
+
+      const toRfp = await invoke('update_project', { id: key, projectUpdate: { ...baseUpdate, status: 'RFP' } });
+      if (!toRfp || toRfp.status !== 'RFP') {
+        throw new Error('Transition Lead->RFP did not persist. status=' + (toRfp && toRfp.status));
+      }
+      const back = await invoke('update_project', { id: key, projectUpdate: { ...baseUpdate, status: 'Lead' } });
+      if (!back || back.status !== 'Lead') {
+        throw new Error('Revert RFP->Lead did not persist. status=' + (back && back.status));
+      }
+      window.__SMOKE_RESULT = JSON.stringify({
+        check: 'status_transition',
+        pass: true,
+        details: { projectId: key, transitions: ['Lead->RFP', 'RFP->Lead'], verified: true }
       });
+      return;
     }
 
-    const statusList = Array.from(foundStatuses);
-    const hasDraft = statusList.includes('Draft');
-    const hasNonDraft = statusList.some(s => s !== 'Draft');
-    const pass = hasDraft && hasNonDraft;
-
+    // Fallback (CRUD phase failed, no throwaway project available):
+    // assert the dataset at least has fees carrying valid status values.
+    const fees = await invoke('get_fees');
+    const statusList = Array.from(new Set(
+      (Array.isArray(fees) ? fees : []).map(f => f && f.status).filter(Boolean)
+    ));
     window.__SMOKE_RESULT = JSON.stringify({
       check: 'status_transition',
-      pass,
+      pass: statusList.length > 0,
       details: {
         statuses: statusList,
-        hasDraft,
-        hasNonDraft,
-        feeCount: Array.isArray(fees) ? fees.length : 0
+        note: 'no CRUD project available — dataset status presence only, no live transition tested'
       }
     });
   } catch(e) {
@@ -72,8 +119,10 @@ export const statusTransition = `(async () => {
  * Check 2: Fee → Project Status Mapping
  *
  * Loads fees and projects. For any fee with status "Accepted", verifies that
- * its linked project has status "Awarded". This validates the fee→project
- * status mapping is consistent across the dataset.
+ * its linked project is in a post-award lifecycle status (Awarded, Design,
+ * Construction, Completed, or On Hold) — i.e. the project was won. A pre-award
+ * or dead status (Lead/RFP/Submitted/Lost/Cancelled/No Response) on an Accepted
+ * fee's project is flagged as an inconsistency.
  *
  * If no Accepted fees exist, passes with a note.
  *
@@ -91,23 +140,28 @@ export const feeProjectMapping = `(async () => {
       throw new Error('get_fees or get_projects returned non-array');
     }
 
-    // Build a project lookup map by ID string
+    // Resolve a SurrealDB id/link to a "table:key" string.
+    // Handles plain strings, v3 RecordId {table, key} and legacy v2 {tb, id},
+    // with key itself possibly wrapped as { String|Number: value }.
+    function resolveRecordId(val, defaultTable) {
+      if (val == null) return null;
+      if (typeof val === 'string') {
+        return val.indexOf(':') >= 0 ? val : (defaultTable + ':' + val);
+      }
+      if (typeof val === 'object') {
+        const tb = val.tb || val.table || defaultTable;
+        let key = (val.key !== undefined) ? val.key : val.id;
+        if (key && typeof key === 'object') key = Object.values(key)[0];
+        if (key !== undefined && key !== null) return tb + ':' + key;
+      }
+      return null;
+    }
+
+    // Build a project lookup map by "projects:key" string
     const projectById = {};
     projects.forEach(p => {
       if (!p) return;
-      // Handle both string IDs and SurrealDB RecordId objects
-      let id = null;
-      if (typeof p.id === 'string') {
-        id = p.id;
-      } else if (p.id && typeof p.id === 'object') {
-        const tb = p.id.tb || 'projects';
-        const key = p.id.id;
-        if (key && typeof key === 'object') {
-          id = tb + ':' + Object.values(key)[0];
-        } else if (key !== undefined && key !== null) {
-          id = tb + ':' + key;
-        }
-      }
+      const id = resolveRecordId(p.id, 'projects');
       if (id) projectById[id] = p;
     });
 
@@ -131,20 +185,8 @@ export const feeProjectMapping = `(async () => {
     let validated = 0;
 
     for (const fee of acceptedFees) {
-      // Resolve project_id to a string key
-      let projectKey = null;
-      const pid = fee.project_id || fee.projectId;
-      if (typeof pid === 'string') {
-        projectKey = pid;
-      } else if (pid && typeof pid === 'object') {
-        const tb = pid.tb || 'projects';
-        const key = pid.id;
-        if (key && typeof key === 'object') {
-          projectKey = tb + ':' + Object.values(key)[0];
-        } else if (key !== undefined && key !== null) {
-          projectKey = tb + ':' + key;
-        }
-      }
+      // Resolve project_id to a "projects:key" string
+      const projectKey = resolveRecordId(fee.project_id || fee.projectId, 'projects');
 
       if (!projectKey) {
         mismatches.push({ feeId: String(fee.id), reason: 'could not resolve project_id' });
@@ -157,13 +199,19 @@ export const feeProjectMapping = `(async () => {
         continue;
       }
 
-      if (project.status !== 'Awarded') {
+      // An Accepted fee means the project was won; it then progresses through
+      // the delivery lifecycle (Awarded -> Design -> Construction -> Completed,
+      // or On Hold) while the fee stays Accepted. Only pre-award or dead
+      // statuses (Lead/RFP/Submitted/Lost/Cancelled/No Response) are real
+      // inconsistencies for an Accepted fee.
+      const postAward = ['Awarded', 'Design', 'Construction', 'Completed', 'On Hold'];
+      if (!postAward.includes(project.status)) {
         mismatches.push({
           feeId: String(fee.id),
           projectId: projectKey,
           feeStatus: fee.status,
           projectStatus: project.status,
-          reason: 'Accepted fee linked to non-Awarded project'
+          reason: 'Accepted fee linked to pre-award/dead project status'
         });
       } else {
         validated++;

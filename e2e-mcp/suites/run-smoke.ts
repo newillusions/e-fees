@@ -183,10 +183,11 @@ export const CHECKS = {
 };
 
 /**
- * Execution order for smoke tests (52 checks total).
+ * Execution order for smoke tests (40 checks total).
  *
  * Safety check must always be first to prevent testing against production.
- * CRUD checks run as a sequential pipeline — crud_cleanup always runs last in the group.
+ * CRUD checks run as a sequential pipeline — crud_cleanup always runs last in the
+ * group (after status_transition, which borrows the CRUD project before cleanup).
  * If any check returns { ABORT: true }, stop and report immediately.
  */
 export const CHECK_ORDER = [
@@ -221,9 +222,11 @@ export const CHECK_ORDER = [
   'crud_contact',
   'crud_project',
   'crud_fee',
+  // status_transition uses the CRUD project (window.__CRUD_IDS) so it must
+  // run before crud_cleanup deletes it
+  'status_transition',
   'crud_cleanup',
   // Phase 7: Integration
-  'status_transition',
   'fee_project_mapping',
   'connection_indicator',
   'entity_count_consistency',
