@@ -350,6 +350,44 @@ async fn test_list_clauses_with_category_filter() {
     cleanup_clause(&c, &id2).await;
 }
 
+/// Regression: the unfiltered list must deserialize EVERY active clause, including
+/// legacy/seeded rows. A row whose `created_at`/`updated_at` was stored as an ISO
+/// string instead of a SurrealDB datetime made `Vec<Clause>` deserialization fail and
+/// the endpoint return 500. The category-filtered test missed it because it only lists
+/// its own freshly-created (datetime) clause. Fixed 2026-06-14 by migrating the clause
+/// timestamps to datetime; this test is read-only and creates no test data.
+#[tokio::test]
+async fn test_list_clauses_unfiltered_deserializes_all_active() {
+    let c = client();
+
+    let resp = c
+        .get(format!("{}/clauses", base_url()))
+        .header("X-API-Key", api_key())
+        .send()
+        .await
+        .expect("Unfiltered list clauses request failed");
+
+    assert_eq!(
+        resp.status(),
+        200,
+        "GET /clauses must return 200; a 500 means an active clause failed to \
+         deserialize (e.g. a string timestamp where a datetime is expected)"
+    );
+
+    let body: Value = resp.json().await.unwrap();
+    let data = body["data"].as_array().expect("data should be an array");
+    assert!(
+        !data.is_empty(),
+        "the active clause library should not be empty"
+    );
+    for clause in data {
+        assert!(
+            clause.get("created_at").is_some(),
+            "each listed clause must expose created_at: {clause:?}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn test_list_categories() {
     let c = client();
