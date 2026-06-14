@@ -69,15 +69,53 @@ macro_rules! delegate_delete {
     };
 }
 
-/// Macro for update operations with merge.
-/// QUAL-H1: Reduces match statement duplication for update patterns.
-macro_rules! delegate_update_merge {
-    ($self:expr, $table:expr, $id:expr, $data:expr) => {
-        match $self {
-            DatabaseClient::Http(client) => client.update(($table, $id)).merge($data).await,
-            DatabaseClient::WebSocket(client) => client.update(($table, $id)).merge($data).await,
+/// Build a partial-update field map from a `ProjectUpdate`, including ONLY the
+/// fields that are `Some`.
+///
+/// The `ProjectUpdate` struct is all-`Option<String>` to express partial updates,
+/// but a `.merge()` of its `SurrealValue` derive serializes EVERY field, sending
+/// `None` as `NONE`. On the SCHEMAFULL `projects` table that hard-errors for
+/// required columns (`area`/`city`/`country`); elsewhere it silently clobbers data.
+/// Emitting only the present fields lets [`DatabaseClient::partial_update`] SET just
+/// what the caller actually changed. See `obs:cno62twf3e6hmhso009f`.
+pub(crate) fn project_update_to_merge(
+    update: &ProjectUpdate,
+) -> serde_json::Map<String, serde_json::Value> {
+    let mut map = serde_json::Map::new();
+    let mut set = |key: &str, value: &Option<String>| {
+        if let Some(v) = value {
+            map.insert(key.to_string(), serde_json::Value::String(v.clone()));
         }
     };
+    set("name", &update.name);
+    set("name_short", &update.name_short);
+    set("status", &update.status);
+    set("area", &update.area);
+    set("city", &update.city);
+    set("country", &update.country);
+    set("folder", &update.folder);
+    map
+}
+
+/// Build a partial-merge object from a `CompanyUpdate`, including ONLY the `Some`
+/// fields. Same rationale as [`project_update_to_merge`].
+pub(crate) fn company_update_to_merge(
+    update: &CompanyUpdate,
+) -> serde_json::Map<String, serde_json::Value> {
+    let mut map = serde_json::Map::new();
+    let mut set = |key: &str, value: &Option<String>| {
+        if let Some(v) = value {
+            map.insert(key.to_string(), serde_json::Value::String(v.clone()));
+        }
+    };
+    set("name", &update.name);
+    set("name_short", &update.name_short);
+    set("abbreviation", &update.abbreviation);
+    set("city", &update.city);
+    set("country", &update.country);
+    set("reg_no", &update.reg_no);
+    set("tax_no", &update.tax_no);
+    map
 }
 
 impl DatabaseClient {
@@ -326,6 +364,47 @@ impl DatabaseClient {
         }
     }
 
+    /// Apply a partial update to `table:id`, SET-ing ONLY the supplied fields via a
+    /// parameterized query. Absent fields are left untouched (no NONE-clobber), and
+    /// every value is bound (no SQL injection). An empty `fields` map is a no-op that
+    /// returns the record unchanged. See `obs:cno62twf3e6hmhso009f`.
+    async fn partial_update<T>(
+        &self,
+        table: &str,
+        id: &str,
+        fields: serde_json::Map<String, serde_json::Value>,
+    ) -> Result<Option<T>, Error>
+    where
+        T: surrealdb::types::SurrealValue,
+    {
+        validate_record_id(id, "record id")?;
+
+        let mut binds = serde_json::Map::new();
+        binds.insert("__id".to_string(), serde_json::Value::String(id.to_string()));
+
+        let query = if fields.is_empty() {
+            // Nothing to change — return the record as-is rather than clobbering it.
+            format!("SELECT * FROM type::record('{}', $__id)", table)
+        } else {
+            let set_clause = fields
+                .iter()
+                .map(|(key, _)| format!("{key} = ${key}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            for (key, value) in fields {
+                binds.insert(key, value);
+            }
+            format!(
+                "UPDATE type::record('{}', $__id) SET {} RETURN AFTER",
+                table, set_clause
+            )
+        };
+
+        let mut response = self.query_bind_map(&query, binds).await?;
+        let items: Vec<T> = response.take(0)?;
+        Ok(items.into_iter().next())
+    }
+
     // ==================== Project Operations ====================
 
     pub async fn create_project(&self, project: Project) -> Result<Option<Project>, Error> {
@@ -388,7 +467,9 @@ impl DatabaseClient {
         id: &str,
         project_data: ProjectUpdate,
     ) -> Result<Option<Project>, Error> {
-        delegate_update_merge!(self, "projects", id, project_data)
+        // SET only the fields the caller set; see project_update_to_merge.
+        let fields = project_update_to_merge(&project_data);
+        self.partial_update("projects", id, fields).await
     }
 
     pub async fn delete_project(&self, id: &str) -> Result<Option<Project>, Error> {
@@ -476,7 +557,9 @@ impl DatabaseClient {
         id: &str,
         company_update: CompanyUpdate,
     ) -> Result<Option<Company>, Error> {
-        delegate_update_merge!(self, "company", id, company_update)
+        // SET only the fields the caller set; see company_update_to_merge.
+        let fields = company_update_to_merge(&company_update);
+        self.partial_update("company", id, fields).await
     }
 
     pub async fn delete_company(&self, id: &str) -> Result<Option<Company>, Error> {

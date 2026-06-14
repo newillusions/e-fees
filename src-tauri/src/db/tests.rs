@@ -1316,4 +1316,203 @@ mod tests {
         assert_eq!(created.entity_type, "project");
         println!("Created activity_log id: {:?}", created.id);
     }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_partial_company_update_preserves_unset_fields() {
+        // BUG (obs:cno62twf3e6hmhso009f): update_company_partial used .merge() of the
+        // all-Option CompanyUpdate, whose SurrealValue derive sends every None as NONE,
+        // silently clobbering omitted columns. FIX: SET only the provided fields.
+        // Live proof: a city-only update must leave name/country/reg_no/tax_no intact.
+        use crate::commands::CompanyUpdate;
+        use crate::db::CompanyCreate;
+
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let abbr = format!("DELME{}", stamp);
+
+        let created = manager
+            .create_company(CompanyCreate {
+                name: format!("DELETE ME - partial update test {}", stamp),
+                name_short: "DELETE ME".to_string(),
+                abbreviation: abbr.clone(),
+                city: "Dubai".to_string(),
+                country: "United Arab Emirates".to_string(),
+                reg_no: Some("DELETE-ME-REG".to_string()),
+                tax_no: Some("DELETE-ME-TAX".to_string()),
+            })
+            .await
+            .expect("create_company should succeed");
+
+        // Partial update: change ONLY the city.
+        let updated = manager
+            .update_company_partial(
+                &abbr,
+                CompanyUpdate {
+                    name: None,
+                    name_short: None,
+                    abbreviation: None,
+                    city: Some("Abu Dhabi".to_string()),
+                    country: None,
+                    reg_no: None,
+                    tax_no: None,
+                },
+            )
+            .await;
+
+        // Clean up the test record regardless of assertion outcome.
+        let _ = manager.delete_company(&abbr).await;
+
+        let updated =
+            updated.expect("partial update_company should succeed without a NONE clobber");
+        assert_eq!(updated.city, "Abu Dhabi", "the set field (city) should change");
+        assert_eq!(updated.name, created.name, "name must be preserved");
+        assert_eq!(updated.country, created.country, "country must be preserved");
+        assert_eq!(
+            updated.reg_no,
+            Some("DELETE-ME-REG".to_string()),
+            "reg_no must NOT be clobbered to NONE by a partial update"
+        );
+        assert_eq!(
+            updated.tax_no,
+            Some("DELETE-ME-TAX".to_string()),
+            "tax_no must NOT be clobbered to NONE by a partial update"
+        );
+    }
+
+    // ========================================================================
+    // PARTIAL-UPDATE MERGE-CONTENT TESTS (obs:cno62twf3e6hmhso009f)
+    //
+    // The update_project / update_company_partial paths must merge ONLY the
+    // fields the caller set to `Some`. Sending `None` fields as NONE hard-errors
+    // on the SCHEMAFULL `projects` table and silently clobbers data elsewhere.
+    // These pure tests exercise the merge-content builders that fix that.
+    // ========================================================================
+    mod partial_update_merge_tests {
+        use crate::commands::{CompanyUpdate, ProjectUpdate};
+        use crate::db::client::{company_update_to_merge, project_update_to_merge};
+
+        fn empty_project_update() -> ProjectUpdate {
+            ProjectUpdate {
+                name: None,
+                name_short: None,
+                status: None,
+                area: None,
+                city: None,
+                country: None,
+                folder: None,
+            }
+        }
+
+        fn empty_company_update() -> CompanyUpdate {
+            CompanyUpdate {
+                name: None,
+                name_short: None,
+                abbreviation: None,
+                city: None,
+                country: None,
+                reg_no: None,
+                tax_no: None,
+            }
+        }
+
+        #[test]
+        fn project_partial_update_includes_only_some_fields() {
+            // Bug repro: a status-only update must NOT carry area/city/country, or
+            // the SCHEMAFULL projects table rejects the merge with a NONE-coercion
+            // error on those required columns.
+            let update = ProjectUpdate {
+                status: Some("RFP".to_string()),
+                ..empty_project_update()
+            };
+            let merge = project_update_to_merge(&update);
+            assert_eq!(merge.len(), 1, "only the status field should be present");
+            assert_eq!(merge.get("status").and_then(|v| v.as_str()), Some("RFP"));
+            for absent in ["name", "name_short", "area", "city", "country", "folder"] {
+                assert!(
+                    !merge.contains_key(absent),
+                    "{absent} must be omitted when None"
+                );
+            }
+        }
+
+        #[test]
+        fn project_all_none_produces_empty_merge() {
+            let merge = project_update_to_merge(&empty_project_update());
+            assert!(
+                merge.is_empty(),
+                "all-None update must produce an empty merge (no-op, not a clobber)"
+            );
+        }
+
+        #[test]
+        fn project_all_some_includes_every_field() {
+            let update = ProjectUpdate {
+                name: Some("n".into()),
+                name_short: Some("ns".into()),
+                status: Some("RFP".into()),
+                area: Some("a".into()),
+                city: Some("c".into()),
+                country: Some("UAE".into()),
+                folder: Some("f".into()),
+            };
+            let merge = project_update_to_merge(&update);
+            assert_eq!(merge.len(), 7, "every set field should be present");
+            assert_eq!(merge.get("country").and_then(|v| v.as_str()), Some("UAE"));
+        }
+
+        #[test]
+        fn company_partial_update_includes_only_some_fields() {
+            let update = CompanyUpdate {
+                name: Some("Acme".into()),
+                ..empty_company_update()
+            };
+            let merge = company_update_to_merge(&update);
+            assert_eq!(merge.len(), 1);
+            assert_eq!(merge.get("name").and_then(|v| v.as_str()), Some("Acme"));
+            for absent in [
+                "name_short",
+                "abbreviation",
+                "city",
+                "country",
+                "reg_no",
+                "tax_no",
+            ] {
+                assert!(
+                    !merge.contains_key(absent),
+                    "{absent} must be omitted when None"
+                );
+            }
+        }
+
+        #[test]
+        fn company_all_none_produces_empty_merge() {
+            let merge = company_update_to_merge(&empty_company_update());
+            assert!(merge.is_empty());
+        }
+
+        #[test]
+        fn company_empty_string_field_is_preserved_not_omitted() {
+            // None = "not provided" (omit). Some("") = "explicitly cleared" (send).
+            let update = CompanyUpdate {
+                reg_no: Some(String::new()),
+                ..empty_company_update()
+            };
+            let merge = company_update_to_merge(&update);
+            assert_eq!(
+                merge.len(),
+                1,
+                "an explicitly-empty field is still a real update"
+            );
+            assert_eq!(merge.get("reg_no").and_then(|v| v.as_str()), Some(""));
+        }
+    }
 }
