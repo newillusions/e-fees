@@ -49,38 +49,18 @@ export const statusTransition = `(async () => {
       // Lead -> RFP, verify it persisted, then revert to Lead.
       // Runs before crud_cleanup, which deletes the project afterward.
       //
-      // NOTE: SurrealDB v3 MERGE writes None/undefined fields as NONE, which fails
-      // the SCHEMAFULL `projects` table coercion for required string fields (area, city, etc).
-      // Read the current project first and pass all fields through to avoid this.
+      // update_project now SETs only the fields provided, so a partial
+      // { status } update leaves the required SCHEMAFULL columns intact. This
+      // is the genuine partial-update path — the prior full-field workaround
+      // for the .merge() NONE-coercion bug is no longer needed
+      // (fixed in obs:cno62twf3e6hmhso009f).
       const key = stripTable(crudProjectId);
-      const allProjects = await invoke('get_projects');
-      const currentProject = Array.isArray(allProjects)
-        ? allProjects.find(p => {
-            const pid = p && p.id;
-            if (!pid) return false;
-            if (typeof pid === 'string') return pid === crudProjectId || stripTable(pid) === key;
-            const tb = pid.tb || pid.table || 'projects';
-            let k = (pid.key !== undefined) ? pid.key : pid.id;
-            if (k && typeof k === 'object') k = Object.values(k)[0];
-            return (tb + ':' + k) === crudProjectId;
-          })
-        : null;
-      if (!currentProject) throw new Error('Could not find CRUD project to read fields: ' + crudProjectId);
 
-      const baseUpdate = {
-        name: currentProject.name || currentProject.name,
-        name_short: currentProject.name_short || currentProject.nameShort || 'DELME',
-        area: currentProject.area || 'Test',
-        city: currentProject.city || 'Test',
-        country: currentProject.country || 'Test',
-        folder: currentProject.folder || ''
-      };
-
-      const toRfp = await invoke('update_project', { id: key, projectUpdate: { ...baseUpdate, status: 'RFP' } });
+      const toRfp = await invoke('update_project', { id: key, projectUpdate: { status: 'RFP' } });
       if (!toRfp || toRfp.status !== 'RFP') {
         throw new Error('Transition Lead->RFP did not persist. status=' + (toRfp && toRfp.status));
       }
-      const back = await invoke('update_project', { id: key, projectUpdate: { ...baseUpdate, status: 'Lead' } });
+      const back = await invoke('update_project', { id: key, projectUpdate: { status: 'Lead' } });
       if (!back || back.status !== 'Lead') {
         throw new Error('Revert RFP->Lead did not persist. status=' + (back && back.status));
       }

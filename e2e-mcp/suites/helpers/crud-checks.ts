@@ -102,11 +102,12 @@ export const crudCompany = `(async () => {
       : null;
     if (!found) throw new Error('Could not find created company with id: ' + createdId);
 
-    // Update — must include all required fields to avoid SurrealDB v3 NONE rejection
+    // Update — partial update: only the name. update_company now SETs only the
+    // fields provided, so omitted columns are preserved (no NONE clobber).
     const updatedName = 'DELETE ME - Updated Company ' + Date.now();
     await invoke('update_company', {
       id: stripTable(createdId),
-      companyUpdate: { name: updatedName, name_short: abbr, abbreviation: abbr, city: '', country: 'Test', reg_no: '', tax_no: '' }
+      companyUpdate: { name: updatedName }
     });
 
     // Verify update
@@ -117,6 +118,11 @@ export const crudCompany = `(async () => {
     if (!updated) throw new Error('Could not find company after update: ' + createdId);
     if (!updated.name.startsWith('DELETE ME - Updated Company')) {
       throw new Error('Update did not take effect. name=' + updated.name);
+    }
+    // Regression guard (obs:cno62twf3e6hmhso009f): a partial update must NOT clobber
+    // omitted fields. country was 'Test' at create and must survive a name-only update.
+    if (updated.country !== 'Test') {
+      throw new Error('Partial update clobbered an unset field: country=' + JSON.stringify(updated.country));
     }
 
     window.__CRUD_IDS.company = createdId;
@@ -263,20 +269,14 @@ export const crudProject = `(async () => {
       : null;
     if (!found) throw new Error('Could not find created project with id: ' + createdId);
 
-    // Update — include all required SCHEMAFULL string fields to avoid NONE coercion error
-    // (SurrealDB v3 MERGE writes None fields as NONE, overwriting existing values)
+    // Update — partial update: only the name. update_project now SETs only the
+    // fields provided. A partial update on the SCHEMAFULL projects table used to
+    // hard-error (NONE coercion on required area/city/country); it must now succeed
+    // and leave those columns intact (obs:cno62twf3e6hmhso009f).
     const updatedName = 'DELETE ME - Updated Project ' + Date.now();
     await invoke('update_project', {
       id: stripTable(createdId),
-      projectUpdate: {
-        name: updatedName,
-        name_short: found.name_short || found.nameShort || 'DELME',
-        status: found.status || 'Lead',
-        area: found.area || 'Test',
-        city: found.city || 'Test',
-        country: found.country || 'Test',
-        folder: found.folder || ''
-      }
+      projectUpdate: { name: updatedName }
     });
 
     // Verify update
@@ -287,6 +287,10 @@ export const crudProject = `(async () => {
     if (!updated) throw new Error('Could not find project after update: ' + createdId);
     if (!updated.name.startsWith('DELETE ME - Updated Project')) {
       throw new Error('Update did not take effect. name=' + updated.name);
+    }
+    // Regression guard: a name-only update must preserve the required columns.
+    if (updated.area !== found.area || updated.city !== found.city || updated.country !== found.country) {
+      throw new Error('Partial update clobbered required fields: area/city/country changed unexpectedly');
     }
 
     window.__CRUD_IDS.project = createdId;
