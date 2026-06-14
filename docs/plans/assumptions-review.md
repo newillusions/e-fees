@@ -1,7 +1,25 @@
 # Assumptions Clause — Working Review
 
-**Status:** Gap analysis done 2026-06-14 — shortlist below awaiting selection
+**Status:** RESOLVED 2026-06-14 by the full FP-corpus mining — conclusion below. The 2026-03 gap analysis (16 invented candidates) is SUPERSEDED; kept further down for history.
 **Last updated:** 2026-06-14
+
+## Conclusion (data-driven, from all 69 historical FP docs)
+
+Mining every fee proposal in the Inactive/Current/Completed folders (see `docs/clause-corpus/CLAUSE-CATALOG.md` §Assumptions + the per-doc `archive/`) shows assumptions have a **consistent structure, not a long generic list**:
+
+1. **Standard preamble** opens almost every proposal:
+   > The following assumptions have been made in the preparation of this proposal. If any of the following are incorrect, please advise us and we will prepare an updated version.
+2. **One genuinely reusable block** — the *designer/engineer coordination boundary* disclaimer (8 lines establishing emittiv's role + limits of liability). This is the only substantive assumption that recurs across projects; the catalog's canonical is the MAF FEC / Tape Theatre / Ciel Lobby full version.
+3. **Site-visit charge line** — append when site attendance is likely.
+4. **Everything else is project-specific** — 13+ distinct bodies (existing-cable retrofit, tie-in to site BMS/GRMS → scope limited to Concept/Schematic, street-lighting excluded, LEED/Estidama/WELL standards, facade traditional-not-pixel, etc.). These are per-deal, not standardisable.
+
+**Action taken:** added a standard **"Assumptions"** clause (preamble + coordination block + site-visit line) to the e-fees-scope clause library — `clause:paw4ejkcmhtwpm0l2miq` (category Legal, is_default, active). Notably there was NO assumptions clause in the curated library before — confirming the real gap. Project-specific assumptions are added per proposal beneath this standard block.
+
+This corrects the old "only 9 substantive bullets" finding below — that was an artefact of the partial 51-doc ingest; the full 69-doc corpus has assumptions in the large majority of proposals.
+
+---
+
+## (Superseded) 2026-03 Working Review
 
 ## Context
 
@@ -9,7 +27,7 @@ Assumptions are typically written fresh per proposal and often left sparse or de
 
 ## Corpus Findings (51 ingested proposals, 15 contained "Assumptions")
 
-Only 9 substantive assumption bullets found across all historical proposals. Confirms assumptions are project-specific and inconsistently included.
+Only 9 substantive assumption bullets found across all historical proposals. Confirms assumptions are project-specific and inconsistently included. **[Superseded — the full 69-doc corpus shows assumptions are far more prevalent; see Conclusion above.]**
 
 ## Candidate Assumptions (requires filtering)
 
