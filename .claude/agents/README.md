@@ -1,172 +1,32 @@
-# Claude Code Native Agents
+# Claude Code Native Agents (e-fees)
 
-This directory contains **Claude Code native agents** with automatic delegation based on task matching.
+Project-specific specialist agents. Claude auto-delegates to one when a task matches its `description`, or you can invoke it explicitly via the Task tool. Each runs in an isolated context with its own tool access.
 
-## How Native Agents Work
+## Roster
 
-Unlike the old manual approach (archived in `../subagents/archived/`), these agents:
+| Agent | Use for |
+|-------|---------|
+| **database-specialist** | SurrealDB queries/schema, v3 gotchas, query optimization, DB connection debugging |
+| **tauri-developer** | Rust/Tauri v2 commands, app state, filesystem/native integration, the standalone API + scope service |
+| **testing-specialist** | E2E (Tauri-MCP) scenarios, `DELETE ME` test-data hygiene, test-failure debugging |
+| **mcp-specialist** | Tauri-MCP socket/protocol issues, E2E harness failures |
+| **code-reviewer** | Code quality, project-convention adherence, refactoring (review-only, no Bash writes) |
 
-- ✅ **Auto-delegate** based on task descriptions and context
-- ✅ **Separate context windows** preventing pollution of main conversations
-- ✅ **Configurable tool access** per agent
-- ✅ **CLI integration** via `/agents` command
+All are `model: sonnet`. They carry only e-fees-specific knowledge; general engineering, TDD discipline, and the full project context live in `../../CLAUDE.md` and `.claude/rules/development-workflow.md`.
 
-## File Format
-
-Each agent uses **YAML frontmatter + Markdown**:
+## File format
 
 ```markdown
 ---
-name: agent-name           # lowercase, hyphens only
-description: Brief purpose and when to use this agent
-tools: [Bash, Read, Write, Edit, Grep]  # Optional tool restrictions
-model: sonnet              # Optional model override
+name: agent-name            # lowercase, hyphens
+description: When to use this agent (drives auto-delegation)
+tools: [Bash, Read, Write, Edit, Grep]   # optional restriction
+model: sonnet               # optional override
 ---
 
-# Agent system prompt content here
+# System prompt (markdown body) — keep it project-specific and tight
 ```
 
-## Available Agents
-
-| Agent | Purpose | Key Responsibilities |
-|-------|---------|---------------------|
-| **tdd-enforcer** | TDD workflow gatekeeper | (ARCHIVED 2026-06-12 - enforcement consolidated into CLAUDE.md + superpowers plugin) |
-| **test-planner** | Test specification design | (ARCHIVED 2026-06-12 - enforcement consolidated into CLAUDE.md + superpowers plugin) |
-| **testing-specialist** | E2E testing & test data management | "DELETE ME" pattern, test scenarios, test cleanup |
-| **surrealdb-specialist** | SurrealDB syntax & best practices | Correct query syntax, indexing, schema design |
-| **database-specialist** | Database queries & optimization | Thing objects, query optimization, schema design |
-| **frontend-specialist** | Svelte UI & DPI scaling | (ARCHIVED 2026-06-12 - Tailwind-era guidance; do frontend work in main session) |
-| **tauri-developer** | Rust backend & desktop integration | Tauri commands, IPC, file system operations, window management |
-| **mcp-specialist** | MCP socket & protocol debugging | Socket health, tool registration, E2E test MCP failures |
-| **code-reviewer** | Code quality & architecture | Code smells, refactoring, best practices, consistency |
-
-## TDD Workflow (MANDATORY)
-
-For any new feature implementation, this workflow MUST be followed:
-
-```
-1. tdd-enforcer    → Verify TDD gate conditions
-2. test-planner    → Create test specification (docs/test-specs/)
-3. testing-specialist → Write tests from spec
-4. Run tests       → Verify RED phase (tests fail)
-5. Implementation  → Write code to pass tests
-6. Run tests       → Verify GREEN phase (tests pass)
-7. code-reviewer   → Review and refactor
-```
-
-**No implementation without tests first.**
-
-## Usage
-
-### Automatic Delegation (Recommended)
-
-Claude automatically invokes agents when tasks match their descriptions:
-
-```bash
-# Just describe the problem - Claude routes automatically
-"The MCP socket isn't connecting"  → mcp-specialist
-"Add a new Tauri command"          → tauri-developer
-"Fix the DPI scaling on this UI"  → frontend-specialist
-```
-
-### Manual Invocation
-
-Use the Task tool with agent name:
-
-```markdown
-<Task agent="mcp-specialist">
-Debug why E2E tests can't connect to /tmp/tauri-mcp-e2e.sock
-</Task>
-```
-
-### CLI Management
-
-```bash
-# List all agents
-/agents list
-
-# View agent details
-/agents show mcp-specialist
-
-# Test agent
-/agents test database-specialist "optimize this query"
-```
-
-## Comparison: Old vs New
-
-### ❌ Old Manual Approach (Archived)
-
-Located in `../subagents/archived/subagent-*.md`
-
-**Invocation:**
-```markdown
-**Sub-Agent Task: MCP Specialist**
-Context: Brief context
-[Include relevant subagent file: .claude/subagents/mcp-specialist.md]
-```
-
-**Problems:**
-- Manual file loading into context
-- No automatic delegation
-- Pollutes main conversation context
-- No tool restrictions per agent
-
-### ✅ New Native Approach (Current)
-
-Located in `.claude/agents/*.md`
-
-**Invocation:**
-```markdown
-Automatic based on task matching, or:
-<Task agent="mcp-specialist">task description</Task>
-```
-
-**Benefits:**
-- Automatic delegation
-- Isolated context windows
-- Tool access control
-- CLI integration
-- Plugin support
-
-## Migration Notes
-
-**Old subagent files migrated on:** November 16, 2025
-
-**Changes made:**
-1. Added YAML frontmatter to each agent
-2. Renamed files (removed `subagent-` prefix)
-3. Updated tool lists in frontmatter
-4. Moved originals to `../subagents/archived/`
-
-**Backward compatibility:**
-- Old files preserved in `../subagents/archived/`
-- CLAUDE.md updated to reference new system
-- SUB-AGENT-ROUTING.md still valid (concepts apply)
-
-## Adding New Agents
-
-1. Create `agent-name.md` in this directory
-2. Use lowercase letters and hyphens only
-3. Add required YAML frontmatter:
-   ```yaml
-   ---
-   name: agent-name
-   description: Purpose and when to use (max 1024 chars)
-   tools: [optional-tool-list]
-   ---
-   ```
-4. Write the system prompt as markdown body
-5. Test with `/agents test agent-name "test task"`
-
-## Related Documentation
-
-- **Native Agent Docs**: https://code.claude.com/docs/en/sub-agents.md
-- **Skills System**: `../ skills/` (reusable agent skills)
-- **Slash Commands**: `../commands/` (project commands)
-- **Old System Reference**: `../subagents/archived/` (legacy manual approach)
-- **Routing Guide**: `../SUB-AGENT-ROUTING.md` (decision framework still applicable)
-
----
-
-**Last Updated**: November 16, 2025
-**Format**: Claude Code Native Agents (YAML frontmatter + Markdown)
+## Notes
+- TDD is mandatory for all coding work and is owned by CLAUDE.md (Critical Directives) + the superpowers plugin — not by a separate agent.
+- Frontend/UI work and general implementation are done in the main session; there is no separate frontend agent.
