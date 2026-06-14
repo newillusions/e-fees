@@ -1,7 +1,7 @@
 # Assumptions Clause — Working Review
 
-**Status:** Ongoing review
-**Last updated:** 2026-03-09
+**Status:** Gap analysis done 2026-06-14 — shortlist below awaiting selection
+**Last updated:** 2026-06-14
 
 ## Context
 
@@ -50,6 +50,56 @@ Many of these overlap with existing clauses (Contract Details, Design Phase Note
 - Need to cross-reference each candidate against existing clause library to identify genuine gaps
 - Consider making assumptions toggleable per proposal in the scope assembly system
 
+## Gap Analysis — 2026-06-14
+
+Mapped the 16 candidates against the live clause library (21 real clauses; the
+`GET /clauses` API is 500-broken so this was read direct from the `clause` table).
+
+**Live clause library:**
+- *Administrative:* Prepared For / Contact Details · Prepared By / Company Details
+- *Commercial:* Fees / Payment Terms · Optional Services · Payment Schedule · Additional Payment Terms · Contract Details / Site Attendance · Proposal Validity
+- *Legal:* Design Phase Notes · Limitation of Liability · Post Contract Phase Notes · Basis of Appointment · Defined Role
+- *Services:* Preliminaries · Stage X / Xa / Xb [Service] · Construction Supervision · Post Completion / DLP · Handover & Close Out
+
+**Verdicts** (covered = drop as redundant · partial = verify clause body before deciding · GAP = genuine standalone assumption):
+
+| # | Candidate (abridged) | Verdict | Maps to |
+|---|---|---|---|
+| 1 | Client appoints LDC to coordinate disciplines | **GAP** (client-obligation angle) | Defined Role / Basis of Appointment define *emittiv's* role, not the client's duty to appoint |
+| 2 | Arch/structural/MEP info provided timely, free | **GAP** | — |
+| 3 | Client/LDC provides complete design brief pre-start | **GAP** | — |
+| 4 | Site access arranged by Client/Contractor, free | covered | Contract Details / Site Attendance |
+| 5 | Programme allows adequate time per stage | partial | Design Phase Notes (verify) |
+| 6 | Single design iteration; redesign = extra fees | partial | Design Phase Notes / Additional Payment Terms (verify) |
+| 7 | Scope = arch/decorative lighting; emergency/exit/aviation/specialist excluded | **GAP** | Services clauses list inclusions, not these exclusions |
+| 8 | ~~Landscape excluded~~ | DROP | unsafe default (often in scope) |
+| 9 | ~~BIM/Revit excluded~~ | DROP | unsafe default (often in scope) |
+| 10 | Equipment procurement/supply/install by others | **GAP** | — |
+| 11 | Main Contractor provides power to luminaire positions | **GAP** | — |
+| 12 | Mock-ups = separate fees/reimbursable | covered | Optional Services |
+| 13 | Fees based on scope/scale at proposal time | covered | Contract Details / Proposal Validity |
+| 14 | Fees exclusive of VAT/withholding | covered | Fees / Payment Terms |
+| 15 | Travel/accommodation reimbursable at cost | partial | Fees / Payment Terms (verify) |
+| 16 | No unreasonable delay; suspension >[X]mo = reassess | partial | Proposal Validity (verify) |
+
+> Title-level mapping. "covered"/"partial" verdicts should be confirmed against the
+> clause *body text* before final removal — only the **GAP** rows are confidently new.
+
+### Recommended standard assumptions (the genuine gaps — your selection)
+1. The Client shall appoint a Lead Design Consultant to coordinate all design disciplines and issue consolidated information packages.
+2. The Client/LDC will provide a complete design brief and all relevant architectural, structural, and MEP drawings/specifications in a timely manner at no cost to emittiv. *(merges candidates 2 + 3)*
+3. Services are limited to architectural / decorative lighting design; emergency, exit signage, aviation obstruction, and specialist systems lighting are excluded unless explicitly stated.
+4. Lighting equipment procurement, supply, and installation are by others.
+5. The Main Contractor shall provide adequate power provisions to all luminaire positions as indicated on the lighting layout drawings.
+
+Then decide partials 5/6/15/16 after reading the relevant clause bodies, and whether
+to implement these as **toggleable assumptions in the scope-assembly system**.
+
+### Side findings (2026-06-14, while pulling clauses)
+- **BUG:** `GET /clauses` on e-fees-scope (10.0.21.81:3201) returns 500 — `Failed to deserialize field 'created_at' on type 'Clause': Expected datetime, got string`. The classic v3 `Datetime`-vs-`String` gotcha; the list endpoint is unusable until the `Clause` model uses `surrealdb_types::Datetime`. `/clauses/categories` and `/clauses/{id}` paths unaffected.
+- **Test hygiene:** the `clause` table holds ~25 leftover `DELETE ME` clauses (categories "DELETE ME - *") from smoke runs that cleanup never removed.
+
 ## Sources
 - Corpus: 51 ingested PDFs in `proposal_corpus` table (SurrealDB 10.0.23.11)
+- Live clause library read 2026-06-14 from the `clause` table (4 categories, 21 real clauses)
 - Web research: RIBA sub-consultant appointment terms, MEP/lighting consultant fee proposal standards
