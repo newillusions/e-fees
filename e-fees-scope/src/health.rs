@@ -4,8 +4,9 @@ use std::time::{Duration, Instant};
 
 use axum::{extract::State, http::StatusCode, response::Json};
 use emittiv_container_utils::health::{
-    compute_status, DependencyStatus, EndpointInfo, HealthResponse, HelpResponse,
+    compute_status, DependencyStatus, EndpointInfo, HealthResponse,
 };
+use serde::Serialize;
 use tracing::{error, warn};
 use utoipa::OpenApi;
 
@@ -96,6 +97,15 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<Hea
     (http_status, Json(body))
 }
 
+/// /help response shape — extends the container-utils struct with a description field.
+#[derive(Serialize)]
+pub struct HelpResponseWithDesc {
+    service: String,
+    version: String,
+    description: String,
+    endpoints: Vec<EndpointInfo>,
+}
+
 /// Self-documentation endpoint (no auth required).
 #[utoipa::path(
     get,
@@ -105,7 +115,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> (StatusCode, Json<Hea
         (status = 200, description = "Service documentation", body = crate::schemas::HelpResponse),
     )
 )]
-pub async fn help() -> Json<HelpResponse> {
+pub async fn help() -> Json<HelpResponseWithDesc> {
     let spec = crate::ApiDoc::openapi();
 
     let endpoints: Vec<EndpointInfo> = spec
@@ -143,9 +153,10 @@ pub async fn help() -> Json<HelpResponse> {
         })
         .collect();
 
-    Json(HelpResponse {
+    Json(HelpResponseWithDesc {
         service: "e-fees-scope".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
+        description: "Clause library, scope assembly, and corpus retrieval microservice for emittiv fee proposals.".to_string(),
         endpoints,
     })
 }
