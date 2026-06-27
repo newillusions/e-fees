@@ -136,3 +136,9 @@ DEFINE INDEX idx_scope_rev_fee ON scope_revision FIELDS fee_id, revision;
 -- ============================================================
 DEFINE FIELD current_revision ON scope_assembly TYPE int DEFAULT 0;
 DEFINE FIELD stages_snapshot  ON scope_assembly TYPE option<array<string>>;
+
+-- ============================================================
+-- Extend scope_assembly for per-proposal clause selection (Stage 1)
+-- ============================================================
+DEFINE FIELD selected_clauses   ON scope_assembly TYPE option<array<object>> FLEXIBLE;
+DEFINE FIELD selected_clauses.* ON scope_assembly TYPE object FLEXIBLE;

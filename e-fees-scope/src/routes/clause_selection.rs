@@ -233,7 +233,14 @@ pub async fn get_clause_selection(
     let selections: Vec<Value> = all_clauses
         .iter()
         .map(|c| {
-            let cid = record_key_string(&c.id.key);
+            // record_key_string in SurrealDB SDK 3.0.4 returns "table:key" for
+            // RecordId::String keys (e.g. "clause:abc123"). Strip the table prefix so the
+            // cid matches what save_clause_selection stores (and what the test expects).
+            let raw_cid = record_key_string(&c.id.key);
+            let cid = raw_cid
+                .strip_prefix("clause:")
+                .unwrap_or(&raw_cid)
+                .to_string();
 
             let (included, override_body) = if has_custom_selection {
                 // Clauses added after the last save default to excluded
