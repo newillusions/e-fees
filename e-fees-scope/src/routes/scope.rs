@@ -41,6 +41,11 @@ fn assembly_to_json(a: &ScopeAssembly) -> Value {
     }
     obj["current_revision"] = json!(a.current_revision);
 
+    // Stage 1: include the clause selection if present
+    if let Some(ref sel) = a.selected_clauses {
+        obj["selected_clauses"] = dbvalue_to_json(sel);
+    }
+
     obj
 }
 
@@ -264,12 +269,103 @@ pub async fn generate_scope(
         .next()
         .ok_or_else(|| ApiError::not_found("Fee", fee_key))?;
 
-    // 2. Fetch active clauses ordered by sort_order, category
-    let mut res = state
-        .db
-        .query("SELECT * FROM clause WHERE status = 'active' ORDER BY sort_order ASC, category ASC")
-        .await?;
-    let clauses: Vec<Clause> = res.take(0)?;
+    // 2. Fetch clauses: use saved selection if present, otherwise all active.
+    //
+    // Stage 1: if `scope_assembly.selected_clauses` exists and is non-empty,
+    // restrict generation to the `included=true` entries and apply any
+    // `override_body` values in place of the master clause body.
+    // When no selection has been saved we fall back to the original pull-all
+    // behaviour (backward compatible).
+    let clauses: Vec<Clause> = {
+        let mut sel_res = state
+            .db
+            .query(
+                "SELECT selected_clauses FROM scope_assembly \
+                 WHERE fee_id = type::record('fee', $fee_key) LIMIT 1",
+            )
+            .bind(("fee_key", fee_key.to_string()))
+            .await?;
+        let sel_rows: Vec<Value> = sel_res.take(0)?;
+
+        let saved_selection = sel_rows
+            .into_iter()
+            .next()
+            .and_then(|row| row.get("selected_clauses").cloned())
+            .filter(|v| !v.is_null() && v.as_array().map_or(false, |a| !a.is_empty()));
+
+        if let Some(sel) = saved_selection {
+            // Build map: clause_id -> override_body (only for included entries)
+            let mut included: std::collections::HashMap<String, Option<String>> =
+                std::collections::HashMap::new();
+            if let Some(arr) = sel.as_array() {
+                for item in arr {
+                    if item.get("included").and_then(Value::as_bool).unwrap_or(false) {
+                        let cid = item
+                            .get("clause_id")
+                            .and_then(Value::as_str)
+                            .unwrap_or("")
+                            .to_string();
+                        if !cid.is_empty() {
+                            let override_body = item
+                                .get("override_body")
+                                .and_then(Value::as_str)
+                                .map(str::to_string);
+                            included.insert(cid, override_body);
+                        }
+                    }
+                }
+            }
+
+            if included.is_empty() {
+                return Err(ApiError::bad_request(
+                    "No clauses are included in the selection — \
+                     enable at least one clause before generating",
+                ));
+            }
+
+            // Fetch all active clauses, filter to included set, apply overrides
+            let mut all_res = state
+                .db
+                .query(
+                    "SELECT * FROM clause WHERE status = 'active' \
+                     ORDER BY sort_order ASC, category ASC",
+                )
+                .await?;
+            let all_clauses: Vec<Clause> = all_res.take(0)?;
+
+            let filtered: Vec<Clause> = all_clauses
+                .into_iter()
+                .filter_map(|mut c| {
+                    let cid = record_key_string(&c.id.key);
+                    included.get(&cid).map(|override_body| {
+                        if let Some(body) = override_body {
+                            c.body = body.clone();
+                        }
+                        c
+                    })
+                })
+                .collect();
+
+            if filtered.is_empty() {
+                return Err(ApiError::bad_request(
+                    "Selected clauses are no longer active in the library — \
+                     update your clause selection and try again",
+                ));
+            }
+
+            filtered
+        } else {
+            // No selection saved — pull all active clauses (original behaviour)
+            let mut res = state
+                .db
+                .query(
+                    "SELECT * FROM clause WHERE status = 'active' \
+                     ORDER BY sort_order ASC, category ASC",
+                )
+                .await?;
+            res.take(0)?
+        }
+    };
 
     if clauses.is_empty() {
         return Err(ApiError::bad_request(

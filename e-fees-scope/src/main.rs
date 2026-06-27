@@ -57,6 +57,8 @@ pub struct AppState {
         routes::corpus::search_corpus,
         routes::corpus::get_corpus_doc,
         routes::corpus::extract_clauses,
+        routes::clause_selection::save_clause_selection,
+        routes::clause_selection::get_clause_selection,
         routes::scope::generate_scope,
         routes::scope::get_scope,
         routes::scope::update_scope,
@@ -181,6 +183,14 @@ async fn main() {
         .route("/corpus/search", get(routes::corpus::search_corpus))
         .route("/corpus/{id}", get(routes::corpus::get_corpus_doc))
         .route("/scope/generate", post(routes::scope::generate_scope))
+        .route(
+            "/scope/clause-selection",
+            post(routes::clause_selection::save_clause_selection),
+        )
+        .route(
+            "/scope/{fee_id}/clause-selection",
+            get(routes::clause_selection::get_clause_selection),
+        )
         .route(
             "/scope/{fee_id}",
             get(routes::scope::get_scope).put(routes::scope::update_scope),
