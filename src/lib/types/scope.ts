@@ -174,6 +174,63 @@ export interface UpdateScopeRequest {
   clauses?: ScopeSection[];
 }
 
+// ── Clause Library (Stage 1) ────────────────────────────────────────
+
+/** A clause record from the library (e-fees-scope /clauses endpoint). */
+export interface Clause {
+  id: string;
+  category: string;
+  subcategory?: string;
+  title: string;
+  body: string;
+  sort_order: number;
+  is_default: boolean;
+  status: string;
+  version: number;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * A single clause selection entry persisted on the scope_assembly.
+ *
+ * `override_body` is structural — once set it is never silently removed.
+ * `null` means "use the library body as-is".
+ */
+export interface ClauseSelectionEntry {
+  clause_id: string;
+  included: boolean;
+  override_body: string | null;
+}
+
+/** Payload for POST /scope/clause-selection. */
+export interface SaveClauseSelectionRequest {
+  fee_id: string;
+  selections: ClauseSelectionEntry[];
+}
+
+/**
+ * Response from GET /scope/{fee_id}/clause-selection.
+ *
+ * Each entry is a library clause merged with the saved selection state.
+ * `has_custom_selection` is false when no selection has been saved yet
+ * (all clauses are implicitly included).
+ */
+export interface ClauseSelectionItem extends ClauseSelectionEntry {
+  title: string;
+  category: string;
+  body: string;
+  sort_order: number;
+  is_default: boolean;
+}
+
+export interface ClauseSelectionResponse {
+  fee_id: string;
+  has_custom_selection: boolean;
+  selections: ClauseSelectionItem[];
+}
+
 // ── API response wrappers ───────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

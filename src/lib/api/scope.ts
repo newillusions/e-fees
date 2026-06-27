@@ -19,7 +19,10 @@ import type {
   ScopeAssembly,
   ScopeDeliverableEntry,
   PaginatedResponse,
-  DeliverableAnalytics
+  DeliverableAnalytics,
+  Clause,
+  SaveClauseSelectionRequest,
+  ClauseSelectionResponse
 } from '$lib/types/scope';
 
 const SCOPE_API_URL = import.meta.env.VITE_SCOPE_API_URL || 'http://10.0.21.81:3201';
@@ -194,4 +197,42 @@ export async function regenerateScope(feeId: string): Promise<ScopeAssembly> {
 /** Export scope as formatted text. */
 export async function exportScope(feeId: string): Promise<{ text: string }> {
   return scopeRequest<{ text: string }>(`/scope/${feeId}/export`);
+}
+
+// =============================================================================
+// CLAUSE SELECTION (Stage 1)
+// =============================================================================
+
+/** List all active library clauses. */
+export async function getClauses(params?: Record<string, string>): Promise<PaginatedResponse<Clause>> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return scopeRequest<PaginatedResponse<Clause>>(`/clauses${qs}`);
+}
+
+/**
+ * Save clause selections for a fee proposal.
+ *
+ * Creates the scope_assembly record if it does not exist yet.
+ * Existing records are patch-updated (only selected_clauses is touched).
+ */
+export async function saveClauseSelection(data: SaveClauseSelectionRequest): Promise<{
+  status: string;
+  fee_id: string;
+  selections_count: number;
+  included_count: number;
+}> {
+  return scopeRequest('/scope/clause-selection', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/**
+ * Get clause selection for a fee proposal.
+ *
+ * Returns all active clauses merged with the saved selection.
+ * When no selection has been saved yet, all clauses default to included=true.
+ */
+export async function getClauseSelection(feeId: string): Promise<ClauseSelectionResponse> {
+  return scopeRequest<ClauseSelectionResponse>(`/scope/${feeId}/clause-selection`);
 }

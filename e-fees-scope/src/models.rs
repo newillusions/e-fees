@@ -116,6 +116,11 @@ pub struct ScopeAssembly {
     pub current_revision: i64,
     #[serde(default)]
     pub stages_snapshot: Option<Vec<String>>,
+    /// Per-proposal clause selection (Stage 1).  When present, generate_scope
+    /// uses only the `included=true` entries (with their `override_body`) instead
+    /// of pulling every active clause from the library.
+    #[serde(default)]
+    pub selected_clauses: Option<surrealdb_types::Value>,
     pub created_at: Datetime,
     pub updated_at: Datetime,
 }
@@ -275,4 +280,30 @@ pub struct ManualDeliverableEntry {
     pub body: String,
     pub stage: String,
     pub sort_order: i64,
+}
+
+// ── Clause Selection models (Stage 1) ────────────────────────────────────────
+
+/// A single clause selection entry for a per-proposal clause toggle + override.
+///
+/// `override_body` is a structural field: once set it is never silently removed.
+/// Downstream code (generate_scope) uses `override_body` in preference to the
+/// master clause body whenever it is `Some`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClauseSelectionEntry {
+    pub clause_id: String,
+    pub included: bool,
+    /// Override body text — structural, preserved once set.
+    pub override_body: Option<String>,
+}
+
+/// Payload for saving clause selections for a fee proposal.
+///
+/// Writes `selected_clauses` on the `scope_assembly` record (creating it if
+/// it does not yet exist).  A subsequent `POST /scope/generate` will use these
+/// selections instead of pulling all active clauses.
+#[derive(Debug, Deserialize)]
+pub struct SaveClauseSelectionRequest {
+    pub fee_id: String,
+    pub selections: Vec<ClauseSelectionEntry>,
 }

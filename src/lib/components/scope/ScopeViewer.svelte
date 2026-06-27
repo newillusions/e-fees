@@ -13,6 +13,7 @@
   import { formatSectionsAsText } from '$lib/utils/scopeFormatter';
   import ScopeSectionView from './ScopeSectionView.svelte';
   import ScopeAdvancedControls from './ScopeAdvancedControls.svelte';
+  import ClausePicker from './ClausePicker.svelte';
 
   let {
     feeId,
@@ -38,6 +39,7 @@
   let saving = $state(false);
   let dirty = $state(false);
   let showAdvanced = $state(false);
+  let showClausePicker = $state(false);
   let error: string | null = $state(null);
   let message: string | null = $state(null);
 
@@ -248,6 +250,20 @@
     <!-- No existing scope — show generate controls -->
     <div class="emittiv-scope-viewer__empty">
       <p>No scope generated yet for this proposal.</p>
+
+      <!-- Clause selection (Stage 1): shown before the generate button so users
+           can customise their clause set before the first generation run. -->
+      <button
+        class="emittiv-scope-viewer__advanced-toggle"
+        onclick={() => (showClausePicker = !showClausePicker)}
+      >
+        {showClausePicker ? '▼' : '▶'} Clause selection
+      </button>
+
+      {#if showClausePicker}
+        <ClausePicker {feeId} onSaved={() => (message = 'Clause selection saved')} />
+      {/if}
+
       <button class="emittiv-btn emittiv-btn--primary emittiv-btn--sm" onclick={handleGenerate}>
         Generate Scope
       </button>
@@ -305,6 +321,21 @@
           Stages changed since last generation — regenerate to update scope text
         </div>
       {/if}
+    {/if}
+
+    <!-- Clause selection toggle (Stage 1) — access after scope exists -->
+    <button
+      class="emittiv-scope-viewer__advanced-toggle"
+      onclick={() => (showClausePicker = !showClausePicker)}
+    >
+      {showClausePicker ? '▼' : '▶'} Clause selection
+    </button>
+
+    {#if showClausePicker}
+      <ClausePicker
+        {feeId}
+        onSaved={() => (message = 'Clause selection saved — regenerate to apply')}
+      />
     {/if}
 
     <!-- Advanced toggle -->
