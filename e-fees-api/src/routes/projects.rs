@@ -472,6 +472,69 @@ pub async fn delete_project(
     }
 }
 
+/// Query parameters for `GET /projects/typeahead`.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub struct TypeaheadParams {
+    /// Case-insensitive substring matched against project number, name, and short name.
+    pub q: Option<String>,
+    /// Maximum results to return (default: 20, max: 100).
+    pub limit: Option<u64>,
+}
+
+/// Type-ahead search returning a lightweight project array for dropdowns.
+///
+/// Returns `[{ number, name, client }]` where `client` is `null` or
+/// `{ id, name }` (the company of the project's latest non-superseded fee).
+/// Matches `q` against project number, name, and short name (case-insensitive
+/// substring). Default limit 20, max 100.
+#[utoipa::path(
+    get,
+    path = "/projects/typeahead",
+    tag = "Projects",
+    params(TypeaheadParams),
+    responses(
+        (status = 200, description = "Matching projects for type-ahead"),
+        (status = 401, description = "Missing or invalid API key"),
+    ),
+    security(("api_key" = []))
+)]
+pub async fn typeahead_projects(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TypeaheadParams>,
+) -> Result<Json<Value>, ApiError> {
+    let q = params.q.as_deref().unwrap_or("").to_string();
+    let limit = params.limit.unwrap_or(20).min(100);
+
+    let query = format!(
+        "SELECT * FROM projects \
+         WHERE (string::lowercase(name) CONTAINS string::lowercase($q) \
+                OR string::lowercase(name_short) CONTAINS string::lowercase($q) \
+                OR number.id CONTAINS $q) \
+         LIMIT {limit}",
+        limit = limit
+    );
+
+    let mut response = state.db.query(&query).bind(("q", q)).await?;
+    let projects: Vec<Project> = response.take(0)?;
+
+    let mut items = Vec::with_capacity(projects.len());
+    for p in &projects {
+        let key = p
+            .id
+            .as_ref()
+            .map(|id| record_key_string(&id.key))
+            .unwrap_or_default();
+        let client = resolve_client_for_project(&state.db, &key).await?;
+        items.push(json!({
+            "number": p.number.id,
+            "name": p.name,
+            "client": client,
+        }));
+    }
+
+    Ok(Json(Value::Array(items)))
+}
+
 /// Convert a Project to a JSON value for API response.
 fn project_to_json(p: &Project) -> Value {
     json!({

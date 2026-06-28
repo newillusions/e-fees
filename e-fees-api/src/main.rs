@@ -46,6 +46,7 @@ pub struct AppState {
         health::help,
         routes::stats::get_stats,
         routes::projects::list_projects,
+        routes::projects::typeahead_projects,
         routes::projects::get_next_number,
         routes::projects::get_project,
         routes::projects::create_project,
@@ -178,6 +179,10 @@ async fn main() {
         .route(
             "/projects",
             get(routes::projects::list_projects).post(routes::projects::create_project),
+        )
+        .route(
+            "/projects/typeahead",
+            get(routes::projects::typeahead_projects),
         )
         .route(
             "/projects/next-number",

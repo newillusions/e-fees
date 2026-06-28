@@ -2458,3 +2458,234 @@ async fn test_help_no_auth_required() {
         .unwrap();
     assert_ne!(resp.status(), 401, "/help should not require auth");
 }
+
+// ===========================================================================
+// GET /projects/typeahead — lightweight type-ahead search for cad-export
+// ===========================================================================
+
+#[tokio::test]
+async fn test_typeahead_requires_auth() {
+    verify_not_production();
+    let client = Client::new();
+    let resp = client
+        .get(format!("{}/projects/typeahead", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+async fn test_typeahead_returns_array() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/typeahead", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    assert!(
+        body.is_array(),
+        "typeahead must return a bare JSON array (not a paginated wrapper), got: {}",
+        body
+    );
+}
+
+#[tokio::test]
+async fn test_typeahead_item_shape() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/typeahead?limit=1", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    if let Some(first) = body.as_array().and_then(|a| a.first()) {
+        assert!(first["number"].is_string(), "item must have 'number' string field");
+        assert!(first["name"].is_string(), "item must have 'name' string field");
+        // client field must be present (null or {id, name} object)
+        assert!(
+            first.get("client").is_some(),
+            "item must have 'client' field (null or {{id, name}})"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_typeahead_default_limit_20() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/typeahead", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    let count = body.as_array().map(|a| a.len()).unwrap_or(0);
+    assert!(
+        count <= 20,
+        "default limit should be 20, got {} items",
+        count
+    );
+}
+
+#[tokio::test]
+async fn test_typeahead_limit_clamped_to_100() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/typeahead?limit=9999", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    let count = body.as_array().map(|a| a.len()).unwrap_or(0);
+    assert!(
+        count <= 100,
+        "limit must be clamped to 100, got {} items",
+        count
+    );
+}
+
+#[tokio::test]
+async fn test_typeahead_no_match_returns_empty_array() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!(
+            "{}/projects/typeahead?q=zzz_no_match_xyz_abc_99999",
+            base_url()
+        ))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    assert!(
+        body.as_array().unwrap().is_empty(),
+        "no-match query must return empty array, got: {}",
+        body
+    );
+}
+
+#[tokio::test]
+async fn test_typeahead_q_filters_by_name() {
+    // Seed a project with a distinctive name, search for it, verify it appears.
+    verify_not_production();
+    let client = authed_client();
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let seq = (ts % 800 + 101) as i64;
+    let project_number_id = format!("26-971{}", seq);
+    let project_key = project_number_id.replace('-', "_");
+    let unique_name = format!("DELETE ME - Typeahead Filter {}", ts);
+
+    let create_body = serde_json::json!({
+        "name": unique_name,
+        "name_short": "DELETE ME - TAF",
+        "status": "Lead",
+        "area": "0",
+        "city": "Dubai",
+        "country": "UAE",
+        "folder": "",
+        "number": { "year": 26, "country": 971, "seq": seq, "id": project_number_id }
+    });
+
+    let resp = client
+        .post(format!("{}/projects", base_url()))
+        .json(&create_body)
+        .send()
+        .await
+        .expect("Failed to create project");
+    assert_eq!(
+        resp.status(),
+        200,
+        "seed project failed: {:?}",
+        resp.text().await
+    );
+
+    // Search using a substring of the unique name
+    let resp = client
+        .get(format!("{}/projects/typeahead?q=typeahead+filter", base_url()))
+        .send()
+        .await
+        .expect("Failed to send typeahead request");
+
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let results = body.as_array().unwrap();
+    let found = results
+        .iter()
+        .any(|r| r["name"].as_str().unwrap_or("").to_lowercase().contains("typeahead filter"));
+    assert!(
+        found,
+        "typeahead should find project by name substring (case-insensitive), got: {}",
+        body
+    );
+
+    // Cleanup
+    client
+        .delete(format!("{}/projects/{}", base_url(), project_key))
+        .send()
+        .await
+        .ok();
+}
+
+#[tokio::test]
+async fn test_typeahead_q_filters_by_number() {
+    verify_not_production();
+    let client = authed_client();
+    // Search by project number fragment — "26-" should return projects starting with that year
+    let resp = client
+        .get(format!("{}/projects/typeahead?q=26-971&limit=5", base_url()))
+        .send()
+        .await
+        .expect("Failed to send typeahead request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    // All returned items should have numbers containing "26-971"
+    if let Some(arr) = body.as_array() {
+        for item in arr {
+            let num = item["number"].as_str().unwrap_or("");
+            assert!(
+                num.contains("26-971") || num.is_empty(),
+                "number '{}' does not match q=26-971",
+                num
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_typeahead_client_field_is_null_or_object() {
+    verify_not_production();
+    let client = authed_client();
+    let resp = client
+        .get(format!("{}/projects/typeahead?limit=5", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.expect("Failed to parse JSON");
+    for item in body.as_array().unwrap_or(&vec![]) {
+        let c = &item["client"];
+        assert!(
+            c.is_null() || c.is_object(),
+            "client field must be null or {{id, name}} object, got: {}",
+            c
+        );
+        if c.is_object() {
+            assert!(c["id"].is_string(), "client.id must be a string");
+            assert!(c["name"].is_string(), "client.name must be a string");
+        }
+    }
+}
