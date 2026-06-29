@@ -1,4 +1,4 @@
-FROM rust:1.89-slim AS builder
+FROM rust:slim AS builder
 
 WORKDIR /app
 
@@ -16,6 +16,11 @@ COPY crates/ crates/
 # Copy the scope crate and fix container-utils path for Docker context
 COPY e-fees-scope/ e-fees-scope/
 RUN sed -i 's|path = "../../../container-utils/rust"|path = "/container-utils/rust"|' e-fees-scope/Cargo.toml
+
+# Pin the same dependency tree as local to keep surrealdb transitive deps stable.
+# Build unlocked (minimal workspace has fewer members than the lock, so --locked
+# would reject it); cargo still reuses the pinned versions for the deps it needs.
+COPY Cargo.lock ./Cargo.lock
 
 RUN cargo build --release -p e-fees-scope
 

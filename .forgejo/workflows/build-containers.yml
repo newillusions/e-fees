@@ -1,0 +1,88 @@
+name: Build Containers
+
+on:
+  push:
+    branches: [main, 'v*']
+    paths:
+      - 'e-fees-api/**'
+      - 'e-fees-scope/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.forgejo/workflows/build-containers.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: tcp://10.0.23.137:2375
+    strategy:
+      matrix:
+        include:
+          - service: e-fees-api
+            image: emittiv/e-fees-api
+            dockerfile: e-fees-api/Dockerfile
+          - service: e-fees-scope
+            image: emittiv/e-fees-scope
+            dockerfile: e-fees-scope/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Docker CLI
+        run: apt-get update -qq && apt-get install -y -qq docker.io > /dev/null 2>&1 && docker info --format '{{.ServerVersion}}'
+
+      - name: Login to registry
+        if: github.ref == 'refs/heads/main'
+        run: |
+          for attempt in 1 2 3; do
+            if echo "${{ secrets.REGISTRY_TOKEN }}" | docker login forge.mms.name -u martin --password-stdin; then
+              exit 0
+            fi
+            echo "Login attempt $attempt failed, retrying in $((attempt * 5))s..."
+            sleep $((attempt * 5))
+          done
+          echo "Login failed after 3 attempts" >&2
+          exit 1
+
+      - name: Build (and push on main)
+        run: |
+          set -e
+          REGISTRY=forge.mms.name
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+          IMAGE=${REGISTRY}/${{ matrix.image }}
+
+          push_with_retry() {
+            local img=$1
+            for attempt in 1 2 3; do
+              if docker push "$img"; then return 0; fi
+              echo "Push attempt $attempt for $img failed, retrying in $((attempt * 5))s..." >&2
+              sleep $((attempt * 5))
+            done
+            echo "Push failed after 3 attempts: $img" >&2
+            return 1
+          }
+
+          docker build --network=host \
+            -t ${IMAGE}:sha-${SHORT_SHA} \
+            -f ${{ matrix.dockerfile }} \
+            .
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            push_with_retry ${IMAGE}:sha-${SHORT_SHA}
+            docker tag ${IMAGE}:sha-${SHORT_SHA} ${IMAGE}:latest
+            push_with_retry ${IMAGE}:latest
+          fi
+
+          case "${{ github.ref }}" in
+            refs/tags/v*)
+              VERSION=$(echo "$GITHUB_REF" | sed 's|refs/tags/||')
+              docker tag ${IMAGE}:sha-${SHORT_SHA} ${IMAGE}:${VERSION}
+              push_with_retry ${IMAGE}:${VERSION}
+              ;;
+          esac
