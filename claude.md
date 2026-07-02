@@ -16,7 +16,7 @@ Premium desktop application (Tauri v2 + Svelte 5) for managing fee proposals, pr
 | Shared domain models | single source of types | `crates/e-fees-core/` |
 | Agent API | desktop-local axum, port 3100 | `src-tauri/src/agent_server.rs` |
 
-Deploys: build on AI server via `ssh unraid-ai`, update via Unraid MCP `update_container` - never raw docker (see `/deploy-containers` skill).
+Deploys: build on AI server via `ssh unraid-ai`, update via Unraid MCP `update_container` - never raw docker (see `/deploy-containers` skill). `.forgejo/workflows/build-containers.yml` builds e-fees-api and e-fees-scope on every push (matrix job, DinD runner); pushes `:latest` only on `main` - PRs build-only. e-fees-scope has its own `API_KEY` env, distinct from e-fees-api's `EFEES_API_KEY`.
 
 ## Tech Stack
 - **Frontend**: Svelte 5 (TypeScript, `mount()` API), svelte-spa-router, Vite with HMR
@@ -39,7 +39,7 @@ Deploys: build on AI server via `ssh unraid-ai`, update via Unraid MCP `update_c
 - Use existing `.emittiv-input`, `.emittiv-select`, `.emittiv-btn` and friends from `app.css` before writing new styles.
 
 ## Database
-- **Prod**: ws://10.0.23.11:8000 (ns `emittiv`, db `projects`) | **Dev**: ws://10.0.23.12:8000
+- **Prod**: ws://10.0.23.11:8000 v3.1.2 (ns `emittiv`, db `projects`) | **Dev**: ws://10.0.23.12:8000 v3.1.4 (ns `emittiv_dev`, db `projects`). Dev runs a newer SurrealDB point release than prod - don't assume schema/behavior parity between the two without checking both directly.
 - **Schema reference**: [DATABASE_SCHEMA.md](./docs/development/DATABASE_SCHEMA.md). Key tables: `projects`, `fee`, `company`, `contacts`, `country`, `currency`.
 - **Project numbers**: YY-CCCNN (e.g. 26-97104 = 2026, UAE dial 971, sequence 04); sequence auto-increments per country/year; country resolved via `fn::resolve_country` (dial_code field).
 - **Record keys** use underscore form (`26_97104`); display numbers use hyphens. API route `{id}` = the record key.
@@ -85,6 +85,7 @@ Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md
 |---|---|
 | Session handover | [.claude/HANDOVER.md](./.claude/HANDOVER.md) |
 | Project rules | `.claude/rules/development-workflow.md` |
+| Tacit judgment (incidents, gotchas) | `.claude/rules/judgment.md` |
 | Release guide | [RELEASE_PROCESS.md](./RELEASE_PROCESS.md) |
 | Known issues | [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) |
 | DB schema | [DATABASE_SCHEMA.md](./docs/development/DATABASE_SCHEMA.md) |
@@ -96,5 +97,5 @@ Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md
 2. **Client-side joins** - `src/lib/stores.ts` joins company names in the frontend (O(1) Map lookups today; revisit at larger datasets).
 
 ---
-**Last Updated**: 2026-06-12 (Fable 5 config modernization)
+**Last Updated**: 2026-07-02 (added CI workflow + dev/prod DB version drift + judgment.md pointer; distillation pass, no code changes)
 **Version**: 0.16.0
