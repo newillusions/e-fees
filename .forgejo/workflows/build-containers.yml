@@ -21,7 +21,9 @@ jobs:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
     env:
-      DOCKER_HOST: tcp://10.0.23.137:2375
+      DOCKER_HOST: tcp://10.0.23.137:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client-primary
     strategy:
       matrix:
         include:
