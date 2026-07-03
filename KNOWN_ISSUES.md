@@ -1,238 +1,82 @@
 # Known Issues and Limitations
 
-**Last Updated**: 2025-12-14
-**Current Version**: v0.10.24
+**Last Updated**: 2026-07-03 (refreshed against v0.16.0 codebase - see CLAUDE.md for current version; supersedes the 2025-12-14 / v0.10.24-era version)
+**Current Version**: v0.16.0
 
-## Critical Issues
-
-### ~~1. Auto-Updater Download Fails Silently~~
-
-**Status**: ✅ RESOLVED in v0.10.17/v0.10.18
-
-**Root Causes Found**:
-1. **Double base64 encoding**: Signatures were being base64 encoded twice in publish script
-2. **Windows artifact format**: Script looked for `.nsis.zip` but artifact is `.exe`
-3. **Windows URL format**: URLs pointed to macOS format instead of Windows exe
-
-**Fixes Applied**:
-- Removed extra `| base64` pipe from signature reading in publish script
-- Updated script to find `*_x64-setup.exe` files for Windows
-- Added `"installMode": "passive"` for Windows seamless updates
-- Rebranded to lowercase "e-fees" for consistency
-
----
+This file previously listed 8 issues dated 2025-12-14 (v0.10.24 era). Verified against the current codebase: 2 were resolved and dropped, 6 carried forward (verification noted per item). Full prior text is in git history (`git log -- KNOWN_ISSUES.md`).
 
 ## Medium Priority Issues
 
-### 2. Update URLs Not Configurable
+### 1. Update URLs Not Configurable
 
-**Status**: 🟡 LIMITATION - By Design
+**Status**: 🟡 LIMITATION - By Design (still real)
 
-**Description**:
-User preference: "we should NOT include the full URL in the public json file. the base url should be hard coded into the app"
+**Description**: Tauri v2's updater plugin requires an absolute URL in its `endpoints` config; it does not support relative paths, base-URL config, or URL templating.
 
-**Current Behavior**:
-update.json contains absolute URLs:
-```json
-{
-  "platforms": {
-    "darwin-aarch64": {
-      "url": "https://apache.mms.name/e-fees-releases/0.10.16/E-Fees_aarch64.app.tar.gz"
-    }
-  }
-}
-```
-
-**Investigation Result**:
-Tauri v2 updater requires absolute URLs in update.json. The plugin does not support:
-- Relative paths
-- Base URL configuration
-- URL templates with version interpolation
-
-**Workaround**:
-- update.json MUST contain full URLs
-- Keep update.json in private GitHub repository
-- Only binaries are publicly accessible on Apache server
+**Current Behavior**: `src-tauri/tauri.conf.json` hardcodes `"endpoints": ["https://raw.githubusercontent.com/newillusions/e-fees/main/update.json"]`. update.json itself is generated per-release by the `/release` skill and pushed via Forgejo API, then synced to GitHub (Tauri only reads the GitHub raw URL).
 
 **Reference**: https://v2.tauri.app/plugin/updater/
 
 ---
 
-### 3. No Dev Mode for Production Debugging
+### 2. Windows Build Signing Present, Manual Verification Unconfirmed
 
-**Status**: 🟡 PLANNED FOR v0.10.17
+**Status**: 🟡 [UNVERIFIED - carried from 2025-12 version, partially updated]
 
-**Description**:
-Production builds don't have access to developer console or verbose logging, making debugging difficult.
+**Description**: `.github/workflows/build-releases.yml` has a `build-windows` job that produces a signed `.nsis.zip` installer with a real signature output (`sig-windows`), so the "empty signature" issue from the 2025-12 version is resolved at the CI level. Whether the resulting Windows installer and update flow have actually been tested on real Windows hardware is not verifiable from the repo alone.
 
-**Impact**:
-- Cannot easily debug issues in production app
-- Must rely on file logging which isn't always captured
-- No way to enable verbose logging without rebuild
-
-**Planned Solution**:
-Implement dev mode toggle:
-- Add `DEV_MODE=false` to e-fees.config file
-- Add UI toggle in settings page
-- When enabled:
-  - Verbose logging to file and console
-  - Debug menu items
-  - Additional diagnostic information
-  - Manual update check button
-
-**Related**: Issue #1 (would have helped diagnose updater failure)
-
----
-
-### 4. Windows Build Not Tested
-
-**Status**: 🟡 INCOMPLETE
-
-**Description**:
-Windows builds are created by GitHub Actions but have never been tested.
-
-**Known Gaps**:
-- No Windows signature in update.json (empty string)
-- Windows update flow never verified
-- No test environment for Windows
-
-**Signature Issue**:
-```json
-"windows-x86_64": {
-  "signature": "",  // Empty - may cause updates to fail
-  "url": "https://apache.mms.name/e-fees-releases/0.10.16/E-Fees_x64-setup.nsis.zip"
-}
-```
-
-**Next Steps**:
-- Set up Windows test environment
-- Verify Windows builds install correctly
-- Test Windows update flow
-- Fix signature generation if needed
+**Verification source**: `.github/workflows/build-releases.yml:221-394` (build-windows job + sig-windows output wired into the release manifest step).
 
 ---
 
 ## Low Priority Issues
 
-### 5. Configurable Download/Install Location
+### 3. Configurable Download/Install Location
 
-**Status**: 🟡 FUTURE ENHANCEMENT
+**Status**: 🟡 FUTURE ENHANCEMENT (still real - not implemented)
 
-**Description**:
-Users should be able to configure where downloaded update files are saved, and potentially customize the installation location.
+**Description**: Update files always go to the system temp directory; Windows always installs to the default AppData location. No UI or config setting exists to change either path.
 
-**Current Behavior**:
-- Update files downloaded to system temp directory
-- Windows installs to default location (AppData/Local/e-fees)
-- No user control over these paths
+**Verification**: no `download location` / `DownloadLocation` / `install location` matches anywhere in `src/` or `src-tauri/` (grep, 2026-07-03).
 
-**Proposed Solution**:
-- Add "Download Location" setting in Settings modal
-- Store preference in e-fees.config file
-- Pass custom path to updater when downloading
-- Consider custom install path option for Windows
-
-**Use Cases**:
-- Users with limited space on system drive
-- Corporate environments with specific installation policies
-- Users who prefer portable installations
-
-**Related Files**:
-- `src/lib/components/SettingsModal.svelte`
-- `src-tauri/src/commands/mod.rs` (AppSettings struct)
+**Related Files**: `src/lib/components/SettingsModal.svelte`, `src-tauri/src/commands/mod.rs`
 
 ---
 
-### 6. Multiple Background Processes (dev only)
+### 4. Multiple Background Processes (dev only)
 
-**Status**: 🟢 MINOR ANNOYANCE
+**Status**: 🟢 MINOR ANNOYANCE (still real, dev-machine only)
 
-**Description**:
-Multiple background bash processes running from previous testing:
-- Multiple `npm run tauri:dev` processes
-- Update test logging processes
-- Script execution processes
+**Description**: Repeated `npm run tauri:dev` runs during local development can leave stray background processes (dev server, test loggers). Isolated to the developer's own machine; does not affect shared/remote systems.
 
-**Impact**: Minimal - processes are isolated and don't interfere
-
-**Cleanup**:
-```bash
-# Kill all E-Fees related processes
-pkill -f "npm run tauri"
-killall "app" "E-Fees"
-```
+**Cleanup**: use a targeted process check (e.g. `pgrep -x` on the known binary name) rather than a broad `pkill -f` pattern-match, which risks matching unrelated processes on the same machine.
 
 ---
 
-### 7. Git Dual Remote Management
+### 5. Git Dual Remote Management
 
-**Status**: 🟢 OPERATIONAL BUT COMPLEX
+**Status**: 🟢 OPERATIONAL BUT COMPLEX (still real)
 
-**Description**:
-Repository has two remotes requiring dual push:
-- `origin`: Forgejo (primary, private — forge.mms.name)
-- `github`: GitHub (mirror for CI/CD)
+**Description**: The repo has two remotes: `origin` (Forgejo, `forge.mms.name/emittiv/fee-prop` - primary, daily work) and `github` (`github.com/newillusions/e-fees` - release/CI mirror only, per CLAUDE.md "Always ask before committing" directive). The `/release` skill's CI pipeline builds on GitHub and syncs `update.json` back to Forgejo, then to GitHub - so both remotes stay in sync automatically for releases; manual dual-push is only a risk for out-of-band changes.
 
-**Current Workflow**:
-```bash
-git push origin main
-git push github main
-```
-
-**Potential Issues**:
-- Easy to forget to push to both
-- Can create divergent history if one push fails
-- No automated sync between remotes
-
-**Mitigation**:
-- Always push to both in release process
-- Document clearly in RELEASE_PROCESS.md
-- Consider git alias for dual push
+**Verification source**: `git remote -v` (2026-07-03) shows both remotes present; `.claude/commands/release.md` documents the automated cross-remote sync.
 
 ---
 
-### 8. Minisign Signature Filename Dependency
+### 6. Minisign Signature Filename Dependency
 
-**Status**: 🟢 UNDERSTOOD AND HANDLED
+**Status**: 🟢 UNDERSTOOD AND HANDLED (still real, technical constraint)
 
-**Description**:
-Minisign signatures embed the filename in the signed data.
+**Description**: Minisign signatures embed the filename in the signed data - renaming a signed artifact after signing breaks verification. The release pipeline must preserve original build filenames end to end.
 
-**Impact**:
-- Cannot rename files after signing
-- Signature verification fails if filename changes
-- Must preserve exact filenames from build
-
-**Solution**:
-publish-release.sh script preserves original filenames from artifacts.
-
-**Example**:
-```bash
-# This breaks signature verification:
-mv E-Fees.app.tar.gz E-Fees_aarch64.app.tar.gz
-
-# Must keep original name or re-sign
-```
+**Verification**: `scripts/publish-release.sh` still present in the repo; this constraint is inherent to minisign, not tied to any specific script version.
 
 ---
 
-## Resolved Issues
+## Resolved Since 2025-12 (dropped from active list)
 
-### ✅ Update Detection Not Working
-**Resolved**: v0.10.15 (permissions fix)
-**Solution**: Added proper Tauri capabilities for updater plugin
-
-### ✅ Artifact Download Conflicts
-**Resolved**: v0.10.16 release script
-**Solution**: Download artifacts to separate subdirectories
-
-### ✅ Files Not Published to Web Server
-**Resolved**: v0.10.16 release script
-**Solution**: Use find commands to locate files in nested artifact structure
-
-### ✅ Git Push Conflicts During Release
-**Resolved**: Manual merge and recommit
-**Solution**: Always pull before pushing update.json
+- **Auto-updater silent download failures** - resolved in v0.10.17/v0.10.18 (double-base64 signature bug, Windows artifact/URL format). No longer applicable at v0.16.0.
+- **No dev mode for production debugging** - implemented: `dev_mode` field now exists in the settings store (`src/lib/stores/settings.ts:26,50`), toggled via `SettingsModal.svelte`, and gates verbose logging in `UpdateNotification.svelte:20-44` and dev-only nav items in `Navigation.svelte:8,51`.
 
 ---
 
@@ -246,19 +90,8 @@ For new issues, document:
 5. **Workarounds**: Temporary solutions
 6. **Next Steps**: Plan to resolve
 
----
-
 ## Priority Definitions
 
 - 🔴 **CRITICAL**: Blocks core functionality, needs immediate attention
 - 🟡 **MEDIUM**: Impacts usability or development workflow, should be addressed soon
 - 🟢 **LOW**: Minor annoyance or known limitation, can be lived with
-
----
-
-## Quick Reference: Most Common Issues
-
-1. **Update fails to download** → See Issue #1 (working on v0.10.17 fix)
-2. **Can't see production logs** → See Issue #3 (dev mode coming in v0.10.17)
-3. **Forgot to push to both git remotes** → See Issue #6 (push to origin AND github)
-4. **Release script fails** → Check RELEASE_PROCESS.md troubleshooting section

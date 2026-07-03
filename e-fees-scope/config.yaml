@@ -8,7 +8,7 @@ database:
   database: "projects"
 
 ollama:
-  url: "http://10.0.21.50:11434"
+  url: "http://10.0.21.20:11434"
   model: "qwen3.5:9b"
 
 docling:

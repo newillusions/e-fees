@@ -1,3 +1,6 @@
+> **HISTORICAL - superseded by CLAUDE.md and the `/release` skill (tombstoned 2026-07-03 per architect review, charter-e-fees).**
+> **Content below is STALE and must not be followed.** This document describes the manual release process from before the `/release [patch|minor|major]` background-agent pipeline existed (2025-12-03 era: dual `git push origin`/`git push github`, a local `scripts/publish-release.sh` copying to an Apache mount). The current pipeline is entirely different: tag push -> GitHub Actions builds -> artifacts uploaded to Forgejo releases -> `update.json` generated and pushed to Forgejo via API -> synced to GitHub. See `CLAUDE.md` §Release and `.claude/commands/release.md` for the real process.
+
 # E-Fees Release Process
 
 **Last Updated**: 2025-12-03
