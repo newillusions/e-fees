@@ -1,3 +1,6 @@
+> **HISTORICAL - superseded by CLAUDE.md and `/release` (tombstoned 2026-07-03 per architect review, charter-e-fees).**
+> **Content below is STALE and must not be followed.** The CSP example here hardcodes a WebSocket allowlist to `ws://10.0.1.17:8000` / `wss://10.0.1.17:8000` - that IP only ever appeared in test fixtures and an old settings-doc example (`src/tests/`, `archive/configs/`), never in production. The actual current CSP in `src-tauri/tauri.conf.json` uses a generic `connect-src 'self' ws: wss:` (no hardcoded IP) - it doesn't restrict to a specific host at all. Prod/dev DB hosts are documented in `CLAUDE.md` §Database. Referenced files (`src/lib/security.ts`, `src-tauri/src/db/security.rs`) may have drifted from this description since - verify current behavior in the code directly rather than trusting this document's feature list.
+
 # Security Configuration Documentation
 
 ## Overview

@@ -7,7 +7,7 @@
   
   Built with Tauri v2 + Svelte 5 + SurrealDB
   
-  [![Version](https://img.shields.io/badge/version-0.10.24-blue.svg)]()
+  [![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)]()
   [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
   [![Status](https://img.shields.io/badge/status-Production%20Ready-green.svg)]()
 </div>
@@ -76,7 +76,7 @@ npm run tauri:build
 - **Frontend**: Svelte 5 with TypeScript
 - **Backend**: Tauri v2 (Rust)
 - **Database**: SurrealDB
-- **Styling**: TailwindCSS
+- **Styling**: CSS custom properties (design tokens) + semantic `.emittiv-*` classes (Tailwind removed 2026-02)
 - **Testing**: Vitest + Tauri MCP
 - **Build**: Vite
 
@@ -107,7 +107,7 @@ npm run check
 
 ## 📈 Current Status
 
-- **Version**: 0.10.24 (Production Ready)
+- **Version**: 0.16.0 (Production Ready)
 - **Auto-Updater**: Working (macOS tested)
 - **Database Records**: 48 projects, 37 proposals, 19 companies
 - **Performance**: < 2s load time, < 100MB memory

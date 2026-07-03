@@ -1,3 +1,6 @@
+> **HISTORICAL - superseded by CLAUDE.md and `/release` (tombstoned 2026-07-03 per architect review, charter-e-fees).**
+> **Content below is STALE and must not be followed.** This document predates the Tauri-MCP-only testing directive: it references generic Playwright browser automation (`Test Automation Setup` section) which explicitly does NOT work for this Tauri desktop app, a GitHub Actions CI job that doesn't match the real `.forgejo/workflows/build-containers.yml`, and refers to the product throughout as "Fee Proposal Management System" (wrong name) at "Version 2.0.0" (wrong version - current is 0.16.0). For current testing guidance see `CLAUDE.md` §Critical Directives (Tauri MCP only) and `docs/testing/CRITICAL_DIRECTIVE_TAURI_MCP_ONLY.md`.
+
 # End-to-End Testing Procedures
 
 ## Overview

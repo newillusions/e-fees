@@ -61,7 +61,7 @@ impl Config {
         );
         defaults.insert(
             "ollama.url".to_string(),
-            serde_yaml::Value::String("http://10.0.21.50:11434".to_string()),
+            serde_yaml::Value::String("http://10.0.21.20:11434".to_string()),
         );
         defaults.insert(
             "ollama.model".to_string(),
@@ -122,7 +122,7 @@ impl Config {
 
         let ollama_url = env::var("OLLAMA_URL").unwrap_or_else(|_| {
             cm.get_str("ollama.url")
-                .unwrap_or_else(|| "http://10.0.21.50:11434".to_string())
+                .unwrap_or_else(|| "http://10.0.21.20:11434".to_string())
         });
 
         let ollama_model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| {
