@@ -1345,15 +1345,39 @@ mod tests {
             .unwrap();
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
+
+    #[test]
+    fn resolve_bind_addr_defaults_to_loopback() {
+        assert_eq!(resolve_bind_addr(3100, None), "127.0.0.1:3100");
+    }
+
+    #[test]
+    fn resolve_bind_addr_respects_override() {
+        assert_eq!(
+            resolve_bind_addr(3100, Some("0.0.0.0:3100".to_string())),
+            "0.0.0.0:3100"
+        );
+    }
+}
+
+/// Resolves the bind address for the agent API server.
+///
+/// Defaults to loopback-only (`127.0.0.1:<port>`) - this API fronts full CRUD
+/// with a root DB credential and has no business listening on the LAN by
+/// default. `override_addr` (the raw `EFEES_AGENT_BIND` env value, if set)
+/// takes precedence for anyone who genuinely needs remote access.
+fn resolve_bind_addr(port: u16, override_addr: Option<String>) -> String {
+    override_addr.unwrap_or_else(|| format!("127.0.0.1:{}", port))
 }
 
 /// Start the agent API HTTP server.
 ///
 /// Spawns a tokio task that listens on the specified port.
-/// Returns immediately — the server runs in the background.
+/// Returns immediately - the server runs in the background.
 ///
 /// # Environment Variables
-/// - `EFEES_AGENT_BIND`: Bind address (default: `0.0.0.0:<port>`)
+/// - `EFEES_AGENT_BIND`: Bind address override (default: `127.0.0.1:<port>`,
+///   loopback-only). Set to `0.0.0.0:<port>` to expose on the LAN.
 /// - `EFEES_AGENT_API_KEY`: If set, all endpoints (except /api/health) require
 ///   this value in the `X-API-Key` header. If unset, no auth is enforced.
 pub async fn start_agent_server(db_state: AppState, port: u16) {
@@ -1370,7 +1394,7 @@ pub async fn start_agent_server(db_state: AppState, port: u16) {
 
     let app = build_router(state);
 
-    let addr = std::env::var("EFEES_AGENT_BIND").unwrap_or_else(|_| format!("0.0.0.0:{}", port));
+    let addr = resolve_bind_addr(port, std::env::var("EFEES_AGENT_BIND").ok());
     info!("Agent API server starting on http://{}", addr);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {
