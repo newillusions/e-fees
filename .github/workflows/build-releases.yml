@@ -27,11 +27,10 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          # Apple Silicon only - Intel dropped per decision:boujy4d42i8w7zovifts (2026-06-29)
           - aarch64-apple-darwin  # Apple Silicon (M1/M2/M3)
-          - x86_64-apple-darwin   # Intel
     outputs:
       sig-aarch64: ${{ steps.get_sig.outputs.sig_aarch64 }}
-      sig-x86_64: ${{ steps.get_sig.outputs.sig_x86_64 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -357,6 +356,8 @@ jobs:
     name: Update manifest
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: always() && needs.build-macos.result != 'cancelled' && needs.build-windows.result != 'cancelled'
     steps:
       - name: Get version
@@ -374,7 +375,6 @@ jobs:
           VERSION="${{ steps.version.outputs.VERSION }}"
           PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           SIG_AARCH64="${{ needs.build-macos.outputs.sig-aarch64 }}"
-          SIG_X64="${{ needs.build-macos.outputs.sig-x86_64 }}"
           SIG_WIN="${{ needs.build-windows.outputs.sig-windows }}"
 
           cat > update.json << EOF
@@ -386,10 +386,6 @@ jobs:
               "darwin-aarch64": {
                 "signature": "$SIG_AARCH64",
                 "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_aarch64.app.tar.gz"
-              },
-              "darwin-x86_64": {
-                "signature": "$SIG_X64",
-                "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v$VERSION/E-Fees_${VERSION}_x64.app.tar.gz"
               },
               "windows-x86_64": {
                 "signature": "$SIG_WIN",
@@ -454,3 +450,19 @@ jobs:
             echo "⚠️ Failed to push to Gitea (may need manual update)"
             echo "The update.json artifact is available for manual upload"
           fi
+
+      # The updater endpoint reads update.json from THIS repo's main branch on
+      # raw.githubusercontent.com - commit it back here so released clients see
+      # new versions (previously required a manual sync; the GitHub manifest was
+      # stale from March to July 2026 because of it).
+      - name: Commit update.json to GitHub main
+        continue-on-error: true
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" manifest-repo
+          cp update.json manifest-repo/update.json
+          cd manifest-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git diff --cached --quiet || git commit -m "chore: update manifest for v${{ steps.version.outputs.VERSION }}"
+          git push origin HEAD:main
