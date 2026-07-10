@@ -1,33 +1,70 @@
 //! Clause selection per-proposal: save and retrieve the `selected_clauses[]` record.
 //!
-//! Stage 1 of the clause-selection feature.  Provides two endpoints:
+//! Provides two endpoints:
 //!
-//! * `POST /scope/clause-selection` — save `[{clause_id, included, override_body}]`
+//! * `POST /scope/clause-selection` - save `[{clause_id, included, override_body}]`
 //!   onto the `scope_assembly` for a fee, creating the assembly record if it does
 //!   not exist yet.
 //!
-//! * `GET /scope/{fee_id}/clause-selection` — return the current selection
-//!   merged with live clause metadata.  When no selection has been saved yet
-//!   every active clause is returned with `included = true` (the default state
-//!   a user would want to deselect from).
+//! * `GET /scope/{fee_id}/clause-selection` - return the current selection
+//!   merged with live clause metadata. When no selection has been saved yet
+//!   (Stage 2, `is_default` + `conditions` pre-fill): each clause defaults to
+//!   included/excluded per its `is_default` flag, gated by its `conditions`
+//!   object (if any) against the optional `?conditions=` query param - see
+//!   `stage2_default_included` below.
 //!
 //! `override_body` is structural: once written it is never silently dropped.
 //! Downstream generation reads it and uses it in preference to the master body.
 
 use std::sync::Arc;
 
-use axum::{extract::Path, extract::State, Json};
+use axum::{extract::Path, extract::Query, extract::State, Json};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use e_fees_core::models::record_key_string;
 
 use crate::error::ApiError;
 use crate::models::{Clause, SaveClauseSelectionRequest};
+use crate::routes::assembly::condition_matches;
 use crate::AppState;
 
 /// Helper to strip "fee:" prefix from a fee ID string.
 fn strip_fee_prefix(fee_id: &str) -> &str {
     fee_id.strip_prefix("fee:").unwrap_or(fee_id)
+}
+
+/// Query parameters for `GET /scope/{fee_id}/clause-selection`.
+#[derive(Debug, Deserialize)]
+pub struct ClauseSelectionQuery {
+    /// JSON-encoded project conditions object (e.g. `{"project_type":"hospitality"}`)
+    /// used to gate conditional clause defaults (Stage 2). Absent means "no known
+    /// conditions" - conditional clauses default to excluded.
+    pub conditions: Option<String>,
+}
+
+/// Stage 2 pre-fill default: whether a clause should be included when no
+/// custom selection has been saved yet, based on its `is_default` flag and
+/// (if present) its `conditions` object matched against the caller's parsed
+/// `conditions` query param.
+///
+/// - `is_default = false` -> always excluded, regardless of conditions.
+/// - `is_default = true`, clause has no `conditions` -> always included.
+/// - `is_default = true`, clause has `conditions` -> included only if the
+///   caller's conditions satisfy every key in the clause's condition object
+///   (subset match via `condition_matches`; no caller conditions -> excluded).
+fn stage2_default_included(
+    is_default: bool,
+    clause_conditions: &Option<surrealdb_types::Value>,
+    requested_conditions: &Option<Value>,
+) -> bool {
+    if !is_default {
+        return false;
+    }
+    match clause_conditions {
+        None => true,
+        Some(cond) => condition_matches(cond, requested_conditions),
+    }
 }
 
 /// Save clause selections for a fee proposal.
@@ -151,26 +188,43 @@ pub async fn save_clause_selection(
 /// Returns all active library clauses merged with the saved selection.
 ///
 /// * If no selection has been saved yet (`has_custom_selection: false`),
-///   every clause is returned with `included = true` (the out-of-the-box
-///   default — equivalent to the old pull-all behaviour).
+///   each clause defaults to its `is_default` flag, gated by `conditions`
+///   (Stage 2) - see `stage2_default_included`.
 /// * If a selection exists, clauses present in the saved list use the saved
-///   `included` / `override_body` values.  Active clauses added to the library
+///   `included` / `override_body` values. Active clauses added to the library
 ///   after the selection was saved default to `included = false`.
 #[utoipa::path(
     get,
     path = "/scope/{fee_id}/clause-selection",
     tag = "Scope",
-    params(("fee_id" = String, Path, description = "Fee record key")),
+    params(
+        ("fee_id" = String, Path, description = "Fee record key"),
+        ("conditions" = Option<String>, Query, description = "JSON-encoded project conditions object for Stage 2 conditional-clause pre-fill gating"),
+    ),
     responses(
         (status = 200, description = "Clause selection for this fee"),
+        (status = 400, description = "Invalid conditions query parameter"),
     ),
     security(("api_key" = []))
 )]
 pub async fn get_clause_selection(
     State(state): State<Arc<AppState>>,
     Path(fee_id): Path<String>,
+    Query(query): Query<ClauseSelectionQuery>,
 ) -> Result<Json<Value>, ApiError> {
     let fee_key = strip_fee_prefix(&fee_id);
+
+    // Stage 2: parse the optional conditions query param up front so a
+    // malformed value fails fast with 400 rather than silently degrading.
+    let requested_conditions: Option<Value> = match &query.conditions {
+        Some(raw) => {
+            let parsed: Value = serde_json::from_str(raw).map_err(|e| {
+                ApiError::bad_request(format!("conditions must be valid JSON: {e}"))
+            })?;
+            Some(parsed)
+        }
+        None => None,
+    };
 
     // Fetch all active library clauses
     let mut clause_res = state
@@ -244,13 +298,12 @@ pub async fn get_clause_selection(
 
             let (included, override_body) = if has_custom_selection {
                 // Clauses added after the last save default to excluded
-                sel_map
-                    .get(&cid)
-                    .cloned()
-                    .unwrap_or((false, None))
+                sel_map.get(&cid).cloned().unwrap_or((false, None))
             } else {
-                // No saved selection — present every clause as included
-                (true, None)
+                // No saved selection yet - Stage 2 pre-fill from is_default + conditions
+                let included =
+                    stage2_default_included(c.is_default, &c.conditions, &requested_conditions);
+                (included, None)
             };
 
             json!({

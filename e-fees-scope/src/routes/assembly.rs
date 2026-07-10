@@ -17,11 +17,13 @@ fn strip_fee_prefix(fee_id: &str) -> &str {
     fee_id.strip_prefix("fee:").unwrap_or(fee_id)
 }
 
-/// Check if a deliverable's condition object is satisfied by the request conditions.
+/// Check if a condition object (deliverable or clause) is satisfied by the
+/// request conditions. For each key in the stored condition, the request
+/// conditions must contain the same key with the same value (subset matching).
 ///
-/// For each key in the deliverable's condition, the request conditions must
-/// contain the same key with the same value (subset matching).
-fn condition_matches(
+/// Shared with `routes::clause_selection` for Stage 2 clause-selection
+/// pre-fill (is_default + conditions gate) - same subset-match semantics.
+pub(crate) fn condition_matches(
     deliverable_condition: &surrealdb_types::Value,
     request_conditions: &Option<Value>,
 ) -> bool {

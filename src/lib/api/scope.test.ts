@@ -115,4 +115,59 @@ describe('scope API', () => {
       expect(result.current_revision).toBe(1);
     });
   });
+
+  describe('getClauseSelection', () => {
+    const mockResponse = {
+      fee_id: '25_97101_1',
+      has_custom_selection: false,
+      selections: []
+    };
+
+    it('omits the conditions query param when none are passed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const { getClauseSelection } = await import('./scope');
+      await getClauseSelection('25_97101_1');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-selection');
+    });
+
+    it('omits the conditions query param when an empty object is passed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const { getClauseSelection } = await import('./scope');
+      await getClauseSelection('25_97101_1', {});
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-selection');
+    });
+
+    it('JSON-encodes conditions into the query string (Stage 2 gating)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const { getClauseSelection } = await import('./scope');
+      await getClauseSelection('25_97101_1', { project_type: 'hospitality', min_area: 500 });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/scope/25_97101_1/clause-selection');
+      expect(JSON.parse(parsed.searchParams.get('conditions')!)).toEqual({
+        project_type: 'hospitality',
+        min_area: 500
+      });
+    });
+  });
 });

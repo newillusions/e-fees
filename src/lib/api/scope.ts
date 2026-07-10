@@ -200,7 +200,7 @@ export async function exportScope(feeId: string): Promise<{ text: string }> {
 }
 
 // =============================================================================
-// CLAUSE SELECTION (Stage 1)
+// CLAUSE SELECTION (Stage 1 save/retrieve; Stage 2 is_default + conditions pre-fill)
 // =============================================================================
 
 /** List all active library clauses. */
@@ -231,8 +231,21 @@ export async function saveClauseSelection(data: SaveClauseSelectionRequest): Pro
  * Get clause selection for a fee proposal.
  *
  * Returns all active clauses merged with the saved selection.
- * When no selection has been saved yet, all clauses default to included=true.
+ *
+ * When no selection has been saved yet (Stage 2), each clause defaults to
+ * its `is_default` flag, gated by its `conditions` object (if any) against
+ * the optional `conditions` param passed here - a project-attributes object
+ * subset-matched against each conditional clause's `conditions` (e.g.
+ * `{ project_type: 'hospitality' }`). Omit it when the caller has no known
+ * project conditions; conditional clauses then default to excluded.
  */
-export async function getClauseSelection(feeId: string): Promise<ClauseSelectionResponse> {
-  return scopeRequest<ClauseSelectionResponse>(`/scope/${feeId}/clause-selection`);
+export async function getClauseSelection(
+  feeId: string,
+  conditions?: Record<string, unknown>
+): Promise<ClauseSelectionResponse> {
+  const qs =
+    conditions && Object.keys(conditions).length > 0
+      ? '?' + new URLSearchParams({ conditions: JSON.stringify(conditions) }).toString()
+      : '';
+  return scopeRequest<ClauseSelectionResponse>(`/scope/${feeId}/clause-selection${qs}`);
 }

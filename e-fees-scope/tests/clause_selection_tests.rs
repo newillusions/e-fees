@@ -29,6 +29,55 @@ fn client() -> Client {
 /// Fictional fee key used across all selection tests (safe to reuse / re-run).
 const TEST_FEE_KEY: &str = "delete-me-sel-test-001";
 
+// ── Helper: create / archive a scratch clause (Stage 2 conditions test) ──────
+
+/// Create a clause and return the full response body. Merges `extra` fields
+/// (e.g. `is_default`, `conditions`) over the DELETE-ME-prefixed defaults.
+async fn create_test_clause(client: &Client, extra: Option<Value>) -> Value {
+    let mut body = json!({
+        "category": "DELETE ME - Test Category",
+        "title": "DELETE ME - Test Clause Title",
+        "body": "DELETE ME - This is a test clause body for integration testing.",
+        "sort_order": 100,
+        "is_default": false,
+    });
+
+    if let Some(extra) = extra {
+        if let (Some(base_obj), Some(extra_obj)) = (body.as_object_mut(), extra.as_object()) {
+            for (k, v) in extra_obj {
+                base_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
+    let resp = client
+        .post(format!("{}/clauses", base_url()))
+        .header("X-API-Key", api_key())
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to send create request");
+
+    assert!(
+        resp.status().is_success(),
+        "Create clause failed with status {}",
+        resp.status()
+    );
+
+    resp.json::<Value>()
+        .await
+        .expect("Failed to parse create response")
+}
+
+/// Archive a scratch clause via the API (sufficient for test isolation).
+async fn cleanup_clause(client: &Client, id: &str) {
+    let _ = client
+        .delete(format!("{}/clauses/{}", base_url(), id))
+        .header("X-API-Key", api_key())
+        .send()
+        .await;
+}
+
 // ── Helper: get first active clause id from the library ──────────────────────
 
 async fn first_active_clause_id(c: &Client) -> Option<String> {
@@ -69,6 +118,28 @@ async fn fetch_selection(c: &Client, fee_key: &str) -> Value {
         .expect("Failed to parse clause-selection response")
 }
 
+/// Fetch clause selection with a `conditions` query param (Stage 2: conditional
+/// clause defaults are gated by project conditions, same subset-match shape as
+/// the deliverable engine's `condition_matches` in routes/assembly.rs).
+async fn fetch_selection_with_conditions(c: &Client, fee_key: &str, conditions: &Value) -> Value {
+    let resp = c
+        .get(format!("{}/scope/{}/clause-selection", base_url(), fee_key))
+        .header("X-API-Key", api_key())
+        .query(&[("conditions", conditions.to_string())])
+        .send()
+        .await
+        .expect("GET clause-selection (with conditions) failed");
+    assert_eq!(
+        resp.status(),
+        200,
+        "GET clause-selection with conditions returned non-200 for fee_key={}",
+        fee_key
+    );
+    resp.json::<Value>()
+        .await
+        .expect("Failed to parse clause-selection response")
+}
+
 // ── Helper: save a clause selection ──────────────────────────────────────────
 
 async fn save_selection(c: &Client, body: Value) -> Value {
@@ -93,11 +164,39 @@ async fn save_selection(c: &Client, body: Value) -> Value {
 // TESTS
 // ============================================================================
 
-/// Calling GET without any prior POST returns all active clauses with included=true.
-/// This is the default "all included" state before a user customises their selection.
+/// Calling GET without any prior POST pre-fills from each clause's `is_default`
+/// flag, gated by `conditions` (Stage 2). With no `conditions` query param,
+/// conditional clauses (conditions.is_some()) can never match, so they default
+/// to excluded regardless of is_default; unconditional clauses default to their
+/// is_default value.
 #[tokio::test]
-async fn test_get_clause_selection_default_all_included() {
+async fn test_get_clause_selection_default_prefills_from_is_default_and_conditions() {
     let c = client();
+
+    // Fetch the master library to know each clause's is_default + conditions.
+    let list_resp = c
+        .get(format!("{}/clauses", base_url()))
+        .header("X-API-Key", api_key())
+        .send()
+        .await
+        .expect("GET /clauses failed");
+    assert!(list_resp.status().is_success());
+    let list_body: Value = list_resp.json().await.expect("parse /clauses");
+    let clauses = list_body["data"].as_array().expect("data must be array");
+    assert!(!clauses.is_empty(), "need at least one active clause");
+
+    let mut expected: std::collections::HashMap<String, bool> = std::collections::HashMap::new();
+    for cj in clauses {
+        let cid = cj["id"]
+            .as_str()
+            .unwrap()
+            .trim_start_matches("clause:")
+            .to_string();
+        let is_default = cj["is_default"].as_bool().unwrap_or(false);
+        let has_conditions = cj.get("conditions").map_or(false, |v| !v.is_null());
+        // No conditions passed on this GET -> conditional clauses never match.
+        expected.insert(cid, is_default && !has_conditions);
+    }
 
     // Use a fresh fictional fee that has never had a selection saved
     let no_sel_key = "delete-me-no-sel-000";
@@ -114,22 +213,120 @@ async fn test_get_clause_selection_default_all_included() {
         "has_custom_selection must be false when no selection was saved"
     );
 
-    let selections = body["selections"].as_array().expect("selections must be an array");
-    assert!(
-        !selections.is_empty(),
-        "should return at least one active clause"
+    let selections = body["selections"]
+        .as_array()
+        .expect("selections must be an array");
+    assert_eq!(
+        selections.len(),
+        clauses.len(),
+        "selection count must match the active library count"
     );
+
     for sel in selections {
+        let cid = sel["clause_id"].as_str().unwrap_or("").to_string();
+        let expected_included = expected.get(&cid).copied().unwrap_or(false);
         assert_eq!(
             sel["included"].as_bool(),
-            Some(true),
-            "all clauses should default to included=true when no selection saved"
+            Some(expected_included),
+            "clause '{}' default inclusion must follow is_default (+ conditions gate)",
+            cid
         );
         assert!(sel["clause_id"].is_string(), "clause_id must be a string");
         assert!(sel["title"].is_string(), "title must be present");
         assert!(sel["category"].is_string(), "category must be present");
         assert!(sel["body"].is_string(), "body must be present");
     }
+}
+
+/// A default=true clause with a `conditions` object is excluded by default
+/// (no project conditions known), included when the passed `conditions` query
+/// param satisfies every key in the clause's condition object, and excluded
+/// again when the passed conditions don't match. Mirrors the deliverable
+/// engine's subset-match semantics (routes/assembly.rs::condition_matches).
+#[tokio::test]
+async fn test_get_clause_selection_conditional_default_gated_by_conditions() {
+    let c = client();
+
+    let created = create_test_clause(
+        &c,
+        Some(json!({
+            "is_default": true,
+            "conditions": { "min_area": 500, "project_type": "hospitality" }
+        })),
+    )
+    .await;
+    let clause_full_id = created["data"]["id"].as_str().unwrap().to_string();
+    let clause_key = clause_full_id.trim_start_matches("clause:").to_string();
+
+    let fee_key = "delete-me-cond-sel-000";
+
+    // No conditions passed -> excluded despite is_default=true.
+    let no_cond = fetch_selection(&c, fee_key).await;
+    let sel_no_cond = no_cond["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["clause_id"].as_str() == Some(clause_key.as_str()))
+        .expect("clause must appear in selection (no conditions)");
+    assert_eq!(
+        sel_no_cond["included"].as_bool(),
+        Some(false),
+        "conditional default clause must be excluded when no conditions are known"
+    );
+
+    // Matching conditions (subset match; extra request keys ignored) -> included.
+    let matching = json!({ "min_area": 500, "project_type": "hospitality", "extra": "ignored" });
+    let match_resp = fetch_selection_with_conditions(&c, fee_key, &matching).await;
+    let sel_match = match_resp["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["clause_id"].as_str() == Some(clause_key.as_str()))
+        .expect("clause must appear in selection (matching conditions)");
+    assert_eq!(
+        sel_match["included"].as_bool(),
+        Some(true),
+        "conditional default clause must be included when conditions match"
+    );
+
+    // Non-matching conditions -> excluded.
+    let non_matching = json!({ "min_area": 200, "project_type": "residential" });
+    let nomatch_resp = fetch_selection_with_conditions(&c, fee_key, &non_matching).await;
+    let sel_nomatch = nomatch_resp["selections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["clause_id"].as_str() == Some(clause_key.as_str()))
+        .expect("clause must appear in selection (non-matching conditions)");
+    assert_eq!(
+        sel_nomatch["included"].as_bool(),
+        Some(false),
+        "conditional default clause must be excluded when conditions don't match"
+    );
+
+    cleanup_clause(&c, &clause_key).await;
+}
+
+/// Malformed `conditions` query JSON is rejected with 400, not silently ignored.
+#[tokio::test]
+async fn test_get_clause_selection_rejects_invalid_conditions_json() {
+    let resp = client()
+        .get(format!(
+            "{}/scope/{}/clause-selection",
+            base_url(),
+            TEST_FEE_KEY
+        ))
+        .header("X-API-Key", api_key())
+        .query(&[("conditions", "not-json")])
+        .send()
+        .await
+        .expect("GET with invalid conditions failed");
+
+    assert_eq!(
+        resp.status(),
+        400,
+        "invalid conditions JSON must be rejected with 400"
+    );
 }
 
 /// POST saves a new selection and GET returns it with has_custom_selection=true.
@@ -175,7 +372,9 @@ async fn test_save_and_get_clause_selection() {
         "has_custom_selection must be true after saving"
     );
 
-    let selections = get_resp["selections"].as_array().expect("selections must be array");
+    let selections = get_resp["selections"]
+        .as_array()
+        .expect("selections must be array");
     let saved = selections
         .iter()
         .find(|s| s["clause_id"].as_str() == Some(first_id.trim_start_matches("clause:")))
@@ -361,7 +560,11 @@ async fn test_save_clause_selection_requires_auth() {
 #[tokio::test]
 async fn test_get_clause_selection_requires_auth() {
     let resp = client()
-        .get(format!("{}/scope/{}/clause-selection", base_url(), TEST_FEE_KEY))
+        .get(format!(
+            "{}/scope/{}/clause-selection",
+            base_url(),
+            TEST_FEE_KEY
+        ))
         .send()
         .await
         .expect("GET without auth failed");
@@ -408,9 +611,5 @@ async fn test_save_empty_fee_id_rejected() {
         .await
         .expect("POST with empty fee_id failed");
 
-    assert_eq!(
-        resp.status(),
-        400,
-        "empty fee_id must be rejected with 400"
-    );
+    assert_eq!(resp.status(), 400, "empty fee_id must be rejected with 400");
 }

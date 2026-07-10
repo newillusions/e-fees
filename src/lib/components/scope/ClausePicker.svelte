@@ -163,7 +163,8 @@
   {:else}
     {#if !hasCustomSelection}
       <div class="clause-picker-hint">
-        All clauses included by default. Deselect any you want to exclude from generation.
+        Default clauses are pre-selected from the clause library. Toggle any clause to customize
+        the selection for this proposal.
       </div>
     {/if}
 
