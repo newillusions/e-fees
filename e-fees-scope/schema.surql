@@ -142,3 +142,21 @@ DEFINE FIELD stages_snapshot  ON scope_assembly TYPE option<array<string>>;
 -- ============================================================
 DEFINE FIELD selected_clauses   ON scope_assembly TYPE option<array<object>> FLEXIBLE;
 DEFINE FIELD selected_clauses.* ON scope_assembly TYPE object FLEXIBLE;
+
+-- ============================================================
+-- Clause corpus usage stats (Stage 3 - clause suggestion mining)
+--
+-- One row per library clause, record id = the clause's own key (1:1 by
+-- construction, no separate unique index needed). Populated by the
+-- one-time (then periodic) mine_clause_usage job - see
+-- docs/plans/2026-07-10-clause-selection-stage3-design.md.
+-- ============================================================
+DEFINE TABLE IF NOT EXISTS clause_corpus_stat SCHEMAFULL;
+
+DEFINE FIELD IF NOT EXISTS clause_id ON TABLE clause_corpus_stat TYPE record<clause>;
+DEFINE FIELD IF NOT EXISTS category ON TABLE clause_corpus_stat TYPE string;
+DEFINE FIELD IF NOT EXISTS usage_count ON TABLE clause_corpus_stat TYPE int DEFAULT 0;
+DEFINE FIELD IF NOT EXISTS sample_project_numbers ON TABLE clause_corpus_stat TYPE array<string> DEFAULT [];
+DEFINE FIELD IF NOT EXISTS classified_at ON TABLE clause_corpus_stat TYPE datetime DEFAULT time::now();
+
+DEFINE INDEX IF NOT EXISTS idx_clause_corpus_stat_clause ON TABLE clause_corpus_stat FIELDS clause_id;

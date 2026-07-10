@@ -170,4 +170,60 @@ describe('scope API', () => {
       });
     });
   });
+
+  describe('getClauseSuggestions', () => {
+    it('fetches the suggestions endpoint for the given fee', async () => {
+      const mockResponse = {
+        fee_id: '25_97101_1',
+        suggestions: [
+          {
+            clause_id: 'abc123',
+            title: 'Fees / Payment Terms',
+            category: 'Commercial',
+            usage_count: 12,
+            sample_project_numbers: ['24-96603', '25-97103'],
+            classified_at: '2026-07-10T16:44:11.102650516Z'
+          }
+        ]
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const { getClauseSuggestions } = await import('./scope');
+      const result = await getClauseSuggestions('25_97101_1');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-suggestions');
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('returns an empty suggestions array without throwing when unmined', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ fee_id: '25_97101_1', suggestions: [] })
+      });
+
+      const { getClauseSuggestions } = await import('./scope');
+      const result = await getClauseSuggestions('25_97101_1');
+
+      expect(result.suggestions).toEqual([]);
+    });
+
+    it('propagates errors on non-ok responses', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: () => Promise.resolve({ message: 'DB error' })
+      });
+
+      const { getClauseSuggestions } = await import('./scope');
+      await expect(getClauseSuggestions('25_97101_1')).rejects.toThrow('DB error');
+    });
+  });
 });

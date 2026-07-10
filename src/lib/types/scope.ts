@@ -231,6 +231,27 @@ export interface ClauseSelectionResponse {
   selections: ClauseSelectionItem[];
 }
 
+/**
+ * A ranked clause suggestion from GET /scope/{fee_id}/clause-suggestions
+ * (Stage 3). Mined from historical FP corpus usage frequency - see
+ * docs/plans/2026-07-10-clause-selection-stage3-design.md. Never filtered
+ * by discipline (the clause library has no discipline field); always an
+ * explicit opt-in add, never auto-included.
+ */
+export interface ClauseSuggestion {
+  clause_id: string;
+  title: string;
+  category: string;
+  usage_count: number;
+  sample_project_numbers: string[];
+  classified_at: string;
+}
+
+export interface ClauseSuggestionsResponse {
+  fee_id: string;
+  suggestions: ClauseSuggestion[];
+}
+
 // ── API response wrappers ───────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

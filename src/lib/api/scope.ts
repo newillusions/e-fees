@@ -22,7 +22,8 @@ import type {
   DeliverableAnalytics,
   Clause,
   SaveClauseSelectionRequest,
-  ClauseSelectionResponse
+  ClauseSelectionResponse,
+  ClauseSuggestionsResponse
 } from '$lib/types/scope';
 
 const SCOPE_API_URL = import.meta.env.VITE_SCOPE_API_URL || 'http://10.0.21.81:3201';
@@ -248,4 +249,14 @@ export async function getClauseSelection(
       ? '?' + new URLSearchParams({ conditions: JSON.stringify(conditions) }).toString()
       : '';
   return scopeRequest<ClauseSelectionResponse>(`/scope/${feeId}/clause-selection${qs}`);
+}
+
+/**
+ * Get ranked clause suggestions for a fee proposal (Stage 3), mined from
+ * historical FP corpus usage frequency. Excludes clauses already included
+ * in the fee's current selection. Returns an empty list (not an error) when
+ * the mining job has not run yet.
+ */
+export async function getClauseSuggestions(feeId: string): Promise<ClauseSuggestionsResponse> {
+  return scopeRequest<ClauseSuggestionsResponse>(`/scope/${feeId}/clause-suggestions`);
 }

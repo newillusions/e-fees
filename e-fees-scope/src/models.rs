@@ -307,3 +307,18 @@ pub struct SaveClauseSelectionRequest {
     pub fee_id: String,
     pub selections: Vec<ClauseSelectionEntry>,
 }
+
+// ── Clause Corpus Stat models (Stage 3) ──────────────────────────────────
+
+/// A clause usage-frequency stat mined from the FP corpus (Stage 3, Option
+/// B). One row per library clause - record id equals the clause's own key.
+/// Populated by the `mine_clause_usage` one-time (then periodic) job.
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct ClauseCorpusStat {
+    pub id: RecordId,
+    pub clause_id: RecordId,
+    pub category: String,
+    pub usage_count: i64,
+    pub sample_project_numbers: Vec<String>,
+    pub classified_at: Datetime,
+}

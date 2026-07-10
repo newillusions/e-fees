@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { getClauseSelection, saveClauseSelection } from '$lib/api/scope';
-  import type { ClauseSelectionItem } from '$lib/types/scope';
+  import { getClauseSelection, saveClauseSelection, getClauseSuggestions } from '$lib/api/scope';
+  import type { ClauseSelectionItem, ClauseSuggestion } from '$lib/types/scope';
 
   let {
     feeId,
@@ -19,8 +19,11 @@
   let saveError = $state<string | null>(null);
   let hasCustomSelection = $state(false);
 
-  /** Working copy of selections — mutated by user interactions. */
+  /** Working copy of selections - mutated by user interactions. */
   let selections = $state<ClauseSelectionItem[]>([]);
+
+  /** Stage 3: ranked clause suggestions mined from historical proposal usage. */
+  let suggestions = $state<ClauseSuggestion[]>([]);
 
   /** Track which clause bodies the user has expanded to edit. */
   let expandedIds = $state<Set<string>>(new Set());
@@ -52,11 +55,20 @@
 
   let includedCount = $derived(selections.filter((s) => s.included).length);
 
+  /** Suggestions not already included in the current working selection. */
+  let visibleSuggestions = $derived(
+    suggestions.filter((sug) => {
+      const sel = selections.find((s) => s.clause_id === sug.clause_id);
+      return !sel || !sel.included;
+    })
+  );
+
   // ── Init ───────────────────────────────────────────────────────────
 
   $effect(() => {
     if (feeId) {
       loadSelections();
+      loadSuggestions();
     }
   });
 
@@ -74,12 +86,35 @@
     }
   }
 
+  /**
+   * Best-effort load: suggestions are a supplementary affordance, not a
+   * required part of the picker, so a failure here does not block or error
+   * out the main selection UI. Empty (unmined) is the expected steady state
+   * before the mining job has run - not treated as an error either way.
+   */
+  async function loadSuggestions() {
+    try {
+      const resp = await getClauseSuggestions(feeId);
+      suggestions = resp.suggestions;
+    } catch {
+      suggestions = [];
+    }
+  }
+
   // ── Actions ────────────────────────────────────────────────────────
 
   function toggleClause(clauseId: string) {
     const idx = selections.findIndex((s) => s.clause_id === clauseId);
     if (idx !== -1) {
       selections[idx] = { ...selections[idx], included: !selections[idx].included };
+    }
+  }
+
+  /** Explicit opt-in add from the Suggested section - never auto-included. */
+  function includeSuggestedClause(clauseId: string) {
+    const idx = selections.findIndex((s) => s.clause_id === clauseId);
+    if (idx !== -1) {
+      selections[idx] = { ...selections[idx], included: true };
     }
   }
 
@@ -165,6 +200,25 @@
       <div class="clause-picker-hint">
         Default clauses are pre-selected from the clause library. Toggle any clause to customize
         the selection for this proposal.
+      </div>
+    {/if}
+
+    {#if visibleSuggestions.length > 0}
+      <div class="clause-suggestions">
+        <div class="clause-suggestions-label">Suggested from past proposals</div>
+        {#each visibleSuggestions.slice(0, 5) as sug (sug.clause_id)}
+          <div class="clause-suggestion-row">
+            <span class="clause-suggestion-title">{sug.title}</span>
+            <span class="clause-suggestion-usage">used in {sug.usage_count} past proposal{sug.usage_count === 1 ? '' : 's'}</span>
+            <button
+              class="emittiv-btn btn-xs btn-ghost"
+              onclick={() => includeSuggestedClause(sug.clause_id)}
+              disabled={saving}
+            >
+              + Add
+            </button>
+          </div>
+        {/each}
       </div>
     {/if}
 
@@ -316,6 +370,46 @@
 
   .save-error {
     margin-top: 4px;
+  }
+
+  .clause-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 8px;
+    background: var(--black);
+    border-radius: 4px;
+    border-left: 2px solid var(--splash);
+  }
+
+  .clause-suggestions-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--light);
+    margin-bottom: 2px;
+  }
+
+  .clause-suggestion-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .clause-suggestion-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--lighter);
+  }
+
+  .clause-suggestion-usage {
+    font-size: 10px;
+    color: var(--light);
+    flex-shrink: 0;
   }
 
   .clause-picker-search {
