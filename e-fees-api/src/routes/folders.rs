@@ -38,7 +38,8 @@ pub async fn create_folder(
 
     // DB stores number.id with underscores (25_97101), script expects dashes (25-97101)
     let number = project.number.id.replace('_', "-");
-    let name = &project.name;
+    // Canonical project folder is `{number} {name_short}`, never the legal/long `name`.
+    let name = &project.name_short;
 
     // Sanitize: only allow alphanumeric and dash
     if !number.chars().all(|c| c.is_alphanumeric() || c == '-') {

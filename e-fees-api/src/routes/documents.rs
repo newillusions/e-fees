@@ -99,9 +99,10 @@ pub async fn upload_document(
     let subfolder_str = subfolder_raw.unwrap_or_else(|| DEFAULT_SUBFOLDER.to_string());
     let subfolder = validate_subfolder(&subfolder_str)?;
 
-    // Build destination path
+    // Build destination path - canonical project folder is `{number} {name_short}`,
+    // never the legal/long `name` (must match folders.rs::create_folder).
     let number = clean_number_for_path(&project.number.id);
-    let name = &project.name;
+    let name = &project.name_short;
     let relative_path = format!("01 RFPs/{} {}/{}/{}", number, name, subfolder, filename);
     let dest_dir = format!(
         "{}/01 RFPs/{} {}/{}",

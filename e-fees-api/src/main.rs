@@ -201,7 +201,9 @@ async fn main() {
         )
         .route(
             "/projects/{id}/documents",
-            axum::routing::post(routes::documents::upload_document),
+            // Default axum body limit is 2 MB; raise it here so multi-MB PDFs upload cleanly.
+            axum::routing::post(routes::documents::upload_document)
+                .layer(axum::extract::DefaultBodyLimit::max(25 * 1024 * 1024)),
         )
         .route(
             "/fees",
