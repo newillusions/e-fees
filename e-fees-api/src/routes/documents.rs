@@ -6,7 +6,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use axum_extra::extract::Multipart;
 use serde_json::{json, Value};
-use tracing::info;
+use tracing::{info, warn};
 
 use e_fees_core::export::clean_number_for_path;
 use e_fees_core::models::Project;
@@ -120,12 +120,19 @@ pub async fn upload_document(
     // Write file via stdin pipe
     ssh.write_file(&dest_file, &data).await?;
 
-    // Trigger Nextcloud rescan
-    let nc_scan_path = format!(
-        "/emittiv/__groupfolders/1/01 Projects/01 RFPs/{} {}/{}",
-        number, name, subfolder
-    );
-    ssh.nc_rescan(&nc_scan_path).await?;
+    // Trigger Nextcloud rescan (best-effort - never fail an otherwise-successful
+    // upload over a rescan hiccup, matching fee_export.rs's export_fee_json /
+    // export_template. BUG FIX (2026-07-15): this path was missing the fixed
+    // `/nc/` groupfolder-mount segment that every other rescan call site uses
+    // (see ProposalPaths::new's `rescan_subpath` - "fixed groupfolder prefix").
+    // Without it, occ's --path target never resolves, so the targeted scan
+    // reliably fails; combined with the `?` this used to carry (unlike the
+    // best-effort pattern everywhere else), a successful file write still
+    // surfaced as a 503 to the caller once the mismatched rescan choked.
+    let nc_scan_path = document_nc_scan_path(&number, name, &subfolder);
+    if let Err(e) = ssh.nc_rescan(&nc_scan_path).await {
+        warn!("NC rescan failed (non-fatal): {}", e.message);
+    }
 
     info!(
         "Uploaded document '{}' ({} bytes) to project {} ({})",
@@ -139,6 +146,15 @@ pub async fn upload_document(
         "path": relative_path,
         "size_bytes": size_bytes,
     })))
+}
+
+/// Build the Nextcloud `occ files:scan --path=` target for an uploaded
+/// document. Mirrors `ProposalPaths::rescan_subpath` in fee_export.rs, which
+/// hardcodes the same fixed `/emittiv/nc/__groupfolders/1/01 Projects` prefix
+/// (the Nextcloud-side groupfolder mount, distinct from the SSH filesystem
+/// `nc_base_path` used for the actual file write). The two must stay in sync.
+fn document_nc_scan_path(number: &str, name_short: &str, subfolder: &str) -> String {
+    format!("/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/{number} {name_short}/{subfolder}")
 }
 
 /// Strip path components from a filename and reject shell-unsafe characters.
@@ -187,6 +203,40 @@ fn validate_subfolder(path: &str) -> Result<String, ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---- document_nc_scan_path tests ----
+    //
+    // BUG regression (2026-07-15): the document-upload rescan path was missing
+    // the fixed `/nc/` groupfolder-mount segment that ProposalPaths::rescan_subpath
+    // (fee_export.rs, the proven-working reference - json-export writes to
+    // Nextcloud fine) always includes. Without it, occ's --path target never
+    // resolves, so every document upload's targeted Nextcloud rescan silently
+    // targeted a nonexistent path.
+
+    #[test]
+    fn document_nc_scan_path_includes_nc_groupfolder_prefix() {
+        let path = document_nc_scan_path(
+            "26-97108",
+            "Lulu Island Dhow",
+            "01 Client Info/01 Pre Award",
+        );
+        assert_eq!(
+            path,
+            "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/26-97108 Lulu Island Dhow/01 Client Info/01 Pre Award"
+        );
+    }
+
+    #[test]
+    fn document_nc_scan_path_matches_proposal_rescan_prefix() {
+        // Same number/name as fee_export.rs's own rescan_subpath test fixture -
+        // the two builders must agree on the shared `/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/...`
+        // prefix, differing only in the trailing subfolder segment.
+        let path = document_nc_scan_path("26-97104", "Lulu-Island-AV", "02 Proposal");
+        assert_eq!(
+            path,
+            "/emittiv/nc/__groupfolders/1/01 Projects/01 RFPs/26-97104 Lulu-Island-AV/02 Proposal"
+        );
+    }
 
     // ---- sanitize_filename tests ----
 

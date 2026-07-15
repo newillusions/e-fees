@@ -92,35 +92,89 @@ fn open_or_create_template(
         _ => {
             // Read the embedded template straight from memory — no temp file, so
             // concurrent exports can't race on a shared path.
-            umya_spreadsheet::reader::xlsx::read_reader(std::io::Cursor::new(EMBEDDED_TEMPLATE), true)
-                .map_err(|e| format!("Failed to read embedded template: {}", e))
+            umya_spreadsheet::reader::xlsx::read_reader(
+                std::io::Cursor::new(EMBEDDED_TEMPLATE),
+                true,
+            )
+            .map_err(|e| format!("Failed to read embedded template: {}", e))
         }
     }
 }
 
 /// Adjust template stage rows to match the actual stage count.
 ///
-/// The blank template ships with 4 stage rows (9–12). If the fee has more
+/// The blank template ships with 4 stage rows (9-12). If the fee has more
 /// design stages, new rows are inserted (formulas auto-adjust). If fewer,
-/// the extra template rows are cleared but **not** removed — umya-spreadsheet's
+/// the extra template rows are cleared but **not** removed - umya-spreadsheet's
 /// `remove_row` can crash on certain formula patterns. Leaving them blank is
 /// safe; the totals formula sums the populated range.
+///
+/// BUG FIX (2026-07-15, e-fees Pricing.xlsx export defect): `insert_new_row`
+/// shifts single-cell formula references correctly, but does **not** widen
+/// `SUM(range)` formulas whose original span ends exactly at the insertion
+/// point (e.g. the template's "Sub" row sums `C9:C12`; inserting rows at 13
+/// moves that formula down but leaves it summing only the original 4 rows,
+/// silently excluding every stage past the 4th from Subtotal/VAT/Grand
+/// Total/Remaining). Confirmed via direct inspection of generated workbook
+/// XML for a 6-stage fee. Fix: after inserting, explicitly rewrite the
+/// shifted Sub row's range formulas to span the full stage block.
 fn adjust_stage_rows(sheet: &mut umya_spreadsheet::structs::Worksheet, stage_count: u32) {
     if stage_count > TEMPLATE_STAGE_COUNT {
         let extra = stage_count - TEMPLATE_STAGE_COUNT;
-        // Insert after the last template stage row → pushes subtotal down
+        // Insert after the last template stage row - pushes subtotal down
         let insert_at = FIRST_STAGE_ROW + TEMPLATE_STAGE_COUNT;
         sheet.insert_new_row(&insert_at, &extra);
+        widen_subtotal_formulas(sheet, stage_count);
     } else if stage_count < TEMPLATE_STAGE_COUNT {
-        // Clear unused template stage rows (don't remove — avoids formula crash)
+        // Clear unused template stage rows (don't remove - avoids formula crash)
         for row in (FIRST_STAGE_ROW + stage_count)..(FIRST_STAGE_ROW + TEMPLATE_STAGE_COUNT) {
-            // Clear data columns: A, B, C–H, M, R
+            // Clear data columns: A, B, C-H, M, R
             for &col in &["A", "B", "C", "D", "E", "F", "G", "H", "M", "R"] {
                 let addr = format!("{}{}", col, row);
                 sheet.get_cell_value_mut(addr.as_str()).set_value("");
             }
         }
     }
+}
+
+/// Rewrite the "Sub" totals row's range formulas to span the full stage
+/// block after `insert_new_row` has shifted that row down.
+///
+/// The template's Sub row (originally row `FIRST_STAGE_ROW + TEMPLATE_STAGE_COUNT`)
+/// sums the 4 default stage rows via fixed ranges (`SUM(C9:C12)` etc). After
+/// inserting `stage_count - TEMPLATE_STAGE_COUNT` rows, the Sub row itself
+/// moves to `FIRST_STAGE_ROW + stage_count`, but umya-spreadsheet does not
+/// widen the range text - it stays pinned to the original 4-row span. This
+/// explicitly rewrites each affected formula to cover every stage row.
+fn widen_subtotal_formulas(sheet: &mut umya_spreadsheet::structs::Worksheet, stage_count: u32) {
+    let sub_row = FIRST_STAGE_ROW + stage_count;
+    let last_stage_row = sub_row - 1;
+
+    // Discipline amount columns C-H: SUM(C9:C{last_stage_row}) etc.
+    for &col in &["C", "D", "E", "F", "G", "H"] {
+        sheet
+            .get_cell_value_mut(format!("{}{}", col, sub_row).as_str())
+            .set_formula(format!(
+                "SUM({}{}:{}{})",
+                col, FIRST_STAGE_ROW, col, last_stage_row
+            ));
+    }
+
+    // M: stage percentage sum (should total 100% across all stages).
+    sheet
+        .get_cell_value_mut(format!("M{}", sub_row).as_str())
+        .set_formula(format!("SUM(M{}:M{})", FIRST_STAGE_ROW, last_stage_row));
+
+    // P: net-fee sum. Template starts at P8 (Mobilisation row), not
+    // FIRST_STAGE_ROW - preserve that lower bound.
+    sheet
+        .get_cell_value_mut(format!("P{}", sub_row).as_str())
+        .set_formula(format!("SUM(P8:P{})", last_stage_row));
+
+    // R: reimbursable costs per stage.
+    sheet
+        .get_cell_value_mut(format!("R{}", sub_row).as_str())
+        .set_formula(format!("SUM(R{}:R{})", FIRST_STAGE_ROW, last_stage_row));
 }
 
 /// Write config / header cells (target fee, discipline names, percentages, etc.).
@@ -383,7 +437,11 @@ mod tests {
         let fee = make_fee_with_n_stages(3); // fewer than TEMPLATE_STAGE_COUNT (4)
         let path = std::env::temp_dir().join("_efees_test_pri_3.xlsx");
         let result = generate_fee_template(&fee, &path, None);
-        assert!(result.is_ok(), "3-stage template failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "3-stage template failed: {:?}",
+            result.err()
+        );
         let bytes = std::fs::read(&path).unwrap();
         assert!(is_valid_xlsx(&bytes), "output must be a valid xlsx");
         let _ = std::fs::remove_file(&path);
@@ -394,7 +452,95 @@ mod tests {
         let fee = make_fee_with_n_stages(6); // more than TEMPLATE_STAGE_COUNT (4)
         let path = std::env::temp_dir().join("_efees_test_pri_6.xlsx");
         let result = generate_fee_template(&fee, &path, None);
-        assert!(result.is_ok(), "6-stage template failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "6-stage template failed: {:?}",
+            result.err()
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    // BUG regression (2026-07-15, Lulu Island dhow FP 26-97108): the Sub
+    // totals row's SUM ranges must widen to cover every inserted stage row,
+    // not stay pinned to the template's original 4-row span. Before the fix,
+    // `insert_new_row` shifted the Sub row down but left `SUM(C9:C12)` etc
+    // unexpanded, silently dropping stages 5+ from Subtotal/VAT/Grand Total.
+    #[test]
+    fn test_more_stages_widens_subtotal_formula_range() {
+        let fee = make_fee_with_n_stages(6); // 2 more than TEMPLATE_STAGE_COUNT (4)
+        let path = std::env::temp_dir().join("_efees_test_pri_subtotal_range.xlsx");
+        let result = generate_fee_template(&fee, &path, None);
+        assert!(
+            result.is_ok(),
+            "6-stage template failed: {:?}",
+            result.err()
+        );
+
+        let book = umya_spreadsheet::reader::xlsx::read(&path).expect("re-read output xlsx");
+        let sheet = book.get_sheet(&0).expect("sheet 0 exists");
+
+        // Sub row = FIRST_STAGE_ROW (9) + stage_count (6) = 15.
+        let sub_row = 15;
+        for col in ["C", "D", "E", "F", "G", "H"] {
+            let formula = sheet
+                .get_cell_value(format!("{}{}", col, sub_row).as_str())
+                .get_formula();
+            assert_eq!(
+                formula,
+                format!("SUM({}9:{}14)", col, col),
+                "column {} Sub-row formula must span all 6 stage rows (9-14), got: {}",
+                col,
+                formula
+            );
+        }
+        assert_eq!(
+            sheet
+                .get_cell_value(format!("M{}", sub_row).as_str())
+                .get_formula(),
+            "SUM(M9:M14)",
+            "stage-percentage Sub formula must span all 6 stage rows"
+        );
+        assert_eq!(
+            sheet
+                .get_cell_value(format!("P{}", sub_row).as_str())
+                .get_formula(),
+            "SUM(P8:P14)",
+            "net-fee Sub formula must span P8 (mobilisation) through the last stage row"
+        );
+        assert_eq!(
+            sheet
+                .get_cell_value(format!("R{}", sub_row).as_str())
+                .get_formula(),
+            "SUM(R9:R14)",
+            "reimbursable-cost Sub formula must span all 6 stage rows"
+        );
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    // BUG regression, fewer-stages side: with exactly the default stage
+    // count (4), the Sub row must remain untouched (no insert triggered,
+    // no widening needed) - guards against widen_subtotal_formulas firing
+    // when it shouldn't.
+    #[test]
+    fn test_default_stage_count_leaves_subtotal_formula_untouched() {
+        let fee = make_fee_with_n_stages(4);
+        let path = std::env::temp_dir().join("_efees_test_pri_default_subtotal.xlsx");
+        let result = generate_fee_template(&fee, &path, None);
+        assert!(
+            result.is_ok(),
+            "4-stage template failed: {:?}",
+            result.err()
+        );
+
+        let book = umya_spreadsheet::reader::xlsx::read(&path).expect("re-read output xlsx");
+        let sheet = book.get_sheet(&0).expect("sheet 0 exists");
+        assert_eq!(
+            sheet.get_cell_value("C13").get_formula(),
+            "SUM(C9:C12)",
+            "default 4-stage Sub row must keep the template's original range"
+        );
+
         let _ = std::fs::remove_file(&path);
     }
 
