@@ -15,6 +15,14 @@ pub(crate) fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
+/// Primary Nextcloud rescan command: shallow groupfolders scan via the
+/// linuxserver.io `occ` wrapper (`/usr/bin/occ`, no `php` prefix).
+pub(crate) const NC_RESCAN_SHALLOW_CMD: &str =
+    "docker exec nextcloud-e occ groupfolders:scan 1 --shallow";
+
+/// Escalation fallback: full (non-shallow) groupfolders scan, same binary.
+pub(crate) const NC_RESCAN_FULL_CMD: &str = "docker exec nextcloud-e occ groupfolders:scan 1";
+
 /// SSH operations helper for executing commands and managing files on a remote host.
 pub struct SshOps {
     host: String,
@@ -196,48 +204,59 @@ impl SshOps {
         Ok(())
     }
 
-    /// Trigger a Nextcloud rescan of `subpath`.
+    /// Trigger a Nextcloud rescan of group folder 1 (`--shallow`), with a full
+    /// (non-shallow) rescan as an escalation fallback if the shallow scan fails.
     ///
-    /// Wraps the occ command in `sh -c` inside docker exec to handle paths with
-    /// spaces correctly. Falls back to `--shallow` on group folder 1 if targeted
-    /// scan fails.
+    /// `subpath` is accepted for call-site context/logging only - it is not
+    /// (and cannot be) passed to `occ`. See the invocation note below.
     ///
-    /// KNOWN ISSUE (flagged 2026-07-16, tracked as mission-record next-step
-    /// "rescan-endpoint"): the targeted scan below is suspected broken on the
-    /// live `nextcloud-e` container (a linuxserver.io image) for two reasons -
-    /// `php /var/www/html/occ` may not be the right invocation for that image
-    /// (its wrapper is typically at `/usr/bin/occ`), and `files:scan --path=`
-    /// cannot address paths inside a groupfolder mount at all. If true, every
-    /// call here has been silently falling through to the `--shallow`
-    /// fallback below since this function was introduced - it is a
-    /// best-effort call site (all callers treat failure as non-fatal), so
-    /// this has not broken uploads/exports, only made rescans less targeted
-    /// than intended. Not fixed as part of this doc-only audit pass - fixing
-    /// the command requires verifying the actual occ binary path on the
-    /// running container, which is a behavior change out of scope here.
+    /// VERIFIED 2026-07-16 (live, obs:29oahetnk6c6g2rax44f) against the deployed
+    /// `nextcloud-e` container (linuxserver.io image): the previous
+    /// `php /var/www/html/occ files:scan --path=<subpath>` invocation failed
+    /// unconditionally - that image's `occ` is a shell wrapper at `/usr/bin/occ`
+    /// (invoke as plain `occ`, no `php` prefix), and `files:scan --path=` cannot
+    /// address a groupfolder-mounted path at all (errors "Unknown user"). The
+    /// old fallback (`php occ groupfolders:scan 1 --shallow`) carried the same
+    /// `php`-prefix defect and also failed. Every call site has been
+    /// warn-and-continue (non-fatal) since introduction, so this was silent:
+    /// every rescan since inception has failed.
     pub async fn nc_rescan(&self, subpath: &str) -> Result<(), ApiError> {
-        let inner_cmd = format!(
-            "php /var/www/html/occ files:scan --path={}",
-            shell_quote(subpath)
-        );
-        let targeted_cmd = format!("docker exec nextcloud-e sh -c {}", shell_quote(&inner_cmd));
-        if self.exec(&targeted_cmd).await.is_ok() {
+        if self.exec(NC_RESCAN_SHALLOW_CMD).await.is_ok() {
             return Ok(());
         }
 
         warn!(
-            "nc_rescan: targeted scan failed for {}, falling back to --shallow on group folder 1",
+            "nc_rescan: shallow scan failed for {}, escalating to full groupfolders scan",
             subpath
         );
-        let fallback_cmd = "docker exec nextcloud-e php occ groupfolders:scan 1 --shallow";
-        self.exec(fallback_cmd).await?;
+        self.exec(NC_RESCAN_FULL_CMD).await?;
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::shell_quote;
+    use super::{shell_quote, NC_RESCAN_FULL_CMD, NC_RESCAN_SHALLOW_CMD};
+
+    #[test]
+    fn test_nc_rescan_shallow_cmd_uses_occ_wrapper_not_php() {
+        assert_eq!(
+            NC_RESCAN_SHALLOW_CMD,
+            "docker exec nextcloud-e occ groupfolders:scan 1 --shallow"
+        );
+        assert!(!NC_RESCAN_SHALLOW_CMD.contains("php"));
+        assert!(!NC_RESCAN_SHALLOW_CMD.contains("files:scan"));
+    }
+
+    #[test]
+    fn test_nc_rescan_full_cmd_uses_occ_wrapper_not_php() {
+        assert_eq!(
+            NC_RESCAN_FULL_CMD,
+            "docker exec nextcloud-e occ groupfolders:scan 1"
+        );
+        assert!(!NC_RESCAN_FULL_CMD.contains("php"));
+        assert!(!NC_RESCAN_FULL_CMD.contains("--shallow"));
+    }
 
     #[test]
     fn test_shell_quote_simple() {
