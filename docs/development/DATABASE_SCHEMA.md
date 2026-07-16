@@ -1,15 +1,27 @@
 # Fee Proposal App - Database Schema Documentation
 
+> **Doc audit note (2026-07-16):** this file's connection details, status enums, and
+> "Current Data Status" snapshot were stale (predated at least two status-enum
+> revisions and an IP migration) and have been corrected against the live
+> source of truth: `e-fees-api/src/validation.rs` (status enums) and
+> `CLAUDE.md` (connection info). Table structure (`DEFINE TABLE`/`DEFINE FIELD`)
+> blocks below are illustrative of the general shape, not verified against a
+> live `INFO FOR TABLE` dump - treat them as a starting reference, not a
+> guaranteed-current schema. `fee` and scope-service tables are SCHEMALESS in
+> practice (see CLAUDE.md "Critical query patterns"), so the `fee` block's
+> `DEFINE FIELD ... ASSERT` lines are historical/aspirational, not enforced.
+
 ## Database Connection Details
 
-**SurrealDB Instance**: `ws://10.0.1.17:8000`  
-**Namespace**: `emittiv`  
-**Database**: `projects`  
-**Authentication**: User-based (martin/password via environment variables)
+**SurrealDB Instance (prod)**: `ws://10.0.23.11:8000` (SurrealDB 3.1.2)
+**SurrealDB Instance (dev)**: `ws://10.0.23.12:8000` (SurrealDB 3.1.4, ns `emittiv_dev`) - a point release ahead of prod; don't assume schema/behavior parity without checking both directly
+**Namespace**: `emittiv` (prod) / `emittiv_dev` (dev)
+**Database**: `projects`
+**Authentication**: Per-app SurrealDB user via environment variables (`SURREAL_USER`/`SURREAL_PASS` for e-fees-api, see `e-fees-api/.env.example`)
 
 ## Database Overview
 
-The database contains **6 main tables** with **27 performance indexes** across all tables. All tables use auto-managed timestamps and have proper foreign key relationships.
+The database contains 6 main application tables (`projects`, `fee`, `company`, `contacts`, `country`, `currency`) plus the e-fees-scope service's own tables (`clause`, `scope_assembly`, `clause_corpus_stat`, etc. - see `e-fees-scope/schema.surql`, not covered by this document). All tables use auto-managed timestamps and record-link foreign keys.
 
 ---
 
@@ -25,7 +37,8 @@ The database contains **6 main tables** with **27 performance indexes** across a
 DEFINE TABLE projects SCHEMAFULL;
 DEFINE FIELD name ON projects TYPE string ASSERT $value != NONE AND string::len($value) > 0;
 DEFINE FIELD name_short ON projects TYPE string ASSERT $value != NONE;
-DEFINE FIELD status ON projects TYPE string ASSERT $value INSIDE ['Draft', 'RFP', 'Active', 'On Hold', 'Completed', 'Cancelled'] DEFAULT 'Draft';
+DEFINE FIELD status ON projects TYPE string ASSERT $value INSIDE ['Lead', 'RFP', 'Submitted', 'Awarded', 'Design', 'Construction', 'Completed', 'Lost', 'No Response', 'Cancelled', 'On Hold', 'Superseded'] DEFAULT 'Lead';
+-- ^ current enum per e-fees-api/src/validation.rs PROJECT_STATUSES (source of truth is src/types/database.ts on the desktop side)
 DEFINE FIELD area ON projects TYPE string ASSERT $value != NONE;
 DEFINE FIELD city ON projects TYPE string ASSERT $value != NONE;
 DEFINE FIELD country ON projects TYPE string ASSERT $value != NONE;
@@ -92,7 +105,10 @@ DEFINE FIELD number ON fee TYPE string ASSERT $value != NONE;
 DEFINE FIELD project_id ON fee TYPE record<projects> ASSERT $value != NONE;
 DEFINE FIELD company_id ON fee TYPE record<company> ASSERT $value != NONE;
 DEFINE FIELD contact_id ON fee TYPE record<contacts> ASSERT $value != NONE;
-DEFINE FIELD status ON fee TYPE string ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Awarded', 'Completed', 'Lost', 'Cancelled', 'On Hold', 'Revised'] DEFAULT 'Draft';
+DEFINE FIELD status ON fee TYPE string ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Accepted', 'Rejected', 'No Response', 'Superseded'] DEFAULT 'Draft';
+-- ^ current enum per e-fees-api/src/validation.rs FEE_STATUSES. Note: `fee` is SCHEMALESS
+-- in the live DB (CLAUDE.md), so this ASSERT is enforced at the API/app validation layer,
+-- not by a live SurrealDB schema constraint.
 DEFINE FIELD issue_date ON fee TYPE string ASSERT $value != NONE AND string::len($value) = 6;
 DEFINE FIELD activity ON fee TYPE option<string>;
 DEFINE FIELD package ON fee TYPE option<string>;
@@ -233,14 +249,15 @@ function generateNextProjectNumber(countryDialCode: number, year?: number): stri
 4. **Issue Dates**: Must be exactly 6 digits (YYMMDD format)
 5. **Sequence Numbers**: 1-999 range, but display as 2-digit padded
 
-### RFP Status Workflow
+### Fee Status Workflow
+
+There is no `rfp` table - the workflow below applies to the `fee` table's `status`
+field (project-level status is the separate `PROJECT_STATUSES` enum above):
 
 ```
-Draft → Active → Sent → Under Review → Negotiation → Awarded/Lost
-      ↓
-   Cancelled (can happen at any stage)
-      ↓  
-   Revised (when project restarted with new approach)
+Draft → Sent → Negotiation → Accepted/Rejected/No Response
+                    ↓
+                Superseded (when a new revision replaces this fee)
 ```
 
 ---
@@ -248,27 +265,24 @@ Draft → Active → Sent → Under Review → Negotiation → Awarded/Lost
 ## Database Relationships
 
 ```
-projects ←──── rfp ────→ company
+projects ←──── fee ────→ company
                 ↓
              contacts ────→ company
 
 country ────→ projects (via country name)
-currency ────→ rfp (for pricing)
+currency ────→ fee (for pricing)
 ```
 
 ---
 
-## Current Data Status (June 2025)
+## Current Data Status
 
-**Production Database Contains**:
-- **48 Projects**: Mix of Active, Completed, Cancelled, RFP status
-- **37 RFPs**: Various stages from Draft to Awarded
-- **19 Companies**: UAE, Saudi, international clients
-- **Multiple Contacts**: Linked to their respective companies
-
-**Example Project Numbers in Use**:
-- UAE: 22-97113, 24-97101, 25-97105 (sequences: 13, 1, 5)
-- Saudi: 22-96601, 24-96606, 25-96601 (sequences: 1, 6, 1)
+Removed as of this audit (2026-07-16) - the "48 Projects / 37 RFPs / 19 Companies"
+snapshot here was dated June 2025 and had drifted from live counts, and there is no
+`rfp` table (see "Fee Status Workflow" above - this doc previously conflated `fee`
+with a nonexistent `rfp` table throughout). For a current count, query `GET /stats`
+on e-fees-api (`http://10.0.21.80:3200/stats`, requires `X-API-Key`) rather than
+trusting a static snapshot in this document.
 
 ---
 

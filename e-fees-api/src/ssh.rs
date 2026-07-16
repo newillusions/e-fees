@@ -201,6 +201,20 @@ impl SshOps {
     /// Wraps the occ command in `sh -c` inside docker exec to handle paths with
     /// spaces correctly. Falls back to `--shallow` on group folder 1 if targeted
     /// scan fails.
+    ///
+    /// KNOWN ISSUE (flagged 2026-07-16, tracked as mission-record next-step
+    /// "rescan-endpoint"): the targeted scan below is suspected broken on the
+    /// live `nextcloud-e` container (a linuxserver.io image) for two reasons -
+    /// `php /var/www/html/occ` may not be the right invocation for that image
+    /// (its wrapper is typically at `/usr/bin/occ`), and `files:scan --path=`
+    /// cannot address paths inside a groupfolder mount at all. If true, every
+    /// call here has been silently falling through to the `--shallow`
+    /// fallback below since this function was introduced - it is a
+    /// best-effort call site (all callers treat failure as non-fatal), so
+    /// this has not broken uploads/exports, only made rescans less targeted
+    /// than intended. Not fixed as part of this doc-only audit pass - fixing
+    /// the command requires verifying the actual occ binary path on the
+    /// running container, which is a behavior change out of scope here.
     pub async fn nc_rescan(&self, subpath: &str) -> Result<(), ApiError> {
         let inner_cmd = format!(
             "php /var/www/html/occ files:scan --path={}",
