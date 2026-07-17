@@ -99,3 +99,11 @@ target/
 
 # mine_clause_usage resumability checkpoint (local run state, not source)
 e-fees-scope/.mine-clause-usage-checkpoint.jsonl
+
+# Accidental git-internals / tool-binary tracking (2026-07-17 hygiene sweep, ~75MB):
+# .git.backup/ was a pre-BFG-cleanup backup of the whole .git dir, committed as
+# regular files in the "cleaned for public release" initial commit; bfg.jar and
+# the old beta .dmg are downloaded tool/build-output binaries, not source.
+.git.backup/
+archive/tools/bfg.jar
+archive/build-artifacts/*.dmg
