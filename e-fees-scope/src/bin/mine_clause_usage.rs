@@ -3,7 +3,7 @@
 //! docs/plans/2026-07-10-clause-selection-stage3-design.md.
 //!
 //! For each active library clause x each ingested corpus document, asks
-//! Ollama (qwen3.5:9b, "think": false - obs:5cpj0lskql7rmiaq9jbq) whether the
+//! Ollama (qwen3.6:27b, "think": false - obs:5cpj0lskql7rmiaq9jbq) whether the
 //! document contains a section functionally equivalent to the clause
 //! (meaning/purpose match, NOT verbatim text match - curated clause wording
 //! diverges from historical proposal wording per docs/clause-corpus/
@@ -157,7 +157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let surreal_pass = env::var("SURREAL_PASS").expect("SURREAL_PASS required");
     let ollama_url =
         env::var("OLLAMA_URL").unwrap_or_else(|_| "http://10.0.21.20:11434".to_string());
-    let ollama_model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen3.5:9b".to_string());
+    let ollama_model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen3.6:27b".to_string());
 
     let clause_limit: Option<usize> = env::var("MINE_CLAUSE_LIMIT").ok().and_then(|v| v.parse().ok());
     let doc_limit: Option<usize> = env::var("MINE_DOC_LIMIT").ok().and_then(|v| v.parse().ok());

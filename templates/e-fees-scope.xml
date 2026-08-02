@@ -83,9 +83,9 @@ Generate API key: openssl rand -hex 16</Overview>
     Description="Ollama API URL for LLM scope generation" Type="Variable" Display="always"
     Required="true" Mask="false">http://10.0.21.20:11434</Config>
 
-  <Config Name="OLLAMA_MODEL" Target="OLLAMA_MODEL" Default="qwen3.5:9b" Mode=""
+  <Config Name="OLLAMA_MODEL" Target="OLLAMA_MODEL" Default="qwen3.6:27b" Mode=""
     Description="Ollama model for scope text generation" Type="Variable" Display="always"
-    Required="true" Mask="false">qwen3.5:9b</Config>
+    Required="true" Mask="false">qwen3.6:27b</Config>
 
   <Config Name="DOCLING_URL" Target="DOCLING_URL" Default="http://10.0.21.42:5001" Mode=""
     Description="Docling document processing URL" Type="Variable" Display="always"

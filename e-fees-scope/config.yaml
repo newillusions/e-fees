@@ -9,7 +9,7 @@ database:
 
 ollama:
   url: "http://10.0.21.20:11434"
-  model: "qwen3.5:9b"
+  model: "qwen3.6:27b"
 
 docling:
   url: "http://10.0.21.42:5001"

@@ -65,7 +65,7 @@ impl Config {
         );
         defaults.insert(
             "ollama.model".to_string(),
-            serde_yaml::Value::String("qwen3.5:9b".to_string()),
+            serde_yaml::Value::String("qwen3.6:27b".to_string()),
         );
         defaults.insert(
             "docling.url".to_string(),
@@ -127,7 +127,7 @@ impl Config {
 
         let ollama_model = env::var("OLLAMA_MODEL").unwrap_or_else(|_| {
             cm.get_str("ollama.model")
-                .unwrap_or_else(|| "qwen3.5:9b".to_string())
+                .unwrap_or_else(|| "qwen3.6:27b".to_string())
         });
 
         let docling_url = env::var("DOCLING_URL").unwrap_or_else(|_| {
