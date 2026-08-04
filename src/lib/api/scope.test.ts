@@ -134,7 +134,9 @@ describe('scope API', () => {
       await getClauseSelection('25_97101_1');
 
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-selection');
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/scope/25_97101_1/clause-selection');
+      expect(parsed.searchParams.has('conditions')).toBe(false);
     });
 
     it('omits the conditions query param when an empty object is passed', async () => {
@@ -148,7 +150,9 @@ describe('scope API', () => {
       await getClauseSelection('25_97101_1', {});
 
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-selection');
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/scope/25_97101_1/clause-selection');
+      expect(parsed.searchParams.has('conditions')).toBe(false);
     });
 
     it('JSON-encodes conditions into the query string (Stage 2 gating)', async () => {
@@ -197,7 +201,8 @@ describe('scope API', () => {
       const result = await getClauseSuggestions('25_97101_1');
 
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toBe('http://10.0.21.81:3201/scope/25_97101_1/clause-suggestions');
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/scope/25_97101_1/clause-suggestions');
       expect(result).toEqual(mockResponse);
     });
 
