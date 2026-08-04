@@ -47,6 +47,21 @@ jobs:
           apt-get install -y -qq --no-install-recommends ca-certificates curl build-essential pkg-config libssl-dev
           update-ca-certificates
 
+      # e-fees-api/Cargo.toml declares emittiv-container-utils as a PATH dep
+      # (../../../container-utils/rust) - present locally as a sibling repo, absent
+      # in CI's single-repo checkout. Clone it to the exact location the relative
+      # path resolves to (/workspace/container-utils). Same fix class as pa's
+      # ci.yml "Checkout container-utils" step - see its off-by-one warning.
+      - name: Checkout container-utils
+        run: |
+          set -e
+          TARGET="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/container-utils"
+          echo "Cloning container-utils to: $TARGET"
+          git clone --depth 1 https://forge.mms.name/emittiv/container-utils.git "$TARGET"
+          test -f "$TARGET/rust/Cargo.toml" || { echo "ERROR: rust/Cargo.toml not found under $TARGET"; ls -la "$TARGET" || true; exit 1; }
+          EXPECTED="$(cd "$GITHUB_WORKSPACE/e-fees-api/../../../container-utils/rust" && pwd)"
+          echo "Cargo path dep resolves to: $EXPECTED"
+
       - name: Install Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
