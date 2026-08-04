@@ -44,7 +44,7 @@ jobs:
       - name: Install build tooling
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends ca-certificates curl build-essential pkg-config libssl-dev
+          apt-get install -y -qq --no-install-recommends ca-certificates curl git build-essential pkg-config libssl-dev
           update-ca-certificates
 
       # e-fees-api/Cargo.toml declares emittiv-container-utils as a PATH dep
