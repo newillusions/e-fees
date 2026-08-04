@@ -102,6 +102,14 @@
     {/if}
   {/snippet}
 
+  <div class="emittiv-alert emittiv-alert--sm emittiv-alert--info mb-2">
+    Costs added here (document purchases, samples, travel) are <strong>desktop-only</strong> -
+    they never appear in the merged client proposal (the InDesign workbook has no costs/reimbursables
+    sheet). If a bought-in cost (e.g. a sub-consultant study) should show as a client-facing line
+    item, model it as its own <strong>discipline</strong> in the Disciplines tab instead, marked up
+    accordingly - not here.
+  </div>
+
   <!-- Costs List -->
   {#if costs.length === 0}
     <div class="p-4 text-center">

@@ -1,0 +1,69 @@
+name: Test
+
+on:
+  push:
+    branches: [main, 'v*']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-frontend:
+    name: Frontend (check + vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm run test:run
+
+      # `npm run lint` is intentionally NOT run here: it's configured with
+      # --max-warnings 0 and the tree currently carries pre-existing lint debt
+      # (10 errors / 108 warnings, none introduced by this workflow) unrelated
+      # to this task's scope. Wiring it in would make CI red on day one for
+      # reasons no push actually caused. Tracked as a follow-up, not silently
+      # dropped - see PR body / KB observation.
+
+  test-rust:
+    name: Rust (cargo test, non-Tauri crates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # This runner's ubuntu-latest resolves to a minimal node:22-slim image with
+      # no C toolchain, no curl, and no Rust preinstalled (obs:63n2ct12y9l2201h97m8).
+      - name: Install build tooling
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends curl build-essential pkg-config libssl-dev
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      # Scoped to the crates this workflow can actually verify standalone: e-fees-core,
+      # e-fees-api, e-fees-scope. src-tauri (the desktop app) is deliberately excluded -
+      # it needs the full Tauri/webkit2gtk/PDFium apt dependency chain and this shared
+      # runner cannot reliably complete that compile (obs:4yw279akufkox1c3wnrm, redline's
+      # test-rust blocker: runner killed/OOM'd mid-compile on every attempt).
+      #
+      # --lib --bins only (not --tests): the tests/ integration suites in e-fees-api and
+      # e-fees-scope are black-box HTTP tests that require an already-running server
+      # process (API_BASE_URL/API_KEY) plus a live SurrealDB - see the "Requires the
+      # e-fees-scope service to be running" doc comment in e-fees-scope/tests/*.rs and the
+      # equivalent in e-fees-api/tests/integration_tests.rs. Standing up that lane (build +
+      # launch the server, provision/seed a DB, wait for readiness) is a real infra project,
+      # not part of this workflow's scope - tracked as a follow-up rather than silently
+      # dropped.
+      - name: Run tests (lib + bin targets)
+        run: cargo test -p e-fees-core -p e-fees-api -p e-fees-scope --lib --bins
