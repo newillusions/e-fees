@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectionStore } from '../stores';
-  import { checkDbConnection, saveSettings, getSettings } from '../api';
+  import { checkDbConnection, saveSettings, getSettings, reconnectDatabase } from '../api';
   import { fade, slide } from 'svelte/transition';
   import { logApiError } from '$lib/services/logger';
 
@@ -78,7 +78,18 @@
         project_folder_path: projectPath
       });
 
-      // Test connection
+      // check_db_connection only reports whether a DB client already exists -
+      // it never attempts a connection. No client exists yet on first run, so
+      // reconnect_database must build one from the settings just saved above
+      // before the check can mean anything.
+      try {
+        await reconnectDatabase();
+      } catch (reconnectError) {
+        connectionTestResult = 'error';
+        connectionTestMessage = `${reconnectError}`;
+        return;
+      }
+
       const isConnected = await checkDbConnection();
 
       if (isConnected) {
