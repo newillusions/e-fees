@@ -1,17 +1,18 @@
 # E-Fees Project Handover
 
 ## Current Status
-**PR #11 merged** into main (merge commit `2709805`, 2026-06-29T17:35:59+04) - container build CI workflow is live. `REGISTRY_TOKEN` was set on `emittiv/fee-prop` before merge.
-**PR #9 merged** into main (`4d9e59d`) - clause-selection Stage 1 (e-fees-scope) is live and deployed; verified via `/health` 200 + route registered (401 not 404) 2026-06-29.
-**PR #10 merged** into main (`4436a9a`) - typeahead endpoint is live.
+**v0.17.0 released (2026-08-12)** - desktop installer refreshed after 4.5 months (previous release was v0.16.0, 2026-03-28). Fixes the first-run setup wizard's connection test, which always failed on a fresh install (log-proven on Windows) because `testConnection()` never called `reconnect_database` before checking connection status. PR #28 merged (`833bf7f`); release commit `ef38301` + manifest sync `5dde60b`; `main` is at `5dde60b`.
 
-- **Versions** (unchanged): desktop 0.16.0, e-fees-api 0.3.4, e-fees-scope 0.2.0.
-- **`main` (origin, Forgejo)** is at `2709805` - all three PRs above are in. Local branch `main` tracks a stale `github` remote and is NOT current; resolve against `origin/main` (Forgejo), not local `main`, when checking what's shipped.
+- **Versions**: desktop **0.17.0**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (unchanged this session).
+- **`main` (origin, Forgejo)** is current source of truth - local `main` tracking is fixed (see `.claude/rules/judgment.md`), just confirm `git fetch && git log` before trusting it.
 - **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4). Prod: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2). Dev runs a newer SurrealDB point release than prod - don't assume schema/behavior parity between the two without checking both.
+- **macOS builds are Apple-Silicon-only** since 2026-06-29 (decision:boujy4d42i8w7zovifts) - Intel dropped from `.github/workflows/build-releases.yml`'s matrix. The macOS job's display name ("Build macOS (Apple Silicon + Intel)") is stale/never renamed; don't read it as a build failure when only 1 macOS asset set appears on a release.
 
 ## Last Session
-**Date**: 2026-06-29
-**Summary**: Authored container build CI workflow (.forgejo/workflows/build-containers.yml). Matrix job builds e-fees-api and e-fees-scope in parallel on ubuntu-latest with DinD docker daemon (10.0.23.137:2375). Safe push policy: login+push:latest only on main, PRs build-only. Also fixed e-fees-scope/Dockerfile (rust:1.89-slim→rust:slim + COPY Cargo.lock). PR #11 opened, CI run #1 GREEN (5m17s), then merged same day after REGISTRY_TOKEN was set. PR #9 (clause-selection Stage 1) also merged and deployed same day.
+**Date**: 2026-08-12
+**Summary**: Fixed `FirstRunSetup.svelte`'s `testConnection()` - it called `check_db_connection` (which only reports whether a DB client already exists, never attempts a connection) without ever calling `reconnect_database` first, so first-run Test always failed even with correct credentials. Added regression test `src/lib/components/FirstRunSetup.test.ts` (RED against the old code, GREEN after the fix; also added a local `Element.prototype.animate` polyfill since jsdom doesn't implement it and this is the first transition-using component with tests in the repo). Full battery green (`npm run test:run` 734/734, `npm run check` 0 errors, `cargo test -p app --lib` 97/0/5-ignored). PR #28 opened, CI green (run #20, 5m19s), squash-merged to main. Cut release v0.17.0 per `.claude/commands/release.md`: version bump (minor), tag pushed to origin+github, GitHub Actions build green on all 3 jobs, Forgejo release id 312 live with 5 assets, `update.json` auto-synced to GitHub by the workflow's own commit step.
+
+**Process note**: `git push github` needed a one-time local fix - `git config credential."https://github.com".helper "!gh auth git-credential"` (plain HTTPS push wasn't picking up `gh`'s stored auth). Full detail + KB observation: `observation:9gstxw3xdgl798lpomg5`.
 
 ## Key Context
 | Resource | Value |
@@ -21,15 +22,14 @@
 | API container | 10.0.21.80:3200 (e-fees-api 0.3.4) - `EFEES_API_KEY` |
 | Scope container | 10.0.21.81:3201 (e-fees-scope 0.2.0) - clause DB = prod |
 | Forgejo | forge.mms.name/emittiv/fee-prop |
-| KB obs (typeahead) | obs:yyba6std1nis8aayx3se |
-| KB obs (CI workflow) | obs:j3rwfa2yz724jxbrrkgq |
-| KB obs (clause-selection Stage 1 deploy) | obs:h1va1gwl1m4f7b0eg44c |
+| v0.17.0 release | https://forge.mms.name/emittiv/fee-prop/releases/tag/v0.17.0 |
+| KB obs (v0.17.0 release + first-run fix) | observation:9gstxw3xdgl798lpomg5 |
 
 ## Next Steps
-1. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line (see judgment.md - buy-ins are discipline lines, not reimbursable costs) + regenerate docs.
-2. **Clause-library backlog** - fix 4 divergent clauses (Defined Role, Fees/Payment Terms, Proposal Validity, Prepared By); supplement 4 thin; add 7 gap clauses (Scope & Services most urgent). Code/data already verified in dev (27/27 tests passing); the remaining gate is Martin's business-content review of 3 client-facing wording changes (payment 30→14d, validity 60d, Defined Role regs paragraph), not a technical blocker.
-3. **Clause Stage 2** - pre-fill ClausePicker from `is_default` + conditions (PR #9 has landed, this is now unblocked).
-4. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`.
+1. **Clause-library backlog** - fix 4 divergent clauses, supplement 4 thin, add 7 gap clauses. Code/data verified in dev; the remaining gate is Martin's business-content review of 3 client-facing wording changes (payment 30→14d, validity 60d, Defined Role regs paragraph), not a technical blocker. (as of 2026-08-12)
+2. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`. (as of 2026-08-12)
+3. **Stage 3 clause-usage mining** - corpus-ranked clause suggestions are operational (769 positive matches, 27 clause stats live); remaining is one verified real-proposal run end to end. (as of 2026-08-12)
+4. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line (see `judgment.md` - buy-ins are discipline lines, not reimbursable costs) + regenerate docs. (as of 2026-08-12)
 
 ## Open Follow-ups
 - Make e-fees-scope integration-test cleanup hard-delete (currently soft-delete → archived residue accumulates).
@@ -39,8 +39,8 @@
 - `kb_detect_project_tags` clobbers monorepo tags - do NOT run on e-fees.
 - SurrealDB type-check fn is `type::is_datetime()` (underscore), not `type::is::datetime`.
 - Critical query/SurrealValue patterns in CLAUDE.md §Critical query patterns.
-- Typeahead endpoint: route registered before `/projects/{id}` to avoid axum param shadowing.
 - Tacit judgment (proposal domain gotchas, deploy traps, cross-project consumer notes) lives in `.claude/rules/judgment.md` - read it before touching pricing/proposal-export logic or Dockerfiles.
+- jsdom doesn't implement `Element.animate` (Web Animations API) - any future component test that renders a Svelte `transition:` needs the same local polyfill used in `FirstRunSetup.test.ts`.
 
 ---
-*Updated: 2026-07-02 (freshness pass - corrected stale PR #9/#11 "open" status to merged; no code changes)*
+*Updated: 2026-08-12 (v0.17.0 release session - first-run connection-test fix; rewrote from a stale 2026-06-29/07-02 handover, several intervening sessions were documented only in KB)*
