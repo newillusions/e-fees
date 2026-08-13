@@ -20,7 +20,6 @@
 
   // Default percentages by canonical name (typical lighting design split)
   const DEFAULT_PERCENTAGES: Record<string, number> = {
-    preliminaries: 5,
     concept: 25,
     schematic: 30,
     detailed: 30,
