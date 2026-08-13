@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectionStore } from '../stores';
-  import { checkDbConnection, saveSettings, getSettings, reconnectDatabase } from '../api';
+  import { checkDbConnection, saveSettings, getSettings, reloadDatabaseConfig } from '../api';
   import { fade, slide } from 'svelte/transition';
   import { logApiError } from '$lib/services/logger';
 
@@ -79,14 +79,18 @@
       });
 
       // check_db_connection only reports whether a DB client already exists -
-      // it never attempts a connection. No client exists yet on first run, so
-      // reconnect_database must build one from the settings just saved above
-      // before the check can mean anything.
+      // it never attempts a connection. reconnect_database re-initializes
+      // using the manager's EXISTING config, which is stale until the app
+      // restarts (it never re-reads the settings we just saved). Use
+      // reload_database_config instead - it re-reads the settings file into
+      // a fresh DatabaseConfig via DatabaseManager::reconfigure() before
+      // reconnecting, mirroring the app's own startup config-loading path.
+      let reloadMessage = '';
       try {
-        await reconnectDatabase();
-      } catch (reconnectError) {
+        reloadMessage = await reloadDatabaseConfig();
+      } catch (reloadError) {
         connectionTestResult = 'error';
-        connectionTestMessage = `${reconnectError}`;
+        connectionTestMessage = `${reloadError}`;
         return;
       }
 
@@ -96,8 +100,12 @@
         connectionTestResult = 'success';
         connectionTestMessage = 'Connection successful!';
       } else {
+        // reload_database_config does not throw when the inner reconnect
+        // fails - it resolves with the real reason embedded in the message
+        // (e.g. "...but connection failed: Invalid URL: http://"). Prefer
+        // that over the generic fallback when present.
         connectionTestResult = 'error';
-        connectionTestMessage = 'Failed to connect. Please check your settings.';
+        connectionTestMessage = reloadMessage || 'Failed to connect. Please check your settings.';
       }
     } catch (error) {
       connectionTestResult = 'error';

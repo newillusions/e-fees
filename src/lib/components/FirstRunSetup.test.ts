@@ -1,15 +1,30 @@
 /**
  * FirstRunSetup Component Tests
  *
- * Regression coverage for the first-run connection-test bug (2026-08-12,
- * fresh Windows install): testConnection() saved settings then called
- * check_db_connection, but that command only reports whether a DB client
- * ALREADY exists - it never attempts a connection. On first run no client
- * has been constructed yet, so Test always failed with "No database client
- * available" even against a reachable server. The fix invokes
- * reconnect_database (which builds a client from the just-saved settings)
- * before checking connection status, and surfaces the real reconnect error
- * instead of the generic failure message when it throws.
+ * Regression coverage for two stacked first-run connection-test bugs.
+ *
+ * Bug 1 (2026-08-12, fixed in v0.17.0): testConnection() saved settings then
+ * called check_db_connection, but that command only reports whether a DB
+ * client ALREADY exists - it never attempts a connection. Fixed by calling
+ * reconnect_database first.
+ *
+ * Bug 2 (2026-08-13, this fix): reconnect_database re-runs initialize() with
+ * the DatabaseManager's EXISTING self.config - it never re-reads the
+ * settings the user just saved. On first run that config is empty, so Test
+ * failed with "Reconnection failed: Invalid URL: http://" even with correct
+ * credentials (restarting the app worked, because startup builds config
+ * fresh from the settings file - proving save was fine and only reconnect's
+ * config was stale). Fixed by calling reload_database_config instead, which
+ * already re-reads the settings file into a fresh DatabaseConfig via
+ * DatabaseManager::reconfigure() before reconnecting - mirroring the app's
+ * own startup config-loading path (src-tauri/src/lib.rs
+ * load_database_config_from_settings) rather than duplicating it.
+ *
+ * reload_database_config has a UX-relevant quirk covered below: on a failed
+ * reconnect it does NOT throw - it resolves with a string like "Database
+ * configuration reloaded but connection failed: <reason>". testConnection()
+ * must surface that embedded reason rather than falling through to the
+ * generic message.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -36,10 +51,10 @@ vi.mock('../api', () => ({
   checkDbConnection: vi.fn(),
   saveSettings: vi.fn(),
   getSettings: vi.fn(),
-  reconnectDatabase: vi.fn()
+  reloadDatabaseConfig: vi.fn()
 }));
 
-import { checkDbConnection, saveSettings, getSettings, reconnectDatabase } from '../api';
+import { checkDbConnection, saveSettings, getSettings, reloadDatabaseConfig } from '../api';
 
 describe('FirstRunSetup - testConnection', () => {
   const callOrder: string[] = [];
@@ -57,9 +72,9 @@ describe('FirstRunSetup - testConnection', () => {
       callOrder.push('saveSettings');
       return 'Settings saved';
     });
-    vi.mocked(reconnectDatabase).mockImplementation(async () => {
-      callOrder.push('reconnectDatabase');
-      return 'Database reconnected successfully';
+    vi.mocked(reloadDatabaseConfig).mockImplementation(async () => {
+      callOrder.push('reloadDatabaseConfig');
+      return 'Database configuration reloaded and connected successfully';
     });
     vi.mocked(checkDbConnection).mockImplementation(async () => {
       callOrder.push('checkDbConnection');
@@ -89,7 +104,7 @@ describe('FirstRunSetup - testConnection', () => {
     await fireEvent.click(screen.getByText('Test & Continue'));
   }
 
-  it('reconnects using the just-saved settings before checking the connection', async () => {
+  it('reloads config from the just-saved settings before checking the connection', async () => {
     await fillAndSubmit();
 
     await waitFor(() => {
@@ -97,29 +112,54 @@ describe('FirstRunSetup - testConnection', () => {
     });
 
     expect(saveSettings).toHaveBeenCalledTimes(1);
-    expect(reconnectDatabase).toHaveBeenCalledTimes(1);
+    expect(reloadDatabaseConfig).toHaveBeenCalledTimes(1);
 
     // testConnection's own checkDbConnection call must come AFTER both
-    // saveSettings and reconnectDatabase (onMount's own earlier call, if any,
-    // is allowed - only the last call matters for the fix under test).
+    // saveSettings and reloadDatabaseConfig (onMount's own earlier call, if
+    // any, is allowed - only the last call matters for the fix under test).
     const saveIdx = callOrder.indexOf('saveSettings');
-    const reconnectIdx = callOrder.indexOf('reconnectDatabase');
+    const reloadIdx = callOrder.indexOf('reloadDatabaseConfig');
     const lastCheckIdx = callOrder.lastIndexOf('checkDbConnection');
 
-    expect(reconnectIdx).toBeGreaterThan(saveIdx);
-    expect(lastCheckIdx).toBeGreaterThan(reconnectIdx);
+    expect(reloadIdx).toBeGreaterThan(saveIdx);
+    expect(lastCheckIdx).toBeGreaterThan(reloadIdx);
   });
 
-  it('surfaces the real reconnect error instead of the generic failure message', async () => {
-    vi.mocked(reconnectDatabase).mockImplementation(async () => {
-      callOrder.push('reconnectDatabase');
-      throw new Error('Unable to connect to ws://10.0.23.11:8000: connection refused');
+  it('surfaces the real failure reason when reload resolves but the reconnect inside it failed', async () => {
+    // This is the exact shape of Martin's live bug: reload_database_config
+    // does NOT throw when the inner reconnect fails - it resolves with the
+    // reason embedded in the string, and the client never got constructed
+    // (so checkDbConnection still correctly reports false afterward).
+    vi.mocked(reloadDatabaseConfig).mockImplementation(async () => {
+      callOrder.push('reloadDatabaseConfig');
+      return 'Database configuration reloaded but connection failed: Reconnection failed: Invalid URL: http://';
+    });
+    vi.mocked(checkDbConnection).mockImplementation(async () => {
+      callOrder.push('checkDbConnection');
+      return false;
     });
 
     await fillAndSubmit();
 
     await waitFor(() => {
-      expect(screen.getByText(/connection refused/)).toBeInTheDocument();
+      expect(screen.getByText(/Invalid URL/)).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByText('Failed to connect. Please check your settings.')
+    ).not.toBeInTheDocument();
+  });
+
+  it('surfaces a genuine invoke-level error if reloadDatabaseConfig itself throws', async () => {
+    vi.mocked(reloadDatabaseConfig).mockImplementation(async () => {
+      callOrder.push('reloadDatabaseConfig');
+      throw new Error('IPC error: reload_database_config not registered');
+    });
+
+    await fillAndSubmit();
+
+    await waitFor(() => {
+      expect(screen.getByText(/reload_database_config not registered/)).toBeInTheDocument();
     });
 
     expect(
