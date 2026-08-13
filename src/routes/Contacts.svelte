@@ -75,6 +75,10 @@
   let hasMore = $state(true);
   let totalRecords = $state(0);
   let initialized = $state(false);
+  // Distinguishes "genuinely zero contacts" from "the load failed" - without
+  // this, a failed loadInitialPage() (e.g. DB not yet connected) left
+  // contacts=[] with no visible error (mirrors the Dashboard statsError fix).
+  let loadError = $state('');
 
   // Modal states
   let isContactDetailOpen = $state(false);
@@ -91,10 +95,15 @@
         hasMore = state.pagination.hasMore;
         totalRecords = state.pagination.totalRecords;
         initialized = state.initialized;
+        loadError = state.error || '';
       }
     );
     return unsubscribe;
   });
+
+  function retryLoadContacts() {
+    paginatedContactsStore.actions.reset().catch(() => {});
+  }
 
   // Scroll handler for infinite scroll
   function handleScroll() {
@@ -219,7 +228,10 @@
     // Check store state directly to avoid race condition with $effect subscription
     const storeState = paginatedContactsStore.actions.getState();
     if (!storeState.initialized) {
-      paginatedContactsStore.actions.loadInitialPage();
+      // loadInitialPage() re-throws on failure after capturing state.error
+      // (which loadError above surfaces) - swallow here so a load failure
+      // doesn't become an unhandled promise rejection.
+      paginatedContactsStore.actions.loadInitialPage().catch(() => {});
     }
     // Only load companies if not already loaded (performance optimization)
     if (!get(companiesStore).length) companiesActions.load();
@@ -319,7 +331,19 @@
     <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
   </div>
 
-  {#if isLoading && contacts.length === 0}
+  {#if loadError}
+    <div class="emittiv-alert emittiv-alert--error" style="margin-bottom: 12px;">
+      {loadError}
+      <button
+        type="button"
+        class="emittiv-link"
+        onclick={retryLoadContacts}
+        style="margin-left: 8px;"
+      >
+        Retry
+      </button>
+    </div>
+  {:else if isLoading && contacts.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
       <div class="emittiv-spinner emittiv-spinner--page"></div>

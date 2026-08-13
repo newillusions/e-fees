@@ -107,6 +107,11 @@
   let hasMore = $state(true);
   let totalRecords = $state(0);
   let initialized = $state(false);
+  // Distinguishes "genuinely zero proposals" from "the load failed" - without
+  // this, a failed loadInitialPage() (e.g. DB not yet connected) left fees=[]
+  // with no visible error, rendering an indistinguishable "No Proposals Yet"
+  // empty state (mirrors the Dashboard statsError fix).
+  let loadError = $state('');
 
   // Effect to sync paginated store state to local runes
   $effect(() => {
@@ -116,9 +121,14 @@
       hasMore = state.pagination.hasMore;
       totalRecords = state.pagination.totalRecords;
       initialized = state.initialized;
+      loadError = state.error || '';
     });
     return unsubscribe;
   });
+
+  function retryLoadProposals() {
+    paginatedFeesStore.actions.reset().catch(() => {});
+  }
 
   // Scroll handler for infinite scroll (unthrottled - called by throttled wrapper)
   function checkScrollPosition() {
@@ -300,7 +310,10 @@
     // Check store state directly to avoid race condition with $effect subscription
     const storeState = paginatedFeesStore.actions.getState();
     if (!storeState.initialized) {
-      paginatedFeesStore.actions.loadInitialPage();
+      // loadInitialPage() re-throws on failure after capturing state.error
+      // (which loadError above surfaces) - swallow here so a load failure
+      // doesn't become an unhandled promise rejection.
+      paginatedFeesStore.actions.loadInitialPage().catch(() => {});
     }
     // Only load related data if not already loaded (performance optimization)
     if (!get(projectsStore).length) projectsActions.load();
@@ -488,7 +501,14 @@
     }
   </style>
 
-  {#if isLoading && fees.length === 0}
+  {#if loadError}
+    <div class="emittiv-alert emittiv-alert--error" style="margin-bottom: 12px;">
+      {loadError}
+      <button type="button" class="emittiv-link" onclick={retryLoadProposals} style="margin-left: 8px;">
+        Retry
+      </button>
+    </div>
+  {:else if isLoading && fees.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
       <div class="emittiv-spinner emittiv-spinner--page"></div>

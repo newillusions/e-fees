@@ -72,6 +72,10 @@
   let hasMore = $state(true);
   let totalRecords = $state(0);
   let initialized = $state(false);
+  // Distinguishes "genuinely zero companies" from "the load failed" - without
+  // this, a failed loadInitialPage() (e.g. DB not yet connected) left
+  // companies=[] with no visible error (mirrors the Dashboard statsError fix).
+  let loadError = $state('');
 
   // Effect to sync paginated store state to local runes
   $effect(() => {
@@ -82,10 +86,15 @@
         hasMore = state.pagination.hasMore;
         totalRecords = state.pagination.totalRecords;
         initialized = state.initialized;
+        loadError = state.error || '';
       }
     );
     return unsubscribe;
   });
+
+  function retryLoadCompanies() {
+    paginatedCompaniesStore.actions.reset().catch(() => {});
+  }
 
   // Scroll handler for infinite scroll
   function handleScroll() {
@@ -194,7 +203,10 @@
     // Check store state directly to avoid race condition with $effect subscription
     const storeState = paginatedCompaniesStore.actions.getState();
     if (!storeState.initialized) {
-      paginatedCompaniesStore.actions.loadInitialPage();
+      // loadInitialPage() re-throws on failure after capturing state.error
+      // (which loadError above surfaces) - swallow here so a load failure
+      // doesn't become an unhandled promise rejection.
+      paginatedCompaniesStore.actions.loadInitialPage().catch(() => {});
     }
   });
 
@@ -287,7 +299,19 @@
     <DateRangeFilter bind:from={dateFrom} bind:to={dateTo} />
   </div>
 
-  {#if isLoading && companies.length === 0}
+  {#if loadError}
+    <div class="emittiv-alert emittiv-alert--error" style="margin-bottom: 12px;">
+      {loadError}
+      <button
+        type="button"
+        class="emittiv-link"
+        onclick={retryLoadCompanies}
+        style="margin-left: 8px;"
+      >
+        Retry
+      </button>
+    </div>
+  {:else if isLoading && companies.length === 0}
     <!-- Initial loading state -->
     <div class="flex flex-col items-center justify-center py-12">
       <div class="emittiv-spinner emittiv-spinner--page"></div>

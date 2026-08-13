@@ -27,6 +27,50 @@
   let appReady = $state(false);
   let showFirstRun = $state(false);
 
+  // Startup connection gate. Previously the app declared itself "ready"
+  // (and mounted Dashboard/Proposals/etc., which immediately query the DB)
+  // as soon as settings existed - it never waited for the backend's async
+  // DB connect to actually finish. That connect is a real network round
+  // trip (up to 3 sequential signin attempts for a root-level user), so a
+  // query could - and did, live - fire before a client existed, fail
+  // instantly, and leave pages silently showing "0"/empty with no error.
+  // 'connecting' polls check_connection_status for real readiness;
+  // 'failed' means the bounded window ran out without a definitive
+  // success - shown with the backend's real error message and a Retry,
+  // never faked into 'ready'.
+  let connectionPhase: 'connecting' | 'ready' | 'failed' = $state('connecting');
+  let connectionErrorMessage = $state('');
+
+  const CONNECT_POLL_INTERVAL_MS = 500;
+  const CONNECT_POLL_TIMEOUT_MS = 15000;
+
+  async function waitForConnection(): Promise<void> {
+    connectionPhase = 'connecting';
+    connectionErrorMessage = '';
+
+    const { getConnectionStatus } = await import('$lib/api');
+    const deadline = Date.now() + CONNECT_POLL_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      const status = await getConnectionStatus();
+      if (status.is_connected) {
+        connectionPhase = 'ready';
+        appReady = true;
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, CONNECT_POLL_INTERVAL_MS));
+    }
+
+    // Timed out - one last check to capture whatever error the backend
+    // most recently reported, so the user sees a real reason, not a
+    // generic timeout.
+    const finalStatus = await getConnectionStatus();
+    connectionErrorMessage =
+      finalStatus.error_message ||
+      'Could not connect to the database. Please check your connection settings.';
+    connectionPhase = 'failed';
+  }
+
   // Reset scroll position on route change
   $effect(() => {
     if ($location && appReady) {
@@ -57,30 +101,27 @@
   async function handleSplashComplete() {
     showSplash = false;
 
-    // Simplified startup: just check settings and start the app
-    // The ConnectionStatus component will handle database connectivity display
-    setTimeout(async () => {
-      try {
-        const { getSettings } = await import('$lib/api');
-        const settings = await getSettings();
+    try {
+      const { getSettings } = await import('$lib/api');
+      const settings = await getSettings();
 
-        const isFirstRun =
-          !settings ||
-          settings.surrealdb_user === 'placeholder' ||
-          !settings.surrealdb_user ||
-          !settings.surrealdb_url ||
-          settings.surrealdb_url === 'placeholder';
+      const isFirstRun =
+        !settings ||
+        settings.surrealdb_user === 'placeholder' ||
+        !settings.surrealdb_user ||
+        !settings.surrealdb_url ||
+        settings.surrealdb_url === 'placeholder';
 
-        if (isFirstRun) {
-          showFirstRun = true;
-        } else {
-          appReady = true;
-        }
-      } catch (error) {
-        console.error('Failed during app initialization:', error);
+      if (isFirstRun) {
         showFirstRun = true;
+        return;
       }
-    }, 800); // Reduced delay since we're not trying to test connections
+
+      await waitForConnection();
+    } catch (error) {
+      console.error('Failed during app initialization:', error);
+      showFirstRun = true;
+    }
   }
 
   function handleFirstRunComplete() {
@@ -117,6 +158,25 @@
   <SplashScreen onComplete={handleSplashComplete} />
 {:else if showFirstRun}
   <FirstRunSetup bind:isOpen={showFirstRun} oncomplete={handleFirstRunComplete} />
+{:else if connectionPhase === 'connecting'}
+  <div class="startup-gate">
+    <div class="emittiv-spinner emittiv-spinner--page"></div>
+    <p class="startup-gate-text">Connecting to database...</p>
+  </div>
+{:else if connectionPhase === 'failed'}
+  <div class="startup-gate">
+    <div class="emittiv-alert emittiv-alert--error" style="max-width: 480px;">
+      {connectionErrorMessage}
+      <button
+        type="button"
+        class="emittiv-link"
+        onclick={waitForConnection}
+        style="margin-left: 8px;"
+      >
+        Retry
+      </button>
+    </div>
+  </div>
 {:else if appReady}
   <Layout>
     <div class="route-content">
@@ -135,6 +195,22 @@
 {/if}
 
 <style>
+  .startup-gate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100vh;
+    background: var(--emittiv-black);
+    gap: 12px;
+  }
+
+  .startup-gate-text {
+    color: var(--emittiv-light);
+    font-size: 14px;
+  }
+
   .route-content {
     position: relative;
     width: 100%;
