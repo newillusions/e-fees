@@ -1040,3 +1040,53 @@ impl DatabaseClient {
         response.take(0)
     }
 }
+
+#[cfg(test)]
+mod batch_tests {
+    use super::DatabaseClient;
+
+    // validate_table_name() is the only injection guard between the frontend's
+    // free-text `entityType` -> TABLE_MAP lookup (src/lib/api/batch.ts) and the
+    // batch_delete/batch_update_status queries, which interpolate `table` directly
+    // into the SQL string (ids and status are parameterized separately). It had
+    // zero test coverage before this file.
+
+    #[test]
+    fn accepts_every_allowlisted_table() {
+        for table in ["projects", "company", "contacts", "fee"] {
+            assert!(
+                DatabaseClient::validate_table_name(table).is_ok(),
+                "{table} should be allowlisted"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_a_table_not_on_the_allowlist() {
+        let result = DatabaseClient::validate_table_name("activity_log");
+        assert!(result.is_err(), "activity_log is not batch-operable");
+    }
+
+    #[test]
+    fn rejects_sql_injection_attempts() {
+        for attempt in [
+            "projects; DROP TABLE projects;",
+            "projects WHERE 1=1",
+            "projects UNION SELECT * FROM company",
+            "",
+        ] {
+            assert!(
+                DatabaseClient::validate_table_name(attempt).is_err(),
+                "{attempt:?} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_case_variants_of_a_valid_table() {
+        // The allowlist match is exact - "Projects"/"PROJECTS" must not slip
+        // through as equivalent to "projects".
+        assert!(DatabaseClient::validate_table_name("Projects").is_err());
+        assert!(DatabaseClient::validate_table_name("PROJECTS").is_err());
+    }
+}

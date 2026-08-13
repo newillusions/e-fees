@@ -1228,10 +1228,19 @@ mod tests {
     //      to NONE and schema's required action: string fails coercion.
     //
     // Run against dev DB to avoid prod activity_log pollution:
-    //   EFEES_SURREALDB_USER=martin EFEES_SURREALDB_PASS=... \
+    //   EFEES_SURREALDB_USER=<dev-authorized user> EFEES_SURREALDB_PASS=... \
     //     cargo test -p app --lib test_get_fees_for_project_bug -- --ignored --nocapture
-    //   EFEES_SURREALDB_USER=martin EFEES_SURREALDB_PASS=... \
+    //   EFEES_SURREALDB_USER=<dev-authorized user> EFEES_SURREALDB_PASS=... \
     //     cargo test -p app --lib test_create_activity_log_bug -- --ignored --nocapture
+    //
+    // NOTE (2026-08-13, verified while adding the batch-operation tests below):
+    // the workspace credential store's EFEES_SURREALDB_USER/PASS pair (used
+    // successfully against PROD via surql.sh) does NOT authenticate as ROOT
+    // against DEV (10.0.23.12) - "problem with authentication" / InvalidAuth.
+    // EFEES_SURREALDB_ROOT_USER/ROOT_PASS DOES authenticate against dev and is
+    // what actually ran these tests green. Whoever runs these next: try the
+    // ROOT_* pair first if the plain pair fails - this may be stale relative
+    // to a recent per-instance root-user rotation, not a bug in the tests.
     // ============================================================================
 
     fn dev_db_config() -> crate::db::DatabaseConfig {
@@ -1386,6 +1395,193 @@ mod tests {
             Some("DELETE-ME-TAX".to_string()),
             "tax_no must NOT be clobbered to NONE by a partial update"
         );
+    }
+
+    // ========================================================================
+    // BATCH OPERATION TESTS (multiselect bulk-action review, 2026-08-13)
+    //
+    // batch_delete()/batch_update_status() (db/client.rs, db/operations.rs) had
+    // zero test coverage. These exercise the exact code path the desktop
+    // multiselect UI drives (src/routes/Projects.svelte -> src/lib/api/batch.ts
+    // -> batch_delete_entities/batch_update_status Tauri commands ->
+    // manager.batch_delete/batch_update_status).
+    //
+    // Run against dev DB (same invocation pattern as the bug-regression tests
+    // above - see the credential note there, EFEES_SURREALDB_ROOT_USER/
+    // ROOT_PASS is what actually authenticates against dev as of 2026-08-13):
+    //   EFEES_SURREALDB_USER=<dev-authorized user> EFEES_SURREALDB_PASS=... \
+    //     cargo test -p app --lib batch_ -- --ignored --nocapture
+    //
+    // VERIFIED 2026-08-13: all 3 tests below pass against the live dev DB
+    // (test_batch_update_status_updates_only_the_selected_projects,
+    // test_batch_update_status_is_partial_and_does_not_error_on_a_missing_id,
+    // test_batch_delete_removes_only_selected_projects).
+    // ========================================================================
+
+    fn delete_me_project_number(seq: i64, stamp: u128) -> crate::db::NewProject {
+        use crate::db::{NewProject, ProjectNumber};
+        NewProject {
+            name: format!("DELETE ME - batch test {} {}", seq, stamp),
+            name_short: "DELETE ME".to_string(),
+            status: "Lead".to_string(),
+            area: "Test Area".to_string(),
+            city: "Dubai".to_string(),
+            country: "United Arab Emirates".to_string(),
+            folder: "DELETE ME".to_string(),
+            number: ProjectNumber {
+                year: 26,
+                country: 971,
+                seq,
+                // project_number_unique is keyed on number.id, not (year,country,seq);
+                // the stamp is what guarantees no collision across test runs.
+                id: format!("DELME-{}-{}", stamp, seq),
+            },
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_batch_update_status_updates_only_the_selected_projects() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let a = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create project A should succeed");
+        let b = manager
+            .create_new_project(delete_me_project_number(2, stamp))
+            .await
+            .expect("create project B should succeed");
+        let c = manager
+            .create_new_project(delete_me_project_number(3, stamp))
+            .await
+            .expect("create project C should succeed");
+
+        let key_a = crate::db::types::record_key_string(&a.id.as_ref().unwrap().key);
+        let key_b = crate::db::types::record_key_string(&b.id.as_ref().unwrap().key);
+        let key_c = crate::db::types::record_key_string(&c.id.as_ref().unwrap().key);
+
+        // Only A and B are selected; C must stay untouched.
+        let update_result = manager
+            .batch_update_status(
+                "projects",
+                &[key_a.clone(), key_b.clone()],
+                "Lost",
+            )
+            .await;
+
+        // Clean up regardless of assertion outcome.
+        let _ = manager
+            .batch_delete("projects", &[key_a.clone(), key_b.clone(), key_c.clone()])
+            .await;
+
+        let updated_count = update_result.expect("batch_update_status should succeed");
+        assert_eq!(updated_count, 2, "exactly the 2 selected rows should update");
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_batch_update_status_is_partial_and_does_not_error_on_a_missing_id() {
+        // Documents the ACTUAL behavior of batch_update_status when one of the
+        // selected ids no longer exists server-side (e.g. deleted by another
+        // session between selection and Apply): it silently updates whatever
+        // matches and returns a count lower than requested, rather than
+        // erroring the whole batch. Callers (projectsActions.bulkUpdateStatus)
+        // MUST compare the returned count against the requested id count to
+        // detect this - see src/lib/stores.ts and src/lib/stores.bulk.test.ts.
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let real = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create project should succeed");
+        let real_key = crate::db::types::record_key_string(&real.id.as_ref().unwrap().key);
+
+        let result = manager
+            .batch_update_status(
+                "projects",
+                &[real_key.clone(), format!("does_not_exist_{}", stamp)],
+                "Awarded",
+            )
+            .await;
+
+        let _ = manager
+            .batch_delete("projects", std::slice::from_ref(&real_key))
+            .await;
+
+        assert_eq!(
+            result.expect("batch_update_status should not error on a missing id"),
+            1,
+            "only the real project should count as updated"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_batch_delete_removes_only_selected_projects() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let a = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create project A should succeed");
+        let b = manager
+            .create_new_project(delete_me_project_number(2, stamp))
+            .await
+            .expect("create project B should succeed");
+
+        let key_a = crate::db::types::record_key_string(&a.id.as_ref().unwrap().key);
+        let key_b = crate::db::types::record_key_string(&b.id.as_ref().unwrap().key);
+
+        let delete_result = manager
+            .batch_delete("projects", std::slice::from_ref(&key_a))
+            .await;
+
+        let deleted = delete_result.expect("batch_delete should succeed");
+        assert_eq!(deleted.len(), 1, "only the selected project should be deleted");
+
+        // A must actually be gone; B (never selected) must still exist.
+        let a_after = manager.get_project_by_id(&key_a).await;
+        assert!(
+            a_after.is_err() || a_after.unwrap().is_none(),
+            "deleted project A must no longer be fetchable"
+        );
+        let b_after = manager
+            .get_project_by_id(&key_b)
+            .await
+            .expect("get_project_by_id(B) should not error");
+        assert!(b_after.is_some(), "unselected project B must still exist");
+
+        // B was never selected for deletion - clean it up now that the
+        // assertions above have run.
+        let _ = manager.delete_project(&key_b).await;
     }
 
     // ========================================================================

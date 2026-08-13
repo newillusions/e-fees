@@ -10,11 +10,10 @@
   import ProjectCard from '$lib/components/ProjectCard.svelte';
   import ProjectDetail from '$lib/components/ProjectDetail.svelte';
   import BulkActionBar from '$lib/components/BulkActionBar.svelte';
-  import { paginatedProjectsStore } from '$lib/stores';
+  import { paginatedProjectsStore, projectsActions } from '$lib/stores';
   import type { PaginatedStoreState } from '$lib/stores/pagination';
   import { settingsStore, settingsActions } from '$lib/stores/settings';
   import { openFolderInExplorer } from '$lib/api';
-  import { batchDeleteEntities, batchUpdateStatus } from '$lib/api/batch';
   import { logger, logApiError } from '$lib/services/logger';
   import StatusChips from '$lib/components/StatusChips.svelte';
   import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
@@ -53,11 +52,19 @@
   let dateTo = $state('');
 
   // Bulk selection state
-  let selectedIds: Set<string> = new SvelteSet();
+  let selectedIds: Set<string> = $state(new SvelteSet());
   let selectMode = $state(false);
 
   // Inline folder error state
   let folderError = $state('');
+
+  // Inline bulk-action error/warning state (surfaced above the Bulk Action Bar)
+  let bulkActionError = $state('');
+
+  function showBulkActionError(message: string) {
+    bulkActionError = message;
+    setTimeout(() => (bulkActionError = ''), 6000);
+  }
 
   function toggleSelect(id: string) {
     const next = new SvelteSet(selectedIds);
@@ -75,22 +82,35 @@
   async function handleBulkDelete() {
     const ids = [...selectedIds];
     try {
-      await batchDeleteEntities('projects', ids);
+      const { requested, applied } = await projectsActions.bulkDelete(ids);
       clearSelection();
-      paginatedProjectsStore.actions.refresh();
+      if (applied < requested) {
+        showBulkActionError(
+          `Deleted ${applied} of ${requested} selected projects - the rest may have already been removed. Refresh to verify.`
+        );
+      }
     } catch (e) {
       logApiError('bulk delete projects', e as Error);
+      showBulkActionError('Bulk delete failed - no projects were deleted. Please try again.');
     }
   }
 
   async function handleBulkStatusChange(status: string) {
     const ids = [...selectedIds];
     try {
-      await batchUpdateStatus('projects', ids, status);
+      const { requested, applied } = await projectsActions.bulkUpdateStatus(
+        ids,
+        status as Project['status']
+      );
       clearSelection();
-      paginatedProjectsStore.actions.refresh();
+      if (applied < requested) {
+        showBulkActionError(
+          `Updated ${applied} of ${requested} selected projects - the rest may no longer exist. Refresh to verify.`
+        );
+      }
     } catch (e) {
       logApiError('bulk status change projects', e as Error);
+      showBulkActionError('Bulk status change failed - no projects were updated. Please try again.');
     }
   }
 
@@ -417,6 +437,9 @@
   {:else}
     {#if folderError}
       <div class="emittiv-alert emittiv-alert--error" style="margin: 8px 0;">{folderError}</div>
+    {/if}
+    {#if bulkActionError}
+      <div class="emittiv-alert emittiv-alert--error" style="margin: 8px 0;">{bulkActionError}</div>
     {/if}
 
     <!-- Bulk Action Bar -->

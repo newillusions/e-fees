@@ -12,6 +12,8 @@ import { createEntityStore } from './utils/crud';
 import { projectsApi, companiesApi, contactsApi, feesApi } from './stores/adapters';
 import { projectLogger, companyLogger, contactLogger, feeLogger } from './services/activityLogger';
 import { ACTIVE_PROPOSAL_STATUSES, ACTIVE_PROJECT_STATUSES } from './constants';
+import { batchDeleteEntities, batchUpdateStatus } from './api/batch';
+import { extractIdFromRelation } from './utils/surrealdb';
 
 // ============================================================================
 // CONNECTION STORE (UNCHANGED)
@@ -203,6 +205,85 @@ export const projectsActions = {
 
   async refresh() {
     return await projectsActionsInternal.refresh();
+  },
+
+  /**
+   * Update the status of multiple projects in one call (multiselect bulk action).
+   * Mirrors update()'s per-item activity logging so bulk status changes are as
+   * auditable as single-project edits, and patches the paginated store in place
+   * instead of forcing a full refetch.
+   *
+   * Returns { requested, applied } so callers can detect a partial application
+   * (e.g. an id that no longer exists server-side) instead of assuming success.
+   */
+  async bulkUpdateStatus(
+    ids: string[],
+    status: Project['status']
+  ): Promise<{ requested: number; applied: number }> {
+    if (ids.length === 0) return { requested: 0, applied: 0 };
+
+    // Keyed by the BARE record key (matches `ids`, which is bare-key form
+    // per the batch API contract). Project.id itself is stored as the full
+    // "table:key" string, so it can be passed straight to updateItem() below
+    // - that store keys its items by extractSurrealId(item.id), which
+    // returns a plain string unchanged (no prefix stripping).
+    const before = new Map<string, Project>();
+    for (const item of paginatedProjectsStore.actions.getState().items) {
+      if (item.id) before.set(extractIdFromRelation(item.id), item);
+    }
+
+    const applied = await batchUpdateStatus('projects', ids, status);
+
+    for (const id of ids) {
+      const priorProject = before.get(id);
+      if (!priorProject || !priorProject.id) continue; // not present locally - nothing to patch/log against
+
+      const updated: Project = {
+        ...priorProject,
+        status,
+        time: {
+          created_at: priorProject.time?.created_at ?? new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      };
+      paginatedProjectsStore.actions.updateItem(priorProject.id, updated);
+
+      if (priorProject.status !== status) {
+        projectLogger.onStatusChange(updated, priorProject.status, status);
+      }
+    }
+
+    return { requested: ids.length, applied };
+  },
+
+  /**
+   * Delete multiple projects in one call (multiselect bulk action).
+   * Mirrors delete()'s per-item activity logging and patches the paginated
+   * store in place instead of forcing a full refetch.
+   *
+   * Returns { requested, applied } so callers can detect a partial application.
+   */
+  async bulkDelete(ids: string[]): Promise<{ requested: number; applied: number }> {
+    if (ids.length === 0) return { requested: 0, applied: 0 };
+
+    // Same bare-key lookup convention as bulkUpdateStatus above.
+    const before = new Map<string, Project>();
+    for (const item of paginatedProjectsStore.actions.getState().items) {
+      if (item.id) before.set(extractIdFromRelation(item.id), item);
+    }
+
+    const deleted = await batchDeleteEntities('projects', ids);
+
+    for (const id of ids) {
+      const priorProject = before.get(id);
+      if (priorProject?.id) {
+        paginatedProjectsStore.actions.removeItem(priorProject.id);
+      }
+      const projectName = priorProject?.name || priorProject?.project_number || 'Unknown Project';
+      projectLogger.onDelete(id, projectName);
+    }
+
+    return { requested: ids.length, applied: deleted.length };
   }
 };
 
