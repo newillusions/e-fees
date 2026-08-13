@@ -34,6 +34,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Checkout container-utils
         run: |
@@ -61,6 +63,29 @@ jobs:
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Prepare release notes
+        id: notes
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          NOTES_FILE="release-notes/v${VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "Using curated release notes from $NOTES_FILE"
+            BODY="$(cat "$NOTES_FILE")"
+          else
+            echo "No curated notes at $NOTES_FILE - deriving from git log"
+            PREV_TAG="$(git describe --tags --abbrev=0 --exclude="v${VERSION}" 2>/dev/null || true)"
+            if [ -n "$PREV_TAG" ]; then
+              BODY="$(git log "${PREV_TAG}..HEAD" --pretty=format:'- %s' 2>/dev/null \
+                | grep -vE '^- (chore: bump version|chore: [Uu]pdate manifest|chore: lamp-off|Merge pull request)' || true)"
+            fi
+            if [ -z "${BODY:-}" ]; then
+              BODY="Release v${VERSION}"
+            fi
+          fi
+          printf '%s' "$BODY" > "$RUNNER_TEMP/release_notes.txt"
+          echo "Prepared $(wc -l < "$RUNNER_TEMP/release_notes.txt") line(s) of release notes"
 
       - name: Build Tauri app
         env:
@@ -159,11 +184,17 @@ jobs:
 
             # Release doesn't exist, try to create it
             echo "Release not found, creating..."
+            RELEASE_NOTES="$(cat "$RUNNER_TEMP/release_notes.txt" 2>/dev/null || echo "Release v${{ steps.version.outputs.VERSION }}")"
+            CREATE_PAYLOAD=$(jq -n \
+              --arg tag "v${{ steps.version.outputs.VERSION }}" \
+              --arg name "E-Fees v${{ steps.version.outputs.VERSION }}" \
+              --arg body "$RELEASE_NOTES" \
+              '{tag_name: $tag, name: $name, body: $body}')
             RELEASE_RESPONSE=$(curl -s -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -H "Content-Type: application/json" \
               "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
-              -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
+              -d "$CREATE_PAYLOAD")
 
             echo "Create Response: $RELEASE_RESPONSE"
 
@@ -225,6 +256,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Checkout container-utils
         shell: bash
@@ -252,6 +285,30 @@ jobs:
           else
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Prepare release notes
+        id: notes
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          NOTES_FILE="release-notes/v${VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "Using curated release notes from $NOTES_FILE"
+            BODY="$(cat "$NOTES_FILE")"
+          else
+            echo "No curated notes at $NOTES_FILE - deriving from git log"
+            PREV_TAG="$(git describe --tags --abbrev=0 --exclude="v${VERSION}" 2>/dev/null || true)"
+            if [ -n "$PREV_TAG" ]; then
+              BODY="$(git log "${PREV_TAG}..HEAD" --pretty=format:'- %s' 2>/dev/null \
+                | grep -vE '^- (chore: bump version|chore: [Uu]pdate manifest|chore: lamp-off|Merge pull request)' || true)"
+            fi
+            if [ -z "${BODY:-}" ]; then
+              BODY="Release v${VERSION}"
+            fi
+          fi
+          printf '%s' "$BODY" > "$RUNNER_TEMP/release_notes.txt"
+          echo "Prepared $(wc -l < "$RUNNER_TEMP/release_notes.txt") line(s) of release notes"
 
       - name: Build Tauri app
         env:
@@ -304,11 +361,17 @@ jobs:
 
             # Release doesn't exist, try to create it
             echo "Release not found, creating..."
+            RELEASE_NOTES="$(cat "$RUNNER_TEMP/release_notes.txt" 2>/dev/null || echo "Release v${{ steps.version.outputs.VERSION }}")"
+            CREATE_PAYLOAD=$(jq -n \
+              --arg tag "v${{ steps.version.outputs.VERSION }}" \
+              --arg name "E-Fees v${{ steps.version.outputs.VERSION }}" \
+              --arg body "$RELEASE_NOTES" \
+              '{tag_name: $tag, name: $name, body: $body}')
             RELEASE_RESPONSE=$(curl -s -X POST \
               -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
               -H "Content-Type: application/json" \
               "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/releases" \
-              -d "{\"tag_name\": \"v${{ steps.version.outputs.VERSION }}\", \"name\": \"E-Fees v${{ steps.version.outputs.VERSION }}\", \"body\": \"Release v${{ steps.version.outputs.VERSION }}\"}")
+              -d "$CREATE_PAYLOAD")
 
             echo "Create Response: $RELEASE_RESPONSE"
 
