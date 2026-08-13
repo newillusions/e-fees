@@ -31,6 +31,10 @@
     totalFees: 0
   });
   let isLoadingStats = $state(true);
+  // Distinguishes "genuinely zero" from "failed to load" - without this, a
+  // transient DB/IPC error on mount silently rendered every stat card as 0
+  // (e.g. "Active Proposals: 0") with no indication anything went wrong.
+  let statsError = $state('');
 
   // Modal handling
   let showProjectModal = $state(false);
@@ -44,8 +48,10 @@
     try {
       const result = await invoke<typeof stats>('get_stats');
       stats = result;
+      statsError = '';
     } catch (error) {
       logApiError('load stats', error as Error);
+      statsError = 'Failed to load statistics - the counts below may be stale or wrong.';
     } finally {
       isLoadingStats = false;
     }
@@ -124,6 +130,14 @@
 
     <!-- Stats Grid -->
     <section class="dashboard-section">
+      {#if statsError}
+        <div class="emittiv-alert emittiv-alert--error" style="margin-bottom: 12px;">
+          {statsError}
+          <button type="button" class="emittiv-link" on:click={loadStats} style="margin-left: 8px;">
+            Retry
+          </button>
+        </div>
+      {/if}
       <div class="stats-grid">
         {#each statCards as card}
           <div

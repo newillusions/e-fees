@@ -60,7 +60,7 @@
   let dateTo = $state('');
 
   // Bulk selection state
-  let selectedIds: Set<string> = new SvelteSet();
+  let selectedIds: Set<string> = $state(new SvelteSet());
   let selectMode = $state(false);
 
   function toggleSelect(id: string) {

@@ -1416,6 +1416,13 @@ mod tests {
     // (test_batch_update_status_updates_only_the_selected_projects,
     // test_batch_update_status_is_partial_and_does_not_error_on_a_missing_id,
     // test_batch_delete_removes_only_selected_projects).
+    //
+    // FLAKY UNDER PARALLEL EXECUTION (found on a second live run, same day):
+    // cargo test's default parallel runner can hit a real SurrealKV
+    // "Transaction conflict: Resource busy" on concurrent CREATE projects
+    // calls from these tests racing each other against the shared dev DB -
+    // not a bug in the tests, but pass `--test-threads=1` for a reliable run:
+    //   cargo test -p app --lib batch_ -- --ignored --nocapture --test-threads=1
     // ========================================================================
 
     fn delete_me_project_number(seq: i64, stamp: u128) -> crate::db::NewProject {

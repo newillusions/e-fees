@@ -13,13 +13,13 @@
 //! Paths are read from the app settings (`e-fees.config` / `e-fees.config.dev` file):
 //! - `PROJECT_FOLDER_PATH`: Base path for all project folders
 
-use crate::commands::types::AppSettingsPublic;
-use crate::commands::get_settings;
+use crate::commands::types::{AppSettingsPublic, ProjectUpdate};
+use crate::commands::{get_settings, AppState};
 use log::{error, info, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tauri::{command, AppHandle};
+use tauri::{command, AppHandle, State};
 
 #[derive(Debug, serde::Serialize)]
 pub struct FolderOperationResult {
@@ -125,6 +125,55 @@ async fn trigger_nc_rescan(settings: &AppSettingsPublic) {
         Err(e) => {
             warn!("Failed to trigger Nextcloud rescan (non-fatal): {}", e);
         }
+    }
+}
+
+/// Convert a display-form project number ("26-97110") to its DB record key
+/// ("26_97110") - the same convention used by `create_new_project`.
+fn project_key_from_number(project_number: &str) -> String {
+    project_number.replace('-', "_")
+}
+
+/// Best-effort sync of the project's DB `folder` field to the folder's actual
+/// name on disk. The DB field is known to drift from reality (obs: two live
+/// records found stale after a folder rename on 2026-08-12 - name_short and
+/// folder both out of sync with the on-disk name) - this closes that gap at
+/// the one place folders are known to have just moved (or been confirmed
+/// already in the right place).
+///
+/// Never fails the caller: a DB write failure here does not mean the folder
+/// move failed, only that the stored `folder` field is still stale.
+async fn sync_project_folder_db_field(
+    state: &State<'_, AppState>,
+    project_number: &str,
+    actual_folder_name: &str,
+) {
+    let record_key = project_key_from_number(project_number);
+
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+
+    let update = ProjectUpdate {
+        name: None,
+        name_short: None,
+        status: None,
+        area: None,
+        city: None,
+        country: None,
+        folder: Some(actual_folder_name.to_string()),
+    };
+
+    match manager_clone.update_project(&record_key, update).await {
+        Ok(_) => info!(
+            "Synced project {} DB folder field to '{}'",
+            project_number, actual_folder_name
+        ),
+        Err(e) => warn!(
+            "Failed to sync project {} DB folder field to '{}' (non-fatal): {}",
+            project_number, actual_folder_name, e
+        ),
     }
 }
 
@@ -313,6 +362,7 @@ pub async fn get_project_folder_location(
 #[command]
 pub async fn move_project_folder(
     app_handle: AppHandle,
+    state: State<'_, AppState>,
     project_number: String,
     new_status: String,
 ) -> Result<FolderOperationResult, String> {
@@ -340,6 +390,17 @@ pub async fn move_project_folder(
     // Check if already in correct location
     if current_info.current_location == dest_folder {
         info!("Project {} is already in {}", project_number, dest_folder);
+
+        // The physical location is already correct, but the DB folder field
+        // can still be stale (e.g. the folder was renamed by hand without
+        // the app knowing) - sync it now that we have the real name in hand.
+        if let Some(actual_name) = Path::new(&current_info.full_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+        {
+            sync_project_folder_db_field(&state, &project_number, actual_name).await;
+        }
+
         return Ok(FolderOperationResult {
             success: true,
             message: format!("Project {} is already in {}", project_number, dest_folder),
@@ -404,6 +465,12 @@ pub async fn move_project_folder(
 
             info!("{}", success_message);
 
+            // Best-effort: sync the DB folder field to the folder's real
+            // (possibly renamed/drifted) name, now that we know it for certain.
+            if let Some(actual_name) = folder_name.to_str() {
+                sync_project_folder_db_field(&state, &project_number, actual_name).await;
+            }
+
             // Best-effort: ask Nextcloud to rescan so it picks up the move.
             // Never blocks or fails the move itself over a rescan hiccup -
             // matches the pattern e-fees-api itself uses for every other
@@ -435,6 +502,7 @@ pub async fn move_project_folder(
 #[command]
 pub async fn move_project_from_rfp(
     app_handle: AppHandle,
+    state: State<'_, AppState>,
     project_number: String,
     destination: String,
 ) -> Result<FolderOperationResult, String> {
@@ -444,10 +512,14 @@ pub async fn move_project_from_rfp(
     );
     // Validate destination — uses new domain model statuses
     match destination.as_str() {
-        "current" => move_project_folder(app_handle, project_number, "awarded".to_string()).await,
-        "archive" => move_project_folder(app_handle, project_number, "completed".to_string()).await,
+        "current" => {
+            move_project_folder(app_handle, state, project_number, "awarded".to_string()).await
+        }
+        "archive" => {
+            move_project_folder(app_handle, state, project_number, "completed".to_string()).await
+        }
         "inactive" => {
-            move_project_folder(app_handle, project_number, "cancelled".to_string()).await
+            move_project_folder(app_handle, state, project_number, "cancelled".to_string()).await
         }
         _ => Err(format!(
             "Invalid destination: {}. Use 'current', 'archive', or 'inactive'",
@@ -459,10 +531,11 @@ pub async fn move_project_from_rfp(
 #[command]
 pub async fn move_project_to_archive(
     app_handle: AppHandle,
+    state: State<'_, AppState>,
     project_number: String,
 ) -> Result<FolderOperationResult, String> {
     info!("Moving project {} to archive", project_number);
-    move_project_folder(app_handle, project_number, "completed".to_string()).await
+    move_project_folder(app_handle, state, project_number, "completed".to_string()).await
 }
 
 #[command]
@@ -676,5 +749,22 @@ mod tests {
         // real empty-string URL/key.
         let settings = settings_with(Some("   "), Some(""));
         assert!(!efees_rescan_configured(&settings));
+    }
+
+    #[test]
+    fn project_key_converts_hyphens_to_underscores() {
+        assert_eq!(project_key_from_number("26-97110"), "26_97110");
+    }
+
+    #[test]
+    fn project_key_is_idempotent_on_an_already_underscored_key() {
+        // Defensive: if a caller ever passes the record-key form by mistake,
+        // this must not corrupt it further.
+        assert_eq!(project_key_from_number("26_97110"), "26_97110");
+    }
+
+    #[test]
+    fn project_key_only_replaces_hyphens_leaves_the_rest_untouched() {
+        assert_eq!(project_key_from_number("00-00001"), "00_00001");
     }
 }
