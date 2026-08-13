@@ -9,4 +9,5 @@ pub mod fee_export;
 pub mod fees;
 pub mod folders;
 pub mod projects;
+pub mod rescan;
 pub mod stats;

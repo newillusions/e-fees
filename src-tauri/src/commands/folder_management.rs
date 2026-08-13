@@ -13,10 +13,12 @@
 //! Paths are read from the app settings (`e-fees.config` / `e-fees.config.dev` file):
 //! - `PROJECT_FOLDER_PATH`: Base path for all project folders
 
+use crate::commands::types::AppSettingsPublic;
 use crate::commands::get_settings;
 use log::{error, info, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tauri::{command, AppHandle};
 
 #[derive(Debug, serde::Serialize)]
@@ -67,6 +69,63 @@ async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, Strin
 
     info!("Using project base path: {:?}", path);
     Ok(path)
+}
+
+/// Whether enough settings are present to attempt a Nextcloud rescan.
+/// Pure/testable: both `efees_api_url` and `efees_api_key` must be set.
+fn efees_rescan_configured(settings: &AppSettingsPublic) -> bool {
+    settings
+        .efees_api_url
+        .as_ref()
+        .is_some_and(|u| !u.trim().is_empty())
+        && settings
+            .efees_api_key
+            .as_ref()
+            .is_some_and(|k| !k.trim().is_empty())
+}
+
+/// Best-effort trigger of e-fees-api's `POST /nc/rescan` after a successful
+/// folder move, so Nextcloud's groupfolders index picks up the change made
+/// directly on the filesystem (Nextcloud does not watch the filesystem live).
+///
+/// Deliberately swallows every failure mode (not configured, unreachable,
+/// non-2xx) - a stale Nextcloud index is a freshness nicety, not a reason to
+/// report the folder move itself as failed. Logs at warn/info so it's still
+/// visible for diagnosis.
+async fn trigger_nc_rescan(settings: &AppSettingsPublic) {
+    if !efees_rescan_configured(settings) {
+        info!(
+            "Skipping Nextcloud rescan: EFEES_API_URL/EFEES_API_KEY not configured in settings"
+        );
+        return;
+    }
+
+    // efees_rescan_configured() already proved both are Some and non-empty.
+    let base_url = settings.efees_api_url.as_ref().unwrap().trim_end_matches('/');
+    let api_key = settings.efees_api_key.as_ref().unwrap();
+    let url = format!("{}/nc/rescan", base_url);
+
+    let client = reqwest::Client::new();
+    match client
+        .post(&url)
+        .header("X-API-Key", api_key)
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+    {
+        Ok(response) if response.status().is_success() => {
+            info!("Nextcloud rescan triggered successfully");
+        }
+        Ok(response) => {
+            warn!(
+                "Nextcloud rescan request returned {} (non-fatal)",
+                response.status()
+            );
+        }
+        Err(e) => {
+            warn!("Failed to trigger Nextcloud rescan (non-fatal): {}", e);
+        }
+    }
 }
 
 /// Get the folder name for a given project status.
@@ -344,6 +403,16 @@ pub async fn move_project_folder(
             }
 
             info!("{}", success_message);
+
+            // Best-effort: ask Nextcloud to rescan so it picks up the move.
+            // Never blocks or fails the move itself over a rescan hiccup -
+            // matches the pattern e-fees-api itself uses for every other
+            // nc_rescan call site (document upload, fee export).
+            match get_settings(app_handle.clone()).await {
+                Ok(settings) => trigger_nc_rescan(&settings).await,
+                Err(e) => warn!("Skipping Nextcloud rescan - could not read settings: {}", e),
+            }
+
             Ok(FolderOperationResult {
                 success: true,
                 message: success_message,
@@ -545,5 +614,67 @@ pub async fn validate_project_base_path(app_handle: AppHandle) -> Result<String,
             }
         }
         Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn settings_with(
+        efees_api_url: Option<&str>,
+        efees_api_key: Option<&str>,
+    ) -> AppSettingsPublic {
+        AppSettingsPublic {
+            surrealdb_url: None,
+            surrealdb_ns: None,
+            surrealdb_db: None,
+            surrealdb_user: None,
+            has_password: false,
+            staff_name: None,
+            staff_email: None,
+            staff_phone: None,
+            staff_position: None,
+            project_folder_path: None,
+            dev_mode: None,
+            log_level: None,
+            scope_api_url: None,
+            scope_api_key: None,
+            efees_api_url: efees_api_url.map(str::to_string),
+            efees_api_key: efees_api_key.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn rescan_configured_when_both_url_and_key_present() {
+        let settings = settings_with(Some("http://10.0.21.80:3200"), Some("secret-key"));
+        assert!(efees_rescan_configured(&settings));
+    }
+
+    #[test]
+    fn rescan_not_configured_when_url_missing() {
+        let settings = settings_with(None, Some("secret-key"));
+        assert!(!efees_rescan_configured(&settings));
+    }
+
+    #[test]
+    fn rescan_not_configured_when_key_missing() {
+        let settings = settings_with(Some("http://10.0.21.80:3200"), None);
+        assert!(!efees_rescan_configured(&settings));
+    }
+
+    #[test]
+    fn rescan_not_configured_when_both_missing() {
+        let settings = settings_with(None, None);
+        assert!(!efees_rescan_configured(&settings));
+    }
+
+    #[test]
+    fn rescan_not_configured_when_values_are_blank_strings() {
+        // A saved-but-empty settings field (e.g. cleared in the Settings
+        // panel) must be treated the same as "not configured", not as a
+        // real empty-string URL/key.
+        let settings = settings_with(Some("   "), Some(""));
+        assert!(!efees_rescan_configured(&settings));
     }
 }

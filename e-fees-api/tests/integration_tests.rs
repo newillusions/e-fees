@@ -176,6 +176,20 @@ async fn test_projects_requires_auth() {
 }
 
 #[tokio::test]
+async fn test_nc_rescan_requires_auth() {
+    verify_not_production();
+
+    let client = Client::new();
+    let resp = client
+        .post(format!("{}/nc/rescan", base_url()))
+        .send()
+        .await
+        .expect("Failed to send request");
+
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
 async fn test_fees_requires_auth() {
     verify_not_production();
 

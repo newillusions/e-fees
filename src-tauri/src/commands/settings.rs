@@ -66,6 +66,8 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
         log_level: None,
         scope_api_url: None,
         scope_api_key: None,
+        efees_api_url: None,
+        efees_api_key: None,
     };
 
     info!("Looking for config file at: {:?}", env_path);
@@ -107,6 +109,8 @@ pub async fn get_settings_internal(app_handle: &AppHandle) -> Result<AppSettings
                             "LOG_LEVEL" => settings.log_level = Some(value.to_lowercase()),
                             "SCOPE_API_URL" => settings.scope_api_url = Some(value.to_string()),
                             "SCOPE_API_KEY" => settings.scope_api_key = Some(value.to_string()),
+                            "EFEES_API_URL" => settings.efees_api_url = Some(value.to_string()),
+                            "EFEES_API_KEY" => settings.efees_api_key = Some(value.to_string()),
                             _ => {} // Ignore unknown variables
                         }
                     }
@@ -276,7 +280,9 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
                             | "DEV_MODE"
                             | "LOG_LEVEL"
                             | "SCOPE_API_URL"
-                            | "SCOPE_API_KEY" => continue,
+                            | "SCOPE_API_KEY"
+                            | "EFEES_API_URL"
+                            | "EFEES_API_KEY" => continue,
                             _ => lines.push(line.to_string()),
                         }
                     } else {
@@ -360,6 +366,17 @@ pub async fn save_settings(settings: AppSettings, app_handle: AppHandle) -> Resu
 
     if let Some(scope_key) = &settings.scope_api_key {
         lines.push(format!("SCOPE_API_KEY=\"{}\"", scope_key));
+    }
+
+    lines.push("".to_string());
+    lines.push("# E-Fees API (Nextcloud rescan trigger)".to_string());
+
+    if let Some(efees_url) = &settings.efees_api_url {
+        lines.push(format!("EFEES_API_URL=\"{}\"", efees_url));
+    }
+
+    if let Some(efees_key) = &settings.efees_api_key {
+        lines.push(format!("EFEES_API_KEY=\"{}\"", efees_key));
     }
 
     // Write to file atomically

@@ -161,6 +161,127 @@ describe('projectsActions bulk write path (multiselect)', () => {
       expect(result).toEqual({ requested: 0, applied: 0 });
       expect(mockInvoke).not.toHaveBeenCalled();
     });
+
+    describe('folder moves (bulk Lost -> 00 Inactive parity with the single-project path)', () => {
+      const withNumber = (id: string, number: string, status: Project['status']) =>
+        makeProject({
+          id,
+          status,
+          number: { year: 26, country: 971, seq: 1, id: number }
+        });
+
+      it('moves the folder when the new status maps to a different folder than the current one', async () => {
+        seedPaginatedProjects([withNumber('projects:26_97101', '26-97101', 'RFP')]);
+        mockInvoke.mockImplementation(async (cmd: string) => {
+          if (cmd === 'batch_update_status') return 1;
+          if (cmd === 'move_project_folder')
+            return { success: true, message: 'moved', old_path: 'a', new_path: 'b' };
+          return { id: 'activity_log:1' };
+        });
+
+        const result = await projectsActions.bulkUpdateStatus(['26_97101'], 'Lost');
+
+        expect(mockInvoke).toHaveBeenCalledWith('move_project_folder', {
+          projectNumber: '26-97101',
+          newStatus: 'Lost'
+        });
+        expect(result.folderMoves).toEqual({ attempted: 1, succeeded: 1, failures: [] });
+      });
+
+      it('does NOT attempt a folder move when old and new status map to the same folder', async () => {
+        // RFP and Submitted both live in "01 RFPs" per getFolderForStatus.
+        seedPaginatedProjects([withNumber('projects:26_97101', '26-97101', 'RFP')]);
+        mockInvoke.mockResolvedValue(1);
+
+        const result = await projectsActions.bulkUpdateStatus(['26_97101'], 'Submitted');
+
+        expect(mockInvoke).not.toHaveBeenCalledWith('move_project_folder', expect.anything());
+        expect(result.folderMoves).toBeUndefined();
+      });
+
+      it('records a folder-move failure without aborting the status change for that project', async () => {
+        seedPaginatedProjects([withNumber('projects:26_97101', '26-97101', 'RFP')]);
+        mockInvoke.mockImplementation(async (cmd: string) => {
+          if (cmd === 'batch_update_status') return 1;
+          if (cmd === 'move_project_folder') {
+            // Mirrors the Rust command's "not found" outcome - a success:false
+            // OK() result, not a thrown error (e.g. already moved by hand).
+            return {
+              success: false,
+              message: 'Project folder 26-97101 not found.',
+              old_path: undefined,
+              new_path: undefined
+            };
+          }
+          return { id: 'activity_log:1' };
+        });
+
+        const result = await projectsActions.bulkUpdateStatus(['26_97101'], 'Lost');
+
+        // Status change still applied and logged despite the folder-move failure.
+        const updated = paginatedProjectsStore.actions
+          .getState()
+          .items.find(p => p.id === 'projects:26_97101');
+        expect(updated?.status).toBe('Lost');
+        expect(mockInvoke).toHaveBeenCalledWith(
+          'create_activity_log',
+          expect.objectContaining({ log: expect.objectContaining({ action: 'status_change' }) })
+        );
+        expect(result.folderMoves).toEqual({
+          attempted: 1,
+          succeeded: 0,
+          failures: ['26-97101: Project folder 26-97101 not found.']
+        });
+      });
+
+      it('isolates a folder-move failure to its own project in a multi-project batch', async () => {
+        seedPaginatedProjects([
+          withNumber('projects:26_97101', '26-97101', 'RFP'),
+          withNumber('projects:26_97102', '26-97102', 'RFP')
+        ]);
+        mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+          if (cmd === 'batch_update_status') return 2;
+          if (cmd === 'move_project_folder') {
+            const { projectNumber } = (args ?? {}) as { projectNumber?: string };
+            if (projectNumber === '26-97101') {
+              return { success: true, message: 'moved', old_path: 'a', new_path: 'b' };
+            }
+            return { success: false, message: 'Destination folder already exists: x' };
+          }
+          return { id: 'activity_log:1' };
+        });
+
+        const result = await projectsActions.bulkUpdateStatus(
+          ['26_97101', '26_97102'],
+          'Lost'
+        );
+
+        expect(result.applied).toBe(2);
+        expect(result.folderMoves).toEqual({
+          attempted: 2,
+          succeeded: 1,
+          failures: ['26-97102: Destination folder already exists: x']
+        });
+      });
+
+      it('catches a thrown/rejected moveProjectFolder call as a failure instead of propagating', async () => {
+        seedPaginatedProjects([withNumber('projects:26_97101', '26-97101', 'RFP')]);
+        mockInvoke.mockImplementation(async (cmd: string) => {
+          if (cmd === 'batch_update_status') return 1;
+          if (cmd === 'move_project_folder') throw new Error('Tauri IPC failure');
+          return { id: 'activity_log:1' };
+        });
+
+        const result = await projectsActions.bulkUpdateStatus(['26_97101'], 'Lost');
+
+        expect(result.applied).toBe(1);
+        expect(result.folderMoves).toEqual({
+          attempted: 1,
+          succeeded: 0,
+          failures: ['26-97101: Tauri IPC failure']
+        });
+      });
+    });
   });
 
   describe('bulkDelete', () => {

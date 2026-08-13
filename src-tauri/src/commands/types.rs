@@ -109,6 +109,13 @@ pub struct AppSettings {
     pub scope_api_url: Option<String>,
     /// Scope service API key for authentication
     pub scope_api_key: Option<String>,
+    /// e-fees-api base URL, used to trigger a best-effort Nextcloud groupfolders
+    /// rescan after a direct filesystem folder move (see folder_management.rs).
+    /// Optional: the rescan is skipped (not an error) when unset.
+    pub efees_api_url: Option<String>,
+    /// e-fees-api API key (sent as `X-API-Key`, same header e-fees-api's own
+    /// scope-service client uses).
+    pub efees_api_key: Option<String>,
 }
 
 /// Public application settings structure for frontend consumption.
@@ -141,6 +148,8 @@ pub struct AppSettingsPublic {
     pub log_level: Option<String>,
     pub scope_api_url: Option<String>,
     pub scope_api_key: Option<String>,
+    pub efees_api_url: Option<String>,
+    pub efees_api_key: Option<String>,
 }
 
 impl From<&AppSettings> for AppSettingsPublic {
@@ -163,6 +172,8 @@ impl From<&AppSettings> for AppSettingsPublic {
             log_level: settings.log_level.clone(),
             scope_api_url: settings.scope_api_url.clone(),
             scope_api_key: settings.scope_api_key.clone(),
+            efees_api_url: settings.efees_api_url.clone(),
+            efees_api_key: settings.efees_api_key.clone(),
         }
     }
 }

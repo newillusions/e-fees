@@ -168,6 +168,12 @@ pub struct FolderCreatedResponse {
     pub path: String,
 }
 
+/// Nextcloud rescan trigger success response.
+#[derive(Serialize, ToSchema)]
+pub struct RescanTriggeredResponse {
+    pub status: String,
+}
+
 /// Help/self-documentation response.
 #[derive(Serialize, ToSchema)]
 pub struct HelpResponse {

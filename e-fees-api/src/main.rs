@@ -73,6 +73,7 @@ pub struct AppState {
         routes::contacts::delete_contact,
         routes::folders::create_folder,
         routes::documents::upload_document,
+        routes::rescan::trigger_rescan,
     ),
     tags(
         (name = "Health", description = "Service health checks"),
@@ -198,6 +199,10 @@ async fn main() {
         .route(
             "/projects/{id}/folder",
             axum::routing::post(routes::folders::create_folder),
+        )
+        .route(
+            "/nc/rescan",
+            axum::routing::post(routes::rescan::trigger_rescan),
         )
         .route(
             "/projects/{id}/documents",

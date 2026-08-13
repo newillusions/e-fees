@@ -98,15 +98,27 @@
   async function handleBulkStatusChange(status: string) {
     const ids = [...selectedIds];
     try {
-      const { requested, applied } = await projectsActions.bulkUpdateStatus(
+      const { requested, applied, folderMoves } = await projectsActions.bulkUpdateStatus(
         ids,
         status as Project['status']
       );
       clearSelection();
+
+      const messages: string[] = [];
       if (applied < requested) {
-        showBulkActionError(
+        messages.push(
           `Updated ${applied} of ${requested} selected projects - the rest may no longer exist. Refresh to verify.`
         );
+      }
+      if (folderMoves && folderMoves.failures.length > 0) {
+        const failedCount = folderMoves.failures.length;
+        const movedCount = folderMoves.succeeded;
+        messages.push(
+          `Moved ${movedCount} of ${folderMoves.attempted} project folder(s); ${failedCount} could not be moved: ${folderMoves.failures.join('; ')}`
+        );
+      }
+      if (messages.length > 0) {
+        showBulkActionError(messages.join(' '));
       }
     } catch (e) {
       logApiError('bulk status change projects', e as Error);

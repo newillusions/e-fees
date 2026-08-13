@@ -14,6 +14,11 @@ import { projectLogger, companyLogger, contactLogger, feeLogger } from './servic
 import { ACTIVE_PROPOSAL_STATUSES, ACTIVE_PROJECT_STATUSES } from './constants';
 import { batchDeleteEntities, batchUpdateStatus } from './api/batch';
 import { extractIdFromRelation } from './utils/surrealdb';
+import {
+  moveProjectFolder,
+  getFolderForStatus,
+  type FolderOperationResult
+} from './api/folderManagement';
 
 // ============================================================================
 // CONNECTION STORE (UNCHANGED)
@@ -213,13 +218,27 @@ export const projectsActions = {
    * auditable as single-project edits, and patches the paginated store in place
    * instead of forcing a full refetch.
    *
-   * Returns { requested, applied } so callers can detect a partial application
-   * (e.g. an id that no longer exists server-side) instead of assuming success.
+   * Also mirrors the single-project edit flow's folder-move behavior
+   * (StatusChangeModal + ProjectModal's folderChangeRequired -> moveProjectFolder):
+   * whenever the destination status maps to a different project folder than the
+   * current status (e.g. any status -> Lost moves the project into "00 Inactive"),
+   * the folder is moved too. Folder moves are per-project and best-effort - a
+   * move failure (folder not found, already moved by hand, destination
+   * collision, fs error) never aborts the status change for that project or any
+   * other; it is surfaced via the returned `folderMoves` summary instead.
+   *
+   * Returns { requested, applied, folderMoves? } so callers can detect a
+   * partial application (e.g. an id that no longer exists server-side) and a
+   * partial folder-move outcome, instead of assuming full success.
    */
   async bulkUpdateStatus(
     ids: string[],
     status: Project['status']
-  ): Promise<{ requested: number; applied: number }> {
+  ): Promise<{
+    requested: number;
+    applied: number;
+    folderMoves?: { attempted: number; succeeded: number; failures: string[] };
+  }> {
     if (ids.length === 0) return { requested: 0, applied: 0 };
 
     // Keyed by the BARE record key (matches `ids`, which is bare-key form
@@ -233,6 +252,8 @@ export const projectsActions = {
     }
 
     const applied = await batchUpdateStatus('projects', ids, status);
+
+    let folderMoves: { attempted: number; succeeded: number; failures: string[] } | undefined;
 
     for (const id of ids) {
       const priorProject = before.get(id);
@@ -251,9 +272,32 @@ export const projectsActions = {
       if (priorProject.status !== status) {
         projectLogger.onStatusChange(updated, priorProject.status, status);
       }
+
+      // Folder move: only when the destination folder actually differs from
+      // the current one (same logic as StatusChangeModal's folderChangeRequired).
+      const projectNumber = priorProject.number?.id;
+      if (
+        projectNumber &&
+        priorProject.status &&
+        getFolderForStatus(priorProject.status) !== getFolderForStatus(status)
+      ) {
+        folderMoves ??= { attempted: 0, succeeded: 0, failures: [] };
+        folderMoves.attempted++;
+        try {
+          const result: FolderOperationResult = await moveProjectFolder(projectNumber, status);
+          if (result.success) {
+            folderMoves.succeeded++;
+          } else {
+            folderMoves.failures.push(`${projectNumber}: ${result.message}`);
+          }
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          folderMoves.failures.push(`${projectNumber}: ${message}`);
+        }
+      }
     }
 
-    return { requested: ids.length, applied };
+    return { requested: ids.length, applied, folderMoves };
   },
 
   /**
