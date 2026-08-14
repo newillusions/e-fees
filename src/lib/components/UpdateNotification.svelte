@@ -9,7 +9,7 @@
 
   let showModal = false;
   let updateAvailable = false;
-  let updateInfo: { version: string; notes: string } | null = null;
+  let updateInfo: { version: string; currentVersion: string; notes: string } | null = null;
   let downloading = false;
   let downloadProgress = 0;
   let downloadedBytes = 0;
@@ -66,6 +66,9 @@
         updateAvailable = true;
         updateInfo = {
           version: update.version,
+          // check() already resolves the running app's version on the Update
+          // object - no separate app-version lookup needed.
+          currentVersion: update.currentVersion,
           notes: update.body || `New version ${update.version} is available`
         };
         showModal = true;
@@ -221,7 +224,7 @@
             Update Available
           </h2>
           <p class="text-sm text-emittiv-light">
-            Version {updateInfo?.version}
+            v{updateInfo?.currentVersion} → v{updateInfo?.version}
           </p>
         </div>
       </div>

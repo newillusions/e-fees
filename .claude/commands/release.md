@@ -21,12 +21,18 @@ Complete release pipeline: version bump → tag → CI build → Forgejo release
 ```
 Tag push → GitHub Actions → Builds macOS (aarch64 + x64) + Windows
                           → Uploads artifacts to Forgejo releases
-                          → Generates update.json → pushes to Forgejo via API
-                          → Creates commit on Forgejo with update.json
-
-Post-CI:  Pull update.json from Forgejo → push to GitHub
-          (Tauri updater checks raw.githubusercontent.com)
+                          → Generates update.json
+                          → Builds ONE commit on top of origin/main (Forgejo)
+                          → Pushes that same commit to BOTH origin (Forgejo)
+                            and github, so main stays identical on both
+                            (Tauri updater checks raw.githubusercontent.com)
 ```
+
+No manual sync step is needed after CI succeeds - the `update-manifest` job pushes
+the identical commit to both remotes itself (fixed 2026-08-14; previously two
+independent commits - one via the Gitea contents API, one via a separate
+clone+commit - diverged by one commit every release and needed a manual
+drift-merge each time).
 
 ## Prerequisites Check
 
@@ -122,20 +128,20 @@ gh run view $RUN_ID --repo newillusions/e-fees --log-failed | tail -80
 
 **Typical build time**: 15-25 minutes for all 3 jobs (macOS aarch64, macOS x64, Windows).
 
-## Step 4: Sync update.json to GitHub
+## Step 4: Verify update.json landed on both remotes
 
-After CI succeeds, the update-manifest job pushes update.json to Forgejo via API (creates a commit).
-The Tauri updater endpoint is `raw.githubusercontent.com`, so we need update.json on GitHub too.
+After CI succeeds, the update-manifest job has already pushed the SAME manifest
+commit to both origin (Forgejo) and github - no manual sync step needed.
 
 ```bash
-# Pull the CI-generated update.json commit from Forgejo
+# Pull the CI-generated update.json commit and confirm both remotes match
+git fetch origin main github main
+git log origin/main -1 --oneline
+git log github/main -1 --oneline   # should be the identical commit sha
 git pull origin main
 
 # Verify update.json exists and has correct content
 cat update.json | python3 -m json.tool
-
-# Push to GitHub so raw.githubusercontent.com serves it
-git push github main
 ```
 
 Verify the update endpoint is accessible:
@@ -228,7 +234,10 @@ git push github "v$VERSION"
 ```
 
 ### update.json not appearing on GitHub
-CI pushes to Forgejo only. You must manually pull and push to GitHub:
+CI pushes the same commit to both remotes automatically. If it's still missing on
+GitHub, check the `update-manifest` job's "Commit update.json" step log for the
+`::error::` line (it fails loudly after 3 retries rather than silently giving up).
+As a one-off manual recovery:
 ```bash
 git pull origin main && git push github main
 ```

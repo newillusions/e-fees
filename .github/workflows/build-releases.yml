@@ -461,71 +461,62 @@ jobs:
           echo "Generated update.json:"
           cat update.json
 
-          # Base64 encode for API
-          CONTENT=$(base64 -w 0 update.json)
-          echo "content=$CONTENT" >> $GITHUB_OUTPUT
-
       - name: Upload update.json as artifact
         uses: actions/upload-artifact@v4
         with:
           name: update-manifest
           path: update.json
 
-      - name: Push to Gitea via API
-        continue-on-error: true
-        run: |
-          echo "Attempting to push update.json to Gitea..."
-
-          # Get current file SHA (if exists)
-          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json?ref=main")
-
-          SHA=$(echo "$RESPONSE" | jq -r '.sha // empty')
-
-          # Prepare update payload
-          if [ -n "$SHA" ]; then
-            echo "Updating existing file (SHA: $SHA)"
-            PAYLOAD=$(jq -n \
-              --arg content "${{ steps.generate.outputs.content }}" \
-              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
-              --arg sha "$SHA" \
-              '{content: $content, message: $message, sha: $sha}')
-          else
-            echo "Creating new file"
-            PAYLOAD=$(jq -n \
-              --arg content "${{ steps.generate.outputs.content }}" \
-              --arg message "chore: Update manifest for v${{ steps.version.outputs.VERSION }}" \
-              '{content: $content, message: $message}')
-          fi
-
-          # Push to Gitea
-          RESULT=$(curl -s -X PUT \
-            -H "Authorization: token ${{ secrets.GITEA_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "${{ env.GITEA_SERVER }}/api/v1/repos/${{ env.GITEA_OWNER }}/${{ env.GITEA_REPO }}/contents/update.json" \
-            -d "$PAYLOAD")
-
-          echo "API Response: $RESULT"
-
-          if echo "$RESULT" | jq -e '.content.sha' > /dev/null 2>&1; then
-            echo "✅ Successfully pushed update.json to Gitea"
-          else
-            echo "⚠️ Failed to push to Gitea (may need manual update)"
-            echo "The update.json artifact is available for manual upload"
-          fi
-
       # The updater endpoint reads update.json from THIS repo's main branch on
-      # raw.githubusercontent.com - commit it back here so released clients see
-      # new versions (previously required a manual sync; the GitHub manifest was
-      # stale from March to July 2026 because of it).
-      - name: Commit update.json to GitHub main
-        continue-on-error: true
+      # raw.githubusercontent.com, so it must land on GitHub; Forgejo (origin)
+      # is the source-of-truth remote for everything else, so it must land
+      # there too. Previously these were two INDEPENDENT commits - one via
+      # the Gitea contents API, one via a separate clone+commit - which
+      # produced two different commit objects (different author/committer
+      # metadata) for the identical update.json content. That left origin/main
+      # and github/main permanently one "chore: update manifest" commit apart
+      # after every release, requiring a manual drift-merge each time
+      # (v0.17.0, v0.18.0, v0.18.1 all hit this). Fix: build ONE commit
+      # locally, on top of the canonical remote (origin/Forgejo), and push
+      # that exact commit object to both remotes so the SHAs match.
+      - name: Commit update.json (single commit, pushed to both remotes)
         run: |
-          git clone --depth 1 "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" manifest-repo
-          cp update.json manifest-repo/update.json
+          set -e
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          UPDATE_JSON="$PWD/update.json"
+
+          git clone "https://x-access-token:${{ secrets.GITEA_TOKEN }}@forge.mms.name/emittiv/fee-prop.git" manifest-repo
           cd manifest-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add update.json
-          git diff --cached --quiet || git commit -m "chore: update manifest for v${{ steps.version.outputs.VERSION }}"
-          git push origin HEAD:main
+          git remote add github "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          MAX_ATTEMPTS=3
+          for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+            git fetch origin main --quiet
+            git checkout -B main origin/main --quiet
+            cp "$UPDATE_JSON" update.json
+            git add update.json
+
+            if git diff --cached --quiet; then
+              echo "update.json already current on origin/main - nothing new to commit"
+            else
+              git commit -m "chore: update manifest for v$VERSION" --quiet
+            fi
+            echo "Local main is at $(git rev-parse HEAD)"
+
+            ORIGIN_OK=true
+            git push origin "HEAD:main" || ORIGIN_OK=false
+
+            if [ "$ORIGIN_OK" = true ] && git push github "HEAD:main"; then
+              echo "✅ Pushed identical commit $(git rev-parse HEAD) to origin/main and github/main"
+              exit 0
+            fi
+
+            if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
+              echo "::error::Failed to sync the manifest commit to both remotes after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+            echo "One or both remotes rejected the push (likely advanced) - refetching and retrying ($ATTEMPT/$MAX_ATTEMPTS)"
+            sleep 5
+          done
