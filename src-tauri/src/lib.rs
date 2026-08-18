@@ -35,6 +35,7 @@ use commands::{
     delete_project,
     delete_project_cascade,
     // Folder reconcile (post-merge / cascade-delete on-disk follow-up)
+    execute_backup_cleanup,
     execute_folder_reconcile,
     execute_trash_project_folder,
     // Excel export
@@ -87,6 +88,7 @@ use commands::{
     open_folder_in_explorer,
     populate_project_data,
     position_window_4k,
+    preview_backup_cleanup,
     preview_folder_reconcile,
     preview_project_delete,
     preview_project_merge,
@@ -390,6 +392,8 @@ pub fn run() {
             execute_folder_reconcile,
             preview_trash_project_folder,
             execute_trash_project_folder,
+            preview_backup_cleanup,
+            execute_backup_cleanup,
             log_message,
             // Log level control
             set_log_level,

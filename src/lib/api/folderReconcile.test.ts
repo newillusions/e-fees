@@ -8,14 +8,18 @@ import {
   previewFolderReconcile,
   executeFolderReconcile,
   previewTrashProjectFolder,
-  executeTrashProjectFolder
+  executeTrashProjectFolder,
+  previewBackupCleanup,
+  executeBackupCleanup
 } from './folderReconcile';
 import type {
   FolderReconcilePreview,
   FolderReconcileOutcome,
   ReconcileResolution,
   TrashFolderPreview,
-  TrashFolderOutcome
+  TrashFolderOutcome,
+  BackupCleanupPreview,
+  BackupCleanupOutcome
 } from '../../types';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -225,6 +229,135 @@ describe('Folder Reconcile API Module', () => {
 
       await expect(executeTrashProjectFolder('26-97105')).rejects.toThrow(
         'Failed to create backup directory'
+      );
+    });
+  });
+
+  describe('previewBackupCleanup', () => {
+    it('should call invoke with cutoffDays when provided', async () => {
+      const mockPreview: BackupCleanupPreview = {
+        base_path: '/base',
+        cutoff_days: 30,
+        eligible: [
+          {
+            timestamp: '20260601T000000Z',
+            path: '/base/.reconcile-backups/20260601T000000Z',
+            age_days: 78,
+            file_count: 3,
+            total_size_bytes: 4096
+          }
+        ],
+        eligible_count: 1,
+        total_size_bytes: 4096
+      };
+      mockInvoke.mockResolvedValueOnce(mockPreview);
+
+      const result = await previewBackupCleanup(30);
+
+      expect(mockInvoke).toHaveBeenCalledWith('preview_backup_cleanup', {
+        cutoffDays: 30
+      });
+      expect(result).toEqual(mockPreview);
+    });
+
+    it('should call invoke with cutoffDays: null when omitted (backend default applies)', async () => {
+      const mockPreview: BackupCleanupPreview = {
+        base_path: '/base',
+        cutoff_days: 30,
+        eligible: [],
+        eligible_count: 0,
+        total_size_bytes: 0
+      };
+      mockInvoke.mockResolvedValueOnce(mockPreview);
+
+      const result = await previewBackupCleanup();
+
+      expect(mockInvoke).toHaveBeenCalledWith('preview_backup_cleanup', {
+        cutoffDays: null
+      });
+      expect(result.eligible_count).toBe(0);
+    });
+
+    it('should throw on error', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('PROJECT_FOLDER_PATH not configured'));
+
+      await expect(previewBackupCleanup()).rejects.toThrow('PROJECT_FOLDER_PATH not configured');
+    });
+  });
+
+  describe('executeBackupCleanup', () => {
+    it('should call invoke with dryRun and cutoffDays', async () => {
+      const mockOutcome: BackupCleanupOutcome = {
+        dry_run: true,
+        deleted_count: 2,
+        freed_bytes: 8192,
+        errors: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockOutcome);
+
+      const result = await executeBackupCleanup(true, 30);
+
+      expect(mockInvoke).toHaveBeenCalledWith('execute_backup_cleanup', {
+        dryRun: true,
+        cutoffDays: 30
+      });
+      expect(result).toEqual(mockOutcome);
+    });
+
+    it('should pass dryRun=false through unchanged for the real run', async () => {
+      const mockOutcome: BackupCleanupOutcome = {
+        dry_run: false,
+        deleted_count: 2,
+        freed_bytes: 8192,
+        errors: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockOutcome);
+
+      await executeBackupCleanup(false, 30);
+
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'execute_backup_cleanup',
+        expect.objectContaining({ dryRun: false })
+      );
+    });
+
+    it('should default cutoffDays to null when omitted', async () => {
+      const mockOutcome: BackupCleanupOutcome = {
+        dry_run: true,
+        deleted_count: 0,
+        freed_bytes: 0,
+        errors: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockOutcome);
+
+      await executeBackupCleanup(true);
+
+      expect(mockInvoke).toHaveBeenCalledWith('execute_backup_cleanup', {
+        dryRun: true,
+        cutoffDays: null
+      });
+    });
+
+    it('should surface per-directory errors without throwing', async () => {
+      const mockOutcome: BackupCleanupOutcome = {
+        dry_run: false,
+        deleted_count: 1,
+        freed_bytes: 100,
+        errors: ["Failed to delete '/base/.reconcile-backups/20260101T000000Z': not found"]
+      };
+      mockInvoke.mockResolvedValueOnce(mockOutcome);
+
+      const result = await executeBackupCleanup(false, 30);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.deleted_count).toBe(1);
+    });
+
+    it('should throw on invoke error', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('PROJECT_FOLDER_PATH not configured'));
+
+      await expect(executeBackupCleanup(false, 30)).rejects.toThrow(
+        'PROJECT_FOLDER_PATH not configured'
       );
     });
   });

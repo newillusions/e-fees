@@ -53,6 +53,7 @@
 //!   convention. Plain user-added files (no project-number substring) are
 //!   unaffected and keep pairing by literal relative path, as before.
 
+use chrono::{DateTime, NaiveDateTime, Utc};
 use log::info;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -67,6 +68,12 @@ use super::folder_management::{find_project_folder, get_projects_base_path, move
 /// reconciled folder's own base-of-status-dirs) that backups are written
 /// under. Deliberately dot-prefixed and outside the 4 status dirs.
 const BACKUP_DIR_NAME: &str = ".reconcile-backups";
+
+/// Default age threshold (days) for `preview_backup_cleanup` /
+/// `execute_backup_cleanup` when the caller doesn't pass `cutoff_days`
+/// explicitly. A backup exactly this many days old is KEPT - only one
+/// STRICTLY older is eligible (see `backup_is_eligible`).
+const DEFAULT_BACKUP_CLEANUP_CUTOFF_DAYS: i64 = 30;
 
 // ============================================================================
 // TYPES - preview_folder_reconcile / execute_folder_reconcile
@@ -162,6 +169,44 @@ pub struct TrashFolderOutcome {
     pub moved: bool,
     pub backup_path: Option<String>,
     pub message: String,
+}
+
+// ============================================================================
+// TYPES - preview_backup_cleanup / execute_backup_cleanup
+// ============================================================================
+
+/// One `.reconcile-backups/{timestamp}/` directory eligible for cleanup.
+/// Both `execute_folder_reconcile`'s `overwrite` action and
+/// `execute_trash_project_folder` write under the same
+/// `{PROJECT_FOLDER_PATH}/.reconcile-backups/{timestamp}/` root (see
+/// `backup_dir_for` and `execute_trash_project_folder`'s doc comment), so
+/// one scan covers backups from either source.
+#[derive(Debug, Clone, Serialize)]
+pub struct BackupCleanupEntry {
+    pub timestamp: String,
+    pub path: String,
+    pub age_days: i64,
+    pub file_count: u64,
+    pub total_size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BackupCleanupPreview {
+    pub base_path: String,
+    pub cutoff_days: i64,
+    pub eligible: Vec<BackupCleanupEntry>,
+    pub eligible_count: usize,
+    pub total_size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BackupCleanupOutcome {
+    pub dry_run: bool,
+    pub deleted_count: usize,
+    pub freed_bytes: u64,
+    /// Per-directory failures. A non-empty list does not mean the whole
+    /// call failed - other deletions may have succeeded.
+    pub errors: Vec<String>,
 }
 
 // ============================================================================
@@ -337,7 +382,121 @@ fn backup_dir_for(target_root: &Path, timestamp: &str) -> Option<PathBuf> {
 }
 
 fn reconcile_timestamp() -> String {
-    chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string()
+    Utc::now().format("%Y%m%dT%H%M%SZ").to_string()
+}
+
+/// Parse a `.reconcile-backups/` subdirectory name back into the instant it
+/// was created, using the exact format `reconcile_timestamp()` writes
+/// (`%Y%m%dT%H%M%SZ`). Returns `None` for anything that doesn't match -
+/// defensive, so a stray non-conforming entry under that directory (a
+/// future format change, something dropped there by hand) is silently
+/// skipped by the cleanup scan rather than mis-parsed or deleted.
+fn parse_backup_timestamp(name: &str) -> Option<DateTime<Utc>> {
+    NaiveDateTime::parse_from_str(name, "%Y%m%dT%H%M%SZ")
+        .ok()
+        .map(|naive| DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
+}
+
+/// Whether a backup created at `created_at` is eligible for cleanup as of
+/// `now`, given a `cutoff_days` threshold. Strictly-greater-than: a backup
+/// exactly `cutoff_days` old is KEPT, only one genuinely OLDER than the
+/// cutoff is eligible. Takes `now` as a parameter rather than calling
+/// `Utc::now()` internally so the boundary is exactly testable, same
+/// reasoning as every other pure/fs helper in this file.
+fn backup_is_eligible(created_at: DateTime<Utc>, now: DateTime<Utc>, cutoff_days: i64) -> bool {
+    now.signed_duration_since(created_at) > chrono::Duration::days(cutoff_days)
+}
+
+/// Total file count and byte size under `root` (recursive).
+fn dir_stats(root: &Path) -> (u64, u64) {
+    let mut file_count = 0u64;
+    let mut total_size_bytes = 0u64;
+    for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            file_count += 1;
+            if let Ok(meta) = entry.metadata() {
+                total_size_bytes += meta.len();
+            }
+        }
+    }
+    (file_count, total_size_bytes)
+}
+
+/// List every `.reconcile-backups/{timestamp}/` directory under
+/// `base_path` eligible for cleanup as of `now`, given `cutoff_days`. Pure
+/// `base_path` + fs, no `AppHandle` - directly unit-testable, mirroring
+/// this file's existing split of pure fs logic (`classify_entry`,
+/// `backup_dir_for`) from the thin `#[command]` glue that resolves
+/// `AppHandle` -> `base_path`. Returns an empty list (not an error) when
+/// `.reconcile-backups/` doesn't exist yet - "no backups" is a normal
+/// outcome, not exceptional.
+fn list_backup_entries(
+    base_path: &Path,
+    cutoff_days: i64,
+    now: DateTime<Utc>,
+) -> Result<Vec<BackupCleanupEntry>, String> {
+    let backups_root = base_path.join(BACKUP_DIR_NAME);
+    if !backups_root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let read_dir = fs::read_dir(&backups_root)
+        .map_err(|e| format!("Failed to read '{}': {}", backups_root.display(), e))?;
+
+    let mut entries = Vec::new();
+    for dir_entry in read_dir {
+        let dir_entry = dir_entry.map_err(|e| format!("Failed to read backup entry: {}", e))?;
+        let path = dir_entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let Some(created_at) = parse_backup_timestamp(name) else {
+            continue;
+        };
+        if !backup_is_eligible(created_at, now, cutoff_days) {
+            continue;
+        }
+
+        let (file_count, total_size_bytes) = dir_stats(&path);
+        entries.push(BackupCleanupEntry {
+            timestamp: name.to_string(),
+            path: path.to_string_lossy().to_string(),
+            age_days: now.signed_duration_since(created_at).num_days(),
+            file_count,
+            total_size_bytes,
+        });
+    }
+
+    entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    Ok(entries)
+}
+
+/// Delete (or, with `dry_run: true`, simulate deleting) every entry in
+/// `entries`. Pure fs operation over an already-computed entry list - no
+/// `AppHandle` needed, so real deletion behavior (not just the listing) is
+/// directly unit-testable. A failure on one entry is recorded and the loop
+/// continues, matching `execute_folder_reconcile`'s per-file error
+/// accumulation contract.
+fn delete_backup_dirs(entries: &[BackupCleanupEntry], dry_run: bool) -> (usize, u64, Vec<String>) {
+    let mut deleted_count = 0usize;
+    let mut freed_bytes = 0u64;
+    let mut errors = Vec::new();
+
+    for entry in entries {
+        if !dry_run {
+            if let Err(e) = fs::remove_dir_all(&entry.path) {
+                errors.push(format!("Failed to delete '{}': {}", entry.path, e));
+                continue;
+            }
+        }
+        deleted_count += 1;
+        freed_bytes += entry.total_size_bytes;
+    }
+
+    (deleted_count, freed_bytes, errors)
 }
 
 // ============================================================================
@@ -700,6 +859,71 @@ pub async fn execute_trash_project_folder(
         moved: true,
         backup_path: Some(dest.to_string_lossy().to_string()),
         message: format!("Folder moved to {}", dest.display()),
+    })
+}
+
+// ============================================================================
+// COMMANDS - backup cleanup (reconcile-backups maintenance)
+// ============================================================================
+
+/// List `.reconcile-backups/{timestamp}/` directories older than
+/// `cutoff_days` (defaults to `DEFAULT_BACKUP_CLEANUP_CUTOFF_DAYS` when
+/// omitted). Read-only - the frontend renders this as a dry-run summary
+/// (count + total size) before the user confirms `execute_backup_cleanup`.
+#[command]
+pub async fn preview_backup_cleanup(
+    app_handle: AppHandle,
+    cutoff_days: Option<i64>,
+) -> Result<BackupCleanupPreview, String> {
+    let cutoff_days = cutoff_days.unwrap_or(DEFAULT_BACKUP_CLEANUP_CUTOFF_DAYS);
+    let base_path = get_projects_base_path(&app_handle).await?;
+    let eligible = list_backup_entries(&base_path, cutoff_days, Utc::now())?;
+    let total_size_bytes = eligible.iter().map(|e| e.total_size_bytes).sum();
+
+    Ok(BackupCleanupPreview {
+        base_path: base_path.to_string_lossy().to_string(),
+        cutoff_days,
+        eligible_count: eligible.len(),
+        total_size_bytes,
+        eligible,
+    })
+}
+
+/// Permanently delete every `.reconcile-backups/{timestamp}/` directory
+/// older than `cutoff_days` (or, with `dry_run: true`, report what WOULD be
+/// deleted without touching the filesystem - same dry-run contract as
+/// `execute_folder_reconcile`). Re-scans fresh rather than trusting a prior
+/// `preview_backup_cleanup` call, so a backup that appeared or aged out of
+/// scope between preview and execute is handled correctly instead of acted
+/// on stale data. These backups are the LAST safety net for an overwrite
+/// or a trashed project folder - deletion here is genuinely permanent, no
+/// further backup is taken.
+#[command]
+pub async fn execute_backup_cleanup(
+    app_handle: AppHandle,
+    cutoff_days: Option<i64>,
+    dry_run: bool,
+) -> Result<BackupCleanupOutcome, String> {
+    let cutoff_days = cutoff_days.unwrap_or(DEFAULT_BACKUP_CLEANUP_CUTOFF_DAYS);
+    let base_path = get_projects_base_path(&app_handle).await?;
+    let eligible = list_backup_entries(&base_path, cutoff_days, Utc::now())?;
+    let (deleted_count, freed_bytes, errors) = delete_backup_dirs(&eligible, dry_run);
+
+    if !dry_run {
+        info!(
+            "Backup cleanup executed: {} backup dir(s) deleted, {} bytes freed (cutoff {}d, {} error(s))",
+            deleted_count,
+            freed_bytes,
+            cutoff_days,
+            errors.len()
+        );
+    }
+
+    Ok(BackupCleanupOutcome {
+        dry_run,
+        deleted_count,
+        freed_bytes,
+        errors,
     })
 }
 
@@ -1140,5 +1364,453 @@ mod tests {
             b"only exists in source",
             "must land under the TARGET's number"
         );
+    }
+
+    // -- backup_is_eligible: age boundary is strictly-greater-than -------
+
+    #[test]
+    fn backup_is_eligible_keeps_a_backup_exactly_at_the_cutoff() {
+        let now = Utc::now();
+        let created_at = now - chrono::Duration::days(30);
+        assert!(
+            !backup_is_eligible(created_at, now, 30),
+            "exactly 30 days old must be KEPT, not eligible - only strictly older is"
+        );
+    }
+
+    #[test]
+    fn backup_is_eligible_deletes_a_backup_one_second_past_the_cutoff() {
+        let now = Utc::now();
+        let created_at = now - chrono::Duration::days(30) - chrono::Duration::seconds(1);
+        assert!(backup_is_eligible(created_at, now, 30));
+    }
+
+    #[test]
+    fn backup_is_eligible_keeps_a_backup_just_under_the_cutoff() {
+        let now = Utc::now();
+        let created_at = now - chrono::Duration::days(29) - chrono::Duration::hours(23);
+        assert!(!backup_is_eligible(created_at, now, 30));
+    }
+
+    #[test]
+    fn backup_is_eligible_deletes_a_much_older_backup() {
+        let now = Utc::now();
+        let created_at = now - chrono::Duration::days(90);
+        assert!(backup_is_eligible(created_at, now, 30));
+    }
+
+    #[test]
+    fn backup_is_eligible_respects_a_custom_cutoff() {
+        let now = Utc::now();
+        let created_at = now - chrono::Duration::days(8);
+        assert!(backup_is_eligible(created_at, now, 7));
+        assert!(!backup_is_eligible(created_at, now, 9));
+    }
+
+    // -- parse_backup_timestamp: matches reconcile_timestamp()'s format --
+
+    #[test]
+    fn parse_backup_timestamp_round_trips_reconcile_timestamp_format() {
+        let ts = reconcile_timestamp();
+        assert!(
+            parse_backup_timestamp(&ts).is_some(),
+            "must parse the exact format reconcile_timestamp() produces"
+        );
+    }
+
+    #[test]
+    fn parse_backup_timestamp_rejects_non_conforming_names() {
+        assert!(parse_backup_timestamp("not-a-timestamp").is_none());
+        assert!(parse_backup_timestamp("").is_none());
+        assert!(parse_backup_timestamp("2026-08-18").is_none());
+    }
+
+    // -- list_backup_entries: listing, filtering, sizing -------------------
+
+    fn write_backup_dir(base: &Path, timestamp: &str, files: &[(&str, &[u8])]) -> PathBuf {
+        let dir = base.join(BACKUP_DIR_NAME).join(timestamp);
+        for (rel, content) in files {
+            write_file(&dir, rel, content);
+        }
+        dir
+    }
+
+    #[test]
+    fn list_backup_entries_returns_empty_when_no_backups_dir_exists() {
+        let base = TempDir::new("cleanup-no-backups-dir");
+        let entries = list_backup_entries(base.path(), 30, Utc::now()).unwrap();
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn list_backup_entries_only_returns_backups_older_than_cutoff() {
+        let base = TempDir::new("cleanup-mixed-ages");
+        let now = Utc::now();
+
+        let old_ts = (now - chrono::Duration::days(45))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        let recent_ts = (now - chrono::Duration::days(5))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        write_backup_dir(base.path(), &old_ts, &[("file.txt", b"old backup content")]);
+        write_backup_dir(base.path(), &recent_ts, &[("file.txt", b"recent")]);
+
+        let entries = list_backup_entries(base.path(), 30, now).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].timestamp, old_ts);
+        assert_eq!(entries[0].file_count, 1);
+        assert_eq!(
+            entries[0].total_size_bytes,
+            "old backup content".len() as u64
+        );
+    }
+
+    #[test]
+    fn list_backup_entries_ignores_non_conforming_directory_names() {
+        let base = TempDir::new("cleanup-stray-dir");
+        let now = Utc::now();
+        // A directory that doesn't match the timestamp format - must be
+        // skipped defensively rather than mis-parsed or (worse) deleted.
+        write_file(
+            &base.path().join(BACKUP_DIR_NAME).join("not-a-timestamp"),
+            "stray.txt",
+            b"x",
+        );
+
+        let entries = list_backup_entries(base.path(), 30, now).unwrap();
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn list_backup_entries_sums_multiple_files_per_backup() {
+        let base = TempDir::new("cleanup-multi-file");
+        let now = Utc::now();
+        let old_ts = (now - chrono::Duration::days(60))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        write_backup_dir(
+            base.path(),
+            &old_ts,
+            &[("a.txt", b"12345"), ("sub/b.txt", b"1234567890")],
+        );
+
+        let entries = list_backup_entries(base.path(), 30, now).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].file_count, 2);
+        assert_eq!(entries[0].total_size_bytes, 15);
+    }
+
+    #[test]
+    fn list_backup_entries_sorts_by_timestamp_ascending() {
+        let base = TempDir::new("cleanup-sort-order");
+        let now = Utc::now();
+        let older = (now - chrono::Duration::days(90))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        let newer = (now - chrono::Duration::days(31))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        // Written newer-first, must still come back older-first.
+        write_backup_dir(base.path(), &newer, &[("f.txt", b"n")]);
+        write_backup_dir(base.path(), &older, &[("f.txt", b"o")]);
+
+        let entries = list_backup_entries(base.path(), 30, now).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].timestamp, older);
+        assert_eq!(entries[1].timestamp, newer);
+    }
+
+    // -- delete_backup_dirs: dry_run vs real deletion, error accumulation --
+
+    #[test]
+    fn delete_backup_dirs_dry_run_does_not_touch_the_filesystem() {
+        let base = TempDir::new("cleanup-dryrun");
+        let dir = write_backup_dir(base.path(), "20260101T000000Z", &[("a.txt", b"12345")]);
+        let entries = vec![BackupCleanupEntry {
+            timestamp: "20260101T000000Z".to_string(),
+            path: dir.to_string_lossy().to_string(),
+            age_days: 999,
+            file_count: 1,
+            total_size_bytes: 5,
+        }];
+
+        let (deleted, freed, errors) = delete_backup_dirs(&entries, true);
+
+        assert_eq!(deleted, 1);
+        assert_eq!(freed, 5);
+        assert!(errors.is_empty());
+        assert!(dir.exists(), "dry_run must never delete anything");
+    }
+
+    #[test]
+    fn delete_backup_dirs_real_run_removes_the_directory() {
+        let base = TempDir::new("cleanup-realrun");
+        let dir = write_backup_dir(base.path(), "20260101T000000Z", &[("a.txt", b"12345")]);
+        let entries = vec![BackupCleanupEntry {
+            timestamp: "20260101T000000Z".to_string(),
+            path: dir.to_string_lossy().to_string(),
+            age_days: 999,
+            file_count: 1,
+            total_size_bytes: 5,
+        }];
+
+        let (deleted, freed, errors) = delete_backup_dirs(&entries, false);
+
+        assert_eq!(deleted, 1);
+        assert_eq!(freed, 5);
+        assert!(errors.is_empty());
+        assert!(!dir.exists(), "real run must actually remove the directory");
+    }
+
+    #[test]
+    fn delete_backup_dirs_reports_a_per_entry_error_and_continues() {
+        // One entry points at a path that doesn't exist - remove_dir_all
+        // must fail for that entry without aborting the batch (matches
+        // execute_folder_reconcile's per-file error accumulation contract).
+        let base = TempDir::new("cleanup-error-continue");
+        let missing = base.path().join(BACKUP_DIR_NAME).join("20260101T000000Z");
+        let real_dir = write_backup_dir(base.path(), "20260102T000000Z", &[("a.txt", b"ok")]);
+        let entries = vec![
+            BackupCleanupEntry {
+                timestamp: "20260101T000000Z".to_string(),
+                path: missing.to_string_lossy().to_string(),
+                age_days: 999,
+                file_count: 0,
+                total_size_bytes: 0,
+            },
+            BackupCleanupEntry {
+                timestamp: "20260102T000000Z".to_string(),
+                path: real_dir.to_string_lossy().to_string(),
+                age_days: 999,
+                file_count: 1,
+                total_size_bytes: 2,
+            },
+        ];
+
+        let (deleted, freed, errors) = delete_backup_dirs(&entries, false);
+
+        assert_eq!(deleted, 1, "the real entry must still succeed");
+        assert_eq!(freed, 2);
+        assert_eq!(
+            errors.len(),
+            1,
+            "the missing entry must report an error, not panic"
+        );
+        assert!(!real_dir.exists());
+    }
+
+    // -- end-to-end: the full reconcile flow against a REALISTIC on-disk
+    // -- layout (two different status dirs sharing one base path, exactly
+    // -- as FolderReconcileModal drives it after a real project merge) -
+    // -- pre-release confidence check, not just isolated-helper coverage.
+    // -- Every prior test in this file uses flat sibling TempDirs for
+    // -- source/target; NONE puts them under DIFFERENT status dirs the way
+    // -- production folders actually sit (`{base}/{status dir}/{project}`),
+    // -- and none exercises ReconcileAction::Overwrite through
+    // -- execute_folder_reconcile at all - this closes both gaps at once.
+
+    #[tokio::test]
+    async fn end_to_end_reconcile_flow_against_realistic_status_dir_layout() {
+        // Mirrors backup_dir_for_lands_outside_the_status_dir_as_a_sibling_of_it's
+        // layout, but with source and target under TWO DIFFERENT status
+        // dirs sharing one base - the case a real merge/reconcile always
+        // hits (an RFP being merged into a Current project), which no
+        // other test in this file covers.
+        let base = TempDir::new("e2e-reconcile-realistic-layout");
+        let source_root = base
+            .path()
+            .join("01 RFPs")
+            .join("26-97110 Old Duplicate");
+        let target_root = base
+            .path()
+            .join("11 Current")
+            .join("26-97104 Real Project");
+        fs::create_dir_all(&source_root).unwrap();
+        fs::create_dir_all(&target_root).unwrap();
+
+        // NEW: only in source.
+        write_file(&source_root, "new-invoice.pdf", b"invoice content");
+        // CONFLICT: same logical base file, renamed per project number,
+        // genuinely different content (a real merge decision, not a
+        // same-size collision).
+        write_file(&source_root, "26-97110-var.json", b"source variables v2");
+        write_file(
+            &target_root,
+            "26-97104-var.json",
+            b"target variables v1 (older)",
+        );
+        // IDENTICAL: present in both, byte-for-byte equal.
+        write_file(&source_root, "site photo.jpg", b"same photo bytes");
+        write_file(&target_root, "site photo.jpg", b"same photo bytes");
+
+        let source_path = source_root.to_string_lossy().to_string();
+        let target_path = target_root.to_string_lossy().to_string();
+
+        // --- Step 1: preview classifies all three correctly -------------
+        let preview = preview_folder_reconcile(
+            source_path.clone(),
+            target_path.clone(),
+            "26-97110".to_string(),
+            "26-97104".to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(preview.entries.len(), 3);
+        assert_eq!(preview.new_count, 1);
+        assert_eq!(preview.conflict_count, 1);
+        assert_eq!(preview.identical_count, 1);
+
+        let conflict_entry = preview
+            .entries
+            .iter()
+            .find(|e| e.status == ReconcileFileStatus::Conflict)
+            .expect("conflict entry must be present");
+        assert_eq!(conflict_entry.relative_path, "26-97110-var.json");
+        assert_eq!(
+            conflict_entry.dest_relative_path, "26-97104-var.json",
+            "conflict must be paired via canonical_dest_relpath, not raw path"
+        );
+
+        // --- Step 2: resolve as a realistic UI session would - take the
+        // --- new file, overwrite the conflict, skip the identical one ---
+        let resolutions = vec![
+            ReconcileResolution {
+                relative_path: "new-invoice.pdf".to_string(),
+                action: ReconcileAction::Copy,
+            },
+            ReconcileResolution {
+                relative_path: "26-97110-var.json".to_string(),
+                action: ReconcileAction::Overwrite,
+            },
+            ReconcileResolution {
+                relative_path: "site photo.jpg".to_string(),
+                action: ReconcileAction::Skip,
+            },
+        ];
+
+        // --- Step 3: dry run must report the same outcome shape but
+        // --- touch NOTHING on disk ---------------------------------------
+        let dry_run_outcome = execute_folder_reconcile(
+            source_path.clone(),
+            target_path.clone(),
+            resolutions.clone(),
+            true,
+            "26-97110".to_string(),
+            "26-97104".to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(dry_run_outcome.copied, 1);
+        assert_eq!(dry_run_outcome.overwritten, 1);
+        assert_eq!(dry_run_outcome.skipped, 1);
+        assert_eq!(dry_run_outcome.kept_both, 0);
+        assert!(dry_run_outcome.errors.is_empty());
+        assert_eq!(
+            dry_run_outcome.backups_created.len(),
+            1,
+            "dry run must still report what WOULD be backed up"
+        );
+
+        assert!(
+            !target_root.join("new-invoice.pdf").exists(),
+            "dry run must not copy the new file"
+        );
+        assert_eq!(
+            fs::read(target_root.join("26-97104-var.json")).unwrap(),
+            b"target variables v1 (older)",
+            "dry run must not touch the conflicting file's content"
+        );
+        assert!(
+            !base.path().join(BACKUP_DIR_NAME).exists(),
+            "dry run must not create the backup directory at all"
+        );
+
+        // --- Step 4: the real run actually applies everything -----------
+        let outcome = execute_folder_reconcile(
+            source_path,
+            target_path,
+            resolutions,
+            false,
+            "26-97110".to_string(),
+            "26-97104".to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(outcome.copied, 1);
+        assert_eq!(outcome.overwritten, 1);
+        assert_eq!(outcome.skipped, 1);
+        assert!(outcome.errors.is_empty());
+        assert_eq!(outcome.backups_created.len(), 1);
+
+        // NEW file landed in target with source's content.
+        assert_eq!(
+            fs::read(target_root.join("new-invoice.pdf")).unwrap(),
+            b"invoice content"
+        );
+        // CONFLICT: target now holds source's content, under the TARGET's
+        // number (not left as the source-numbered file).
+        assert_eq!(
+            fs::read(target_root.join("26-97104-var.json")).unwrap(),
+            b"source variables v2"
+        );
+        assert!(!target_root.join("26-97110-var.json").exists());
+        // SKIP: identical file genuinely untouched.
+        assert_eq!(
+            fs::read(target_root.join("site photo.jpg")).unwrap(),
+            b"same photo bytes"
+        );
+        // Source folder itself is never written to.
+        assert_eq!(
+            fs::read(source_root.join("26-97110-var.json")).unwrap(),
+            b"source variables v2"
+        );
+
+        // The pre-overwrite target content is preserved in the backup -
+        // this is the actual safety invariant the "never a silent
+        // overwrite" doc comment promises, verified by CONTENT not just by
+        // a path string existing.
+        let backup_path = PathBuf::from(&outcome.backups_created[0]);
+        assert_eq!(
+            fs::read(&backup_path).unwrap(),
+            b"target variables v1 (older)",
+            "backup must hold the ORIGINAL destination content, not the new one"
+        );
+
+        // The backup must land outside BOTH status dirs - the exact
+        // production scenario backup_dir_for's doc comment describes,
+        // now proven against two DIFFERENT status dirs rather than one.
+        assert!(!backup_path.starts_with(base.path().join("01 RFPs")));
+        assert!(!backup_path.starts_with(base.path().join("11 Current")));
+        assert!(backup_path.starts_with(base.path().join(BACKUP_DIR_NAME)));
+    }
+
+    // -- end-to-end: list + delete pipeline together ----------------------
+
+    #[test]
+    fn end_to_end_cleanup_deletes_old_backups_and_keeps_recent_ones() {
+        let base = TempDir::new("cleanup-e2e");
+        let now = Utc::now();
+        let old_ts = (now - chrono::Duration::days(40))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        let recent_ts = (now - chrono::Duration::days(2))
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        let old_dir = write_backup_dir(base.path(), &old_ts, &[("f.txt", b"old")]);
+        let recent_dir = write_backup_dir(base.path(), &recent_ts, &[("f.txt", b"new")]);
+
+        let eligible = list_backup_entries(base.path(), 30, now).unwrap();
+        let (deleted, freed, errors) = delete_backup_dirs(&eligible, false);
+
+        assert_eq!(deleted, 1);
+        assert_eq!(freed, 3);
+        assert!(errors.is_empty());
+        assert!(!old_dir.exists(), "old backup must be removed");
+        assert!(recent_dir.exists(), "recent backup must survive");
     }
 }

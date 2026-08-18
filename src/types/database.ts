@@ -237,6 +237,41 @@ export interface TrashFolderOutcome {
   message: string;
 }
 
+// ============================================================================
+// BACKUP CLEANUP TYPES (maintenance follow-up to the two reconcile flows
+// above - both write under the same {PROJECT_FOLDER_PATH}/.reconcile-backups/
+// {timestamp}/ root, so one scan/delete covers backups from either source.
+// see src-tauri/src/commands/folder_reconcile.rs)
+// ============================================================================
+
+/** One `.reconcile-backups/{timestamp}/` directory eligible for cleanup. */
+export interface BackupCleanupEntry {
+  timestamp: string;
+  path: string;
+  age_days: number;
+  file_count: number;
+  total_size_bytes: number;
+}
+
+/** Dry-run listing of backups older than cutoff_days - render before
+ * calling executeBackupCleanup(). */
+export interface BackupCleanupPreview {
+  base_path: string;
+  cutoff_days: number;
+  eligible: BackupCleanupEntry[];
+  eligible_count: number;
+  total_size_bytes: number;
+}
+
+/** Result of an execute_backup_cleanup call - dry_run mirrors what a real
+ * run would do without touching the filesystem. */
+export interface BackupCleanupOutcome {
+  dry_run: boolean;
+  deleted_count: number;
+  freed_bytes: number;
+  errors: string[];
+}
+
 export interface Company {
   id?: string; // company:ABBREVIATION
   name: string;

@@ -10,10 +10,13 @@
   import { reloadDatabaseConfig, reconnectDatabase } from '$lib/api';
   import { loadAllData } from '$lib/stores';
   import FolderSyncModal from './FolderSyncModal.svelte';
+  import BackupCleanupModal from './BackupCleanupModal.svelte';
   import { logger, logApiError } from '$lib/services/logger';
 
   // Folder sync modal state
   let showFolderSyncModal = $state(false);
+  // Backup cleanup modal state
+  let showBackupCleanupModal = $state(false);
 
   let {
     isOpen = $bindable(false),
@@ -537,6 +540,31 @@
               </svg>
               Check Folder Consistency
             </button>
+            <!-- Backup Cleanup Button -->
+            <button
+              type="button"
+              on:click={() => (showBackupCleanupModal = true)}
+              class="emittiv-btn emittiv-btn--md emittiv-btn--dark"
+              style="margin-top: 8px; width: 100%; gap: 8px;"
+              style:opacity={!settings.project_folder_path ? '0.5' : '1'}
+              style:cursor={!settings.project_folder_path ? 'not-allowed' : 'pointer'}
+              disabled={!settings.project_folder_path}
+            >
+              <svg
+                style="width: 14px; height: 14px; flex-shrink: 0;"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              Clean Up Old Backups
+            </button>
           </div>
 
           <!-- Developer Options Section -->
@@ -633,3 +661,6 @@
 
 <!-- Folder Sync Modal (rendered outside main modal for proper z-index) -->
 <FolderSyncModal isOpen={showFolderSyncModal} onclose={() => (showFolderSyncModal = false)} />
+
+<!-- Backup Cleanup Modal (rendered outside main modal for proper z-index) -->
+<BackupCleanupModal isOpen={showBackupCleanupModal} onclose={() => (showBackupCleanupModal = false)} />

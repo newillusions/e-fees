@@ -15,7 +15,9 @@ import type {
   FolderReconcileOutcome,
   ReconcileResolution,
   TrashFolderPreview,
-  TrashFolderOutcome
+  TrashFolderOutcome,
+  BackupCleanupPreview,
+  BackupCleanupOutcome
 } from '../../types';
 import { logApiError } from '../services/logger';
 
@@ -120,6 +122,50 @@ export async function executeTrashProjectFolder(
     });
   } catch (error) {
     logApiError('executeTrashProjectFolder', error as Error, { component: 'FolderReconcileApi' });
+    throw error;
+  }
+}
+
+/**
+ * List `.reconcile-backups/{timestamp}/` directories older than
+ * `cutoffDays` (defaults to 30 on the backend when omitted). Read-only -
+ * render this as a dry-run summary (count + total size) before calling
+ * `executeBackupCleanup`. Both the overwrite path in
+ * `executeFolderReconcile` and `executeTrashProjectFolder` write backups
+ * under the same root, so this single scan covers backups from either
+ * source.
+ */
+export async function previewBackupCleanup(cutoffDays?: number): Promise<BackupCleanupPreview> {
+  try {
+    return await invoke<BackupCleanupPreview>('preview_backup_cleanup', {
+      cutoffDays: cutoffDays ?? null
+    });
+  } catch (error) {
+    logApiError('previewBackupCleanup', error as Error, { component: 'FolderReconcileApi' });
+    throw error;
+  }
+}
+
+/**
+ * Permanently delete every `.reconcile-backups/{timestamp}/` directory
+ * older than `cutoffDays` (or, with `dryRun: true`, report what WOULD be
+ * deleted without touching the filesystem). These backups are the LAST
+ * safety net for an overwrite or a trashed project folder - deletion here
+ * is genuinely permanent, no further backup is taken. Call once with
+ * `dryRun: true` to render a confirmation summary, then again with
+ * `dryRun: false` after the user confirms.
+ */
+export async function executeBackupCleanup(
+  dryRun: boolean,
+  cutoffDays?: number
+): Promise<BackupCleanupOutcome> {
+  try {
+    return await invoke<BackupCleanupOutcome>('execute_backup_cleanup', {
+      dryRun,
+      cutoffDays: cutoffDays ?? null
+    });
+  } catch (error) {
+    logApiError('executeBackupCleanup', error as Error, { component: 'FolderReconcileApi' });
     throw error;
   }
 }

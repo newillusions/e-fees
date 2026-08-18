@@ -84,7 +84,10 @@ export type {
   ReconcileResolution,
   FolderReconcileOutcome,
   TrashFolderPreview,
-  TrashFolderOutcome
+  TrashFolderOutcome,
+  BackupCleanupEntry,
+  BackupCleanupPreview,
+  BackupCleanupOutcome
 } from './database';
 
 // ============================================================================
