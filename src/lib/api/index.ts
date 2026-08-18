@@ -64,6 +64,14 @@ export {
   writeFeeToJsonSafe
 } from './fees';
 
+// Folder reconcile operations (post-merge / cascade-delete on-disk follow-up)
+export {
+  previewFolderReconcile,
+  executeFolderReconcile,
+  previewTrashProjectFolder,
+  executeTrashProjectFolder
+} from './folderReconcile';
+
 // Filesystem operations
 export {
   selectFolder,

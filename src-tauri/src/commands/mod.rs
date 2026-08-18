@@ -121,6 +121,13 @@ pub use folder_management::{
 pub mod folder_sync;
 pub use folder_sync::{resolve_folder_inconsistency, scan_folder_sync};
 
+// Folder reconcile (post-merge / cascade-delete on-disk follow-up)
+pub mod folder_reconcile;
+pub use folder_reconcile::{
+    execute_folder_reconcile, execute_trash_project_folder, preview_folder_reconcile,
+    preview_trash_project_folder,
+};
+
 // Import wizard
 pub mod import_wizard;
 pub use import_wizard::{import_execute, import_scan_directory};

@@ -18,6 +18,7 @@
   import BaseModal from './BaseModal.svelte';
   import TypeaheadSelect from './TypeaheadSelect.svelte';
   import Button from './Button.svelte';
+  import FolderReconcileModal from './FolderReconcileModal.svelte';
   import type { Project, ProjectMergePreview, ProjectMergeResult } from '../../types';
 
   let {
@@ -43,6 +44,18 @@
   let loadingPreview = $state(false);
   let merging = $state(false);
   let error = $state('');
+
+  // Optional Step 5: on-disk folder reconcile, offered after the DB merge
+  // above has already committed. Fully decoupled - onmerged() only fires
+  // once this step is skipped or completed, but the DB merge itself is
+  // final the moment mergeProjects() resolves, regardless of what happens
+  // here.
+  let showReconcileModal = $state(false);
+  let pendingMergeResult: ProjectMergeResult | null = $state(null);
+  let reconcileSourceNumber = $state('');
+  let reconcileTargetNumber = $state('');
+  let reconcileSourceLabel = $state('');
+  let reconcileTargetLabel = $state('');
 
   const allTargetOptions = $derived(
     $projectsStore
@@ -112,14 +125,47 @@
         revChanges: result.rev_changes
       });
 
-      onmerged?.(result);
+      // Capture folder-reconcile identifiers now, while sourceProject is
+      // still in scope - the DB merge above already deleted the source
+      // project's record, so its number is only reachable from this local
+      // reference from here on (get_project_folder_location itself works
+      // fine post-merge, since it scans folder names on disk rather than
+      // querying the DB - this is purely about the frontend not losing the
+      // reference once paginatedProjectsStore drops the row).
+      pendingMergeResult = result;
+      reconcileSourceNumber = sourceProject.number?.id || '';
+      reconcileTargetNumber = result.target.number?.id || '';
+      reconcileSourceLabel = `${sourceProject.number?.id ?? ''} - ${sourceName}`;
+      reconcileTargetLabel = `${result.target.number?.id ?? ''} - ${targetName}`;
+
       handleClose();
+
+      if (reconcileSourceNumber && reconcileTargetNumber) {
+        showReconcileModal = true;
+      } else {
+        finishMerge();
+      }
     } catch (e) {
       logApiError('mergeProjects', e as Error, { component: 'MergeProjectModal' });
       error = e instanceof Error ? e.message : String(e);
     } finally {
       merging = false;
     }
+  }
+
+  // Fires onmerged() for the caller (e.g. ProjectDetail closes its panel
+  // since the source project no longer exists) - deferred until the
+  // optional folder-reconcile step is skipped or completed, never blocked
+  // by it.
+  function finishMerge() {
+    const result = pendingMergeResult;
+    pendingMergeResult = null;
+    if (result) onmerged?.(result);
+  }
+
+  function handleReconcileClose() {
+    showReconcileModal = false;
+    finishMerge();
   }
 
   function handleClose() {
@@ -214,3 +260,12 @@
     </div>
   {/if}
 </BaseModal>
+
+<FolderReconcileModal
+  bind:isOpen={showReconcileModal}
+  sourceNumber={reconcileSourceNumber}
+  targetNumber={reconcileTargetNumber}
+  sourceLabel={reconcileSourceLabel}
+  targetLabel={reconcileTargetLabel}
+  onclose={handleReconcileClose}
+/>

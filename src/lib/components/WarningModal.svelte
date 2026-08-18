@@ -14,7 +14,9 @@
     onCancel = null,
     onconfirm,
     onclose,
-    oncancel
+    oncancel,
+    checkboxLabel = '',
+    checkboxChecked = $bindable(false)
   }: {
     isOpen?: boolean;
     title?: string;
@@ -26,6 +28,12 @@
     onconfirm?: () => void;
     onclose?: () => void;
     oncancel?: () => void;
+    /** Optional opt-in checkbox rendered below the message, e.g. for a
+     * cascade-delete confirmation offering to trash an on-disk folder
+     * alongside the DB delete. Omit (empty string) to render no checkbox -
+     * every other WarningModal usage is unaffected. */
+    checkboxLabel?: string;
+    checkboxChecked?: boolean;
   } = $props();
 
   function handleConfirm() {
@@ -110,6 +118,16 @@
         >
           {message}
         </p>
+        {#if checkboxLabel}
+          <label class="emittiv-checkbox-option" style="margin-top: 8px;">
+            <input
+              type="checkbox"
+              bind:checked={checkboxChecked}
+              class="emittiv-checkbox emittiv-checkbox-sm"
+            />
+            <span class="text-sm text-emittiv-lighter">{checkboxLabel}</span>
+          </label>
+        {/if}
       </div>
 
       <!-- Footer -->

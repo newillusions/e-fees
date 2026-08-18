@@ -170,6 +170,73 @@ export interface ProjectDeleteResult {
   deleted_fees: Fee[];
 }
 
+// ============================================================================
+// FOLDER RECONCILE (on-disk follow-up to a project merge or cascade-delete -
+// see src-tauri/src/commands/folder_reconcile.rs. Decoupled from the DB
+// operations above: this is an optional step run AFTER a merge/delete has
+// already committed, and a cancelled or failed reconcile never rolls it back)
+// ============================================================================
+
+export type ReconcileFileStatus = 'new' | 'conflict' | 'identical';
+
+export interface ReconcileFileEntry {
+  /** Path relative to the SOURCE folder root. */
+  relative_path: string;
+  /** Path relative to the TARGET folder root - where this file actually
+   * lands. Differs from relative_path when the file name carries the
+   * source project's number (renumbered to the target's number). */
+  dest_relative_path: string;
+  status: ReconcileFileStatus;
+  source_size: number;
+  dest_size: number | null;
+}
+
+/** Preview of a folder reconcile - render before calling executeFolderReconcile(). */
+export interface FolderReconcilePreview {
+  source_path: string;
+  target_path: string;
+  entries: ReconcileFileEntry[];
+  new_count: number;
+  conflict_count: number;
+  identical_count: number;
+}
+
+export type ReconcileAction = 'copy' | 'overwrite' | 'keep_both' | 'skip';
+
+export interface ReconcileResolution {
+  relative_path: string;
+  action: ReconcileAction;
+}
+
+/** Result of an execute_folder_reconcile call - dry_run mirrors what a real
+ * run would do without touching the filesystem. */
+export interface FolderReconcileOutcome {
+  dry_run: boolean;
+  copied: number;
+  overwritten: number;
+  kept_both: number;
+  skipped: number;
+  backups_created: string[];
+  errors: string[];
+}
+
+/** Preview of what execute_trash_project_folder would move, for the
+ * cascade-delete opt-in checkbox. */
+export interface TrashFolderPreview {
+  project_number: string;
+  folder_exists: boolean;
+  source_path: string | null;
+  file_count: number;
+  total_size_bytes: number;
+}
+
+export interface TrashFolderOutcome {
+  project_number: string;
+  moved: boolean;
+  backup_path: string | null;
+  message: string;
+}
+
 export interface Company {
   id?: string; // company:ABBREVIATION
   name: string;

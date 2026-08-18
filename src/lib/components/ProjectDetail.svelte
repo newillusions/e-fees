@@ -20,6 +20,7 @@
     previewProjectDelete,
     deleteProjectCascade
   } from '$lib/api';
+  import { previewTrashProjectFolder, executeTrashProjectFolder } from '$lib/api/folderReconcile';
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
@@ -50,6 +51,13 @@
   // Merge/delete state
   let showMergeModal = $state(false);
   let deletingProject = $state(false);
+  // Cascade-delete's opt-in "also trash the on-disk folder" checkbox.
+  // Default OFF (Martin's decision) - only shown at all when the project
+  // actually has a resolvable on-disk folder. Reset alongside every
+  // warningModal reassignment below so an unrelated dialog never inherits
+  // a stale checkbox.
+  let trashFolderOnDelete = $state(false);
+  let deleteFolderCheckboxLabel = $state('');
 
   // Modal state
   let warningModal: {
@@ -126,13 +134,34 @@
   // dialog names exactly what will be removed - a project with fee
   // proposals needs an explicit cascade confirmation, never a silent
   // orphan-and-delete.
+  function formatFolderSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   async function handleDeleteProject() {
     if (!project?.id) return;
     const projectKey = extractIdFromRelation(project.id);
     const projectName = project.name || project.number?.id || 'Unknown Project';
+    const projectNumber = project.number?.id || '';
 
     try {
-      const preview = await previewProjectDelete(projectKey);
+      const [preview, folderPreview] = await Promise.all([
+        previewProjectDelete(projectKey),
+        // Best-effort: an on-disk folder lookup failing must never block
+        // the delete confirm dialog from appearing - fall back to "no
+        // folder" so the checkbox is simply omitted.
+        projectNumber
+          ? previewTrashProjectFolder(projectNumber).catch(() => ({
+              project_number: projectNumber,
+              folder_exists: false,
+              source_path: null,
+              file_count: 0,
+              total_size_bytes: 0
+            }))
+          : Promise.resolve(null)
+      ]);
 
       const message =
         preview.dependent_fees.length === 0
@@ -141,6 +170,12 @@
             `This will also permanently delete ${preview.dependent_fees.length} fee proposal(s):\n` +
             preview.dependent_fees.map(fee => `- ${fee.number} (${fee.status})`).join('\n') +
             '\n\nThis cannot be undone.';
+
+      trashFolderOnDelete = false;
+      deleteFolderCheckboxLabel =
+        folderPreview && folderPreview.folder_exists
+          ? `Also move the on-disk folder (${folderPreview.file_count} file${folderPreview.file_count === 1 ? '' : 's'}, ${formatFolderSize(folderPreview.total_size_bytes)}) to .reconcile-backups`
+          : '';
 
       warningModal = {
         isOpen: true,
@@ -163,6 +198,20 @@
             for (const fee of result.deleted_fees) {
               const feeId = extractIdFromRelation(fee.id || '');
               feeLogger.onDelete(feeId, fee.number || fee.name || 'Unknown Fee');
+            }
+
+            // Opt-in on-disk trash, deliberately AFTER the DB delete has
+            // already committed - decoupled by design, so a failure here
+            // never rolls back or blocks the delete that already
+            // succeeded. Best-effort: log and move on.
+            if (trashFolderOnDelete && projectNumber) {
+              try {
+                await executeTrashProjectFolder(projectNumber);
+              } catch (trashError) {
+                logApiError('executeTrashProjectFolder', trashError as Error, {
+                  component: 'ProjectDetail'
+                });
+              }
             }
 
             handleClose();
@@ -540,6 +589,8 @@
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
   onclose={() => (warningModal.isOpen = false)}
+  checkboxLabel={warningModal.title === 'Delete Project' ? deleteFolderCheckboxLabel : ''}
+  bind:checkboxChecked={trashFolderOnDelete}
 />
 
 <!-- Merge Project Modal -->

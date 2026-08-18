@@ -44,6 +44,10 @@ rand = "0.8"
 base64 = "0.22"
 # Cross-platform file system operations
 fs_extra = "1.3"
+# Folder-reconcile: recursive directory walking + content hashing for
+# conflict detection (size-first, hash only on a size match)
+walkdir = "2"
+sha2 = "0.10"
 # Agent API HTTP server
 axum = "0.8"
 async-stream = "0.3"

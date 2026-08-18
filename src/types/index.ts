@@ -76,7 +76,15 @@ export type {
   ProjectMergePreview,
   ProjectMergeResult,
   ProjectDeletePreview,
-  ProjectDeleteResult
+  ProjectDeleteResult,
+  ReconcileFileStatus,
+  ReconcileFileEntry,
+  FolderReconcilePreview,
+  ReconcileAction,
+  ReconcileResolution,
+  FolderReconcileOutcome,
+  TrashFolderPreview,
+  TrashFolderOutcome
 } from './database';
 
 // ============================================================================

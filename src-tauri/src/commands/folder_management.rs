@@ -48,7 +48,7 @@ pub struct ProjectFolderInfo {
 /// # Returns
 /// * `Ok(PathBuf)` - The configured project base path
 /// * `Err(String)` - Error message if path is not configured or doesn't exist
-async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) async fn get_projects_base_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     let settings = get_settings(app_handle.clone())
         .await
         .map_err(|e| format!("Failed to get settings: {}", e))?;
@@ -198,7 +198,7 @@ fn get_folder_for_status(status: &str) -> Result<&str, String> {
 ///
 /// Searches through all status folders (00 Inactive, 01 RFPs, 11 Current, 99 Completed)
 /// to locate a project folder that starts with the given project number.
-async fn find_project_folder(
+pub(crate) async fn find_project_folder(
     app_handle: &AppHandle,
     project_number: &str,
 ) -> Result<ProjectFolderInfo, String> {
@@ -267,7 +267,7 @@ async fn find_project_folder(
 /// # Returns
 /// * `Ok(())` - Move successful
 /// * `Err(String)` - Error message if move failed
-fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
+pub(crate) fn move_folder_cross_platform(from: &Path, to: &Path) -> Result<(), String> {
     info!("Moving folder from {:?} to {:?}", from, to);
 
     // First, try a simple rename (fast, works on same filesystem)

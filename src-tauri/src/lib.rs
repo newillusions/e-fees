@@ -34,6 +34,9 @@ use commands::{
     delete_fee,
     delete_project,
     delete_project_cascade,
+    // Folder reconcile (post-merge / cascade-delete on-disk follow-up)
+    execute_folder_reconcile,
+    execute_trash_project_folder,
     // Excel export
     export_fee_excel,
     export_fee_template,
@@ -84,8 +87,10 @@ use commands::{
     open_folder_in_explorer,
     populate_project_data,
     position_window_4k,
+    preview_folder_reconcile,
     preview_project_delete,
     preview_project_merge,
+    preview_trash_project_folder,
     reconnect_database,
     reload_database_config,
     rename_folder_with_old_suffix,
@@ -380,6 +385,11 @@ pub fn run() {
             // Folder sync commands
             scan_folder_sync,
             resolve_folder_inconsistency,
+            // Folder reconcile (post-merge / cascade-delete on-disk follow-up)
+            preview_folder_reconcile,
+            execute_folder_reconcile,
+            preview_trash_project_folder,
+            execute_trash_project_folder,
             log_message,
             // Log level control
             set_log_level,
