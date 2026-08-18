@@ -19,7 +19,7 @@ const activityServiceLogger = logger.child({ component: 'ActivityLoggerService' 
 
 // Entity type definitions
 export type EntityType = 'project' | 'fee' | 'company' | 'contact';
-export type ActionType = 'create' | 'update' | 'delete' | 'status_change';
+export type ActionType = 'create' | 'update' | 'delete' | 'status_change' | 'merge';
 
 /**
  * Base interface for entities that can be logged.
@@ -87,6 +87,11 @@ export function generateDescription(
         return `Changed ${entityLabel.toLowerCase()} status from "${oldValue}" to "${newValue}"`;
       }
       return `Changed ${entityLabel.toLowerCase()} status`;
+    case 'merge':
+      if (oldValue) {
+        return `Merged ${oldValue} into ${entityLabel.toLowerCase()}: ${entityName}`;
+      }
+      return `Merged another ${entityLabel.toLowerCase()} into: ${entityName}`;
     default:
       return `${action} ${entityLabel.toLowerCase()}: ${entityName}`;
   }
@@ -193,6 +198,43 @@ export async function logStatusChange(
     description: generateDescription('status_change', entityType, entityName, oldStatus, newStatus),
     old_value: oldStatus,
     new_value: newStatus,
+    metadata
+  });
+}
+
+/**
+ * Log a project merge operation. Two entries are written so both the
+ * absorbed (deleted) project and the surviving project have an auditable
+ * record: one against the surviving project's id (this function's return),
+ * and one more the caller should log separately against the deleted
+ * source's id if they still need it displayed (the source record itself is
+ * gone, so its activity_log rows are the only remaining trace of it).
+ *
+ * NOTE: this is a genuinely new `action` value ('merge') that create/update/
+ * delete/status_change did not need to be - it was not verified this
+ * session against the live activity_log table's SCHEMAFULL ASSERT (no
+ * schema.surql for activity_log is checked into this repo; the constraint
+ * is documented only in db/tests.rs's live-test comments, and this session
+ * had no path to a live-DB credential to check it directly). If it turns
+ * out the ASSERT rejects 'merge', the write fails silently - logActivity()
+ * catches and warns rather than throwing, so a merge itself still succeeds,
+ * only its audit-trail entry is dropped. Worth confirming (or widening the
+ * ASSERT) the next time someone has dev-DB creds in hand.
+ */
+export async function logMerge(
+  targetId: string,
+  targetName: string,
+  sourceName: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  await logActivity({
+    action: 'merge',
+    entity_type: 'project',
+    entity_id: targetId,
+    entity_name: targetName,
+    description: generateDescription('merge', 'project', targetName, sourceName),
+    old_value: sourceName,
+    new_value: targetName,
     metadata
   });
 }

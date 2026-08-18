@@ -6,7 +6,10 @@
 use super::AppState;
 use crate::commands::types::ProjectUpdate;
 use crate::crud_command;
-use crate::db::{PaginatedResponse, Project};
+use crate::db::{
+    PaginatedResponse, Project, ProjectDeleteOutcome, ProjectDeletePreview, ProjectMergeOutcome,
+    ProjectMergePreview,
+};
 
 use log::{error, info};
 use tauri::State;
@@ -64,6 +67,125 @@ crud_command!(
     "project",
     id: String
 );
+
+// ============================================================================
+// PROJECT MERGE / CASCADE-DELETE COMMANDS
+// ============================================================================
+//
+// These recover from a project created in error or a duplicate created from
+// PA RFP intake, at the project level: merge folds one project's fee
+// proposals into another; cascade-delete removes a project together with
+// its proposals instead of orphaning them. See
+// `src-tauri/src/db/project_lifecycle.rs` for the transactional
+// implementation and its design notes.
+
+/// Preview a project merge: which fees would move from `source_id` into
+/// `target_id`, and how their revision numbers would change. Read-only -
+/// call this to render a confirmation dialog before `merge_projects`.
+#[tauri::command]
+pub async fn preview_project_merge(
+    source_id: String,
+    target_id: String,
+    state: State<'_, AppState>,
+) -> Result<ProjectMergePreview, String> {
+    info!(
+        "Previewing merge of project '{}' into '{}'",
+        source_id, target_id
+    );
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+    manager_clone
+        .preview_project_merge(&source_id, &target_id)
+        .await
+        .map_err(|e| {
+            error!("Failed to preview project merge: {}", e);
+            format!("Failed to preview project merge: {}", e)
+        })
+}
+
+/// Merge `source_id` into `target_id`: reparent every fee proposal from the
+/// source project onto the target, renumbering revisions only where needed
+/// to avoid a collision, then delete the (now empty) source project.
+#[tauri::command]
+pub async fn merge_projects(
+    source_id: String,
+    target_id: String,
+    state: State<'_, AppState>,
+) -> Result<ProjectMergeOutcome, String> {
+    info!("Merging project '{}' into '{}'", source_id, target_id);
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+    match manager_clone.merge_projects(&source_id, &target_id).await {
+        Ok(outcome) => {
+            info!(
+                "Merged project '{}' into '{}': {} fee(s) moved",
+                source_id, target_id, outcome.fees_moved
+            );
+            Ok(outcome)
+        }
+        Err(e) => {
+            error!("Failed to merge projects: {}", e);
+            Err(format!("Failed to merge projects: {}", e))
+        }
+    }
+}
+
+/// Preview a project delete: the project and every fee proposal that would
+/// be cascade-deleted with it. Read-only - call this to render a
+/// confirmation dialog before `delete_project_cascade`.
+#[tauri::command]
+pub async fn preview_project_delete(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<ProjectDeletePreview, String> {
+    info!("Previewing delete of project '{}'", id);
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+    manager_clone
+        .preview_project_delete(&id)
+        .await
+        .map_err(|e| {
+            error!("Failed to preview project delete: {}", e);
+            format!("Failed to preview project delete: {}", e)
+        })
+}
+
+/// Delete a project, cascading to its fee proposals. If the project has
+/// fee proposals, `cascade` must be `true` or the call is refused - callers
+/// should show `preview_project_delete`'s `dependent_fees` in a
+/// confirmation dialog first.
+#[tauri::command]
+pub async fn delete_project_cascade(
+    id: String,
+    cascade: bool,
+    state: State<'_, AppState>,
+) -> Result<ProjectDeleteOutcome, String> {
+    info!("Deleting project '{}' (cascade: {})", id, cascade);
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+    match manager_clone.delete_project_cascade(&id, cascade).await {
+        Ok(outcome) => {
+            info!(
+                "Deleted project '{}' with {} cascaded fee(s)",
+                id,
+                outcome.deleted_fees.len()
+            );
+            Ok(outcome)
+        }
+        Err(e) => {
+            error!("Failed to delete project: {}", e);
+            Err(format!("Failed to delete project: {}", e))
+        }
+    }
+}
 
 /// Search projects using fuzzy matching across multiple fields.
 #[tauri::command]

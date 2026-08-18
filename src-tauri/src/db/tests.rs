@@ -1592,6 +1592,240 @@ mod tests {
     }
 
     // ========================================================================
+    // PROJECT MERGE / CASCADE-DELETE LIVE TESTS
+    //
+    // Pure rev-remap logic is unit-tested with no DB in
+    // db/project_lifecycle.rs's own `#[cfg(test)] mod tests`. These two are
+    // the live end-to-end proof that a merge/delete actually commits against
+    // real SurrealDB semantics (transactions, the fee_project_rev unique
+    // index, type::record() coercion) - run manually per the dev_db_config()
+    // instructions above this section.
+    // ========================================================================
+
+    fn delete_me_company(stamp: u128) -> crate::db::CompanyCreate {
+        crate::db::CompanyCreate {
+            name: format!("DELETE ME - merge test company {}", stamp),
+            name_short: "DELETE ME".to_string(),
+            abbreviation: format!("DM{}", stamp % 100_000),
+            city: "Dubai".to_string(),
+            country: "United Arab Emirates".to_string(),
+            reg_no: None,
+            tax_no: None,
+        }
+    }
+
+    fn delete_me_contact(company_key: &str, stamp: u128) -> crate::db::ContactCreate {
+        crate::db::ContactCreate {
+            first_name: "DELETE".to_string(),
+            last_name: format!("ME {}", stamp),
+            email: format!("delete-me-{}@example.com", stamp),
+            phone: "+971500000000".to_string(),
+            position: "Test Contact".to_string(),
+            company: company_key.to_string(),
+        }
+    }
+
+    fn delete_me_fee(
+        project_key: &str,
+        company_key: &str,
+        contact_key: &str,
+        rev: i64,
+    ) -> crate::db::FeeCreate {
+        crate::db::FeeCreate {
+            name: "DELETE ME - merge test fee".to_string(),
+            number: format!("{}-R{}", project_key, rev),
+            rev,
+            status: "Draft".to_string(),
+            issue_date: "260101".to_string(),
+            activity: "Test".to_string(),
+            package: String::new(),
+            project_id: project_key.to_string(),
+            company_id: company_key.to_string(),
+            contact_id: contact_key.to_string(),
+            staff_name: String::new(),
+            staff_email: String::new(),
+            staff_phone: String::new(),
+            staff_position: String::new(),
+            strap_line: String::new(),
+            revisions: vec![],
+            pricing: None,
+            post_contract_items: None,
+            reimbursable_costs: None,
+            payment_schedule: None,
+            pricing_revisions: None,
+            current_revision_number: None,
+            current_release_number: None,
+            import_source: None,
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_merge_projects_reparents_fees_and_resolves_rev_collision() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let source = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create source project should succeed");
+        let target = manager
+            .create_new_project(delete_me_project_number(2, stamp))
+            .await
+            .expect("create target project should succeed");
+        let source_key = crate::db::types::record_key_string(&source.id.as_ref().unwrap().key);
+        let target_key = crate::db::types::record_key_string(&target.id.as_ref().unwrap().key);
+
+        let company = manager
+            .create_company(delete_me_company(stamp))
+            .await
+            .expect("create company should succeed");
+        let company_key = crate::db::types::record_key_string(&company.id.as_ref().unwrap().key);
+
+        let contact = manager
+            .create_contact(delete_me_contact(&company_key, stamp))
+            .await
+            .expect("create contact should succeed");
+        let contact_key = crate::db::types::record_key_string(&contact.id.as_ref().unwrap().key);
+
+        // Deliberate rev collision: both the source's fee and the target's
+        // fee are created at rev 1 - proves the merge renumbers rather than
+        // silently overwriting/double-counting at the same (project_id, rev).
+        let source_fee = manager
+            .create_fee(delete_me_fee(&source_key, &company_key, &contact_key, 1))
+            .await
+            .expect("create source fee should succeed");
+        let target_fee = manager
+            .create_fee(delete_me_fee(&target_key, &company_key, &contact_key, 1))
+            .await
+            .expect("create target fee should succeed");
+        let source_fee_key =
+            crate::db::types::record_key_string(&source_fee.id.as_ref().unwrap().key);
+        let target_fee_key =
+            crate::db::types::record_key_string(&target_fee.id.as_ref().unwrap().key);
+
+        let merge_result = manager.merge_projects(&source_key, &target_key).await;
+
+        // Clean up regardless of assertion outcome: the fee's id embeds the
+        // project number, so this deletes both irrespective of which
+        // project it ended up under post-merge; source project is expected
+        // gone already, so its own delete is a best-effort no-op if so.
+        let _ = manager.delete_fee(&source_fee_key).await;
+        let _ = manager.delete_fee(&target_fee_key).await;
+        let _ = manager.delete_project(&source_key).await;
+        let _ = manager.delete_project(&target_key).await;
+        let _ = manager
+            .batch_delete("company", std::slice::from_ref(&company_key))
+            .await;
+        let _ = manager
+            .batch_delete("contacts", std::slice::from_ref(&contact_key))
+            .await;
+
+        let outcome = merge_result.expect("merge_projects should succeed");
+        assert_eq!(outcome.fees_moved, 1, "exactly the source's one fee moves");
+        assert_eq!(outcome.rev_changes.len(), 1);
+        assert_eq!(outcome.rev_changes[0].fee_id, source_fee_key);
+        assert_eq!(outcome.rev_changes[0].old_rev, 1);
+        assert_eq!(
+            outcome.rev_changes[0].new_rev, 2,
+            "rev 1 collided with the target's existing fee, must bump to 2"
+        );
+        assert_eq!(
+            crate::db::types::record_key_string(&outcome.target.id.as_ref().unwrap().key),
+            target_key
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_delete_project_cascade_removes_dependent_fees() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let project = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create project should succeed");
+        let project_key = crate::db::types::record_key_string(&project.id.as_ref().unwrap().key);
+
+        let company = manager
+            .create_company(delete_me_company(stamp))
+            .await
+            .expect("create company should succeed");
+        let company_key = crate::db::types::record_key_string(&company.id.as_ref().unwrap().key);
+
+        let contact = manager
+            .create_contact(delete_me_contact(&company_key, stamp))
+            .await
+            .expect("create contact should succeed");
+        let contact_key = crate::db::types::record_key_string(&contact.id.as_ref().unwrap().key);
+
+        let fee = manager
+            .create_fee(delete_me_fee(&project_key, &company_key, &contact_key, 1))
+            .await
+            .expect("create fee should succeed");
+        let fee_key = crate::db::types::record_key_string(&fee.id.as_ref().unwrap().key);
+
+        // Without cascade=true, a project with dependent fees must be refused.
+        let refused = manager.delete_project_cascade(&project_key, false).await;
+        assert!(
+            refused.is_err(),
+            "delete without cascade must refuse when dependent fees exist"
+        );
+        // Refusal must not have deleted anything.
+        assert!(manager
+            .get_project_by_id(&project_key)
+            .await
+            .expect("get_project_by_id should not error")
+            .is_some());
+
+        let cascade_result = manager.delete_project_cascade(&project_key, true).await;
+
+        // Best-effort cleanup for anything the assertions below don't
+        // already expect to be gone.
+        let _ = manager.delete_fee(&fee_key).await;
+        let _ = manager.delete_project(&project_key).await;
+        let _ = manager
+            .batch_delete("company", std::slice::from_ref(&company_key))
+            .await;
+        let _ = manager
+            .batch_delete("contacts", std::slice::from_ref(&contact_key))
+            .await;
+
+        let outcome = cascade_result.expect("cascade delete should succeed");
+        assert_eq!(outcome.deleted_fees.len(), 1);
+        assert_eq!(
+            crate::db::types::record_key_string(&outcome.deleted_fees[0].id.as_ref().unwrap().key),
+            fee_key
+        );
+
+        assert!(
+            manager
+                .get_project_by_id(&project_key)
+                .await
+                .expect("get_project_by_id should not error")
+                .is_none(),
+            "project must be gone after cascade delete"
+        );
+    }
+
+    // ========================================================================
     // PARTIAL-UPDATE MERGE-CONTENT TESTS (obs:cno62twf3e6hmhso009f)
     //
     // The update_project / update_company_partial paths must merge ONLY the

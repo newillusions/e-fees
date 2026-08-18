@@ -82,6 +82,10 @@ export class ApiClient {
   static createProject = projects.createProject;
   static updateProject = projects.updateProject;
   static deleteProject = projects.deleteProject;
+  static previewProjectMerge = projects.previewProjectMerge;
+  static mergeProjects = projects.mergeProjects;
+  static previewProjectDelete = projects.previewProjectDelete;
+  static deleteProjectCascade = projects.deleteProjectCascade;
   static generateNextProjectNumber = projects.generateNextProjectNumber;
   static validateProjectNumber = projects.validateProjectNumber;
   static createProjectWithTemplate = projects.createProjectWithTemplate;
@@ -163,6 +167,10 @@ export const {
   createProject,
   updateProject,
   deleteProject,
+  previewProjectMerge,
+  mergeProjects,
+  previewProjectDelete,
+  deleteProjectCascade,
 
   // Company operations
   getCompanies,

@@ -71,7 +71,12 @@ export type {
   ContactCreate,
   ContactUpdate,
   FeeCreate,
-  FeeUpdate
+  FeeUpdate,
+  FeeRevChange,
+  ProjectMergePreview,
+  ProjectMergeResult,
+  ProjectDeletePreview,
+  ProjectDeleteResult
 } from './database';
 
 // ============================================================================
@@ -302,7 +307,7 @@ export interface ActivityLog {
  * The timestamp is automatically set by the database.
  */
 export interface ActivityLogCreate {
-  action: 'create' | 'update' | 'delete' | 'status_change';
+  action: 'create' | 'update' | 'delete' | 'status_change' | 'merge';
   entity_type: 'project' | 'fee' | 'company' | 'contact';
   entity_id: string;
   entity_name: string;

@@ -5,16 +5,20 @@
     companiesStore,
     companiesActions,
     settingsStore,
-    settingsActions
+    settingsActions,
+    paginatedProjectsStore
   } from '$lib/stores';
   import { onMount } from 'svelte';
   import { extractId, compareIds } from '$lib/utils';
+  import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import {
     openFolderInExplorer,
     copyProjectTemplate,
     checkProjectFolderExists,
-    renameFolderWithOldSuffix
+    renameFolderWithOldSuffix,
+    previewProjectDelete,
+    deleteProjectCascade
   } from '$lib/api';
   import { getFolderForStatus } from '$lib/api/folderManagement';
   import DetailPanel from './DetailPanel.svelte';
@@ -23,8 +27,10 @@
   import ListCard from './ListCard.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import WarningModal from './WarningModal.svelte';
+  import MergeProjectModal from './MergeProjectModal.svelte';
   import { logger, logApiError } from '$lib/services/logger';
-  import type { Project, Fee } from '../../types';
+  import { projectLogger, feeLogger } from '$lib/services/activityLogger';
+  import type { Project, Fee, ProjectMergeResult } from '../../types';
 
   let {
     isOpen = $bindable(false),
@@ -40,6 +46,10 @@
 
   // Inline folder error state
   let folderError = $state('');
+
+  // Merge/delete state
+  let showMergeModal = $state(false);
+  let deletingProject = $state(false);
 
   // Modal state
   let warningModal: {
@@ -98,6 +108,95 @@
 
   function handleClose() {
     onclose?.();
+  }
+
+  // Open the merge modal for the current project.
+  function handleOpenMerge() {
+    if (!project) return;
+    showMergeModal = true;
+  }
+
+  function handleMerged(_result: ProjectMergeResult) {
+    // The source project (this panel's project) no longer exists - close.
+    showMergeModal = false;
+    handleClose();
+  }
+
+  // Delete this project. Fetches a live preview first so the confirm
+  // dialog names exactly what will be removed - a project with fee
+  // proposals needs an explicit cascade confirmation, never a silent
+  // orphan-and-delete.
+  async function handleDeleteProject() {
+    if (!project?.id) return;
+    const projectKey = extractIdFromRelation(project.id);
+    const projectName = project.name || project.number?.id || 'Unknown Project';
+
+    try {
+      const preview = await previewProjectDelete(projectKey);
+
+      const message =
+        preview.dependent_fees.length === 0
+          ? `Delete project "${projectName}"?\n\nThis project has no fee proposals and cannot be undone.`
+          : `Delete project "${projectName}"?\n\n` +
+            `This will also permanently delete ${preview.dependent_fees.length} fee proposal(s):\n` +
+            preview.dependent_fees.map(fee => `- ${fee.number} (${fee.status})`).join('\n') +
+            '\n\nThis cannot be undone.';
+
+      warningModal = {
+        isOpen: true,
+        title: 'Delete Project',
+        message,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        onConfirm: async () => {
+          deletingProject = true;
+          try {
+            const cascade = preview.dependent_fees.length > 0;
+            const result = await deleteProjectCascade(projectKey, cascade);
+
+            paginatedProjectsStore.actions.removeItem(project?.id || '');
+            if (result.deleted_fees.length > 0) {
+              await feesActions.load();
+            }
+
+            projectLogger.onDelete(projectKey, projectName);
+            for (const fee of result.deleted_fees) {
+              const feeId = extractIdFromRelation(fee.id || '');
+              feeLogger.onDelete(feeId, fee.number || fee.name || 'Unknown Fee');
+            }
+
+            handleClose();
+          } catch (error) {
+            logApiError('deleteProjectCascade', error as Error, {
+              component: 'ProjectDetail'
+            });
+            warningModal = {
+              isOpen: true,
+              title: 'Error',
+              message: `Failed to delete project:\n\n${error}`,
+              confirmText: 'OK',
+              cancelText: '',
+              onConfirm: null,
+              onCancel: null
+            };
+          } finally {
+            deletingProject = false;
+          }
+        },
+        onCancel: null
+      };
+    } catch (error) {
+      logApiError('previewProjectDelete', error as Error, { component: 'ProjectDetail' });
+      warningModal = {
+        isOpen: true,
+        title: 'Error',
+        message: `Failed to check project dependents:\n\n${error}`,
+        confirmText: 'OK',
+        cancelText: '',
+        onConfirm: null,
+        onCancel: null
+      };
+    }
   }
 
   // Function to get full project folder path
@@ -280,6 +379,20 @@
       tooltip: 'Create project folder with template files',
       icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4',
       disabled: !project
+    },
+    {
+      handler: handleOpenMerge,
+      label: 'Merge Into Another Project',
+      tooltip: 'Merge this project\'s fee proposals into another project, then delete this one',
+      icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
+      disabled: !project
+    },
+    {
+      handler: handleDeleteProject,
+      label: 'Delete Project',
+      tooltip: 'Permanently delete this project',
+      icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+      disabled: !project || deletingProject
     }
   ]);
 </script>
@@ -427,4 +540,12 @@
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
   onclose={() => (warningModal.isOpen = false)}
+/>
+
+<!-- Merge Project Modal -->
+<MergeProjectModal
+  bind:isOpen={showMergeModal}
+  sourceProject={project}
+  onclose={() => (showMergeModal = false)}
+  onmerged={handleMerged}
 />

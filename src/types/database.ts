@@ -129,6 +129,47 @@ export interface Fee {
   };
 }
 
+// ============================================================================
+// PROJECT MERGE / CASCADE-DELETE (project-level recovery from a duplicate or
+// mistaken project, e.g. one created in error from PA RFP intake)
+// ============================================================================
+
+/** One fee's revision-number change as part of a project merge. */
+export interface FeeRevChange {
+  fee_id: string;
+  fee_number: string;
+  old_rev: number;
+  new_rev: number;
+}
+
+/** Preview of a project merge - render before calling mergeProjects(). */
+export interface ProjectMergePreview {
+  source: Project;
+  target: Project;
+  fees_to_move: number;
+  rev_changes: FeeRevChange[];
+}
+
+/** Result of a completed project merge. */
+export interface ProjectMergeResult {
+  target: Project;
+  fees_moved: number;
+  rev_changes: FeeRevChange[];
+  source_deleted_id: string;
+}
+
+/** Preview of a project delete - render before calling deleteProjectCascade(). */
+export interface ProjectDeletePreview {
+  project: Project;
+  dependent_fees: Fee[];
+}
+
+/** Result of a completed (possibly cascading) project delete. */
+export interface ProjectDeleteResult {
+  deleted_project: Project;
+  deleted_fees: Fee[];
+}
+
 export interface Company {
   id?: string; // company:ABBREVIATION
   name: string;

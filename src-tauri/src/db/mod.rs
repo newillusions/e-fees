@@ -6,6 +6,7 @@
 pub mod client;
 pub mod config;
 pub mod operations;
+pub mod project_lifecycle;
 pub mod secure_operations;
 pub mod security;
 #[cfg(test)]
@@ -16,6 +17,10 @@ pub mod utils;
 // Re-export public types
 pub use client::DatabaseClient;
 pub use config::{ConnectionStatus, DatabaseConfig, HEARTBEAT_INTERVAL_SECS};
+pub use project_lifecycle::{
+    FeeRevChange, ProjectDeleteOutcome, ProjectDeletePreview, ProjectMergeOutcome,
+    ProjectMergePreview,
+};
 pub use types::{
     ActivityLog,
     ActivityLogCreate,

@@ -12,13 +12,26 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  previewProjectMerge,
+  mergeProjects,
+  previewProjectDelete,
+  deleteProjectCascade,
   generateNextProjectNumber,
   validateProjectNumber,
   createProjectWithTemplate,
   copyProjectTemplate,
   populateProjectData
 } from './projects';
-import type { Project, ProjectCreate, ProjectUpdate, PaginatedResponse } from '../../types';
+import type {
+  Project,
+  ProjectCreate,
+  ProjectUpdate,
+  PaginatedResponse,
+  ProjectMergePreview,
+  ProjectMergeResult,
+  ProjectDeletePreview,
+  ProjectDeleteResult
+} from '../../types';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
@@ -187,6 +200,120 @@ describe('Projects API Module', () => {
 
       expect(mockInvoke).toHaveBeenCalledWith('delete_project', { id: 'test' });
       expect(result).toEqual(mockProject);
+    });
+  });
+
+  describe('previewProjectMerge', () => {
+    it('should call invoke with sourceId and targetId', async () => {
+      const mockPreview: ProjectMergePreview = {
+        source: mockProject,
+        target: { ...mockProject, id: 'projects:target' },
+        fees_to_move: 2,
+        rev_changes: [{ fee_id: 'fee1', fee_number: 'test-1', old_rev: 1, new_rev: 2 }]
+      };
+      mockInvoke.mockResolvedValueOnce(mockPreview);
+
+      const result = await previewProjectMerge('source', 'target');
+
+      expect(mockInvoke).toHaveBeenCalledWith('preview_project_merge', {
+        sourceId: 'source',
+        targetId: 'target'
+      });
+      expect(result).toEqual(mockPreview);
+    });
+
+    it('should throw on error', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('Cannot merge a project into itself'));
+
+      await expect(previewProjectMerge('a', 'a')).rejects.toThrow(
+        'Cannot merge a project into itself'
+      );
+    });
+  });
+
+  describe('mergeProjects', () => {
+    it('should call invoke with sourceId and targetId', async () => {
+      const mockResult: ProjectMergeResult = {
+        target: mockProject,
+        fees_moved: 2,
+        rev_changes: [],
+        source_deleted_id: 'source'
+      };
+      mockInvoke.mockResolvedValueOnce(mockResult);
+
+      const result = await mergeProjects('source', 'target');
+
+      expect(mockInvoke).toHaveBeenCalledWith('merge_projects', {
+        sourceId: 'source',
+        targetId: 'target'
+      });
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should throw on error', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('Failed to merge projects'));
+
+      await expect(mergeProjects('source', 'target')).rejects.toThrow(
+        'Failed to merge projects'
+      );
+    });
+  });
+
+  describe('previewProjectDelete', () => {
+    it('should call invoke with project id', async () => {
+      const mockPreview: ProjectDeletePreview = {
+        project: mockProject,
+        dependent_fees: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockPreview);
+
+      const result = await previewProjectDelete('test');
+
+      expect(mockInvoke).toHaveBeenCalledWith('preview_project_delete', { id: 'test' });
+      expect(result).toEqual(mockPreview);
+    });
+  });
+
+  describe('deleteProjectCascade', () => {
+    it('should call invoke with id and cascade flag', async () => {
+      const mockResult: ProjectDeleteResult = {
+        deleted_project: mockProject,
+        deleted_fees: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockResult);
+
+      const result = await deleteProjectCascade('test', true);
+
+      expect(mockInvoke).toHaveBeenCalledWith('delete_project_cascade', {
+        id: 'test',
+        cascade: true
+      });
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should pass cascade=false through unchanged', async () => {
+      const mockResult: ProjectDeleteResult = {
+        deleted_project: mockProject,
+        deleted_fees: []
+      };
+      mockInvoke.mockResolvedValueOnce(mockResult);
+
+      await deleteProjectCascade('test', false);
+
+      expect(mockInvoke).toHaveBeenCalledWith('delete_project_cascade', {
+        id: 'test',
+        cascade: false
+      });
+    });
+
+    it('should throw when the backend refuses an uncascaded delete with dependents', async () => {
+      mockInvoke.mockRejectedValueOnce(
+        new Error(
+          "Project 'test' has 2 fee proposal(s); pass cascade=true to delete them together with the project"
+        )
+      );
+
+      await expect(deleteProjectCascade('test', false)).rejects.toThrow('cascade=true');
     });
   });
 

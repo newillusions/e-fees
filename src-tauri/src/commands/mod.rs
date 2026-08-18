@@ -65,8 +65,9 @@ pub use types::{AppSettings, AppSettingsPublic, CompanyUpdate, ContactUpdate, Pr
 // Project management
 pub mod projects;
 pub use projects::{
-    create_project, delete_project, generate_next_project_number, get_project_by_id, get_projects,
-    get_projects_page, search_projects, update_project, validate_project_number,
+    create_project, delete_project, delete_project_cascade, generate_next_project_number,
+    get_project_by_id, get_projects, get_projects_page, merge_projects, preview_project_delete,
+    preview_project_merge, search_projects, update_project, validate_project_number,
 };
 
 // Fee proposal management

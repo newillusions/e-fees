@@ -6,7 +6,16 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { Project, ProjectCreate, ProjectUpdate, PaginatedResponse } from '../../types';
+import type {
+  Project,
+  ProjectCreate,
+  ProjectUpdate,
+  PaginatedResponse,
+  ProjectMergePreview,
+  ProjectMergeResult,
+  ProjectDeletePreview,
+  ProjectDeleteResult
+} from '../../types';
 import { logApiError } from '../services/logger';
 
 /**
@@ -127,6 +136,91 @@ export async function deleteProject(id: string): Promise<Project> {
     return deleted;
   } catch (error) {
     logApiError('deleteProject', error as Error, { component: 'ProjectsApi' });
+    throw error;
+  }
+}
+
+// =============================================================================
+// PROJECT MERGE / CASCADE-DELETE METHODS
+//
+// Project-level recovery from a duplicate or mistaken project (e.g. one
+// created in error from PA RFP intake): merge folds one project's fee
+// proposals into another; cascade-delete removes a project together with
+// its proposals instead of orphaning them. See
+// src-tauri/src/db/project_lifecycle.rs for the transactional backend.
+// =============================================================================
+
+/**
+ * Preview a project merge: which fees would move from `sourceId` into
+ * `targetId`, and how their revision numbers would change. Read-only - call
+ * before `mergeProjects` to render a confirmation dialog.
+ * @param sourceId - Bare record key of the project to merge FROM (will be deleted)
+ * @param targetId - Bare record key of the project to merge INTO (survives)
+ */
+export async function previewProjectMerge(
+  sourceId: string,
+  targetId: string
+): Promise<ProjectMergePreview> {
+  try {
+    return await invoke<ProjectMergePreview>('preview_project_merge', {
+      sourceId,
+      targetId
+    });
+  } catch (error) {
+    logApiError('previewProjectMerge', error as Error, { component: 'ProjectsApi' });
+    throw error;
+  }
+}
+
+/**
+ * Merge `sourceId` into `targetId`: reparents every fee proposal from the
+ * source project onto the target, renumbering revisions only where needed
+ * to avoid a collision, then deletes the (now empty) source project.
+ * @param sourceId - Bare record key of the project to merge FROM (will be deleted)
+ * @param targetId - Bare record key of the project to merge INTO (survives)
+ */
+export async function mergeProjects(
+  sourceId: string,
+  targetId: string
+): Promise<ProjectMergeResult> {
+  try {
+    return await invoke<ProjectMergeResult>('merge_projects', { sourceId, targetId });
+  } catch (error) {
+    logApiError('mergeProjects', error as Error, { component: 'ProjectsApi' });
+    throw error;
+  }
+}
+
+/**
+ * Preview a project delete: the project and every fee proposal that would
+ * be cascade-deleted with it. Read-only - call before `deleteProjectCascade`
+ * to render a confirmation dialog.
+ * @param id - Bare record key of the project
+ */
+export async function previewProjectDelete(id: string): Promise<ProjectDeletePreview> {
+  try {
+    return await invoke<ProjectDeletePreview>('preview_project_delete', { id });
+  } catch (error) {
+    logApiError('previewProjectDelete', error as Error, { component: 'ProjectsApi' });
+    throw error;
+  }
+}
+
+/**
+ * Delete a project, cascading to its fee proposals. If the project has fee
+ * proposals, `cascade` must be `true` or the call is refused - show
+ * `previewProjectDelete`'s `dependent_fees` in a confirmation dialog first.
+ * @param id - Bare record key of the project
+ * @param cascade - Must be true when the project has dependent fee proposals
+ */
+export async function deleteProjectCascade(
+  id: string,
+  cascade: boolean
+): Promise<ProjectDeleteResult> {
+  try {
+    return await invoke<ProjectDeleteResult>('delete_project_cascade', { id, cascade });
+  } catch (error) {
+    logApiError('deleteProjectCascade', error as Error, { component: 'ProjectsApi' });
     throw error;
   }
 }

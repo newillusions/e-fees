@@ -24,7 +24,7 @@ pub(crate) fn normalize_ws_url(url: &str) -> String {
 
 /// Validate a record ID contains only alphanumeric chars, underscores, and hyphens.
 /// Returns Error if invalid, preventing SQL injection in table:key references.
-fn validate_record_id(id: &str, field_name: &str) -> Result<(), Error> {
+pub(crate) fn validate_record_id(id: &str, field_name: &str) -> Result<(), Error> {
     if id.is_empty() || id.len() > 100 {
         return Err(Error::thrown(format!("Invalid {} length", field_name)));
     }
