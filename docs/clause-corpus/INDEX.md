@@ -1,6 +1,6 @@
-# FP Corpus Index — 69 documents / 50 projects
+# FP Corpus Index - 72 documents / 51 projects
 
-Per-document index of the historical fee-proposal corpus (mined 2026-06-14). Verbatim per-doc records are in `archive/`; the deduped clause catalog is in `CLAUSE-CATALOG.md`.
+Per-document index of the historical fee-proposal corpus (mined 2026-06-14; extended 2026-08-18 to close the "01 RFPs" scan gap - obs:glb2xi3bdc3jeufjirm4). Verbatim per-doc records are in `archive/`; the deduped clause catalog is in `CLAUSE-CATALOG.md`.
 
 | Project | Doc | Status | Client | Total Fee | #Clauses |
 |---|---|---|---|---|---|
@@ -73,3 +73,6 @@ Per-document index of the historical fee-proposal corpus (mined 2026-06-14). Ver
 | 25-97101 Shanghai Tang | 25-97101-FP-01 | 99 Completed | Conrad Hotels | 55000 AED | 21 |
 | 25-97101 Shanghai Tang | 25-97101-FP-02 | 99 Completed | Nicholas Fernandez, Director of Engineering, Conrad Hotels | 50000 AED | 21 |
 | 25-97104 MAF MiCC Kids FEC Redesign | 25-97104-FP-01 | 99 Completed | Sim Leisure Gulf Contracting LLC | 85000 AED | 20 |
+| 26-97108 Lulu Boats | 26-97108-FP-01 | 01 RFPs | Eventoria Events | 45000 AED | 21 |
+| 26-97108 Lulu Boats | 26-97108-FP-02 | 01 RFPs | Eventoria Events | 52500 AED | 21 |
+| 26-97109 Furjan39B | 26-97109-FP-01-r00 | 01 RFPs | Jouzy Consulting Engineers (for Ajmal Estate Developers L.L.C.) | 148500 AED | 22 |

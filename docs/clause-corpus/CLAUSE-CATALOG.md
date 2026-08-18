@@ -1,6 +1,6 @@
 # Emittiv FP Clause Catalog
 
-Consolidated, deduplicated catalog of every clause variant found across **69 historical fee-proposal documents** (50 projects, across the Inactive / Current / Completed folders), generated 2026-06-14 by mining the `02 Proposal` PDFs. **1,683 clauses** were extracted and grouped into 23 types; each section below lists the distinct variants, which proposals use each, and a recommended canonical wording where one is clear.
+Consolidated, deduplicated catalog of every clause variant found across **72 historical fee-proposal documents** (51 projects, across the Inactive / Current / RFPs / Completed folders), generated 2026-06-14 by mining the `02 Proposal` PDFs, extended 2026-08-18 to close the "01 RFPs" scan gap (obs:glb2xi3bdc3jeufjirm4). **1,683 clauses** were extracted and grouped into 23 types in the original 2026-06-14 pass; each section below lists the distinct variants, which proposals use each, and a recommended canonical wording where one is clear. The 2026-08-18 addition (3 documents: 26-97108 Lulu Boats FP-01/FP-02, 26-97109 Furjan39B FP-01-r00) was reconciled against the standard, most-reused clauses only (Company Profile, Defined Role, Basis of Appointment, Limitation of Liability, Optional Services, Proposal Validity) - see each section's "Used by" line for the 2026-08-18 additions. Several project-specific or structurally-different clauses in the new documents (a longer 7-stage building-project Stages set, a per-service Post Contract Fees table, a 30% mobilisation ratio, an RFQ-style Response wording) were NOT reconciled against existing variants in this pass and are flagged inline in the corresponding `archive/` files for a future catalog refresh.
 
 Companion files: `INDEX.md` (per-doc index with client + fee), `archive/` (faithful verbatim record per document).
 
@@ -3582,7 +3582,7 @@ Representative (23-97101 Marina Island Financial District):
 > The Project is known as Marina Island Financial District and is located in Kasssir Island, Abu Dhabi, U.A.E.
 > [...project details, reference documents, and packages follow...]
 
-Used by: 23-97101 Marina Island Financial District, 24-96603 Marasi Gate, 25-97108 RAK Beach District (each bundles the 60-day validity line into a full preamble block)
+Used by: 23-97101 Marina Island Financial District, 24-96603 Marasi Gate, 25-97108 RAK Beach District (each bundles the 60-day validity line into a full preamble block) + 26-97108 Lulu Boats (FP-01, FP-02), 26-97109 Furjan39B (FP-01-r00) (2026-08-18 corpus-gap addition, 7 documents total)
 
 ### Recommended standard wording
 
@@ -3606,7 +3606,7 @@ All 69 fee proposals across the corpus use a single Limitation of Liability clau
 >
 > emittiv shall not be liable for delays or performance failures due to circumstances beyond our control.
 
-Used by: 22-96601, 22-97111, 22-97112, 22-97113, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96606 +55 more (67 documents total)
+Used by: 22-96601, 22-97111, 22-97112, 22-97113, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96606 +55 more (67 documents total) + 26-97108 Lulu Boats (FP-01, FP-02), 26-97109 Furjan39B (FP-01-r00) (2026-08-18 corpus-gap addition, 70 documents total).
 
 ### Cap-sentence wording variants (otherwise identical)
 
@@ -3648,7 +3648,7 @@ The overwhelmingly dominant form. Two near-identical sub-variants differ only by
 >
 > Any dispute, difference, controversy or claim arising out of or in connection with this contract, including [but not limited to] any question regarding its existence, validity, interpretation, performance, discharge and applicable remedies, shall be subject to the exclusive jurisdiction of the Courts of the Dubai International Financial Centre ["the DIFC Courts"].
 
-Used by: 22-96601, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96607, 23-97101, 23-97102 (Wynn AA + EL), 24-97104, 25-97103, 25-97106 (MAF MOE FEC), 22-97113 (MAF FEC), 24-97101 (HoH Supervision) +44 more (61 total, A1+A2 combined; includes 22-97111 TPF, 22-97112 The View as the A2 sub-variant)
+Used by: 22-96601, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96607, 23-97101, 23-97102 (Wynn AA + EL), 24-97104, 25-97103, 25-97106 (MAF MOE FEC), 22-97113 (MAF FEC), 24-97101 (HoH Supervision) +44 more (61 total, A1+A2 combined; includes 22-97111 TPF, 22-97112 The View as the A2 sub-variant) + 26-97108 Lulu Boats (FP-01, FP-02), 26-97109 Furjan39B (FP-01-r00), all A1 form (2026-08-18 corpus-gap addition, 64 total)
 
 ---
 
@@ -3743,7 +3743,7 @@ The dominant wording, used in 61 documents. Full discipline exclusions plus the 
 >
 > Regulations / standards / landlord guidelines - It is the responsibility of the client to inform emittiv at time of appointment of any specific regulatory or energy efficiency standards / regulations / guidelines that need to be adhered to other than Part L or CIBSE. This includes any country, city, state, landlord, client, tenant regulations or guidelines.
 
-Used by: 22-97111, 22-97112, 22-97113, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96606, 23-96607 +49 more (61 documents total; minor whitespace/em-dash differences in 22-97112-FP-01 are folded in here as the same clause).
+Used by: 22-97111, 22-97112, 22-97113, 22-97114, 22-97115, 23-96601, 23-96602, 23-96603, 23-96604, 23-96605, 23-96606, 23-96607 +49 more (61 documents total; minor whitespace/em-dash differences in 22-97112-FP-01 are folded in here as the same clause) + 26-97108 Lulu Boats (FP-01, FP-02), 26-97109 Furjan39B (FP-01-r00) (2026-08-18 corpus-gap addition, 64 documents total).
 
 ---
 
@@ -4077,7 +4077,7 @@ The dominant clause: 13 lighting-design exclusions, ending with the as-built lin
 > - Final lamp schedule for the Client's building maintenance staff
 > - As built / installed drawings [to be provided by the Electrical Engineer or Contractor]
 
-Used by (60 docs): 22-97114 HoH, 23-96601 Dammam Adv World, 23-96602 Shoot the Chute, 23-96603 Khobar Grand Mosque, 23-97101 Marina Island, 23-97102 Wynn (AA + EL), 23-97107 DAFZA Refurb, 23-97108 Ciel Lobby (FP-01/02), 24-96603 Marasi Gate, 24-97102 DMC 2A, 24-97104 HoH Programming, 24-97106 RAK Sled +47 more.
+Used by (60 docs): 22-97114 HoH, 23-96601 Dammam Adv World, 23-96602 Shoot the Chute, 23-96603 Khobar Grand Mosque, 23-97101 Marina Island, 23-97102 Wynn (AA + EL), 23-97107 DAFZA Refurb, 23-97108 Ciel Lobby (FP-01/02), 24-96603 Marasi Gate, 24-97102 DMC 2A, 24-97104 HoH Programming, 24-97106 RAK Sled +47 more + 26-97108 Lulu Boats (FP-01, FP-02) (2026-08-18 corpus-gap addition, 62 docs total; 26-97109 Furjan39B NOT added here - its Optional Services list shows only 10 of the 13 standard items, uncertain whether a genuine content difference or a page-extraction truncation, flagged not reconciled).
 
 Includes the `•`-bulleted spelling and the minor sub-variant "Sunlight design and studies **including**..." (dropped comma) — both used by 22-97112 The View Exp Ctr, 22-97111 TPF Sound System (3 docs).
 
