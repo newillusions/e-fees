@@ -7,7 +7,7 @@ Three PRs open, all ready for orchestrator merge (PR #35 already confirmed merge
 - **#36** (2026-08-18, NEW this session): **on-disk folder reconcile** - optional follow-up to #35, chained onto the merge success path + an opt-in cascade-delete checkbox.
 
 - **Versions**: desktop **0.18.1**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (unchanged this session).
-- **`main` (origin, Forgejo)** is now at `c187903` (PR #35 merged) plus PR #36's branch on top. PR #36 branch `feat/folder-reconcile-modal`, head `d30a9cb26cae831a3b2115cede0103d95cc47687`, mergeable:true, merge_base = base (clean).
+- **`main` (origin, Forgejo)** is now at `c19c8d2` (PR #35 merged + handover sync) plus PR #36's branch on top. PR #36 branch `feat/folder-reconcile-modal`, head `de9c5e0a7512a40cf81fc816694314a50f220988` (UPDATED after review - see below), mergeable:true.
 - **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4). Prod: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2).
 
 ## Last Session (2026-08-18)
@@ -15,9 +15,11 @@ Three PRs open, all ready for orchestrator merge (PR #35 already confirmed merge
 
 Frontend: new `FolderReconcileModal.svelte` (4-step: resolve both folders by number -> classify -> per-file/bulk resolution -> dry-run summary + confirm), wired as an optional Step 5 on `MergeProjectModal.svelte`'s post-merge success path. `ProjectDetail.svelte` gained an opt-in ("default OFF") "also move the on-disk folder" checkbox on the cascade-delete confirmation, only shown when a folder actually exists; `WarningModal.svelte` extended with an optional checkbox slot (backward compatible - gated to the delete-confirm dialog only).
 
-Full battery green: `cargo test -p app --lib` 130/130 (114 baseline + 16 new), `cargo clippy` 84/84 warnings zero new (verified via `git stash -u` - NOT plain `git stash`, which misses untracked files and would have silently included the new module in the "before" baseline), `npm run test:run` 805/805 (796 baseline + 9 new API-layer tests), `svelte-check` 0 errors / 185 warnings (baseline unchanged), `npm run lint` 14 pre-existing errors in untouched files only, `npm run build` succeeds.
+**Review round 2, same session**: Martin caught a real gap - project folders are created from a template whose files get the project's NUMBER substituted into their names (`rename_template_files_cross_platform` in `template_ops.rs`, confirmed by reading the actual creation code). Path-equality pairing reported a renamed base file (e.g. `"26-97110-var.json"` vs `"26-97104-var.json"` - same logical file, different literal name) as two unrelated NEW files instead of one real conflict, and a plain copy would leave the source's number sitting in the target folder. Fixed with `canonical_dest_relpath()` - reverses the number substitution per path component to compute the correct destination, used for both classification AND the actual write. Plain user files (no number in the name) are unaffected. 9 new tests (5 pure-function, 4 end-to-end) cover it. PR #36 updated in place on the same branch (head `de9c5e0a7`).
 
-**Tooling gotcha worth knowing**: svelte-check (4.2.1) intermittently failed to resolve the four new functions when barrel-re-exported through `src/lib/api/index.ts` ("no exported member", while plain `tsc --noEmit` found zero errors in the same files). Worked around by importing directly from the leaf module (`$lib/api/folderReconcile`) in the two consuming `.svelte` files - which also matches this codebase's existing precedent (`folderManagement.ts` functions were never barrel-exported either). The barrel re-export block is still in `index.ts` (harmless) but nothing relies on it.
+Full battery green (final state): `cargo test -p app --lib` **139/139** (114 baseline + 25 folder-reconcile), `cargo clippy` 84/84 warnings zero new (verified via `git stash -u` - NOT plain `git stash`, which misses untracked files), `npm run test:run` **806/806** (796 baseline + 10 API-layer tests), `svelte-check` 0 errors / 185 warnings (baseline unchanged), `npm run lint` 14 pre-existing errors in untouched files only, `npm run build` succeeds.
+
+**Tooling gotcha worth knowing**: svelte-check (4.2.1) intermittently failed to resolve new functions when barrel-re-exported through `src/lib/api/index.ts` ("no exported member", while plain `tsc --noEmit` found zero errors in the same files). Worked around by importing directly from the leaf module (`$lib/api/folderReconcile`) in the two consuming `.svelte` files - which also matches this codebase's existing precedent (`folderManagement.ts` functions were never barrel-exported either). The barrel re-export block is still in `index.ts` (harmless) but nothing relies on it.
 
 **Process note**: worked directly in the project root per the prior session's convention (no isolated worktree); nothing to tear down.
 
@@ -32,7 +34,7 @@ Full battery green: `cargo test -p app --lib` 130/130 (114 baseline + 16 new), `
 | PR #34 (version display + CI fix) | https://forge.mms.name/emittiv/fee-prop/pulls/34 |
 | PR #35 (project merge + cascade-delete) | MERGED - https://forge.mms.name/emittiv/fee-prop/pulls/35 |
 | PR #36 (on-disk folder reconcile) | https://forge.mms.name/emittiv/fee-prop/pulls/36 |
-| KB obs (this session) | observation:wdgfn20acnhnjlptzejn |
+| KB obs (this session) | observation:vntsnt3o3mo9gnuas2ge (supersedes observation:wdgfn20acnhnjlptzejn) |
 | KB wiki section (updated this session) | wiki_section:9yrv1l4tzme1l48lsnyh (page `e-fees`) |
 
 ## Next Steps
@@ -58,4 +60,4 @@ Full battery green: `cargo test -p app --lib` 130/130 (114 baseline + 16 new), `
 - `get_project_folder_location`/`find_project_folder` resolve a project's on-disk folder by scanning folder NAMES against the 4 status dirs - DB-independent, so it still works for a project whose DB record was just deleted (as long as the folder itself hasn't been touched). This is what makes the folder-reconcile step safe to run after the DB merge has already committed.
 
 ---
-*Updated: 2026-08-18 (folder-reconcile session, PR #36; confirmed PR #35 merged)*
+*Updated: 2026-08-18 (folder-reconcile session, PR #36 incl. review-round-2 project-number-aware file pairing fix; confirmed PR #35 merged)*
