@@ -1,18 +1,24 @@
 # E-Fees Project Handover
 
 ## Current Status
-**v0.17.0 released (2026-08-12)** - desktop installer refreshed after 4.5 months (previous release was v0.16.0, 2026-03-28). Fixes the first-run setup wizard's connection test, which always failed on a fresh install (log-proven on Windows) because `testConnection()` never called `reconnect_database` before checking connection status. PR #28 merged (`833bf7f`); release commit `ef38301` + manifest sync `5dde60b`; `main` is at `5dde60b`.
+Two PRs open, both ready for orchestrator merge:
+- **#34** (2026-08-14): update-dialog version display fix + release-manifest CI atomic-commit fix.
+- **#35** (2026-08-18, NEW this session): project-level **merge** and **cascade-delete** - recover from a duplicate/mistaken project (e.g. one created in error from PA RFP intake) without orphaning fee proposals or leaving the previously-rejected "undo an RFP log" idea half-built.
 
-- **Versions**: desktop **0.17.0**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (unchanged this session).
-- **`main` (origin, Forgejo)** is current source of truth - local `main` tracking is fixed (see `.claude/rules/judgment.md`), just confirm `git fetch && git log` before trusting it.
-- **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4). Prod: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2). Dev runs a newer SurrealDB point release than prod - don't assume schema/behavior parity between the two without checking both.
-- **macOS builds are Apple-Silicon-only** since 2026-06-29 (decision:boujy4d42i8w7zovifts) - Intel dropped from `.github/workflows/build-releases.yml`'s matrix. The macOS job's display name ("Build macOS (Apple Silicon + Intel)") is stale/never renamed; don't read it as a build failure when only 1 macOS asset set appears on a release.
+- **Versions**: desktop **0.18.1**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (unchanged this session).
+- **`main` (origin, Forgejo)** is current source of truth at `f56bf6e`. PR #35 branch `feat/project-merge-cascade-delete`, head `d25275ac6365191ab3fb7bd02db6eae07eb3eaf9`, mergeable:true.
+- **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4). Prod: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2).
 
-## Last Session
-**Date**: 2026-08-12
-**Summary**: Fixed `FirstRunSetup.svelte`'s `testConnection()` - it called `check_db_connection` (which only reports whether a DB client already exists, never attempts a connection) without ever calling `reconnect_database` first, so first-run Test always failed even with correct credentials. Added regression test `src/lib/components/FirstRunSetup.test.ts` (RED against the old code, GREEN after the fix; also added a local `Element.prototype.animate` polyfill since jsdom doesn't implement it and this is the first transition-using component with tests in the repo). Full battery green (`npm run test:run` 734/734, `npm run check` 0 errors, `cargo test -p app --lib` 97/0/5-ignored). PR #28 opened, CI green (run #20, 5m19s), squash-merged to main. Cut release v0.17.0 per `.claude/commands/release.md`: version bump (minor), tag pushed to origin+github, GitHub Actions build green on all 3 jobs, Forgejo release id 312 live with 5 assets, `update.json` auto-synced to GitHub by the workflow's own commit step.
+## Last Session (2026-08-18)
+**Summary**: Added project merge (fold a source project's fee proposals onto a target, transactional, revision-collision-safe) and cascade delete (refuses unless dependent fees are explicitly confirmed via `cascade: true`) at the project level. Backend: new `src-tauri/src/db/project_lifecycle.rs` module (`preview_project_merge`, `merge_projects`, `preview_project_delete`, `delete_project_cascade` Tauri commands), transactional (`BEGIN/COMMIT TRANSACTION`), re-reads every affected record after commit to verify the state matches the plan rather than trusting the mutation's return value. A fee's record id/`number` are never renamed (they embed the *original* project number by existing `create_fee` convention) - only `project_id` and, on a revision-number collision, `rev` - which is exactly what lets merge skip e-fees-scope's `scope_assembly`/`scope_revision` tables entirely. Frontend: new `MergeProjectModal.svelte` (target-project typeahead + server preview + confirm) and two new `ProjectDetail.svelte` actions.
 
-**Process note**: `git push github` needed a one-time local fix - `git config credential."https://github.com".helper "!gh auth git-credential"` (plain HTTPS push wasn't picking up `gh`'s stored auth). Full detail + KB observation: `observation:9gstxw3xdgl798lpomg5`.
+Full battery green: `cargo test -p app --lib` 114/114 passing (+10 ignored, incl. 2 new live-DB tests not run this session - no dev-DB credential path available that doesn't violate the workspace's "never read creds.env" rule), `cargo clippy` clean (verified zero new warnings via before/after `git stash`), `npm run test:run` 796/796 (+8 new API-layer tests), `svelte-check` 0 errors (185 pre-existing warnings unchanged), `npm run lint` 0 new errors, `npm run build` succeeds.
+
+**Two things flagged unverified, not silently assumed correct** (see PR #35 body + code comments):
+1. `activity_log.action` gained a new `'merge'` value client-side; whether the live SCHEMAFULL `activity_log` table's ASSERT permits it is unverified (no `schema.surql` for that table exists in this repo). Low blast radius - `logActivity()` is fire-and-forget (catches, warns, never throws), so a rejected write only drops the audit-log entry, not the merge itself.
+2. Found but did NOT fix (unrelated, out of dispatch scope): `ProjectModal.svelte`'s existing single-project delete button computes its id via `getEntityId(project)` → `extractSurrealId(project.id)`, which for a string-typed `project.id` (confirmed via `stores.test.ts` fixtures) returns the FULL `"projects:xxx"` string rather than the bare key `delete_project`'s Rust command expects. My new merge/delete-cascade frontend code deliberately uses `extractIdFromRelation` throughout instead. Worth a look next session - if real, the existing single-project delete may be silently deleting nothing.
+
+**Process note**: worked directly in the project root per dispatch instructions (no isolated worktree); nothing to tear down.
 
 ## Key Context
 | Resource | Value |
@@ -22,25 +28,30 @@
 | API container | 10.0.21.80:3200 (e-fees-api 0.3.4) - `EFEES_API_KEY` |
 | Scope container | 10.0.21.81:3201 (e-fees-scope 0.2.0) - clause DB = prod |
 | Forgejo | forge.mms.name/emittiv/fee-prop |
-| v0.17.0 release | https://forge.mms.name/emittiv/fee-prop/releases/tag/v0.17.0 |
-| KB obs (v0.17.0 release + first-run fix) | observation:9gstxw3xdgl798lpomg5 |
+| PR #34 (version display + CI fix) | https://forge.mms.name/emittiv/fee-prop/pulls/34 |
+| PR #35 (project merge + cascade-delete) | https://forge.mms.name/emittiv/fee-prop/pulls/35 |
+| KB obs (this session) | observation:dhhaj1a090ia7wcswuwi |
+| KB wiki section (this session) | wiki_section:9yrv1l4tzme1l48lsnyh (page `e-fees`) |
 
 ## Next Steps
-1. **Clause-library backlog** - fix 4 divergent clauses, supplement 4 thin, add 7 gap clauses. Code/data verified in dev; the remaining gate is Martin's business-content review of 3 client-facing wording changes (payment 30→14d, validity 60d, Defined Role regs paragraph), not a technical blocker. (as of 2026-08-12)
-2. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`. (as of 2026-08-12)
-3. **Stage 3 clause-usage mining** - corpus-ranked clause suggestions are operational (769 positive matches, 27 clause stats live); remaining is one verified real-proposal run end to end. (as of 2026-08-12)
-4. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line (see `judgment.md` - buy-ins are discipline lines, not reimbursable costs) + regenerate docs. (as of 2026-08-12)
+1. **Orchestrator: merge PR #34 and PR #35**, then deploy per the normal release/deploy path. (as of 2026-08-18)
+2. **If dev-DB creds are in hand**: run the 2 new `#[ignore]`-gated live tests (`test_merge_projects_reparents_fees_and_resolves_rev_collision`, `test_delete_project_cascade_removes_dependent_fees` in `db/tests.rs`) and confirm `activity_log.action='merge'` is accepted by the live schema. (as of 2026-08-18)
+3. **Clause-library backlog** - fix 4 divergent clauses, supplement 4 thin, add 7 gap clauses. Gate is Martin's business-content review of 3 client-facing wording changes, not a technical blocker. (as of 2026-08-12)
+4. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`. (as of 2026-08-12)
+5. **Stage 3 clause-usage mining** - corpus-ranked clause suggestions are operational; remaining is one verified real-proposal run end to end. (as of 2026-08-12)
+6. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line + regenerate docs. (as of 2026-08-12)
 
 ## Open Follow-ups
 - Make e-fees-scope integration-test cleanup hard-delete (currently soft-delete → archived residue accumulates).
 - Drop old `ns:emittiv` on 10.0.23.12 once confirmed unneeded.
+- Investigate the possible `ProjectModal.svelte` single-delete id bug noted above.
 
 ## Notes
 - `kb_detect_project_tags` clobbers monorepo tags - do NOT run on e-fees.
 - SurrealDB type-check fn is `type::is_datetime()` (underscore), not `type::is::datetime`.
 - Critical query/SurrealValue patterns in CLAUDE.md §Critical query patterns.
-- Tacit judgment (proposal domain gotchas, deploy traps, cross-project consumer notes) lives in `.claude/rules/judgment.md` - read it before touching pricing/proposal-export logic or Dockerfiles.
-- jsdom doesn't implement `Element.animate` (Web Animations API) - any future component test that renders a Svelte `transition:` needs the same local polyfill used in `FirstRunSetup.test.ts`.
+- Tacit judgment (proposal domain gotchas, deploy traps, cross-project consumer notes) lives in `.claude/rules/judgment.md`.
+- A fee's record id/`number` embed the *original* project number at creation and are never renamed by any code path - this is now a load-bearing convention for `project_lifecycle.rs`'s merge, worth knowing before touching fee-id handling elsewhere.
 
 ---
-*Updated: 2026-08-12 (v0.17.0 release session - first-run connection-test fix; rewrote from a stale 2026-06-29/07-02 handover, several intervening sessions were documented only in KB)*
+*Updated: 2026-08-18 (project merge + cascade-delete session, PR #35)*
