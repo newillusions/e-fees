@@ -1822,6 +1822,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "surrealdb",
+ "surrealdb-types",
  "tokio",
  "tower-http",
  "tracing",
