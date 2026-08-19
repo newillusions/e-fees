@@ -563,9 +563,61 @@ pub fn resolve_multi_revision_create_conflicts(plans: Vec<RowPlan>) -> Vec<RowPl
         .collect()
 }
 
+/// Pure gate decision for `--apply --target prod`: still refused by default
+/// (prod writes are orchestrator-owned), but an explicit `--confirm-prod`
+/// flag lifts the refusal. `target_name` is `"dev"` or `"prod"`; `dry_run`
+/// targets (any `target_name` when `apply` is `false`) and `dev --apply` are
+/// never gated. Returns `Err` with the refusal message when the write should
+/// be blocked, `Ok(())` when it may proceed.
+pub fn check_prod_apply_gate(
+    target_name: &str,
+    apply: bool,
+    confirm_prod: bool,
+) -> Result<(), String> {
+    if apply && target_name == "prod" && !confirm_prod {
+        return Err(
+            "REFUSED: --apply --target prod. Prod writes are orchestrator-owned. \
+             Run --target prod (dry-run, the default) to produce a plan and hand \
+             the exact apply command to the orchestrator, or pass --confirm-prod \
+             to proceed."
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ------------------------------------------------------------------
+    // check_prod_apply_gate
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn prod_apply_without_confirm_is_refused() {
+        let result = check_prod_apply_gate("prod", true, false);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("REFUSED"));
+    }
+
+    #[test]
+    fn prod_apply_with_confirm_is_accepted() {
+        assert_eq!(check_prod_apply_gate("prod", true, true), Ok(()));
+    }
+
+    #[test]
+    fn dev_apply_is_unaffected_by_confirm_prod() {
+        assert_eq!(check_prod_apply_gate("dev", true, false), Ok(()));
+        assert_eq!(check_prod_apply_gate("dev", true, true), Ok(()));
+    }
+
+    #[test]
+    fn dry_run_default_is_unaffected_regardless_of_target_or_confirm() {
+        assert_eq!(check_prod_apply_gate("prod", false, false), Ok(()));
+        assert_eq!(check_prod_apply_gate("prod", false, true), Ok(()));
+        assert_eq!(check_prod_apply_gate("dev", false, false), Ok(()));
+    }
 
     // ------------------------------------------------------------------
     // parse_index_md / derive_project_id / derive_rev / parse_fee_cell

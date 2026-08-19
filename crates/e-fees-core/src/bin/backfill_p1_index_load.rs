@@ -9,11 +9,13 @@
 //!   cargo run -p e-fees-core --bin backfill_p1_index_load -- \
 //!     --target dev [--apply] [--index-md PATH] [--report-file PATH]
 //!
-//! `--target prod --apply` is HARD REFUSED (compile-time constant match, not
-//! a runtime flag check that could be bypassed) - prod writes are
-//! orchestrator-owned. `--target prod` without `--apply` runs a read-only
-//! dry-run against prod, which is the whole point of the prod pass: produce
-//! the exact plan for the orchestrator to apply separately.
+//! `--target prod --apply` is REFUSED unless `--confirm-prod` is also
+//! passed, since prod writes are orchestrator-owned by default. `--target
+//! prod` without `--apply` runs a read-only dry-run against prod, which is
+//! the whole point of the prod pass: produce the exact plan for the
+//! orchestrator to apply separately (or, when the orchestrator itself is
+//! running this binary, `--apply --target prod --confirm-prod` applies it
+//! directly).
 //!
 //! Default is `--dry-run` (i.e. omitting `--apply` never writes, regardless
 //! of `--target`).
@@ -34,7 +36,8 @@ use surrealdb::types::{RecordId, SurrealValue};
 use surrealdb::Surreal;
 
 use e_fees_core::backfill::p1_index_load::{
-    self, CompanyRecord, ConflictGroup, ConsistentGroup, FeeGroupKey, RowPlan, SkippedRow,
+    self, check_prod_apply_gate, CompanyRecord, ConflictGroup, ConsistentGroup, FeeGroupKey,
+    RowPlan, SkippedRow,
 };
 use e_fees_core::models::record_key_string;
 
@@ -68,6 +71,7 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let mut target: Option<&'static TargetConfig> = None;
     let mut apply = false;
+    let mut confirm_prod = false;
     let mut index_md_path =
         "/Volumes/base/dev/claude/e-fees/docs/clause-corpus/INDEX.md".to_string();
     let mut report_file = None;
@@ -85,6 +89,7 @@ fn parse_args() -> Result<Args, String> {
             }
             "--apply" => apply = true,
             "--dry-run" => apply = false,
+            "--confirm-prod" => confirm_prod = true,
             "--index-md" => {
                 index_md_path = iter.next().ok_or("--index-md requires a path")?;
             }
@@ -97,14 +102,7 @@ fn parse_args() -> Result<Args, String> {
 
     let target = target.ok_or("--target dev|prod is required")?;
 
-    if apply && target.name == "prod" {
-        return Err(
-            "REFUSED: --apply --target prod. Prod writes are orchestrator-owned. \
-             Run --target prod (dry-run, the default) to produce a plan and hand \
-             the exact apply command to the orchestrator."
-                .to_string(),
-        );
-    }
+    check_prod_apply_gate(target.name, apply, confirm_prod)?;
 
     Ok(Args { target, apply, index_md_path, report_file })
 }
