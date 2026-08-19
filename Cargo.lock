@@ -1840,6 +1840,7 @@ dependencies = [
  "serde_json",
  "surrealdb",
  "surrealdb-types",
+ "tokio",
  "umya-spreadsheet",
  "utoipa",
  "zip 2.4.2",

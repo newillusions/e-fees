@@ -12,11 +12,16 @@ openapi = ["utoipa"]
 chrono = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-surrealdb = { version = "3.0.4", default-features = false }
+surrealdb = { version = "3.0.4", default-features = false, features = ["protocol-ws", "rustls"] }
 surrealdb-types = "3.0.4"
 utoipa = { version = "5", optional = true }
 rust_xlsxwriter = "0.82"
 umya-spreadsheet = "2.3"
+# Needed only by the src/bin/backfill_p1_index_load.rs writer (async DB I/O).
+# protocol-ws/rustls above are additive to whatever other workspace members
+# already request on the same surrealdb version - no capability change for
+# src-tauri/e-fees-api/e-fees-scope, which all already enable these.
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [dev-dependencies]
 zip = "2"
