@@ -56,7 +56,7 @@ DEFINE FIELD time.updated_at ON projects TYPE datetime VALUE time::now();
 DEFINE INDEX project_number_unique ON projects FIELDS number.id UNIQUE;
 ```
 
-**P0 backfill fields (2026-08-19, `scripts/migration/006-backfill-metadata-fields.surql`):**
+**P0 backfill fields (2026-08-19, `scripts/migration/v006_backfill_metadata_fields.surql`):**
 net-new, all `option<T>` (absent = `NONE`, never `NULL`) so existing rows and
 existing writers are unaffected. Not read by the desktop app or `e-fees-api`
 yet - populated by the historical-backfill phases (P1-P4, see
@@ -109,6 +109,60 @@ removing it with the bracket-star form (`REMOVE FIELD disciplines[*] ON
 projects;`), not the dot-star form the introspection output displays. See
 the rollback script's header comment for the full note. Not yet re-verified
 against prod's 3.1.2.
+
+## Migration workflow (schema-guard onboarded 2026-08-19)
+
+Schema migrations for `projects` go through the workspace migration guard,
+`~/.claude/scripts/apply-migration.sh` (`obs:q2lbpycedhr8ppggv56u`) - the
+same tool `pa-core-rs` uses. It proves, on every single run, that the
+migration being applied is reversible (rollback file exists AND round-trips
+cleanly, re-tested live every time) and, for anything not provably additive,
+that the entire target database is recoverable before it writes anything.
+
+**File convention**: `scripts/migration/vNNN_slug.surql` (forward) +
+`scripts/migration/vNNN_slug_rollback.surql` (rollback), starting from
+`v006_backfill_metadata_fields.surql`. The pre-guard files
+(`001-create-venue-table.surql` … `005-country-normalization.surql`) keep
+their original hyphenated names - they are historical and will never be
+re-run through the guard; see `000-bootstrap-schema-version-tracking.surql`
+for exactly which of them actually reached prod (not all five - `venue` was
+an abandoned parallel workstream that never shipped to either environment).
+
+**Version-stamp discipline** (same idiom as `pa-core-rs/schema/README.md`):
+every migration from v006 onward ends with a trailing stamp block:
+
+```sql
+LET $existing = (SELECT id FROM app_state WHERE key = 'schema_version' LIMIT 1);
+IF array::len($existing) > 0 THEN
+  (UPDATE $existing[0].id SET value = 'NN', updated_at = time::now())
+ELSE
+  (CREATE app_state SET key = 'schema_version', value = 'NN', updated_at = time::now())
+END;
+```
+
+and its rollback ends with the same block stamping `NN - 1`. The guard reads
+`app_state.schema_version` before applying anything and refuses unless the
+target is at exactly `version - 1` (refuses skipped versions, re-runs, and
+wrong-database applies). `app_state` itself (`key`/`value`/`updated_at`,
+unique index on `key`) was bootstrapped once, by hand
+(`000-bootstrap-schema-version-tracking.surql`, never through the guard -
+see that file for why the guard structurally cannot bootstrap its own
+tracking table), stamped at `'5'` on both dev and prod.
+
+**Applying a new migration** (`NNN` = next version number):
+
+```bash
+~/.claude/scripts/apply-migration.sh \
+  --schema-dir scripts/migration --version NNN \
+  --host 10.0.23.11:8000 --ns emittiv --db projects \
+  --creds EFEES_SURREALDB --dry-run   # then re-run without --dry-run
+```
+
+`--dev-host` defaults to `10.0.23.12:8000` (dev) and is where the guard
+proves the rollback round-trip in a throwaway namespace before ever touching
+the real target - it does not need to be passed explicitly for e-fees. Prod
+application is orchestrator-owned per the workspace deploy-ownership
+contract, not run by a project instance.
 
 **Business Logic - Project Numbering**:
 - Format: `YY-CCCNN` (e.g., `25-97105`)

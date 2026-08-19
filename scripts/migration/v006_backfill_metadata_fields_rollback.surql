@@ -1,7 +1,14 @@
--- 006-backfill-metadata-fields-rollback.surql
--- Rollback for 006-backfill-metadata-fields.surql (P0 historical-backfill
+-- v006_backfill_metadata_fields_rollback.surql
+-- Rollback for v006_backfill_metadata_fields.surql (P0 historical-backfill
 -- schema migration). Removes every field the forward migration defined.
 -- Child object-array fields are removed before their parent.
+--
+-- Renamed from 006-backfill-metadata-fields-rollback.surql (2026-08-19,
+-- migration-guard onboarding) to the guard's `_rollback.surql` sibling
+-- convention; trailing schema_version stamp-revert added (see bottom of
+-- file) - the guard's rollback-proof cycle asserts schema_version reads
+-- back to the predecessor version (5) after this file runs, every time it
+-- proves the migration, not just here.
 --
 -- Safe to re-run: `REMOVE FIELD IF EXISTS` is idempotent.
 --
@@ -42,3 +49,13 @@ REMOVE FIELD IF EXISTS scope_summary ON projects;
 REMOVE FIELD IF EXISTS loss_reason ON projects;
 REMOVE FIELD IF EXISTS source_document ON projects;
 REMOVE FIELD IF EXISTS data_provenance ON projects;
+
+-- Schema-version stamp-revert (guard requirement - see
+-- v006_backfill_metadata_fields.surql's matching stamp for the structural
+-- template the classifier matches). Idempotent re-apply.
+LET $existing = (SELECT id FROM app_state WHERE key = 'schema_version' LIMIT 1);
+IF array::len($existing) > 0 THEN
+  (UPDATE $existing[0].id SET value = '5', updated_at = time::now())
+ELSE
+  (CREATE app_state SET key = 'schema_version', value = '5', updated_at = time::now())
+END;

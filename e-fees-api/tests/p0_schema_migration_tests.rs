@@ -1,5 +1,5 @@
 //! Integration tests for the P0 historical-backfill schema migration
-//! (`scripts/migration/006-backfill-metadata-fields.surql`).
+//! (`scripts/migration/v006_backfill_metadata_fields.surql`).
 //!
 //! These tests exercise the new `projects` fields (`project_type`,
 //! `project_category`, `disciplines[*]`, `stage`, `outcome`,

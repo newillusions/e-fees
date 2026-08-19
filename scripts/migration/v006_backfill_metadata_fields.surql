@@ -1,9 +1,21 @@
--- 006-backfill-metadata-fields.surql
+-- v006_backfill_metadata_fields.surql
 -- Historical fee-data backfill, Phase P0 — schema migration.
 -- Owner-approved DDL (revised 2026-08-18) from
 -- /Volumes/base/dev/.claude/research/2026-08-08-pricing-ingestion/03-ingestion-plan.md
 -- section 2 "P0 — Schema migration". D1/D2/D3 applied. Rollback:
--- 006-backfill-metadata-fields-rollback.surql.
+-- v006_backfill_metadata_fields_rollback.surql.
+--
+-- Renamed from 006-backfill-metadata-fields.surql (2026-08-19, migration-
+-- guard onboarding) to the guard's discovery convention
+-- (~/.claude/scripts/apply-migration.sh: `v<NNN>_<slug>.surql` /
+-- `v<NNN>_<slug>_rollback.surql`) and given the trailing schema_version
+-- stamp the guard's classifier requires (see bottom of file) - content
+-- otherwise unchanged from the merged PR #39 version. Migrations from here
+-- on (007+) use this same `vNNN_slug.surql` naming; 001-005 keep their
+-- original hyphenated names as historical/dead files that will never be
+-- re-run through the guard (see 000-bootstrap-schema-version-tracking.surql
+-- for why, and why this migration's predecessor version is 5, not the count
+-- of files that actually landed).
 --
 -- Run on: emittiv/projects DB, dev (10.0.23.12:8000, ns emittiv_dev) FIRST,
 -- verified there, then prod (10.0.23.11:8000, ns emittiv) only after Martin
@@ -14,10 +26,14 @@
 -- that guard: every `DEFINE FIELD OVERWRITE` below targets a field that does
 -- NOT yet exist on prod (this migration net-adds fields; it does not
 -- re-define any field prod already has), so the guard's "not-proven-additive"
--- path (triggered by an OVERWRITE of an EXISTING field) is not expected to
--- fire here - it would only fire if this migration were re-run after a
--- partial hand-apply. `OVERWRITE` (not `IF NOT EXISTS`) is used throughout
--- specifically so a partial hand-apply can be safely re-run.
+-- path (triggered by an OVERWRITE of an EXISTING table) is not expected to
+-- fire here for that reason - it DOES still classify NOT_ADDITIVE overall,
+-- because every statement is `DEFINE FIELD OVERWRITE` (not `IF NOT EXISTS`)
+-- and several carry ASSERT clauses outside the guard's enumerated safe-clause
+-- set (migration_classify.py) - expected and accepted, not a defect; the
+-- migration pays the whole-database recoverability proof instead of riding
+-- the pure-whitelist path. `OVERWRITE` (not `IF NOT EXISTS`) is used
+-- throughout specifically so a partial hand-apply can be safely re-run.
 --
 -- `projects` is SCHEMAFULL: every field must be explicitly defined; an
 -- undefined field hard-errors on write (confirmed live on dev: attempting to
@@ -29,6 +45,18 @@
 -- (desktop app / e-fees-api) or existing rows - none of the fields below is
 -- read by the app today (ProjectModal.svelte binds to exactly 6 fields via
 -- an explicit validator array, per the plan's evaluator finding).
+--
+-- REBUILD-SAFETY PREREQUISITE (added 2026-08-19, found by the guard's own
+-- dry-run): `projects`'s base definition predates this repo's migration
+-- chain (same situation pa-core-rs documents in schema/v000_baseline_email.
+-- surql for `email`). apply-migration.sh's rollback-proof cycle runs this
+-- file alone against a brand-new throwaway namespace, so if `projects`
+-- isn't already defined there, `data_provenance`'s FLEXIBLE clause below
+-- hits a table SurrealDB auto-created SCHEMALESS - confirmed live:
+-- "FLEXIBLE can only be used in SCHEMAFULL tables". `IF NOT EXISTS` makes
+-- this a no-op against dev/prod, which already have `projects` defined
+-- exactly this way (verified via INFO FOR DB on both, 2026-08-19).
+DEFINE TABLE IF NOT EXISTS projects TYPE NORMAL SCHEMAFULL PERMISSIONS FULL;
 
 -- D1: two-field open-vocabulary type/category (not a hard enum - the
 -- vocabulary is still being discovered, an enum would reject legitimate new
@@ -75,3 +103,14 @@ DEFINE FIELD OVERWRITE scope_summary   ON projects TYPE option<string>;
 DEFINE FIELD OVERWRITE loss_reason     ON projects TYPE option<string>;
 DEFINE FIELD OVERWRITE source_document ON projects TYPE option<string>;
 DEFINE FIELD OVERWRITE data_provenance ON projects TYPE option<object> FLEXIBLE;
+
+-- Schema-version stamp (guard requirement, migration_classify.py's
+-- SCHEMA_VERSION_STAMP rule - structural template match, not a substring
+-- search). Idempotent re-apply: whichever branch fires, the result is the
+-- same row at value='6'.
+LET $existing = (SELECT id FROM app_state WHERE key = 'schema_version' LIMIT 1);
+IF array::len($existing) > 0 THEN
+  (UPDATE $existing[0].id SET value = '6', updated_at = time::now())
+ELSE
+  (CREATE app_state SET key = 'schema_version', value = '6', updated_at = time::now())
+END;
