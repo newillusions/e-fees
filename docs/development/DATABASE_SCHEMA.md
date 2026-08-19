@@ -56,6 +56,60 @@ DEFINE FIELD time.updated_at ON projects TYPE datetime VALUE time::now();
 DEFINE INDEX project_number_unique ON projects FIELDS number.id UNIQUE;
 ```
 
+**P0 backfill fields (2026-08-19, `scripts/migration/006-backfill-metadata-fields.surql`):**
+net-new, all `option<T>` (absent = `NONE`, never `NULL`) so existing rows and
+existing writers are unaffected. Not read by the desktop app or `e-fees-api`
+yet - populated by the historical-backfill phases (P1-P4, see
+`/Volumes/base/dev/.claude/research/2026-08-08-pricing-ingestion/03-ingestion-plan.md`).
+
+```sql
+-- Open-vocabulary project type/category (free text + UI typeahead, no enum -
+-- the vocabulary is still being discovered).
+DEFINE FIELD project_type ON projects TYPE option<string>;
+DEFINE FIELD project_category ON projects TYPE option<string>;
+
+-- Structured discipline entries. "Sub" is a subcontractor slot, not a
+-- discipline name - kind=Sub + sub_company must never reach a client-facing
+-- export (enforced at the app/export layer, not by this DDL).
+DEFINE FIELD disciplines ON projects TYPE option<array<object>>;
+DEFINE FIELD disciplines[*].kind ON projects
+    TYPE string
+    ASSERT $value IN ['Lighting', 'Video', 'Audio', 'SFX', 'Show Control', 'Sub'];
+DEFINE FIELD disciplines[*].sub_discipline ON projects TYPE option<string>;
+DEFINE FIELD disciplines[*].sub_company ON projects TYPE option<record<company>>;
+
+-- Lifecycle (`stage`) and commercial result (`outcome`) as two separate
+-- axes - NOT a replacement for the existing `status` field, which stays
+-- untouched and app-workflow-owned. `outcome = NONE` means open/pending;
+-- "Open" is never a written value.
+DEFINE FIELD stage ON projects
+    TYPE option<string>
+    ASSERT $value = NONE OR $value IN
+        ['RFP', 'Design', 'Construction', 'Completed', 'Superseded', 'Cancelled'];
+DEFINE FIELD outcome ON projects
+    TYPE option<string>
+    ASSERT $value = NONE OR $value IN ['Won', 'Lost', 'No Response', 'Cancelled'];
+DEFINE FIELD outcome_changed_at ON projects TYPE option<datetime>;
+DEFINE FIELD successor ON projects TYPE option<record<projects>>;
+    -- Forward pointer, populated only when stage=Superseded.
+
+-- Project metadata, mined from client documents in a later backfill phase.
+DEFINE FIELD gfa_sqm         ON projects TYPE option<float>;
+DEFINE FIELD plot_area_sqm   ON projects TYPE option<float>;
+DEFINE FIELD scope_summary   ON projects TYPE option<string>;
+DEFINE FIELD loss_reason     ON projects TYPE option<string>;
+DEFINE FIELD source_document ON projects TYPE option<string>;
+DEFINE FIELD data_provenance ON projects TYPE option<object> FLEXIBLE;
+```
+
+Note (SurrealDB 3.1.4, dev): defining `disciplines[*].kind` (etc.) implicitly
+creates an intermediate wildcard object field SurrealDB echoes in
+`INFO FOR TABLE` as `disciplines.*` - rolling back requires explicitly
+removing it with the bracket-star form (`REMOVE FIELD disciplines[*] ON
+projects;`), not the dot-star form the introspection output displays. See
+the rollback script's header comment for the full note. Not yet re-verified
+against prod's 3.1.2.
+
 **Business Logic - Project Numbering**:
 - Format: `YY-CCCNN` (e.g., `25-97105`)
 - YY: 2-digit year (25 = 2025)
