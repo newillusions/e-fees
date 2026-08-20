@@ -24,10 +24,28 @@
 //!    project collides on `(project_id, 0)` regardless of which corpus
 //!    revision it represents. This is verified live against both dev and
 //!    prod's `INFO FOR TABLE fee` (identical on both). Consequently: only a
-//!    project with ZERO existing fee rows is CREATE-eligible, and if the
-//!    corpus itself would need to create more than one revision for such a
-//!    project, none of them are created (a product decision on which
-//!    revision to seed is needed, not something this writer should guess).
+//!    project with ZERO existing fee rows is CREATE-eligible, and when the
+//!    corpus would need to create more than one revision for such a project,
+//!    only ONE fee row can be written.
+//!
+//!    RULING (Martin, 2026-08-20): seed the LATEST revision (highest `rev`
+//!    number, NOT necessarily the highest amount - a later revision can
+//!    quote lower than an earlier one, e.g. HoH Supervision 24-97101:
+//!    FP-01 628500 -> FP-02 385500 AED, seed 385500) as the value, and record
+//!    every earlier revision's amount in `data_provenance.superseded_revisions`
+//!    on the seeded fee row so the revision history is not lost until a real
+//!    revision workflow exists. See `resolve_multi_revision_create_conflicts`.
+//!
+//! 3. Some corpus client-text strings name a real, owner-confirmed company
+//!    that the fuzzy matcher CORRECTLY refuses to link (e.g. "Conrad Hotels"
+//!    vs the company record "Conrad Hilton Etihad Towers" - sharing only one
+//!    token is not enough to guess a legal-entity match, see
+//!    `conrad_hotels_does_not_false_match_conrad_hilton_etihad`). For cases
+//!    Martin has confirmed directly, `CLIENT_ALIASES` is an explicit,
+//!    reviewable map from corpus client text to company record id, checked
+//!    BEFORE the fuzzy matcher in `classify_group`. The fuzzy matcher itself
+//!    is never loosened - new aliases are added as new map entries, one line
+//!    each, never by relaxing `tokenize`/`match_company`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -393,8 +411,53 @@ pub fn match_company(client_text: &str, companies: &[CompanyRecord]) -> CompanyM
 }
 
 // ============================================================================
+// EXPLICIT ALIAS MAP (owner-confirmed corpus-client -> company identity)
+// ============================================================================
+
+/// Explicit, reviewable aliases from a corpus "Client" text to a company
+/// record id, for cases where the fuzzy matcher is CORRECTLY refusing to
+/// guess (see the module doc comment, item 3) but the identity is a plain
+/// fact Martin has confirmed out of band. One line per alias - add future
+/// aliases here, never by loosening `tokenize`/`match_company`.
+///
+/// Matching (`resolve_alias`) is a case-insensitive substring check against
+/// the joined client text, since a corpus row's client field carries
+/// free-text variation around the same client name (a trailing contact name,
+/// reordered fields) - see the three real "Conrad Hotels" variants in
+/// `docs/clause-corpus/INDEX.md` (plain, with a parenthesised contact, and
+/// contact-name-first).
+pub const CLIENT_ALIASES: &[(&str, &str)] = &[
+    // Martin confirmed directly (2026-08-20): the corpus's "Conrad Hotels" IS
+    // company:CHE "Conrad Hilton Etihad Towers" (contact Nicholas Fernandez).
+    ("Conrad Hotels", "company:CHE"),
+];
+
+/// Look up an explicit alias for a corpus client text. Returns the first
+/// matching alias's company id (case-insensitive substring match), or `None`
+/// if no alias applies - in which case the caller falls back to
+/// `match_company`.
+pub fn resolve_alias(client_text: &str) -> Option<&'static str> {
+    let lower = client_text.to_lowercase();
+    CLIENT_ALIASES
+        .iter()
+        .find(|(key, _)| lower.contains(&key.to_lowercase()))
+        .map(|(_, company_id)| *company_id)
+}
+
+// ============================================================================
 // CLASSIFICATION (what to do with each consistent group, given DB state)
 // ============================================================================
+
+/// One earlier revision's amount, carried in `data_provenance` on the fee
+/// row that gets seeded instead of it (see `resolve_multi_revision_create_
+/// conflicts`), so the value is not lost even though only one revision can
+/// be a live fee row today.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SupersededRevision {
+    pub rev: i64,
+    pub amount: f64,
+    pub currency: String,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RowPlan {
@@ -406,12 +469,17 @@ pub enum RowPlan {
     SkipAlreadyPopulated { key: FeeGroupKey, existing_quoted_fee: f64 },
     /// The project has zero existing fee rows, a confident single company
     /// match with a resolvable contact - create the skeleton + pricing.
+    /// `superseded_revisions` is non-empty only when this Create is the
+    /// winner of a multi-revision project (see
+    /// `resolve_multi_revision_create_conflicts`); empty for the ordinary
+    /// single-revision case.
     Create {
         key: FeeGroupKey,
         amount: f64,
         currency: String,
         company_id: String,
         contact_id: String,
+        superseded_revisions: Vec<SupersededRevision>,
     },
     /// Named skip - the reason is always human-readable and specific (never
     /// a bare "skipped").
@@ -475,9 +543,29 @@ pub fn classify_group(
         return RowPlan::Skip { key, reason };
     }
 
-    // Resolve company from the client text(s) seen for this group.
+    // Resolve company from the client text(s) seen for this group. An
+    // explicit alias (owner-confirmed identity, CLIENT_ALIASES) is checked
+    // FIRST and takes priority over the fuzzy matcher - the fuzzy matcher
+    // itself is never loosened to make a case like this match.
     let client_text = group.client_texts.join(" / ");
-    match match_company(&client_text, companies) {
+    let company_match = match resolve_alias(&client_text) {
+        Some(alias_company_id) => {
+            if companies.iter().any(|c| c.id == alias_company_id) {
+                CompanyMatch::Confident(alias_company_id.to_string())
+            } else {
+                return RowPlan::Skip {
+                    key,
+                    reason: format!(
+                        "aliased company '{alias_company_id}' for client '{client_text}' \
+                         not found on target DB - alias may be stale"
+                    ),
+                };
+            }
+        }
+        None => match_company(&client_text, companies),
+    };
+
+    match company_match {
         CompanyMatch::NoMatch => RowPlan::Skip {
             key,
             reason: format!("no company match found for client '{client_text}'"),
@@ -496,6 +584,7 @@ pub fn classify_group(
                     currency: group.currency.clone(),
                     company_id,
                     contact_id: contact_id.clone(),
+                    superseded_revisions: Vec::new(),
                 },
                 None => RowPlan::Skip {
                     key,
@@ -510,57 +599,77 @@ pub fn classify_group(
 
 /// Post-pass over `Create` plans: if the SAME project appears as a `Create`
 /// target for more than one revision (a never-before-seen project whose
-/// corpus rows span multiple FP-NN revisions), none of them can be created -
-/// the unique index only allows one, and picking one arbitrarily would be
-/// exactly the kind of guess this writer must not make. Downgrades every
-/// affected `Create` to a `Skip` naming all the competing revisions.
+/// corpus rows span multiple FP-NN revisions), the `fee_project_rev` unique
+/// index still only allows one fee row per project. RULING (Martin,
+/// 2026-08-20): seed the LATEST revision (highest `rev` number - not
+/// necessarily the highest amount, see the module doc comment item 2) as
+/// that one row, carrying every earlier revision's amount forward in
+/// `superseded_revisions` on the winning `Create` so the history is not
+/// lost. Every non-winning revision becomes a `Skip` naming what happened
+/// and where the amount landed - never silently dropped from the report.
 pub fn resolve_multi_revision_create_conflicts(plans: Vec<RowPlan>) -> Vec<RowPlan> {
-    let mut by_project: HashMap<String, Vec<&RowPlan>> = HashMap::new();
-    for plan in &plans {
+    let mut by_project: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, plan) in plans.iter().enumerate() {
         if let RowPlan::Create { key, .. } = plan {
-            by_project.entry(key.project_id.clone()).or_default().push(plan);
+            by_project.entry(key.project_id.clone()).or_default().push(i);
         }
     }
-    let conflicted_projects: HashSet<String> = by_project
-        .into_iter()
-        .filter(|(_, v)| v.len() > 1)
-        .map(|(k, _)| k)
-        .collect();
+    let conflicted: Vec<(String, Vec<usize>)> =
+        by_project.into_iter().filter(|(_, v)| v.len() > 1).collect();
 
-    if conflicted_projects.is_empty() {
+    if conflicted.is_empty() {
         return plans;
     }
 
-    // Build a human-readable rev list per conflicted project for the skip reason.
-    let mut revs_by_project: HashMap<String, Vec<i64>> = HashMap::new();
-    for plan in &plans {
-        if let RowPlan::Create { key, .. } = plan {
-            if conflicted_projects.contains(&key.project_id) {
-                revs_by_project.entry(key.project_id.clone()).or_default().push(key.rev);
-            }
+    let mut plans = plans;
+    for (project_id, indices) in conflicted {
+        let winner_idx = *indices
+            .iter()
+            .max_by_key(|&&i| match &plans[i] {
+                RowPlan::Create { key, .. } => key.rev,
+                _ => unreachable!("index came from a scan over Create plans"),
+            })
+            .expect("indices is non-empty (grouped by >1 above)");
+        let winner_rev = match &plans[winner_idx] {
+            RowPlan::Create { key, .. } => key.rev,
+            _ => unreachable!(),
+        };
+
+        let mut superseded: Vec<SupersededRevision> = indices
+            .iter()
+            .copied()
+            .filter(|&i| i != winner_idx)
+            .map(|i| match &plans[i] {
+                RowPlan::Create { key, amount, currency, .. } => {
+                    SupersededRevision { rev: key.rev, amount: *amount, currency: currency.clone() }
+                }
+                _ => unreachable!(),
+            })
+            .collect();
+        superseded.sort_by_key(|s| s.rev);
+
+        if let RowPlan::Create { superseded_revisions, .. } = &mut plans[winner_idx] {
+            *superseded_revisions = superseded;
+        }
+
+        for &i in indices.iter().filter(|&&i| i != winner_idx) {
+            let key = match &plans[i] {
+                RowPlan::Create { key, .. } => key.clone(),
+                _ => unreachable!(),
+            };
+            let losing_rev = key.rev;
+            plans[i] = RowPlan::Skip {
+                key,
+                reason: format!(
+                    "revision {losing_rev} superseded by seeded revision {winner_rev} for \
+                     project {project_id} (fee_project_rev unique index allows only one fee \
+                     row per project); earlier amount recorded in provenance on \
+                     fee:{project_id}_{winner_rev}"
+                ),
+            };
         }
     }
-
     plans
-        .into_iter()
-        .map(|plan| match plan {
-            RowPlan::Create { key, .. } if conflicted_projects.contains(&key.project_id) => {
-                let mut revs = revs_by_project.get(&key.project_id).cloned().unwrap_or_default();
-                revs.sort_unstable();
-                RowPlan::Skip {
-                    key: key.clone(),
-                    reason: format!(
-                        "project {} needs CREATE for multiple revisions ({revs:?}) but has \
-                         zero existing fee rows - the fee_project_rev unique index only \
-                         allows one; picking one would be a guess, needs a product decision \
-                         on which revision to seed",
-                        key.project_id
-                    ),
-                }
-            }
-            other => other,
-        })
-        .collect()
 }
 
 /// Pure gate decision for `--apply --target prod`: still refused by default
@@ -873,6 +982,39 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
+    // resolve_alias
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn resolves_conrad_hotels_alias_in_all_three_real_corpus_variants() {
+        // The three real client-text shapes seen in docs/clause-corpus/
+        // INDEX.md for "Conrad Hotels" (24-97107, 24-97113, 25-97101) must
+        // all resolve, since a corpus client cell carries free-text variation
+        // around the same name.
+        assert_eq!(resolve_alias("Conrad Hotels"), Some("company:CHE"));
+        assert_eq!(
+            resolve_alias("Conrad Hotels (Nicholas Fernandez, Director of Engineering)"),
+            Some("company:CHE")
+        );
+        assert_eq!(
+            resolve_alias("Nicholas Fernandez, Director of Engineering, Conrad Hotels"),
+            Some("company:CHE")
+        );
+    }
+
+    #[test]
+    fn resolve_alias_is_case_insensitive() {
+        assert_eq!(resolve_alias("conrad hotels"), Some("company:CHE"));
+        assert_eq!(resolve_alias("CONRAD HOTELS"), Some("company:CHE"));
+    }
+
+    #[test]
+    fn resolve_alias_returns_none_for_unaliased_clients() {
+        assert_eq!(resolve_alias("Mojo Architecture & Interior Design"), None);
+        assert_eq!(resolve_alias("Wynn Design and Development"), None);
+    }
+
+    // ------------------------------------------------------------------
     // classify_group
     // ------------------------------------------------------------------
 
@@ -1016,62 +1158,159 @@ mod tests {
         }
     }
 
+    #[test]
+    fn creates_via_alias_when_the_fuzzy_matcher_would_correctly_refuse() {
+        // Real corpus case: 24-97113 Level 63, client "Conrad Hotels". The
+        // fuzzy matcher alone returns NoMatch for this (proven above); the
+        // explicit alias must resolve it to company:CHE and let Create through.
+        let group = consistent("24_97113", 1, 45000.0, "AED", "Conrad Hotels");
+        let mut known_projects = HashSet::new();
+        known_projects.insert("24_97113".to_string());
+        let companies =
+            vec![company("company:CHE", "Conrad Hilton Etihad Towers", "Conrad Etihad")];
+        let mut contacts = HashMap::new();
+        contacts.insert("company:CHE".to_string(), vec!["contacts:nf".to_string()]);
+
+        let plan = classify_group(
+            &group,
+            &known_projects,
+            &HashMap::new(),
+            &HashSet::new(),
+            &companies,
+            &contacts,
+        );
+        match plan {
+            RowPlan::Create { company_id, contact_id, amount, .. } => {
+                assert_eq!(company_id, "company:CHE");
+                assert_eq!(contact_id, "contacts:nf");
+                assert_eq!(amount, 45000.0);
+            }
+            other => panic!("expected Create via alias, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn skips_when_aliased_company_is_not_present_on_target_db() {
+        // The alias points at company:CHE, but if that company record does
+        // not exist on THIS target DB (stale alias, wrong environment), the
+        // writer must skip with a specific reason - never invent the company.
+        let group = consistent("24_97113", 1, 45000.0, "AED", "Conrad Hotels");
+        let mut known_projects = HashSet::new();
+        known_projects.insert("24_97113".to_string());
+
+        let plan = classify_group(
+            &group,
+            &known_projects,
+            &HashMap::new(),
+            &HashSet::new(),
+            &[], // company:CHE not present
+            &HashMap::new(),
+        );
+        match plan {
+            RowPlan::Skip { reason, .. } => {
+                assert!(reason.contains("aliased company"));
+                assert!(reason.contains("company:CHE"));
+                assert!(reason.contains("not found on target DB"));
+            }
+            other => panic!("expected Skip (stale alias), got {other:?}"),
+        }
+    }
+
     // ------------------------------------------------------------------
     // resolve_multi_revision_create_conflicts
     // ------------------------------------------------------------------
 
+    fn create_plan(
+        project_id: &str,
+        rev: i64,
+        amount: f64,
+        cur: &str,
+        company_id: &str,
+        contact_id: &str,
+    ) -> RowPlan {
+        RowPlan::Create {
+            key: FeeGroupKey { project_id: project_id.to_string(), rev },
+            amount,
+            currency: cur.to_string(),
+            company_id: company_id.to_string(),
+            contact_id: contact_id.to_string(),
+            superseded_revisions: Vec::new(),
+        }
+    }
+
     #[test]
-    fn downgrades_multiple_creates_for_the_same_never_before_seen_project() {
+    fn seeds_latest_revision_and_records_earlier_amount_in_provenance() {
+        // Real corpus case: 23-97108 Ciel Lobby, FP-01 150000 -> FP-02
+        // 173000 AED. Ruling: seed rev 2 (the latest), carry rev 1's amount
+        // forward as a superseded revision - never skip both.
         let plans = vec![
-            RowPlan::Create {
-                key: FeeGroupKey { project_id: "23_97108".to_string(), rev: 1 },
-                amount: 150000.0,
-                currency: "AED".to_string(),
-                company_id: "company:SMT".to_string(),
-                contact_id: "contacts:xyz".to_string(),
-            },
-            RowPlan::Create {
-                key: FeeGroupKey { project_id: "23_97108".to_string(), rev: 2 },
-                amount: 173000.0,
-                currency: "AED".to_string(),
-                company_id: "company:SMT".to_string(),
-                contact_id: "contacts:xyz".to_string(),
-            },
-            RowPlan::Create {
-                key: FeeGroupKey { project_id: "22_96601".to_string(), rev: 1 },
-                amount: 3750000.0,
-                currency: "AED".to_string(),
-                company_id: "company:SLG".to_string(),
-                contact_id: "contacts:abc".to_string(),
-            },
+            create_plan("23_97108", 1, 150000.0, "AED", "company:SMT", "contacts:xyz"),
+            create_plan("23_97108", 2, 173000.0, "AED", "company:SMT", "contacts:xyz"),
+            create_plan("22_96601", 1, 3750000.0, "AED", "company:SLG", "contacts:abc"),
         ];
         let resolved = resolve_multi_revision_create_conflicts(plans);
-        let creates: Vec<_> = resolved
+
+        let creates: Vec<_> =
+            resolved.iter().filter(|p| matches!(p, RowPlan::Create { .. })).collect();
+        assert_eq!(creates.len(), 2, "the winning multi-rev revision plus the untouched single-rev project");
+
+        let winner = resolved
             .iter()
-            .filter(|p| matches!(p, RowPlan::Create { .. }))
-            .collect();
-        assert_eq!(creates.len(), 1, "only the single-revision project should survive as Create");
-        let skips: Vec<_> = resolved
-            .iter()
-            .filter(|p| matches!(p, RowPlan::Skip { .. }))
-            .collect();
-        assert_eq!(skips.len(), 2);
-        for skip in skips {
-            if let RowPlan::Skip { reason, .. } = skip {
-                assert!(reason.contains("multiple revisions"));
+            .find(|p| matches!(p, RowPlan::Create { key, .. } if key.project_id == "23_97108"))
+            .expect("23_97108's latest revision should survive as Create");
+        match winner {
+            RowPlan::Create { key, amount, superseded_revisions, .. } => {
+                assert_eq!(key.rev, 2, "must seed the LATEST (highest-rev) revision");
+                assert_eq!(*amount, 173000.0);
+                assert_eq!(
+                    superseded_revisions,
+                    &vec![SupersededRevision { rev: 1, amount: 150000.0, currency: "AED".to_string() }]
+                );
             }
+            other => panic!("expected Create, got {other:?}"),
+        }
+
+        let skips: Vec<_> = resolved.iter().filter(|p| matches!(p, RowPlan::Skip { .. })).collect();
+        assert_eq!(skips.len(), 1, "only the losing (rev 1) revision should be skipped");
+        if let RowPlan::Skip { key, reason } = skips[0] {
+            assert_eq!(key.rev, 1);
+            assert!(reason.contains("superseded by seeded revision 2"));
+            assert!(reason.contains("fee:23_97108_2"));
+        } else {
+            unreachable!();
+        }
+    }
+
+    #[test]
+    fn seeds_latest_revision_even_when_it_quotes_lower_than_an_earlier_one() {
+        // Real corpus case: 24-97101 HoH Supervision, FP-01 628500 ->
+        // FP-02 385500 AED. "Latest" must mean highest rev NUMBER, never
+        // highest amount - the later revision here is a lower quote.
+        let plans = vec![
+            create_plan("24_97101", 1, 628500.0, "AED", "company:HYP", "contacts:h1"),
+            create_plan("24_97101", 2, 385500.0, "AED", "company:HYP", "contacts:h1"),
+        ];
+        let resolved = resolve_multi_revision_create_conflicts(plans);
+
+        let creates: Vec<_> =
+            resolved.iter().filter(|p| matches!(p, RowPlan::Create { .. })).collect();
+        assert_eq!(creates.len(), 1);
+        match creates[0] {
+            RowPlan::Create { key, amount, superseded_revisions, .. } => {
+                assert_eq!(key.rev, 2, "seeds the LATEST revision even though its amount is lower");
+                assert_eq!(*amount, 385500.0);
+                assert_eq!(
+                    superseded_revisions,
+                    &vec![SupersededRevision { rev: 1, amount: 628500.0, currency: "AED".to_string() }]
+                );
+            }
+            other => panic!("expected Create, got {other:?}"),
         }
     }
 
     #[test]
     fn leaves_single_revision_creates_untouched() {
-        let plans = vec![RowPlan::Create {
-            key: FeeGroupKey { project_id: "22_96601".to_string(), rev: 1 },
-            amount: 3750000.0,
-            currency: "AED".to_string(),
-            company_id: "company:SLG".to_string(),
-            contact_id: "contacts:abc".to_string(),
-        }];
+        let plans = vec![create_plan("22_96601", 1, 3750000.0, "AED", "company:SLG", "contacts:abc")];
         let resolved = resolve_multi_revision_create_conflicts(plans.clone());
         assert_eq!(resolved, plans);
     }

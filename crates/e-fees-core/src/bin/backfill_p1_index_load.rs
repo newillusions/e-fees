@@ -2,8 +2,12 @@
 //! `fee.pricing.config.quoted_fee`/`currency`. See
 //! `crates/e-fees-core/src/backfill/p1_index_load.rs` for the pure parsing/
 //! classification logic (unit-tested there) and its module doc comment for
-//! the two real-DB constraints the ingestion plan didn't anticipate
-//! (duplicate corpus rows, the `fee_project_rev` unique-index collision).
+//! the real-DB constraints the ingestion plan didn't anticipate (duplicate
+//! corpus rows, the `fee_project_rev` unique-index collision, and the two
+//! 2026-08-20 owner rulings this file implements: multi-revision seeding
+//! carries the earlier amount forward in provenance instead of skipping
+//! both, and CLIENT_ALIASES resolves owner-confirmed client identities the
+//! fuzzy matcher correctly refuses to guess).
 //!
 //! Usage:
 //!   cargo run -p e-fees-core --bin backfill_p1_index_load -- \
@@ -37,7 +41,7 @@ use surrealdb::Surreal;
 
 use e_fees_core::backfill::p1_index_load::{
     self, check_prod_apply_gate, CompanyRecord, ConflictGroup, ConsistentGroup, FeeGroupKey,
-    RowPlan, SkippedRow,
+    RowPlan, SkippedRow, SupersededRevision,
 };
 use e_fees_core::models::record_key_string;
 
@@ -115,6 +119,12 @@ struct RowReport {
     amount: Option<f64>,
     currency: Option<String>,
     reason: Option<String>,
+    /// Non-empty only for a `create` row that won a multi-revision seeding
+    /// choice (ruling: Martin, 2026-08-20) - the earlier revision(s) whose
+    /// amount is carried forward in this row's `data_provenance` instead of
+    /// being written as their own fee row.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    superseded_revisions: Vec<SupersededRevision>,
 }
 
 #[derive(Serialize)]
@@ -361,24 +371,33 @@ async fn main() -> ExitCode {
                     None,
                 ));
             }
-            RowPlan::Create { key, amount, currency, company_id, contact_id } => {
+            RowPlan::Create { key, amount, currency, company_id, contact_id, superseded_revisions } => {
                 let doc = group_source_doc(&grouping.consistent, key);
                 if args.apply {
-                    if let Err(e) =
-                        apply_create(&db, key, *amount, currency, company_id, contact_id, &doc)
-                            .await
+                    if let Err(e) = apply_create(
+                        &db,
+                        key,
+                        *amount,
+                        currency,
+                        company_id,
+                        contact_id,
+                        &doc,
+                        superseded_revisions,
+                    )
+                    .await
                     {
                         eprintln!("error creating fee:{}: {e}", key.fee_record_key());
                         skipped.push(row_report(key, "error", None, None, Some(e)));
                         continue;
                     }
                 }
-                created.push(row_report(
+                created.push(row_report_with_superseded(
                     key,
                     "create",
                     Some(*amount),
                     Some(currency.clone()),
                     None,
+                    superseded_revisions.clone(),
                 ));
             }
             RowPlan::SkipAlreadyPopulated { key, existing_quoted_fee } => {
@@ -454,6 +473,18 @@ fn row_report(
     currency: Option<String>,
     reason: Option<String>,
 ) -> RowReport {
+    row_report_with_superseded(key, action, amount, currency, reason, Vec::new())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn row_report_with_superseded(
+    key: &FeeGroupKey,
+    action: &str,
+    amount: Option<f64>,
+    currency: Option<String>,
+    reason: Option<String>,
+    superseded_revisions: Vec<SupersededRevision>,
+) -> RowReport {
     RowReport {
         project_id: key.project_id.clone(),
         rev: key.rev,
@@ -461,6 +492,7 @@ fn row_report(
         amount,
         currency,
         reason,
+        superseded_revisions,
     }
 }
 
@@ -504,12 +536,29 @@ async fn apply_create(
     company_id: &str,
     contact_id: &str,
     doc: &str,
+    superseded_revisions: &[SupersededRevision],
 ) -> Result<(), String> {
     let fee_id = RecordId::new("fee", key.fee_record_key());
     let project_id = RecordId::new("projects", key.project_id.clone());
     let company_rid = parse_record_id(company_id)?;
     let contact_rid = parse_record_id(contact_id)?;
     let number = format!("{}-FP-{}", key.display_number(), key.rev);
+
+    // `fee` is SCHEMALESS (CLAUDE.md), so no migration is needed to write
+    // `superseded_revisions` here - it just needs to exist for the multi-
+    // revision seeding ruling (Martin, 2026-08-20): the earlier revision(s)'
+    // amount is carried forward in provenance instead of getting its own
+    // fee row, since `fee_project_rev`'s unique index allows only one.
+    let provenance = serde_json::json!({
+        "source": "backfill",
+        "confidence": "high",
+        "backfilled_at": chrono::Utc::now().to_rfc3339(),
+        "backfilled_by": "ingestion-P1-index-load",
+        "superseded_revisions": superseded_revisions
+            .iter()
+            .map(|s| serde_json::json!({ "rev": s.rev, "amount": s.amount, "currency": s.currency }))
+            .collect::<Vec<_>>(),
+    });
 
     db.query(
         "CREATE $fee_id CONTENT { \
@@ -530,12 +579,7 @@ async fn apply_create(
             revisions: [], \
             time: {}, \
             pricing: { config: { quoted_fee: $amount, currency: $currency } }, \
-            data_provenance: { \
-                source: 'backfill', \
-                confidence: 'high', \
-                backfilled_at: time::now(), \
-                backfilled_by: 'ingestion-P1-index-load' \
-            }, \
+            data_provenance: $provenance, \
             source_document: $doc \
         };",
     )
@@ -547,6 +591,7 @@ async fn apply_create(
     .bind(("amount", amount))
     .bind(("currency", currency.to_string()))
     .bind(("doc", doc.to_string()))
+    .bind(("provenance", provenance))
     .await
     .map_err(|e| e.to_string())?
     .check()
