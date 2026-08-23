@@ -13,6 +13,7 @@
   import ProposalDetailPage from './routes/ProposalDetailPage.svelte';
   import DevMode from './routes/DevMode.svelte';
   import ScopeBuilderPage from './routes/ScopeBuilderPage.svelte';
+  import WinRatioPage from './routes/WinRatioPage.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { refreshExchangeRates } from '$lib/stores/exchangeRates';
@@ -95,6 +96,7 @@
     '/companies': Companies,
     '/contacts': Contacts,
     '/scope/:id': ScopeBuilderPage,
+    '/win-ratio': WinRatioPage,
     '/dev': DevMode
   };
 

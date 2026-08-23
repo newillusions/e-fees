@@ -148,8 +148,8 @@ pub use settings::{
 // System commands
 pub mod system;
 pub use system::{
-    get_db_info, get_log_level, get_stats, get_table_schema, health_check, investigate_record,
-    log_message, position_window_4k, set_log_level,
+    get_db_info, get_log_level, get_stats, get_table_schema, get_win_ratio_report, health_check,
+    investigate_record, log_message, position_window_4k, set_log_level,
 };
 
 // Excel export

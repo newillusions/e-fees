@@ -113,6 +113,55 @@ export interface DatabaseStats {
 }
 
 /**
+ * A monetary total for one currency. Fee amounts are never summed across
+ * currencies (Emittiv quotes in AED, USD and others depending on the
+ * client's market) - see the win_ratio module docs on the Rust side.
+ */
+export interface CurrencyAmount {
+  currency: string;
+  amount: number;
+}
+
+/**
+ * Per-client win-ratio summary, returned by getWinRatioReport.
+ *
+ * `win_ratio` is won / (won + lost + no_response) - `Cancelled` and pending
+ * (still-open) projects are excluded from that denominator since neither
+ * reflects a competitive decision. `null` when there is nothing decided yet
+ * for that client.
+ *
+ * As of the 2026-08 historical backfill, almost every non-win outcome is
+ * `No Response` (a proposal nobody heard back on) rather than a confirmed
+ * `Lost` - `lost_value` combines both into one "quoted but not won" bucket
+ * rather than implying a precision the data doesn't have yet.
+ */
+export interface ClientWinRatio {
+  company_id: string;
+  company_name: string;
+  won_count: number;
+  lost_count: number;
+  no_response_count: number;
+  cancelled_count: number;
+  pending_count: number;
+  /** won_count + lost_count + no_response_count */
+  decided_count: number;
+  win_ratio: number | null;
+  won_value: CurrencyAmount[];
+  lost_value: CurrencyAmount[];
+}
+
+/**
+ * Full win-ratio report returned by getWinRatioReport - one row per client
+ * plus a count of decided projects that couldn't be attributed to any
+ * client (a fee row's company is required by schema, but a decided project
+ * can still have zero linked fee rows at all).
+ */
+export interface WinRatioReport {
+  clients: ClientWinRatio[];
+  unattributed_decided_count: number;
+}
+
+/**
  * Database connection information structure.
  *
  * Provides detailed information about the current database connection

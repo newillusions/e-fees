@@ -24,10 +24,12 @@ pub use project_lifecycle::{
 pub use types::{
     ActivityLog,
     ActivityLogCreate,
+    ClientWinRatio,
     Company,
     CompanyCreate,
     Contact,
     ContactCreate,
+    CurrencyAmount,
     Discipline,
     EntityCounts,
     Fee,
@@ -45,6 +47,7 @@ pub use types::{
     Revision,
     Stage,
     TimeStamps,
+    WinRatioReport,
 };
 
 use log::{error, info, warn};

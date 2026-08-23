@@ -5,7 +5,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { DatabaseStats, DatabaseInfo, TableSchema } from '../../types';
+import type { DatabaseStats, DatabaseInfo, TableSchema, WinRatioReport } from '../../types';
 import { logger } from '../services/logger';
 
 const systemLogger = logger.child({ component: 'SystemAPI' });
@@ -20,6 +20,20 @@ export async function getStats(): Promise<DatabaseStats> {
     return stats;
   } catch (error) {
     systemLogger.error('Failed to fetch stats from database', { error });
+    throw error;
+  }
+}
+
+/**
+ * Retrieves the per-client win-ratio report (won/lost/no-response counts
+ * and quoted-fee value totals grouped by client and currency).
+ * @returns Win-ratio report, one row per client
+ */
+export async function getWinRatioReport(): Promise<WinRatioReport> {
+  try {
+    return await invoke<WinRatioReport>('get_win_ratio_report');
+  } catch (error) {
+    systemLogger.error('Failed to fetch win-ratio report', { error });
     throw error;
   }
 }

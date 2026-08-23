@@ -150,3 +150,62 @@ pub struct EntityCounts {
     pub total_fees: usize,
     pub active_fees: usize,
 }
+
+// ============================================================================
+// WIN-RATIO REPORT STRUCTURES
+// ============================================================================
+//
+// Output-only types for the per-client win-ratio analysis (never round-
+// tripped through the DB, only constructed in Rust from aggregated data and
+// returned over Tauri IPC as plain JSON) - so these derive Serialize +
+// Deserialize only, not SurrealValue.
+
+/// A monetary total for one currency (fee amounts are never summed across
+/// currencies - see win_ratio module doc for why).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+pub struct CurrencyAmount {
+    pub currency: String,
+    pub amount: f64,
+}
+
+/// Per-client win-ratio summary. `outcome` on `projects` is one of
+/// Won/Lost/No Response/Cancelled/NONE(pending) - see the P0 backfill
+/// migration (v006_backfill_metadata_fields.surql). `win_ratio` is
+/// won / (won + lost + no_response); `NONE` (pending) and `Cancelled` are
+/// excluded from that denominator since neither reflects a competitive
+/// decision.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+pub struct ClientWinRatio {
+    pub company_id: String,
+    pub company_name: String,
+    pub won_count: i64,
+    pub lost_count: i64,
+    pub no_response_count: i64,
+    pub cancelled_count: i64,
+    pub pending_count: i64,
+    /// won + lost + no_response.
+    pub decided_count: i64,
+    /// `None` when decided_count is 0 (nothing to compute a ratio from).
+    pub win_ratio: Option<f64>,
+    pub won_value: Vec<CurrencyAmount>,
+    /// Lost + No Response combined - "quoted but not won". Kept as one
+    /// bucket rather than split because, as of the 2026-08 historical
+    /// backfill, almost every non-win outcome is No Response (proposals
+    /// nobody heard back on) rather than a confirmed Lost - see D3 in
+    /// obs:oxq0nje2uzhsu171fbpe. Splitting further would suggest a
+    /// precision the data doesn't have yet.
+    pub lost_value: Vec<CurrencyAmount>,
+}
+
+/// Full win-ratio report: one row per client plus a count of decided
+/// projects that could not be attributed to any client (a fee row's
+/// `company_id` is required by schema, but a decided project can still have
+/// zero linked fee rows at all - see win_ratio module doc).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+pub struct WinRatioReport {
+    pub clients: Vec<ClientWinRatio>,
+    pub unattributed_decided_count: i64,
+}

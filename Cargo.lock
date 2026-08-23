@@ -1836,6 +1836,7 @@ name = "e-fees-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "rust_xlsxwriter",
  "serde",
  "serde_json",

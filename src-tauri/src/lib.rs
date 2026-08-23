@@ -74,6 +74,7 @@ use commands::{
     get_stage_dictionary,
     get_stats,
     get_table_schema,
+    get_win_ratio_report,
     health_check,
     import_execute,
     // Import wizard commands
@@ -352,6 +353,7 @@ pub fn run() {
             get_contact_by_id,
             health_check,
             get_stats,
+            get_win_ratio_report,
             get_db_info,
             get_table_schema,
             position_window_4k,

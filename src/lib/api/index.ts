@@ -92,6 +92,7 @@ export { getSettings, saveSettings, reloadDatabaseConfig, reconnectDatabase } fr
 // System operations
 export {
   getStats,
+  getWinRatioReport,
   healthCheck,
   getDbInfo,
   getTableSchema,

@@ -134,6 +134,37 @@ pub async fn get_stats(state: State<'_, AppState>) -> Result<serde_json::Value, 
     Ok(stats)
 }
 
+/// Get the per-client win-ratio report: won/lost/no-response counts and
+/// quoted-fee value totals grouped by client and currency.
+///
+/// # Returns
+/// - `Ok(WinRatioReport)`: one row per client plus a count of decided
+///   projects that could not be attributed to any client (see the
+///   `e_fees_core::analytics::win_ratio` module docs for why that can
+///   happen and why it is surfaced rather than silently dropped)
+/// - `Err(String)`: error querying the database
+///
+/// # Frontend Usage
+/// ```typescript
+/// const report = await invoke<WinRatioReport>('get_win_ratio_report');
+/// ```
+#[tauri::command]
+pub async fn get_win_ratio_report(
+    state: State<'_, AppState>,
+) -> Result<crate::db::WinRatioReport, String> {
+    info!("Fetching per-client win-ratio report");
+
+    let manager_clone = {
+        let manager = state.read().await;
+        manager.clone()
+    };
+
+    manager_clone.get_win_ratio_report().await.map_err(|e| {
+        error!("Failed to compute win-ratio report: {}", e);
+        format!("Failed to compute win-ratio report: {}", e)
+    })
+}
+
 /// Get database table schema information for development.
 ///
 /// This command retrieves the schema definition for a specified table,

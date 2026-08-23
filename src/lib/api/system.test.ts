@@ -6,13 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import {
   getStats,
+  getWinRatioReport,
   healthCheck,
   getDbInfo,
   getTableSchema,
   positionWindow4K,
   investigateRecord
 } from './system';
-import type { DatabaseStats, DatabaseInfo, TableSchema } from '../../types';
+import type { DatabaseStats, DatabaseInfo, TableSchema, WinRatioReport } from '../../types';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
@@ -47,6 +48,41 @@ describe('System API Module', () => {
       mockInvoke.mockRejectedValueOnce(new Error('Stats unavailable'));
 
       await expect(getStats()).rejects.toThrow('Stats unavailable');
+    });
+  });
+
+  describe('getWinRatioReport', () => {
+    it('should call invoke and return the report', async () => {
+      const mockReport: WinRatioReport = {
+        clients: [
+          {
+            company_id: 'company:PTG',
+            company_name: 'Petrus Group',
+            won_count: 1,
+            lost_count: 0,
+            no_response_count: 2,
+            cancelled_count: 0,
+            pending_count: 0,
+            decided_count: 3,
+            win_ratio: 1 / 3,
+            won_value: [{ currency: 'AED', amount: 50000 }],
+            lost_value: [{ currency: 'AED', amount: 50000 }]
+          }
+        ],
+        unattributed_decided_count: 0
+      };
+      mockInvoke.mockResolvedValueOnce(mockReport);
+
+      const result = await getWinRatioReport();
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_win_ratio_report');
+      expect(result).toEqual(mockReport);
+    });
+
+    it('should throw on error', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('Report unavailable'));
+
+      await expect(getWinRatioReport()).rejects.toThrow('Report unavailable');
     });
   });
 

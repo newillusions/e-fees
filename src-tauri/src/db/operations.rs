@@ -5,13 +5,16 @@
 
 use crate::db::types::record_key_string;
 use chrono::Datelike;
+use e_fees_core::analytics::win_ratio::{aggregate_win_ratios, ProjectOutcomeRow};
+use e_fees_core::models::record_id_string;
 use log::{error, info};
+use std::collections::BTreeMap;
 use surrealdb::{types::Value, Error};
 
 use super::{
     ActivityLog, ActivityLogCreate, Company, CompanyCreate, Contact, ContactCreate,
     DatabaseManager, EntityCounts, Fee, FeeCreate, FeeUpdate, NewProject, PaginatedResponse,
-    PricingUpdate, Project,
+    PricingUpdate, Project, WinRatioReport,
 };
 use crate::commands::{CompanyUpdate, ProjectUpdate};
 
@@ -665,6 +668,44 @@ impl DatabaseManager {
             total_fees: extract_count(fees),
             active_fees: extract_count(active),
         })
+    }
+
+    /// Per-client win-ratio report (won/lost/no-response counts and fee
+    /// values by client). See `e_fees_core::analytics::win_ratio` module
+    /// docs for the lineage-dedup and currency-grouping rules this applies.
+    ///
+    /// Fetches whole tables rather than filtering in a WHERE clause on the
+    /// backfill-only `outcome`/`successor` fields - this repo's established
+    /// pattern for those fields is to filter in Rust after fetching (see
+    /// `backfill_stage_outcome.rs`), and the tables involved are small
+    /// (tens to low hundreds of rows), so this is one round trip per table,
+    /// not N+1.
+    pub async fn get_win_ratio_report(&self) -> Result<WinRatioReport, Error> {
+        let client = self.get_client()?;
+
+        let mut proj_response = client
+            .query("SELECT id, outcome, successor FROM projects")
+            .await?;
+        let project_rows: Vec<ProjectOutcomeRow> = proj_response.take(0)?;
+
+        // OMIT import_source: not needed for this report, reduces payload.
+        let mut fee_response = client.query("SELECT * OMIT import_source FROM fee").await?;
+        let fee_rows: Vec<Fee> = fee_response.take(0)?;
+
+        let companies = self.get_companies().await?;
+        let company_names: BTreeMap<String, String> = companies
+            .iter()
+            .filter_map(|c| c.id.as_ref().map(|id| (record_id_string(id), c.name.clone())))
+            .collect();
+
+        info!(
+            "Win-ratio report: {} projects, {} fees, {} companies",
+            project_rows.len(),
+            fee_rows.len(),
+            company_names.len()
+        );
+
+        Ok(aggregate_win_ratios(&project_rows, &fee_rows, &company_names))
     }
 }
 
