@@ -99,14 +99,32 @@ pub async fn update_fee_pricing(
 // ============================================================================
 
 /// Clone a fee as a new revision with incremented rev number.
+///
+/// `author_email`/`author_name`/`notes` populate the new revision's audit
+/// trail entry (`fee.revisions[]`) - see `Revision::new`'s doc comment for
+/// why this must be populated for the DB-computed `rev` field and the
+/// `fee_project_rev` unique index to work at all.
 #[tauri::command]
-pub async fn clone_fee_revision(fee_id: String, state: State<'_, AppState>) -> Result<Fee, String> {
+pub async fn clone_fee_revision(
+    fee_id: String,
+    author_email: String,
+    author_name: String,
+    notes: String,
+    state: State<'_, AppState>,
+) -> Result<Fee, String> {
     let fee_name = format!("fee revision from '{}'", fee_id);
     execute_with_manager(
         &state,
         |manager| {
             let id = fee_id.clone();
-            Box::pin(async move { manager.clone_fee_as_revision(&id).await })
+            let author_email = author_email.clone();
+            let author_name = author_name.clone();
+            let notes = notes.clone();
+            Box::pin(async move {
+                manager
+                    .clone_fee_as_revision(&id, &author_email, &author_name, &notes)
+                    .await
+            })
         },
         "clone revision",
         &fee_name,

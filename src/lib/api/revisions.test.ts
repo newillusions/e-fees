@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
-import { exportIndesignWorkbook, exportFeeTemplate } from './revisions';
+import { exportIndesignWorkbook, exportFeeTemplate, cloneFeeRevision } from './revisions';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
@@ -46,6 +46,35 @@ describe('Revisions API Module', () => {
       mockInvoke.mockRejectedValueOnce(new Error('Fee not found'));
 
       await expect(exportIndesignWorkbook('fee:missing')).rejects.toThrow('Fee not found');
+    });
+  });
+
+  describe('cloneFeeRevision', () => {
+    it('should call invoke with feeId and the audit-trail fields', async () => {
+      mockInvoke.mockResolvedValueOnce({ id: 'fee:abc123', rev: 2 });
+
+      const result = await cloneFeeRevision(
+        'fee:abc123',
+        'reviewer@emittiv.com',
+        'Reviewer Name',
+        'Reduced scope per client meeting'
+      );
+
+      expect(mockInvoke).toHaveBeenCalledWith('clone_fee_revision', {
+        feeId: 'fee:abc123',
+        authorEmail: 'reviewer@emittiv.com',
+        authorName: 'Reviewer Name',
+        notes: 'Reduced scope per client meeting'
+      });
+      expect(result).toEqual({ id: 'fee:abc123', rev: 2 });
+    });
+
+    it('should propagate errors', async () => {
+      mockInvoke.mockRejectedValueOnce(new Error('source fee not found'));
+
+      await expect(cloneFeeRevision('fee:missing', '', '', '')).rejects.toThrow(
+        'source fee not found'
+      );
     });
   });
 

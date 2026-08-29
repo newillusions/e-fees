@@ -1303,7 +1303,7 @@ mod tests {
             .unwrap()
             .as_millis();
         let log = ActivityLogCreate {
-            action: "update".to_string(), // valid per schema ASSERT
+            action: "update".to_string(),       // valid per schema ASSERT
             entity_type: "project".to_string(), // valid per schema ASSERT
             entity_id: format!("DELETE-ME-{}", stamp),
             entity_name: format!("DELETE ME - tdd activity_log test {}", stamp),
@@ -1382,9 +1382,15 @@ mod tests {
 
         let updated =
             updated.expect("partial update_company should succeed without a NONE clobber");
-        assert_eq!(updated.city, "Abu Dhabi", "the set field (city) should change");
+        assert_eq!(
+            updated.city, "Abu Dhabi",
+            "the set field (city) should change"
+        );
         assert_eq!(updated.name, created.name, "name must be preserved");
-        assert_eq!(updated.country, created.country, "country must be preserved");
+        assert_eq!(
+            updated.country, created.country,
+            "country must be preserved"
+        );
         assert_eq!(
             updated.reg_no,
             Some("DELETE-ME-REG".to_string()),
@@ -1479,11 +1485,7 @@ mod tests {
 
         // Only A and B are selected; C must stay untouched.
         let update_result = manager
-            .batch_update_status(
-                "projects",
-                &[key_a.clone(), key_b.clone()],
-                "Lost",
-            )
+            .batch_update_status("projects", &[key_a.clone(), key_b.clone()], "Lost")
             .await;
 
         // Clean up regardless of assertion outcome.
@@ -1492,7 +1494,10 @@ mod tests {
             .await;
 
         let updated_count = update_result.expect("batch_update_status should succeed");
-        assert_eq!(updated_count, 2, "exactly the 2 selected rows should update");
+        assert_eq!(
+            updated_count, 2,
+            "exactly the 2 selected rows should update"
+        );
     }
 
     #[tokio::test]
@@ -1572,7 +1577,11 @@ mod tests {
             .await;
 
         let deleted = delete_result.expect("batch_delete should succeed");
-        assert_eq!(deleted.len(), 1, "only the selected project should be deleted");
+        assert_eq!(
+            deleted.len(),
+            1,
+            "only the selected project should be deleted"
+        );
 
         // A must actually be gone; B (never selected) must still exist.
         let a_after = manager.get_project_by_id(&key_a).await;
@@ -1741,6 +1750,159 @@ mod tests {
         assert_eq!(
             crate::db::types::record_key_string(&outcome.target.id.as_ref().unwrap().key),
             target_key
+        );
+    }
+
+    // ========================================================================
+    // FEE REVISIONS LIVE TESTS (e-fees revision audit + fix, 2026-08-28)
+    //
+    // Proves `clone_fee_as_revision` actually works against real SurrealDB
+    // semantics now that it populates `revisions[]` - before this fix,
+    // `fee.rev` (VALUE math::max(revisions[*].revision_number)) always
+    // computed to 0 because every fee-construction call site wrote
+    // `revisions: []`, so the `fee_project_rev` UNIQUE(project_id, rev)
+    // index rejected any second fee row for a project outright. Confirmed
+    // live on dev before this fix: 100% of 30 sampled fee rows had
+    // `rev: 0, revisions: []`.
+    // ========================================================================
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_clone_fee_as_revision_computes_correct_rev_and_supersedes_source() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let project = manager
+            .create_new_project(delete_me_project_number(1, stamp))
+            .await
+            .expect("create project should succeed");
+        let project_key = crate::db::types::record_key_string(&project.id.as_ref().unwrap().key);
+
+        let company = manager
+            .create_company(delete_me_company(stamp))
+            .await
+            .expect("create company should succeed");
+        let company_key = crate::db::types::record_key_string(&company.id.as_ref().unwrap().key);
+
+        let contact = manager
+            .create_contact(delete_me_contact(&company_key, stamp))
+            .await
+            .expect("create contact should succeed");
+        let contact_key = crate::db::types::record_key_string(&contact.id.as_ref().unwrap().key);
+
+        let fee1 = manager
+            .create_fee(delete_me_fee(&project_key, &company_key, &contact_key, 1))
+            .await
+            .expect("create fee1 should succeed");
+        let fee1_key = crate::db::types::record_key_string(&fee1.id.as_ref().unwrap().key);
+
+        // Sanity check on the fix itself: create_fee's defense-in-depth
+        // auto-seed must give fee1 a real rev, not the pre-fix rev=0.
+        assert_eq!(
+            fee1.rev, 1,
+            "fee1 should compute rev=1 from its auto-seeded revisions[]"
+        );
+        assert_eq!(fee1.revisions.len(), 1);
+
+        let clone_result = manager
+            .clone_fee_as_revision(
+                &fee1_key,
+                "reviewer@emittiv.com",
+                "Reviewer Name",
+                "Reduced scope per client meeting",
+            )
+            .await;
+
+        // Second lineage collision check happens after cleanup is set up so
+        // it always runs even if the clone itself fails.
+        let mut collision_key: Option<String> = None;
+
+        let outcome = (|| -> Result<(), String> {
+            let fee2 = clone_result.map_err(|e| format!("clone_fee_as_revision failed: {e}"))?;
+            let fee2_key = crate::db::types::record_key_string(&fee2.id.as_ref().unwrap().key);
+            collision_key = Some(fee2_key.clone());
+
+            if fee2.rev != 2 {
+                return Err(format!("expected fee2.rev == 2, got {}", fee2.rev));
+            }
+            if fee2.revisions.len() != 2 {
+                return Err(format!(
+                    "expected fee2.revisions.len() == 2 (source history + new entry), got {}",
+                    fee2.revisions.len()
+                ));
+            }
+            if fee2.revisions[0].revision_number != 1 || fee2.revisions[1].revision_number != 2 {
+                return Err(format!(
+                    "expected revisions [1, 2], got {:?}",
+                    fee2.revisions
+                        .iter()
+                        .map(|r| r.revision_number)
+                        .collect::<Vec<_>>()
+                ));
+            }
+            if fee2.revisions[1].author_email != "reviewer@emittiv.com" {
+                return Err(
+                    "new revision entry did not carry the submitted author_email".to_string(),
+                );
+            }
+            if fee2.status != "Draft" {
+                return Err(format!(
+                    "expected fee2.status == Draft, got {}",
+                    fee2.status
+                ));
+            }
+
+            Ok(())
+        })();
+
+        // Verify the source fee was flipped to Superseded, independent of
+        // whether the above assertions passed - this is a separate claim
+        // clone_fee_as_revision makes and should be checked either way.
+        let source_after = manager.get_fee_by_id(&fee1_key).await;
+        let source_status_ok = matches!(
+            &source_after,
+            Ok(Some(f)) if f.status == "Superseded"
+        );
+
+        // "a second lineage on the same project still collides only when it
+        // should": attempt to CREATE a third fee directly at rev=2 (the
+        // same rev fee2 now occupies) for the same project - the unique
+        // index must still reject this, proving the fix didn't accidentally
+        // widen or disable fee_project_rev.
+        let collision_attempt = manager
+            .create_fee(delete_me_fee(&project_key, &company_key, &contact_key, 2))
+            .await;
+        let collision_rejected = collision_attempt.is_err();
+
+        // Cleanup - best effort, runs regardless of assertion outcome.
+        let _ = manager.delete_fee(&fee1_key).await;
+        if let Some(k) = &collision_key {
+            let _ = manager.delete_fee(k).await;
+        }
+        let _ = manager.delete_project(&project_key).await;
+        let _ = manager
+            .batch_delete("company", std::slice::from_ref(&company_key))
+            .await;
+        let _ = manager
+            .batch_delete("contacts", std::slice::from_ref(&contact_key))
+            .await;
+
+        outcome.expect("clone_fee_as_revision assertions");
+        assert!(
+            source_status_ok,
+            "source fee should be flipped to Superseded: {source_after:?}"
+        );
+        assert!(
+            collision_rejected,
+            "a second fee at the same (project_id, rev) must still be rejected by fee_project_rev"
         );
     }
 

@@ -43,7 +43,7 @@ use e_fees_core::backfill::p1_index_load::{
     self, check_prod_apply_gate, CompanyRecord, ConflictGroup, ConsistentGroup, FeeGroupKey,
     RowPlan, SkippedRow, SupersededRevision,
 };
-use e_fees_core::models::record_key_string;
+use e_fees_core::models::{record_key_string, Revision};
 
 struct TargetConfig {
     name: &'static str,
@@ -108,7 +108,12 @@ fn parse_args() -> Result<Args, String> {
 
     check_prod_apply_gate(target.name, apply, confirm_prod)?;
 
-    Ok(Args { target, apply, index_md_path, report_file })
+    Ok(Args {
+        target,
+        apply,
+        index_md_path,
+        report_file,
+    })
 }
 
 #[derive(Serialize)]
@@ -235,7 +240,13 @@ async fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    if let Err(e) = db.signin(Root { username: user, password: pass }).await {
+    if let Err(e) = db
+        .signin(Root {
+            username: user,
+            password: pass,
+        })
+        .await
+    {
         eprintln!("error signing in: {e}");
         return ExitCode::FAILURE;
     }
@@ -250,7 +261,10 @@ async fn main() -> ExitCode {
         .await
         .and_then(|mut r| r.take::<Vec<ProjectIdRow>>(0))
     {
-        Ok(rows) => rows.into_iter().map(|r| record_key_string(&r.id.key)).collect(),
+        Ok(rows) => rows
+            .into_iter()
+            .map(|r| record_key_string(&r.id.key))
+            .collect(),
         Err(e) => {
             eprintln!("error reading projects: {e}");
             return ExitCode::FAILURE;
@@ -285,8 +299,13 @@ async fn main() -> ExitCode {
             let rev_str = &rev_str[1..];
             if let Ok(rev) = rev_str.parse::<i64>() {
                 existing_fee_project_ids.insert(proj.to_string());
-                existing_fee_quoted_fee
-                    .insert(FeeGroupKey { project_id: proj.to_string(), rev }, row.qf);
+                existing_fee_quoted_fee.insert(
+                    FeeGroupKey {
+                        project_id: proj.to_string(),
+                        rev,
+                    },
+                    row.qf,
+                );
             }
         }
     }
@@ -320,7 +339,10 @@ async fn main() -> ExitCode {
             for r in rows {
                 let company_id = format!("company:{}", record_key_string(&r.company.key));
                 let contact_id = format!("contacts:{}", record_key_string(&r.id.key));
-                contacts_by_company.entry(company_id).or_default().push(contact_id);
+                contacts_by_company
+                    .entry(company_id)
+                    .or_default()
+                    .push(contact_id);
             }
         }
         Err(e) => {
@@ -354,7 +376,11 @@ async fn main() -> ExitCode {
 
     for plan in &plans {
         match plan {
-            RowPlan::Update { key, amount, currency } => {
+            RowPlan::Update {
+                key,
+                amount,
+                currency,
+            } => {
                 let doc = group_source_doc(&grouping.consistent, key);
                 if args.apply {
                     if let Err(e) = apply_update(&db, key, *amount, currency, &doc).await {
@@ -371,7 +397,14 @@ async fn main() -> ExitCode {
                     None,
                 ));
             }
-            RowPlan::Create { key, amount, currency, company_id, contact_id, superseded_revisions } => {
+            RowPlan::Create {
+                key,
+                amount,
+                currency,
+                company_id,
+                contact_id,
+                superseded_revisions,
+            } => {
                 let doc = group_source_doc(&grouping.consistent, key);
                 if args.apply {
                     if let Err(e) = apply_create(
@@ -400,7 +433,10 @@ async fn main() -> ExitCode {
                     superseded_revisions.clone(),
                 ));
             }
-            RowPlan::SkipAlreadyPopulated { key, existing_quoted_fee } => {
+            RowPlan::SkipAlreadyPopulated {
+                key,
+                existing_quoted_fee,
+            } => {
                 skipped_already_populated.push(row_report(
                     key,
                     "skip_already_populated",
@@ -549,16 +585,51 @@ async fn apply_create(
     // revision seeding ruling (Martin, 2026-08-20): the earlier revision(s)'
     // amount is carried forward in provenance instead of getting its own
     // fee row, since `fee_project_rev`'s unique index allows only one.
+    let backfilled_at = chrono::Utc::now().to_rfc3339();
     let provenance = serde_json::json!({
         "source": "backfill",
         "confidence": "high",
-        "backfilled_at": chrono::Utc::now().to_rfc3339(),
+        "backfilled_at": backfilled_at,
         "backfilled_by": "ingestion-P1-index-load",
         "superseded_revisions": superseded_revisions
             .iter()
             .map(|s| serde_json::json!({ "rev": s.rev, "amount": s.amount, "currency": s.currency }))
             .collect::<Vec<_>>(),
     });
+
+    // `revisions[]` MUST be populated - `fee.rev` is DB-computed from
+    // `revisions[*].revision_number` (see
+    // `crates/e-fees-core/src/backfill/fee_revisions_seed.rs`'s module doc
+    // for the full story: an empty array here would silently compute
+    // `rev = 0` for this newly-created row too, reintroducing the exact
+    // bug this backfill's own sibling (`backfill_fee_revisions_seed`) fixes
+    // retroactively on every OTHER row). One entry per superseded revision
+    // (ascending) plus one for this row's own rev = key.rev, matching the
+    // shape `plan_row_backfill` produces for a row it finds after the fact.
+    let mut revisions: Vec<Revision> = superseded_revisions
+        .iter()
+        .map(|s| {
+            Revision::at(
+                s.rev,
+                "",
+                "",
+                format!(
+                    "Backfilled: earlier revision reconstructed from \
+                     data_provenance.superseded_revisions (P1 historical-backfill \
+                     loader) (amount {} {})",
+                    s.amount, s.currency
+                ),
+                &backfilled_at,
+            )
+        })
+        .collect();
+    let latest_note = if revisions.is_empty() {
+        "Backfilled: P1 corpus INDEX.md load - initial revision for this project."
+    } else {
+        "Backfilled: P1 corpus INDEX.md load - seeded as the latest known revision \
+         (data_provenance.superseded_revisions records the earlier amount(s))."
+    };
+    revisions.push(Revision::at(key.rev, "", "", latest_note, &backfilled_at));
 
     db.query(
         "CREATE $fee_id CONTENT { \
@@ -576,7 +647,7 @@ async fn apply_create(
             staff_phone: '', \
             staff_position: '', \
             strap_line: 'sensory design studio', \
-            revisions: [], \
+            revisions: $revisions, \
             time: {}, \
             pricing: { config: { quoted_fee: $amount, currency: $currency } }, \
             data_provenance: $provenance, \
@@ -592,6 +663,19 @@ async fn apply_create(
     .bind(("currency", currency.to_string()))
     .bind(("doc", doc.to_string()))
     .bind(("provenance", provenance))
+    // Bind via serde_json::Value, NOT the native Vec<Revision>
+    // (SurrealValue-derived) - confirmed live on dev this session
+    // (backfill_fee_revisions_seed's own apply run): binding a
+    // SurrealValue-derived Vec<struct> directly against `revisions.*` (a
+    // schemaful nested object field) fails with "Couldn't coerce value for
+    // field `revisions.*`... Expected `object` but found `NONE`", while the
+    // identical data serialized to JSON first succeeds - matches
+    // `db/client.rs`'s working `create_fee`/`update_fee` strategy for this
+    // exact field.
+    .bind((
+        "revisions",
+        serde_json::to_value(&revisions).unwrap_or(serde_json::json!([])),
+    ))
     .await
     .map_err(|e| e.to_string())?
     .check()

@@ -14,7 +14,7 @@ use surrealdb::{types::Value, Error};
 use super::{
     ActivityLog, ActivityLogCreate, Company, CompanyCreate, Contact, ContactCreate,
     DatabaseManager, EntityCounts, Fee, FeeCreate, FeeUpdate, NewProject, PaginatedResponse,
-    PricingUpdate, Project, WinRatioReport,
+    PricingUpdate, Project, Revision, WinRatioReport,
 };
 use crate::commands::{CompanyUpdate, ProjectUpdate};
 
@@ -268,7 +268,27 @@ impl DatabaseManager {
         Ok(items.into_iter().next())
     }
 
-    pub async fn create_fee(&self, fee: FeeCreate) -> Result<Fee, Error> {
+    pub async fn create_fee(&self, mut fee: FeeCreate) -> Result<Fee, Error> {
+        // Defense-in-depth single point of truth: `fee.rev` is DB-computed
+        // from `revisions[*].revision_number` (see `Revision::new`'s doc
+        // comment), so ANY caller that submits an empty `revisions[]` -
+        // including the general-purpose `create_fee` Tauri command the
+        // frontend's "new proposal" form calls directly, which this
+        // manager-level check covers without needing every future
+        // FeeCreate-building call site to remember to do it itself - would
+        // silently get `rev = 0` regardless of the `rev` value it submitted.
+        // Individual call sites (clone_fee_as_revision, import_wizard.rs,
+        // agent_server.rs) still build a more specific Revision entry with
+        // real author/notes context; this only fires as a fallback when
+        // they - or a future caller - don't.
+        if fee.revisions.is_empty() {
+            fee.revisions.push(Revision::new(
+                fee.rev.max(1),
+                fee.staff_email.clone(),
+                fee.staff_name.clone(),
+                String::new(),
+            ));
+        }
         let client = self.get_client()?;
         client
             .create_fee(fee)
@@ -301,7 +321,24 @@ impl DatabaseManager {
     }
 
     /// Clone a fee as a new revision with incremented rev number.
-    pub async fn clone_fee_as_revision(&self, source_fee_id: &str) -> Result<Fee, Error> {
+    ///
+    /// Populates the new fee's `revisions[]` with the source's full history
+    /// plus a real entry for this revision - `fee.rev` is DB-computed from
+    /// `revisions[*].revision_number` (see `Revision::new`'s doc comment), so
+    /// writing an empty array here is what caused every second revision to
+    /// collide on the live `fee_project_rev` unique index (audited 2026-08-28
+    /// after the historical-backfill P1 loader found and worked around the
+    /// same defect - see `crates/e-fees-core/src/backfill/p1_index_load.rs`).
+    /// Also flips the source fee to `Superseded`, per the design spec
+    /// ("Create new revision when terms agreed / Old revision auto-set to
+    /// 'Superseded'", docs/plans/2026-02-24-domain-model-restructure-design.md).
+    pub async fn clone_fee_as_revision(
+        &self,
+        source_fee_id: &str,
+        author_email: &str,
+        author_name: &str,
+        notes: &str,
+    ) -> Result<Fee, Error> {
         // 1. Fetch the source fee
         let source: Option<Fee> = self.get_by_id("fee", source_fee_id).await?;
         let source = source.ok_or_else(|| self.not_found_error("source fee"))?;
@@ -310,8 +347,17 @@ impl DatabaseManager {
         let client = self.get_client()?;
         let project_id_val = record_key_string(&source.project_id.key);
         let mut response = client.query_bind(
-            "SELECT math::max(rev) AS max_rev FROM fee WHERE project_id = projects:$pid GROUP ALL",
-            ("pid", project_id_val)
+            // type::record() is the canonical pattern for a param-derived
+            // record id (CLAUDE.md "Critical query patterns") - the bare
+            // `projects:$pid` form this line used before this fix hard-fails
+            // on SurrealDB v3 ("Unexpected token `$param`, expected a
+            // record-id key"). This was a second, independent, pre-existing
+            // bug in clone_fee_as_revision found by this fix's own live
+            // regression test - the function had never been exercised live
+            // before (see the revisions[] bug this whole change addresses),
+            // so this query path had never actually run.
+            "SELECT math::max(rev) AS max_rev FROM fee WHERE project_id = type::record('projects', $pid) GROUP ALL",
+            ("pid", project_id_val.clone())
         ).await?;
 
         let max_rev_result: Option<serde_json::Value> = response.take(0)?;
@@ -320,7 +366,17 @@ impl DatabaseManager {
             .map(|r| r + 1)
             .unwrap_or(1);
 
-        // 3. Create new fee with incremented rev, copying pricing data
+        // 3. Build the new fee's revision history: the source's own history,
+        // defensively backfilled with a single "revision 1" entry if the
+        // source predates this fix and was never populated, plus a real
+        // entry for the revision being created now.
+        let mut revisions = source.revisions.clone();
+        if revisions.is_empty() {
+            revisions.push(Revision::new(source.rev.max(1), "", "", ""));
+        }
+        revisions.push(Revision::new(new_rev, author_email, author_name, notes));
+
+        // 4. Create new fee with incremented rev, copying pricing data
         let new_fee = FeeCreate {
             name: source.name.clone(),
             number: source.number.clone(),
@@ -337,7 +393,7 @@ impl DatabaseManager {
             staff_phone: source.staff_phone.clone(),
             staff_position: source.staff_position.clone(),
             strap_line: source.strap_line.clone(),
-            revisions: vec![],
+            revisions,
             pricing: source.pricing_typed(),
             post_contract_items: source.post_contract_items.clone(),
             reimbursable_costs: source.reimbursable_costs.clone(),
@@ -348,7 +404,46 @@ impl DatabaseManager {
             import_source: None,
         };
 
-        self.create_fee(new_fee).await
+        let created = self.create_fee(new_fee).await?;
+
+        // 5. Flip the source fee to Superseded now that a real revision
+        // exists on top of it. Best-effort: the new revision is already
+        // committed and is the source of truth, so a failure here is logged
+        // rather than turned into an error that would make the caller think
+        // the revision itself failed to create.
+        let status_update = FeeUpdate {
+            name: source.name.clone(),
+            number: source.number.clone(),
+            rev: source.rev,
+            status: "Superseded".to_string(),
+            issue_date: source.issue_date.clone(),
+            activity: Some(source.activity.clone()),
+            package: Some(source.package.clone()),
+            project_id: record_key_string(&source.project_id.key),
+            company_id: record_key_string(&source.company_id.key),
+            contact_id: record_key_string(&source.contact_id.key),
+            staff_name: Some(source.staff_name.clone()),
+            staff_email: Some(source.staff_email.clone()),
+            staff_phone: Some(source.staff_phone.clone()),
+            staff_position: Some(source.staff_position.clone()),
+            strap_line: Some(source.strap_line.clone()),
+            revisions: source.revisions.clone(),
+            pricing: None,
+            post_contract_items: None,
+            reimbursable_costs: None,
+            payment_schedule: None,
+            pricing_revisions: None,
+            current_revision_number: None,
+            current_release_number: None,
+        };
+        if let Err(e) = self.update_fee(source_fee_id, status_update).await {
+            log::warn!(
+                "clone_fee_as_revision: created revision {} for project {} but failed to flip source {} to Superseded: {}",
+                new_rev, project_id_val, source_fee_id, e
+            );
+        }
+
+        Ok(created)
     }
 
     /// Get all fees for a specific project, sorted by rev DESC.
@@ -695,7 +790,10 @@ impl DatabaseManager {
         let companies = self.get_companies().await?;
         let company_names: BTreeMap<String, String> = companies
             .iter()
-            .filter_map(|c| c.id.as_ref().map(|id| (record_id_string(id), c.name.clone())))
+            .filter_map(|c| {
+                c.id.as_ref()
+                    .map(|id| (record_id_string(id), c.name.clone()))
+            })
             .collect();
 
         info!(
@@ -705,7 +803,11 @@ impl DatabaseManager {
             company_names.len()
         );
 
-        Ok(aggregate_win_ratios(&project_rows, &fee_rows, &company_names))
+        Ok(aggregate_win_ratios(
+            &project_rows,
+            &fee_rows,
+            &company_names,
+        ))
     }
 }
 
@@ -760,10 +862,7 @@ impl DatabaseManager {
             "entity_type".into(),
             serde_json::Value::String(log.entity_type),
         );
-        bindings.insert(
-            "entity_id".into(),
-            serde_json::Value::String(log.entity_id),
-        );
+        bindings.insert("entity_id".into(), serde_json::Value::String(log.entity_id));
         bindings.insert(
             "entity_name".into(),
             serde_json::Value::String(log.entity_name),

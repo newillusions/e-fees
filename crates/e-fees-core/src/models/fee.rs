@@ -212,7 +212,7 @@ pub struct FeeUpdate {
 }
 
 /// Revision entry for fee proposals.
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, SurrealValue)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Revision {
     pub revision_number: i64,
@@ -220,6 +220,55 @@ pub struct Revision {
     pub author_email: String,
     pub author_name: String,
     pub notes: String,
+}
+
+impl Revision {
+    /// Build a revision entry stamped with the current time.
+    ///
+    /// `fee.rev` is a DB-computed field (`math::max(revisions[*].revision_number)`,
+    /// see `docs/development/DATABASE_SCHEMA.md` "fee" table) - every write path
+    /// that creates a fee row MUST populate `revisions[]` with at least one entry
+    /// matching the `rev` it intends, or the DB recomputes `rev` from an empty
+    /// array instead of trusting the submitted value. See
+    /// `docs/development/DATABASE_SCHEMA.md` "Revision Management" and
+    /// `crates/e-fees-core/src/backfill/p1_index_load.rs`'s header comment for
+    /// the collision this caused before every FeeCreate site was fixed to call
+    /// this constructor (obs: e-fees revision-audit, 2026-08-28).
+    pub fn new(
+        revision_number: i64,
+        author_email: impl Into<String>,
+        author_name: impl Into<String>,
+        notes: impl Into<String>,
+    ) -> Self {
+        Self::at(
+            revision_number,
+            author_email,
+            author_name,
+            notes,
+            chrono::Utc::now().to_rfc3339(),
+        )
+    }
+
+    /// Same as `new`, but with an explicit `revision_date` instead of "now".
+    /// Used by backfill tooling (`crate::backfill::fee_revisions_seed`) so a
+    /// planning pass is deterministic and reproducible across a dry-run and
+    /// its later real apply, rather than stamping a fresh timestamp each
+    /// time `plan_row_backfill` is called.
+    pub fn at(
+        revision_number: i64,
+        author_email: impl Into<String>,
+        author_name: impl Into<String>,
+        notes: impl Into<String>,
+        revision_date: impl Into<String>,
+    ) -> Self {
+        Self {
+            revision_number,
+            revision_date: revision_date.into(),
+            author_email: author_email.into(),
+            author_name: author_name.into(),
+            notes: notes.into(),
+        }
+    }
 }
 
 // ============================================================================

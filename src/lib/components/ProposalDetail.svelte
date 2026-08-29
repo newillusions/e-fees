@@ -25,6 +25,7 @@
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
   import WarningModal from './WarningModal.svelte';
+  import NewRevisionModal from './NewRevisionModal.svelte';
   import { logger, logApiError } from '$lib/services/logger';
   import type { Fee, Project, Company, Contact } from '../../types';
 
@@ -62,6 +63,7 @@
   // Revision state
   let projectRevisions: Fee[] = $state([]);
   let loadingRevisions = $state(false);
+  let showNewRevisionModal = $state(false);
 
   // Create optimized company lookup
   const companyLookup = $derived(createCompanyLookup($companiesStore));
@@ -328,16 +330,36 @@
     }
   }
 
-  // Create new revision from current proposal
-  async function handleNewRevision() {
+  // Create new revision from current proposal - opens the details dialog
+  // first (author/notes are part of the audit trail on the new revision,
+  // see Revision::new's doc comment).
+  function handleNewRevision() {
     if (!proposal) return;
+    showNewRevisionModal = true;
+  }
+
+  async function confirmNewRevision(details: {
+    authorEmail: string;
+    authorName: string;
+    notes: string;
+  }) {
+    if (!proposal) {
+      showNewRevisionModal = false;
+      return;
+    }
     try {
       const feeId = extractId(proposal.id);
-      const newFee = await cloneFeeRevision(feeId);
+      const newFee = await cloneFeeRevision(
+        feeId,
+        details.authorEmail,
+        details.authorName,
+        details.notes
+      );
+      showNewRevisionModal = false;
       warningModal = {
         isOpen: true,
         title: 'Revision Created',
-        message: `New revision FP-${String(newFee.rev).padStart(2, '0')} created successfully.`,
+        message: `New revision FP-${String(newFee.rev).padStart(2, '0')} created successfully. The previous revision has been marked Superseded.`,
         confirmText: 'OK',
         cancelText: '',
         onConfirm: null,
@@ -346,6 +368,7 @@
       // Reload revisions list
       loadRevisions();
     } catch (error) {
+      showNewRevisionModal = false;
       logApiError('create revision', error as Error);
       warningModal = {
         isOpen: true,
@@ -677,4 +700,13 @@
   onConfirm={warningModal.onConfirm}
   onCancel={warningModal.onCancel}
   onclose={() => (warningModal.isOpen = false)}
+/>
+
+<!-- New Revision Modal -->
+<NewRevisionModal
+  isOpen={showNewRevisionModal}
+  proposalNumber={proposal?.number || ''}
+  nextRevisionLabel={proposal ? `FP-${String((proposal.rev || 0) + 1).padStart(2, '0')}` : ''}
+  onconfirm={confirmNewRevision}
+  onclose={() => (showNewRevisionModal = false)}
 />

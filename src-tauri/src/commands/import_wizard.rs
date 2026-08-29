@@ -646,7 +646,10 @@ async fn import_proposal_from_json(
         .await
         .unwrap_or_else(|| "EMT".to_string());
 
-    // Create the fee record
+    // Create the fee record. `revisions[]` is seeded with a real entry -
+    // `fee.rev` is DB-computed from `revisions[*].revision_number`, so an
+    // empty array here would silently compute `rev = 0` regardless of the
+    // `rev: 1` submitted below (see `Revision::new`'s doc comment).
     let fee_create = crate::db::FeeCreate {
         name: proposal.project_name.clone(),
         number: format!("{}-R1", project_id),
@@ -663,7 +666,7 @@ async fn import_proposal_from_json(
         staff_phone: "".to_string(),
         staff_position: "".to_string(),
         strap_line: "".to_string(),
-        revisions: Vec::new(),
+        revisions: vec![crate::db::Revision::new(1, "", "", "Initial import")],
         pricing: Some(pricing),
         post_contract_items: None,
         reimbursable_costs: None,

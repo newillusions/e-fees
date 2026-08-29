@@ -6,15 +6,26 @@ import { logApiError } from '../services/logger';
  * Clone a fee proposal as a new revision
  *
  * @param feeId - ID of the fee to clone (extracted string ID, not Thing object)
+ * @param authorEmail - email of the person issuing this revision (recorded in the
+ *   audit trail; the DB-computed `rev` field depends on `revisions[]` being
+ *   populated, so this call always writes a real entry - see backend
+ *   `Revision::new`)
+ * @param authorName - name of the person issuing this revision
+ * @param notes - free-text note describing what changed in this revision
  * @returns Promise resolving to newly created Fee with incremented revision number
  * @throws Error if cloning fails
  *
  * @example
- * const newFee = await cloneFeeRevision('abc123')
+ * const newFee = await cloneFeeRevision('abc123', 'jane@emittiv.com', 'Jane Doe', 'Reduced scope per client meeting')
  */
-export async function cloneFeeRevision(feeId: string): Promise<Fee> {
+export async function cloneFeeRevision(
+  feeId: string,
+  authorEmail: string,
+  authorName: string,
+  notes: string
+): Promise<Fee> {
   try {
-    return await invoke<Fee>('clone_fee_revision', { feeId });
+    return await invoke<Fee>('clone_fee_revision', { feeId, authorEmail, authorName, notes });
   } catch (error) {
     logApiError('cloneFeeRevision', error as Error, { component: 'RevisionsApi' });
     throw error;

@@ -544,6 +544,12 @@ async fn create_fee_handler(
         .issue_date
         .unwrap_or_else(|| chrono::Utc::now().format("%y%m%d").to_string());
 
+    let staff_name = req.staff_name.unwrap_or_default();
+    let staff_email = req.staff_email.unwrap_or_default();
+    // `revisions[]` is seeded with a real entry - `fee.rev` is DB-computed
+    // from `revisions[*].revision_number`, so an empty array here would
+    // silently compute `rev = 0` regardless of the `rev: 1` submitted below
+    // (see `Revision::new`'s doc comment).
     let fee_create = FeeCreate {
         name: req.name,
         number: req.number,
@@ -557,12 +563,17 @@ async fn create_fee_handler(
         project_id,
         company_id,
         contact_id,
-        staff_name: req.staff_name.unwrap_or_default(),
-        staff_email: req.staff_email.unwrap_or_default(),
+        staff_name: staff_name.clone(),
+        staff_email: staff_email.clone(),
         staff_phone: req.staff_phone.unwrap_or_default(),
         staff_position: req.staff_position.unwrap_or_default(),
         strap_line: req.strap_line.unwrap_or_default(),
-        revisions: vec![],
+        revisions: vec![crate::db::Revision::new(
+            1,
+            staff_email,
+            staff_name,
+            "Created via agent API",
+        )],
         pricing: None,
         post_contract_items: None,
         reimbursable_costs: None,

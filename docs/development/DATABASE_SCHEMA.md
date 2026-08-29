@@ -202,41 +202,79 @@ contract, not run by a project instance.
 
 ### 2. `fee` Table
 
-**Purpose**: Fee proposals created by emittiv staff  
-**ID Format**: `fee:⟨YY_CCCNN_R⟩` (auto-generated)  
-**Type**: SCHEMAFULL
+**Purpose**: Fee proposals created by emittiv staff
+**ID Format**: `fee:⟨YY_CCCNN_R⟩` (record key embeds the *submitted* `rev` at
+create time - see "Revision Management" below for why that can diverge from
+the DB-computed `rev` field on the row if a caller ever passes a `rev` that
+doesn't match what `revisions[]` implies)
+**Type**: SCHEMALESS (`fee` itself carries no `DEFINE TABLE`; individual
+fields below are still defined and enforced regardless of table-level
+schema mode - see CLAUDE.md "Critical query patterns")
+
+> **Verified 2026-08-28** against dev (10.0.23.12) via a live `INFO FOR
+> TABLE fee` (same audit that produced `scripts/migration/v007_fee_revisions.surql`).
+> The block below is the confirmed live shape, not the "illustrative, not
+> verified" placeholder this section carried previously - that placeholder's
+> `rev` VALUE clause (`math::max($value.revisions[*].revision_number)` with
+> no empty-array guard) was WRONG: SurrealDB v3's `math::max([])` returns
+> `-Infinity`, not `0`/`NONE` (see the project's pinned kb-critical rule
+> "Surrealdb V3 Math Max Empty Array"). The live field already guards this;
+> the block below matches it exactly.
 
 ```sql
-DEFINE TABLE fee SCHEMAFULL;
-DEFINE FIELD name ON fee TYPE string ASSERT $value != NONE AND string::len($value) > 0 DEFAULT 'Fee Proposal';
-DEFINE FIELD number ON fee TYPE string ASSERT $value != NONE;
-DEFINE FIELD project_id ON fee TYPE record<projects> ASSERT $value != NONE;
-DEFINE FIELD company_id ON fee TYPE record<company> ASSERT $value != NONE;
-DEFINE FIELD contact_id ON fee TYPE record<contacts> ASSERT $value != NONE;
-DEFINE FIELD status ON fee TYPE string ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Accepted', 'Rejected', 'No Response', 'Superseded'] DEFAULT 'Draft';
--- ^ current enum per e-fees-api/src/validation.rs FEE_STATUSES. Note: `fee` is SCHEMALESS
--- in the live DB (CLAUDE.md), so this ASSERT is enforced at the API/app validation layer,
--- not by a live SurrealDB schema constraint.
-DEFINE FIELD issue_date ON fee TYPE string ASSERT $value != NONE AND string::len($value) = 6;
-DEFINE FIELD activity ON fee TYPE option<string>;
-DEFINE FIELD package ON fee TYPE option<string>;
-DEFINE FIELD strap_line ON fee TYPE option<string> DEFAULT 'sensory design studio';
-DEFINE FIELD staff_name ON fee TYPE option<string>;
-DEFINE FIELD staff_email ON fee TYPE option<string>;
-DEFINE FIELD staff_phone ON fee TYPE option<string>;
-DEFINE FIELD staff_position ON fee TYPE option<string>;
-DEFINE FIELD rev ON fee TYPE int DEFAULT 1 VALUE math::max($value.revisions[*].revision_number);
-DEFINE FIELD revisions ON fee TYPE array<object> DEFAULT [];
-DEFINE FIELD time ON fee TYPE object VALUE { created_at: time::now(), updated_at: time::now() };
+DEFINE FIELD name ON fee TYPE string ASSERT string::len($value) > 0 PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD number ON fee TYPE string PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD project_id ON fee TYPE record<projects> PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD company_id ON fee TYPE record<company> PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD contact_id ON fee TYPE record<contacts> PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD status ON fee TYPE string DEFAULT 'Draft' ASSERT $value INSIDE ['Draft', 'Sent', 'Negotiation', 'Accepted', 'Rejected', 'No Response', 'Superseded'] PERMISSIONS FULL;
+DEFINE FIELD issue_date ON fee TYPE string ASSERT string::len($value) = 6 AND string::is_numeric($value) PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD activity ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD package ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD strap_line ON fee TYPE string PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD staff_name ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD staff_email ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD staff_phone ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD staff_position ON fee TYPE string PERMISSIONS FULL;
+DEFINE FIELD revisions ON fee TYPE array<object> DEFAULT [] PERMISSIONS FOR select, create, update WHERE FULL;
+DEFINE FIELD `revisions.*` ON fee TYPE object PERMISSIONS FULL;
+DEFINE FIELD rev ON fee TYPE int
+    VALUE (IF array::len(revisions.*.revision_number) > 0
+           THEN math::max(revisions.*.revision_number)
+           ELSE 0 END)
+    PERMISSIONS FOR select WHERE FULL, FOR create, update FULL;
+DEFINE FIELD time ON fee TYPE object PERMISSIONS FULL;
+DEFINE FIELD time.created_at ON fee TYPE datetime DEFAULT time::now() VALUE $before OR time::now() PERMISSIONS FULL;
+DEFINE FIELD time.updated_at ON fee TYPE datetime DEFAULT time::now() VALUE time::now() PERMISSIONS FULL;
 
 -- Unique constraint on project + revision
 DEFINE INDEX fee_project_rev ON fee FIELDS project_id, rev UNIQUE;
 ```
 
-**Revision Management**:
-- `rev` field auto-computed from revisions array
-- Each revision has: revision_number, revision_date, author_email, author_name, notes
-- Complete audit trail for all proposal changes
+**Revision Management** (fixed 2026-08-28, e-fees revision audit - see
+`crates/e-fees-core/src/models/fee.rs`'s `Revision::new`):
+- `rev` is DB-computed from `revisions[*].revision_number` via the `VALUE`
+  clause above - it is **not** settable directly. Any `FeeCreate`/`FeeUpdate`
+  that writes `revisions: []` gets `rev = 0` regardless of what `rev` value
+  it submits, which is exactly the bug this fix closes: every fee-creation
+  call site (`clone_fee_as_revision`, `import_wizard.rs`, `agent_server.rs`)
+  now populates `revisions[]` with a real entry via `Revision::new` before
+  creating or updating a row.
+- Each revision entry: `revision_number`, `revision_date`, `author_email`,
+  `author_name`, `notes` - a complete audit trail for all proposal changes.
+- `clone_fee_as_revision` seeds the new fee's `revisions[]` from the
+  source's full history plus one new entry, and flips the source fee's
+  `status` to `Superseded` (per `docs/plans/2026-02-24-domain-model-restructure-design.md`
+  L375-376: "Create new revision when terms agreed / Old revision
+  auto-set to 'Superseded'").
+- **Historical data**: every fee row created before this fix has
+  `revisions: []` / `rev: 0` live (confirmed on dev, 100% of rows sampled).
+  `crates/e-fees-core/src/bin/backfill_fee_revisions_seed.rs` retroactively seeds a real
+  `revisions[]` entry on every such row - see that file's header for the
+  provenance rules (rows the P1 historical-backfill loader already
+  annotated with `data_provenance.superseded_revisions` get their full
+  multi-entry history reconstructed; every other row gets a single
+  `revision_number: 1` entry).
 
 ---
 
