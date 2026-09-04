@@ -7,7 +7,7 @@
   
   Built with Tauri v2 + Svelte 5 + SurrealDB
   
-  [![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)]()
+  [![Version](https://img.shields.io/badge/version-0.18.1-blue.svg)]()
   [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
   [![Status](https://img.shields.io/badge/status-Production%20Ready-green.svg)]()
 </div>
@@ -107,9 +107,9 @@ npm run check
 
 ## 📈 Current Status
 
-- **Version**: 0.16.0 (Production Ready)
+- **Version**: 0.18.1 (Production Ready)
 - **Auto-Updater**: Working (macOS tested)
-- **Database Records**: 48 projects, 37 proposals, 19 companies
+- **Database Records** (prod, as of 2026-09-04): 75 projects, 59 fees, 31 companies, 34 contacts
 - **Performance**: < 2s load time, < 100MB memory
 
 ## 🤝 Contributing

@@ -1,7 +1,7 @@
 # Known Issues and Limitations
 
-**Last Updated**: 2026-07-03 (refreshed against v0.16.0 codebase - see CLAUDE.md for current version; supersedes the 2025-12-14 / v0.10.24-era version)
-**Current Version**: v0.16.0
+**Last Updated**: 2026-09-04 (version stamp refreshed against v0.18.1 codebase during docs review; issue content last verified 2026-07-03 - see CLAUDE.md for current version)
+**Current Version**: v0.18.1
 
 This file previously listed 8 issues dated 2025-12-14 (v0.10.24 era). Verified against the current codebase: 2 were resolved and dropped, 6 carried forward (verification noted per item). Full prior text is in git history (`git log -- KNOWN_ISSUES.md`).
 

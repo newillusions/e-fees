@@ -97,5 +97,5 @@ Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md
 2. **Client-side joins** - `src/lib/stores.ts` joins company names in the frontend (O(1) Map lookups today; revisit at larger datasets).
 
 ---
-**Last Updated**: 2026-08-12 (v0.17.0 release - fixed first-run connection-test bug)
-**Version**: 0.17.0
+**Last Updated**: 2026-09-04 (docs review - fee revisions, historical backfill (P0-P2) and win-ratio report all merged and prod-verified; PR #47 fp-template rendering integration open)
+**Version**: 0.18.1

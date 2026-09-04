@@ -1,63 +1,55 @@
 # E-Fees Project Handover
 
 ## Current Status
-Three PRs open, all ready for orchestrator merge (PR #35 already confirmed merged):
-- **#34** (2026-08-14): update-dialog version display fix + release-manifest CI atomic-commit fix.
-- **#35** (2026-08-18): project-level **merge** and **cascade-delete** - **CONFIRMED MERGED** to `main` as `c187903` this session.
-- **#36** (2026-08-18, NEW this session): **on-disk folder reconcile** - optional follow-up to #35, chained onto the merge success path + an opt-in cascade-delete checkbox.
+**Corrected 2026-09-04 (full project review)**: the version of this file that was sitting uncommitted in the main checkout claimed PRs #41/#43/#44/#45/#46 were "all open, orchestrator-owned merge + prod apply" - that is **false**. Verified this session via the Forgejo API and a direct read-only query against prod: all five PRs are **merged** (into `main` between 2026-08-19 and 2026-08-29), and prod's `app_state.schema_version = "7"` (updated 2026-08-29T08:19Z, matching PR #46's merge), with 55 of 59 fee rows carrying seeded revision history (only 3 rows still show `rev=0`/`revisions=[]`, matching the mission record's "4 need manual revision numbers" note). **Historical pricing backfill (P0/P1/P2), fee revisions, and the win-ratio report are all live on prod.** Do not trust the previous version of this section.
 
-- **Versions**: desktop **0.18.1**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (unchanged this session).
-- **`main` (origin, Forgejo)** is now at `c19c8d2` (PR #35 merged + handover sync) plus PR #36's branch on top. PR #36 branch `feat/folder-reconcile-modal`, head `de9c5e0a7512a40cf81fc816694314a50f220988` (UPDATED after review - see below), mergeable:true.
-- **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4). Prod: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2).
+**Now (2026-09-04)**: one PR is genuinely open - **PR #47** (`feat/fp-template-integration`, head `c8062c1`, mergeable), built in worktree `e-fees-fp-wt` by a concurrently-running agent (`gtm-fp-efees-integration`). Per the KB mission record (updated today 18:36Z by that session): the fp-template rendering path is proven end-to-end on a dev fee (14-page HTML -> 1920x1080pt PDF), code-only (not merged), with two open items - two narrative fields (reference-documents, areas) that e-fees has no data field for yet, and an owner decision on where the renderer runs (the e-fees-api container has no python3/Chrome/template checkout; the render route 503s until `FP_TEMPLATE_ROOT` is set). **This review did not touch that worktree or branch** - see `~/.claude/state/returns/review-e-fees.md` for what else is in flight.
 
-## Last Session (2026-08-18)
-**Summary**: Built the on-disk folder reconcile feature per the approved design (obs:v74ffyd1v6n1go8kf4c7), following PR #35's DB-only project merge/cascade-delete. New backend module `src-tauri/src/commands/folder_reconcile.rs` - 4 Tauri commands: `preview_folder_reconcile`/`execute_folder_reconcile` (walk both project folders, classify every file NEW/CONFLICT/IDENTICAL size-first with a SHA-256 hash only on a size match, then apply per-file copy/overwrite/keep-both/skip resolutions with a mandatory `dry_run: true` pass before any real write) and `preview_trash_project_folder`/`execute_trash_project_folder` (move a deleted project's folder to `.reconcile-backups/{timestamp}/`, opt-in only). Safety invariants: never a silent overwrite (keep-both renames the incoming file; overwrite backs up the existing file first); backups always land outside the 4 status directories; every write re-validates against current reality at execute time rather than trusting a stale preview. Reused `folder_management.rs`'s folder-location/move helpers (widened to `pub(crate)`) instead of duplicating them.
-
-Frontend: new `FolderReconcileModal.svelte` (4-step: resolve both folders by number -> classify -> per-file/bulk resolution -> dry-run summary + confirm), wired as an optional Step 5 on `MergeProjectModal.svelte`'s post-merge success path. `ProjectDetail.svelte` gained an opt-in ("default OFF") "also move the on-disk folder" checkbox on the cascade-delete confirmation, only shown when a folder actually exists; `WarningModal.svelte` extended with an optional checkbox slot (backward compatible - gated to the delete-confirm dialog only).
-
-**Review round 2, same session**: Martin caught a real gap - project folders are created from a template whose files get the project's NUMBER substituted into their names (`rename_template_files_cross_platform` in `template_ops.rs`, confirmed by reading the actual creation code). Path-equality pairing reported a renamed base file (e.g. `"26-97110-var.json"` vs `"26-97104-var.json"` - same logical file, different literal name) as two unrelated NEW files instead of one real conflict, and a plain copy would leave the source's number sitting in the target folder. Fixed with `canonical_dest_relpath()` - reverses the number substitution per path component to compute the correct destination, used for both classification AND the actual write. Plain user files (no number in the name) are unaffected. 9 new tests (5 pure-function, 4 end-to-end) cover it. PR #36 updated in place on the same branch (head `de9c5e0a7`).
-
-Full battery green (final state): `cargo test -p app --lib` **139/139** (114 baseline + 25 folder-reconcile), `cargo clippy` 84/84 warnings zero new (verified via `git stash -u` - NOT plain `git stash`, which misses untracked files), `npm run test:run` **806/806** (796 baseline + 10 API-layer tests), `svelte-check` 0 errors / 185 warnings (baseline unchanged), `npm run lint` 14 pre-existing errors in untouched files only, `npm run build` succeeds.
-
-**Tooling gotcha worth knowing**: svelte-check (4.2.1) intermittently failed to resolve new functions when barrel-re-exported through `src/lib/api/index.ts` ("no exported member", while plain `tsc --noEmit` found zero errors in the same files). Worked around by importing directly from the leaf module (`$lib/api/folderReconcile`) in the two consuming `.svelte` files - which also matches this codebase's existing precedent (`folderManagement.ts` functions were never barrel-exported either). The barrel re-export block is still in `index.ts` (harmless) but nothing relies on it.
-
-**Process note**: worked directly in the project root per the prior session's convention (no isolated worktree); nothing to tear down.
+- **Versions**: desktop **0.18.1**, e-fees-api 0.3.4, e-fees-scope 0.2.0 (confirmed via `package.json`/`tauri.conf.json`, unverified whether the two service versions changed since 2026-08-02).
+- **`main` (origin, Forgejo)** is at `d769f33` (PR #46 merge). The local `main` branch in the main checkout is 11 commits behind this - has not been updated since `3e1df4a` (a lamp-off sync commit); needs a `git pull`/fast-forward next time someone works from it directly.
+- **Prod DB**: `ws://10.0.23.11:8000` ns `emittiv` db `projects` (v3.1.2) - schema_version 7, 75 projects / 59 fees / 31 companies / 34 contacts (queried live 2026-09-04). **Dev DB**: `ws://10.0.23.12:8000` ns `emittiv_dev` db `projects` (v3.1.4).
+- **Forgejo is on PostgreSQL** (`postgresql17-forgejo`, 10.0.23.27:5432, migrated 2026-08-20).
 
 ## Key Context
 | Resource | Value |
 |----------|-------|
-| Production DB | ws://10.0.23.11:8000 v3.1.2 (ns emittiv, db projects) |
+| Production DB | ws://10.0.23.11:8000 v3.1.2 (ns emittiv, db projects), schema_version 7 |
 | Dev DB | ws://10.0.23.12:8000 v3.1.4, ns emittiv_dev db projects |
 | API container | 10.0.21.80:3200 (e-fees-api 0.3.4) - `EFEES_API_KEY` |
 | Scope container | 10.0.21.81:3201 (e-fees-scope 0.2.0) - clause DB = prod |
-| Forgejo | forge.mms.name/emittiv/fee-prop |
-| PR #34 (version display + CI fix) | https://forge.mms.name/emittiv/fee-prop/pulls/34 |
-| PR #35 (project merge + cascade-delete) | MERGED - https://forge.mms.name/emittiv/fee-prop/pulls/35 |
-| PR #36 (on-disk folder reconcile) | https://forge.mms.name/emittiv/fee-prop/pulls/36 |
-| KB obs (this session) | observation:vntsnt3o3mo9gnuas2ge (supersedes observation:wdgfn20acnhnjlptzejn) |
-| KB wiki section (updated this session) | wiki_section:9yrv1l4tzme1l48lsnyh (page `e-fees`) |
+| Forgejo | forge.mms.name/emittiv/fee-prop (PostgreSQL as of 2026-08-20) |
+| PR #47 (fp-template integration, IN PROGRESS elsewhere) | https://forge.mms.name/emittiv/fee-prop/pulls/47 (open, mergeable - do not touch, another agent's worktree) |
+| PR #46 (fee revisions real) | MERGED d769f33, 2026-08-29 |
+| PR #45 (win-ratio report) | MERGED 0775539, 2026-08-23 |
+| PR #41/#42/#43/#44 (historical backfill P0-P2) | all MERGED, 2026-08-19/20 |
+| KB mission record | `project:6z8cqd43k5jnvz0neu4j` (kept current by the fp-template session; this review only added the docs-hygiene next step) |
 
 ## Next Steps
-1. **Orchestrator: merge PR #34 and PR #36**, then deploy per the normal release/deploy path. (as of 2026-08-18)
-2. **If dev-DB creds are in hand**: run PR #35's 2 `#[ignore]`-gated live tests (`test_merge_projects_reparents_fees_and_resolves_rev_collision`, `test_delete_project_cascade_removes_dependent_fees` in `db/tests.rs`) and confirm `activity_log.action='merge'` is accepted by the live schema. (as of 2026-08-18)
-3. **Not built, flagged in the design**: a manual "clear .reconcile-backups older than 30 days" action + surfacing the backup dir's size in the UI (Martin's decision: keep, no auto-prune, add a manual clear action). (as of 2026-08-18)
-4. **Clause-library backlog** - fix 4 divergent clauses, supplement 4 thin, add 7 gap clauses. Gate is Martin's business-content review of 3 client-facing wording changes, not a technical blocker. (as of 2026-08-12)
-5. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`. (as of 2026-08-12)
-6. **Stage 3 clause-usage mining** - corpus-ranked clause suggestions are operational; remaining is one verified real-proposal run end to end. (as of 2026-08-12)
-7. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line + regenerate docs. (as of 2026-08-12)
+1. **Fast-forward the main checkout's local `main` branch** (currently 11 commits behind `origin/main`) - `git -C /Volumes/base/dev/claude/e-fees checkout main && git pull`. (as of 2026-09-04)
+2. **Orchestrator: merge PR #47** once the fp-template integration session finishes (owner decision needed first on where the renderer runs - see mission record `efees-scope-assembly-ui-sequencing`). (as of 2026-09-04)
+3. **Follow-up owed by e-fees**: fix the backticked wildcard statement in `v007_fee_revisions.surql` flagged by the migration guard hub message - not verified fixed this session, check before the next migration touches that file. (as of 2026-08-29, unverified whether closed)
+4. **Genuine document conflicts need Martin's input** (not code-fixable): 23-97102 Wynn, 25-97105 Shanghai Tang v2, 22-96603 RUA SB5. (as of 2026-08-22, unverified whether resolved since)
+5. **ENTTEC Warehouse pro-bono row** - owner ruling received (Won, $0 fee, deliberate); needs the real ENTTEC contact mined from mail before the company+contact+fee rows can be created. (as of 2026-08-22)
+6. **Clause-library backlog** - fix 4 divergent clauses, supplement 4 thin, add 7 gap clauses. Gate is Martin's business-content review, not a technical blocker. (as of 2026-08-18)
+7. **IDW T5 `.indd` linking** - scoped in `docs/plans/2026-06-14-idw-t5-indd-linking-scope.md`. (as of 2026-08-18)
+8. **Stage 3 clause-usage mining** - `mine_clause_usage` binary shipped (PR #18); no evidence it has been run against the production corpus yet. (as of 2026-08-18)
+9. **Lulu 26-97104** - waiting on client meeting to lock price; then model Acoustics 55k as a discipline line + regenerate docs. (as of 2026-08-18)
+10. **26-96801 fee create** - AED 120k, pending Martin's one-liner per the mission record's current_focus. (as of 2026-08-29)
 
 ## Open Follow-ups
-- Make e-fees-scope integration-test cleanup hard-delete (currently soft-delete → archived residue accumulates).
+- Make e-fees-scope integration-test cleanup hard-delete (currently soft-delete -> archived residue accumulates).
 - Drop old `ns:emittiv` on 10.0.23.12 once confirmed unneeded.
-- Investigate the possible `ProjectModal.svelte` single-delete id bug (flagged in the PR #35 session, not yet re-checked): `getEntityId(project)` → `extractSurrealId(project.id)` may return the full `"projects:xxx"` string rather than the bare key `delete_project`'s Rust command expects.
+- Investigate the possible `ProjectModal.svelte` single-delete id bug: `getEntityId(project)` -> `extractSurrealId(project.id)` may return the full `"projects:xxx"` string rather than the bare key `delete_project`'s Rust command expects. (still unverified whether it's a real bug)
 
 ## Notes
 - `kb_detect_project_tags` clobbers monorepo tags - do NOT run on e-fees.
 - SurrealDB type-check fn is `type::is_datetime()` (underscore), not `type::is::datetime`.
 - Critical query/SurrealValue patterns in CLAUDE.md §Critical query patterns.
 - Tacit judgment (proposal domain gotchas, deploy traps, cross-project consumer notes) lives in `.claude/rules/judgment.md`.
-- A fee's record id/`number` embed the *original* project number at creation and are never renamed by any code path - load-bearing for `project_lifecycle.rs`'s merge.
-- `get_project_folder_location`/`find_project_folder` resolve a project's on-disk folder by scanning folder NAMES against the 4 status dirs - DB-independent, so it still works for a project whose DB record was just deleted (as long as the folder itself hasn't been touched). This is what makes the folder-reconcile step safe to run after the DB merge has already committed.
+- `fee` table is SCHEMALESS - arbitrary `data_provenance` sub-fields need no migration, unlike `projects` (SCHEMAFULL).
+- New alias-map pattern for company matching: `CLIENT_ALIASES` in `p1_index_load.rs`.
+- CI (`.forgejo/workflows/test.yml`) deliberately excludes `src-tauri` (needs the full Tauri/webkit2gtk apt chain the shared runner can't reliably complete) - `cargo check -p app` is the manual equivalent when touching Tauri command wiring.
+- **HANDOVER discipline**: write this file only from inside a worktree, never the main checkout - a prior session's uncommitted main-checkout edit (containing stale "PRs still open" claims) sat unpushed for days and nearly got relayed as current status. If `git -C <root> status --short` shows `.claude/HANDOVER.md` modified in the main checkout, that is a signal something went wrong, not a file to trust.
 
 ---
-*Updated: 2026-08-18 (folder-reconcile session, PR #36 incl. review-round-2 project-number-aware file pairing fix; confirmed PR #35 merged)*
+*Updated: 2026-09-04 (full project review - corrected stale "PRs open" claims; verified prod migration/backfill state live)*
