@@ -8,6 +8,7 @@ pub mod documents;
 pub mod fee_export;
 pub mod fees;
 pub mod folders;
+pub mod fp_proposal;
 pub mod projects;
 pub mod rescan;
 pub mod stats;

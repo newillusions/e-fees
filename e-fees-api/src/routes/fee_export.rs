@@ -36,7 +36,7 @@ use crate::AppState;
 /// Fetch a fee and its three linked entities (project, company, contact).
 ///
 /// Returns 404 with a descriptive message if any record is missing.
-async fn fetch_fee_with_links(
+pub(crate) async fn fetch_fee_with_links(
     state: &Arc<AppState>,
     fee_id: &str,
 ) -> Result<(Fee, Project, Company, Contact), ApiError> {

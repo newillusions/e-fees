@@ -61,6 +61,8 @@ pub struct AppState {
         routes::fee_export::fee_json_status,
         routes::fee_export::export_indesign,
         routes::fee_export::export_template,
+        routes::fp_proposal::get_fp_manifest,
+        routes::fp_proposal::render_fp_proposal,
         routes::companies::list_companies,
         routes::companies::get_company,
         routes::companies::create_company,
@@ -235,6 +237,14 @@ async fn main() {
         .route(
             "/fees/{id}/export/template",
             axum::routing::post(routes::fee_export::export_template),
+        )
+        .route(
+            "/fees/{id}/fp-manifest",
+            get(routes::fp_proposal::get_fp_manifest),
+        )
+        .route(
+            "/fees/{id}/fp-proposal",
+            axum::routing::post(routes::fp_proposal::render_fp_proposal),
         )
         .route(
             "/companies",

@@ -30,6 +30,17 @@ impl ApiError {
         }
     }
 
+    /// Create a 422 Unprocessable Entity error (the request is well-formed but
+    /// the referenced data cannot satisfy it - e.g. a fee with no pricing, or a
+    /// discipline set that cannot be expressed in the proposal template).
+    pub fn unprocessable(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            code: "unprocessable".into(),
+            message: message.into(),
+        }
+    }
+
     /// Create a 503 Service Unavailable error (for folder creation / SSH failures).
     pub fn service_unavailable(message: impl Into<String>) -> Self {
         Self {

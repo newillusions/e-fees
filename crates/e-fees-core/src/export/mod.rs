@@ -4,6 +4,8 @@
 //! for InDesign variable data export. No I/O, no DB access — pure logic only.
 
 pub mod fee_template;
+pub mod fp_manifest;
+pub mod fp_render;
 pub mod indesign_workbook;
 
 use chrono::Utc;
