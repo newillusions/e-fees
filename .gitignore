@@ -107,3 +107,8 @@ e-fees-scope/.mine-clause-usage-checkpoint.jsonl
 .git.backup/
 archive/tools/bfg.jar
 archive/build-artifacts/*.dmg
+
+# fp-template vendored into the Docker build context by
+# scripts/vendor-fp-template.sh - a build artefact, pinned by
+# e-fees-api/fp-template.ref, never committed.
+.vendor/

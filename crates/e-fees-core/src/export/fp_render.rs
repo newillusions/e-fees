@@ -14,19 +14,38 @@
 //! three read-only pre-issue gates (`--issue-check`, `--column-check`,
 //! `--quote-check`) which [`run_gate`] wraps.
 //!
+//! # Two render backends, one selected by environment
+//!
+//! The PDF step is behind [`ProposalPdfRenderer`]:
+//!
+//! | Backend | Selected when | Needs |
+//! |---|---|---|
+//! | [`GotenbergRenderer`] | `GOTENBERG_URL` is set | an HTTP reachable gotenberg |
+//! | [`LocalChromiumRenderer`] | otherwise | a local headless Chrome |
+//!
+//! [`select_renderer`] applies that rule, and every entry point in this module
+//! goes through it, so the CLI and the API agree without either passing a flag.
+//!
 //! # Deployment note (named, not hidden)
 //!
-//! This driver needs a checkout of fp-template plus python3 (with `pyyaml`,
-//! `beautifulsoup4`, `playwright`) and a headless Chrome/Chromium on the same
-//! host. The `e-fees-api` container image carries none of those today, so
-//! [`FpRenderConfig::from_env`] returns `None` unless `FP_TEMPLATE_ROOT` is set
-//! and callers are expected to report "render backend not configured" rather
-//! than pretend. Packaging the toolchain into the API image (or splitting the
-//! renderer into its own container) is a deployment decision, not a code one.
+//! This driver always needs a checkout of fp-template plus python3 (with
+//! `pyyaml`, `beautifulsoup4`), because the FILL step and the three pre-issue
+//! gates are fp-template's own python. [`FpRenderConfig::from_env`] returns
+//! `None` unless `FP_TEMPLATE_ROOT` is set, and callers report "render backend
+//! not configured" rather than pretend.
+//!
+//! Gotenberg removes the browser from the RENDER step only. The FILL step
+//! still launches a local Chromium through Playwright: fp-template's
+//! `engine/measure.py` measures every block's height in a real render, has no
+//! remote or cached mode, and raises rather than guessing. So an image built
+//! with python3 and no browser can serve the manifest route and run the gates,
+//! but `fill.py` will fail — see `docs/development/FP-TEMPLATE-INTEGRATION.md`.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
+
+use crate::export::gotenberg::{GotenbergConfig, GotenbergError, GotenbergRenderer};
 
 /// Environment variable naming the fp-template checkout to render with.
 pub const FP_TEMPLATE_ROOT_ENV: &str = "FP_TEMPLATE_ROOT";
@@ -137,6 +156,9 @@ pub enum FpRenderError {
         command: String,
         expected: PathBuf,
     },
+    /// The gotenberg render backend failed. Carries its own classification of
+    /// whose fault it was — see [`GotenbergError::is_caller_fault`].
+    Gotenberg(GotenbergError),
     Io(std::io::Error),
 }
 
@@ -180,6 +202,7 @@ impl std::fmt::Display for FpRenderError {
                 "{command} reported success but {} was not written",
                 expected.display()
             ),
+            FpRenderError::Gotenberg(e) => write!(f, "{e}"),
             FpRenderError::Io(e) => write!(f, "io error: {e}"),
         }
     }
@@ -295,6 +318,73 @@ pub fn render_pdf(
         });
     }
     Ok(())
+}
+
+// ============================================================================
+// RENDER BACKENDS
+// ============================================================================
+
+/// The PDF half of the pipeline: turn a filled HTML document into a PDF file.
+///
+/// Deliberately narrow. Everything else — the fill, the gates, the temporary
+/// directory, the release policy — is backend independent and stays where it
+/// is, so swapping the browser out cannot change what a proposal contains.
+pub trait ProposalPdfRenderer: Send + Sync {
+    fn render(&self, html_in: &Path, pdf_out: &Path) -> Result<(), FpRenderError>;
+    /// Short name for logs and the `x-fp-render-backend` response header.
+    fn backend(&self) -> &'static str;
+}
+
+/// The original backend: fp-template's own `render.sh`, driving a local
+/// headless Chrome. Kept for development and for hosts that have a browser.
+#[derive(Debug, Clone)]
+pub struct LocalChromiumRenderer {
+    config: FpRenderConfig,
+}
+
+impl LocalChromiumRenderer {
+    pub fn new(config: FpRenderConfig) -> Self {
+        Self { config }
+    }
+}
+
+impl ProposalPdfRenderer for LocalChromiumRenderer {
+    fn render(&self, html_in: &Path, pdf_out: &Path) -> Result<(), FpRenderError> {
+        render_pdf(&self.config, html_in, pdf_out)
+    }
+
+    fn backend(&self) -> &'static str {
+        "local-chromium"
+    }
+}
+
+impl ProposalPdfRenderer for GotenbergRenderer {
+    fn render(&self, html_in: &Path, pdf_out: &Path) -> Result<(), FpRenderError> {
+        self.render_to_file(html_in, pdf_out)
+            .map_err(FpRenderError::Gotenberg)
+    }
+
+    fn backend(&self) -> &'static str {
+        "gotenberg"
+    }
+}
+
+/// Choose the render backend from the environment: gotenberg when
+/// `GOTENBERG_URL` names one, the local browser otherwise.
+///
+/// There is no host default for `GOTENBERG_URL` on purpose — an unset value
+/// means "this deployment renders locally", never "try some address".
+pub fn select_renderer(config: &FpRenderConfig) -> Box<dyn ProposalPdfRenderer> {
+    match GotenbergConfig::from_env() {
+        // The fp-template checkout is the second allowed asset root: a filled
+        // proposal legitimately points at its stylesheets, fonts and images.
+        // Anything resolving outside it and the document's own directory is
+        // refused rather than uploaded.
+        Some(gotenberg) => {
+            Box::new(GotenbergRenderer::new(gotenberg).with_roots(vec![config.root.clone()]))
+        }
+        None => Box::new(LocalChromiumRenderer::new(config.clone())),
+    }
 }
 
 /// One of fp-template's read-only pre-issue gates.
@@ -494,8 +584,31 @@ pub fn build_proposal_pdf(
     html_out: &Path,
     pdf_out: &Path,
 ) -> Result<FpRenderOutput, FpRenderError> {
+    build_proposal_pdf_with(
+        config,
+        select_renderer(config).as_ref(),
+        manifest_path,
+        html_out,
+        pdf_out,
+    )
+}
+
+/// Fill then render with an explicitly chosen backend.
+pub fn build_proposal_pdf_with(
+    config: &FpRenderConfig,
+    renderer: &dyn ProposalPdfRenderer,
+    manifest_path: &Path,
+    html_out: &Path,
+    pdf_out: &Path,
+) -> Result<FpRenderOutput, FpRenderError> {
     let fill_stdout = fill_manifest(config, manifest_path, html_out)?;
-    render_pdf(config, html_out, pdf_out)?;
+    renderer.render(html_out, pdf_out)?;
+    if !pdf_out.exists() {
+        return Err(FpRenderError::MissingOutput {
+            command: renderer.backend().to_string(),
+            expected: pdf_out.to_path_buf(),
+        });
+    }
     Ok(FpRenderOutput {
         html_path: html_out.to_path_buf(),
         pdf_path: pdf_out.to_path_buf(),
@@ -508,6 +621,8 @@ pub fn build_proposal_pdf(
 pub struct GatedRender {
     pub output: FpRenderOutput,
     pub gates: GateReport,
+    /// Which backend produced the PDF, for logs and response headers.
+    pub backend: &'static str,
 }
 
 /// Why a gated build stopped.
@@ -530,18 +645,57 @@ impl std::fmt::Display for GatedRenderError {
 
 impl std::error::Error for GatedRenderError {}
 
-/// Fill, render, and gate — the only entry point a client-facing caller should
-/// use. A PDF comes back only when the release gate passed.
+/// Fill, gate, then render — the only entry point a client-facing caller
+/// should use. A PDF comes back only when the release gate passed, and the
+/// backend is whatever [`select_renderer`] chose.
 pub fn build_proposal_pdf_gated(
     config: &FpRenderConfig,
     manifest_path: &Path,
     html_out: &Path,
     pdf_out: &Path,
 ) -> Result<GatedRender, GatedRenderError> {
-    let output = build_proposal_pdf(config, manifest_path, html_out, pdf_out)
-        .map_err(GatedRenderError::Render)?;
+    build_proposal_pdf_gated_with(
+        config,
+        select_renderer(config).as_ref(),
+        manifest_path,
+        html_out,
+        pdf_out,
+    )
+}
+
+/// Fill, gate, and render with an explicitly chosen backend.
+///
+/// ORDER MATTERS AND IS DELIBERATE: the gates run on the filled HTML BEFORE
+/// the PDF is produced, so a document that must not be issued never reaches a
+/// renderer at all — and, with gotenberg, never leaves this host.
+pub fn build_proposal_pdf_gated_with(
+    config: &FpRenderConfig,
+    renderer: &dyn ProposalPdfRenderer,
+    manifest_path: &Path,
+    html_out: &Path,
+    pdf_out: &Path,
+) -> Result<GatedRender, GatedRenderError> {
+    let fill_stdout =
+        fill_manifest(config, manifest_path, html_out).map_err(GatedRenderError::Render)?;
     let gates = run_release_gates(config, html_out).map_err(GatedRenderError::Gate)?;
-    Ok(GatedRender { output, gates })
+    renderer
+        .render(html_out, pdf_out)
+        .map_err(GatedRenderError::Render)?;
+    if !pdf_out.exists() {
+        return Err(GatedRenderError::Render(FpRenderError::MissingOutput {
+            command: renderer.backend().to_string(),
+            expected: pdf_out.to_path_buf(),
+        }));
+    }
+    Ok(GatedRender {
+        output: FpRenderOutput {
+            html_path: html_out.to_path_buf(),
+            pdf_path: pdf_out.to_path_buf(),
+            fill_stdout,
+        },
+        gates,
+        backend: renderer.backend(),
+    })
 }
 
 // ============================================================================

@@ -18,6 +18,12 @@ surrealdb-types = "3.0.4"
 utoipa = { version = "5", optional = true }
 rust_xlsxwriter = "0.82"
 umya-spreadsheet = "2.3"
+# Blocking HTTP client for the gotenberg render backend (export::gotenberg).
+# default-features = false + rustls-tls deliberately: the API's builder image
+# has no OpenSSL, and surrealdb already brings rustls into the tree. The
+# blocking client runs its own background runtime, so it is safe inside the
+# API's spawn_blocking render task.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 # Needed only by the src/bin/backfill_p1_index_load.rs writer (async DB I/O).
 # protocol-ws/rustls above are additive to whatever other workspace members
 # already request on the same surrealdb version - no capability change for

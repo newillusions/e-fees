@@ -92,6 +92,29 @@ Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md
 | Smoke tests | `/smoke-test` (Tauri MCP, app must be running) |
 | Ship pipeline | `/sendit` (review → test → bump → tag → CI → verify) |
 
+## Proposal rendering (fp-template)
+
+A fee record becomes a proposal PDF through fp-template. The PDF step has two
+backends and the environment picks one:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FP_TEMPLATE_ROOT` | none | fp-template checkout. Required by BOTH backends (`fill.py` and the three gates live there). Unset gives 503. |
+| `GOTENBERG_URL` | none | Set = render through gotenberg over HTTP. Unset = local `render.sh` and a local headless Chrome. No host default. Production value: `http://10.0.21.83:3000`. |
+| `GOTENBERG_TIMEOUT_SECS` | `60` | Per-request budget. |
+| `GOTENBERG_TAGGED_PDF` | `true` | Send `generateTaggedPdf`, matching local Chromium. |
+
+`POST /fees/{id}/fp-proposal` answers 422 when the document itself cannot be
+issued or rendered as written (a blocked gate, a manifest failure, a missing or
+colliding asset, a bundle gotenberg rejects) and 503 when the backend is
+unconfigured or unavailable. The gates run on the HTML BEFORE the render, so a
+blocked document never reaches a renderer.
+
+The image bakes fp-template in at the commit pinned in
+`e-fees-api/fp-template.ref`; run `scripts/vendor-fp-template.sh` before
+`docker build`. Full detail, including the browser the FILL step still needs:
+[FP-TEMPLATE-INTEGRATION.md](./docs/development/FP-TEMPLATE-INTEGRATION.md).
+
 ## Known Scalability Limits
 1. **Database mutex** - `src-tauri/src/db/mod.rs` serializes DB operations (RwLock today; revisit if concurrency grows).
 2. **Client-side joins** - `src/lib/stores.ts` joins company names in the frontend (O(1) Map lookups today; revisit at larger datasets).

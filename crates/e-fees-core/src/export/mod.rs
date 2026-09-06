@@ -6,6 +6,7 @@
 pub mod fee_template;
 pub mod fp_manifest;
 pub mod fp_render;
+pub mod gotenberg;
 pub mod indesign_workbook;
 
 use chrono::Utc;

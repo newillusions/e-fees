@@ -3,7 +3,7 @@
 //! This is the read-only, orchestrator-runnable path for the fp-template
 //! integration: it reads one fee (plus its project/company/contact) from the
 //! database, writes the two files fp-template's fill engine needs, and can then
-//! drive `fill.py` + `render.sh` to produce the proposal PDF.
+//! drive `fill.py` plus a PDF renderer to produce the proposal.
 //!
 //! ```text
 //! cargo run -p e-fees-core --bin fp_export -- \
@@ -18,8 +18,12 @@
 //!   - with `--render`: `proposal.html` and `proposal.pdf`
 //!
 //! NEVER WRITES TO THE DATABASE. Rendering needs `FP_TEMPLATE_ROOT` (or
-//! `--fp-template-root`) pointing at an fp-template checkout, plus python3 and
-//! a headless Chrome on this host.
+//! `--fp-template-root`) pointing at an fp-template checkout, plus python3 on
+//! this host. The PDF itself comes from whichever backend the environment
+//! selects: set `GOTENBERG_URL` to render through a gotenberg service, leave it
+//! unset to use fp-template's `render.sh` and a local headless Chrome. Either
+//! way the FILL step still launches a browser through Playwright — see
+//! `export::fp_render`'s module docs.
 //!
 //! Credentials: `EFEES_SURREALDB_USER` / `EFEES_SURREALDB_PASS` env vars, the
 //! same pair the backfill binaries use. Never read from a file, never printed.

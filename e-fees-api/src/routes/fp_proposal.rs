@@ -9,12 +9,19 @@
 //!
 //! The manifest route is pure computation over records this API already
 //! serves, so it is always available. The render route shells out to
-//! fp-template's own `fill.py` and `render.sh`, which need python3, a headless
-//! Chrome, and a checkout of the template on the same host — none of which the
-//! `e-fees-api` container image carries today. When `FP_TEMPLATE_ROOT` is
-//! unset the route answers `503 Service Unavailable` with that reason rather
-//! than failing obscurely. Packaging the renderer is a deployment decision;
-//! see `e_fees_core::export::fp_render`'s module docs.
+//! fp-template's own `fill.py` (python3) and then produces the PDF through
+//! whichever backend the environment selects:
+//!
+//! | `GOTENBERG_URL` | Backend | Needs |
+//! |---|---|---|
+//! | set | gotenberg over HTTP | a reachable gotenberg service |
+//! | unset | fp-template's `render.sh` | a local headless Chrome |
+//!
+//! `FP_TEMPLATE_ROOT` is required either way — it is where `fill.py` and the
+//! three pre-issue gates live. When it is unset the route answers `503
+//! Service Unavailable` with that reason rather than failing obscurely; see
+//! `e_fees_core::export::fp_render`'s module docs for the remaining
+//! browser dependency in the fill step.
 //!
 //! Neither route writes to the database, and neither writes into the Nextcloud
 //! project folder — that is `fee_export.rs`'s job and stays there.
@@ -33,8 +40,8 @@ use tracing::{info, warn};
 
 use e_fees_core::export::fp_manifest::{build_fp_manifest, FpManifestOptions, FpNarrative};
 use e_fees_core::export::fp_render::{
-    build_proposal_pdf_gated, FpRenderConfig, FpRenderError, GateBlock, GateReport,
-    GatedRenderError, FP_TEMPLATE_ROOT_ENV,
+    build_proposal_pdf_gated_with, select_renderer, FpRenderConfig, FpRenderError, GateBlock,
+    GateReport, GatedRenderError, FP_TEMPLATE_ROOT_ENV,
 };
 use e_fees_core::export::{build_fee_json, clean_number_for_path};
 
@@ -205,11 +212,13 @@ pub async fn render_fp_proposal(
     let residual_count = manifest.residuals.len();
     let work_dir_for_task = work_dir.clone();
 
-    // fill.py + headless Chrome are blocking and slow; keep them off the async
-    // runtime's worker threads. The gate runs inside the same task, so a
-    // document that must not be issued never becomes a response body.
-    let render =
-        tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, GateReport), GatedRenderError> {
+    // fill.py and the render (a local browser, or a blocking HTTP call to
+    // gotenberg) are slow; keep them off the async runtime's worker threads.
+    // The gate runs inside the same task and BEFORE the render, so a document
+    // that must not be issued never becomes a response body — and never
+    // leaves this host when the backend is remote.
+    let render = tokio::task::spawn_blocking(
+        move || -> Result<(Vec<u8>, GateReport, &'static str), GatedRenderError> {
             let write = |path: std::path::PathBuf, body: String| -> Result<(), FpRenderError> {
                 std::fs::write(path, body)?;
                 Ok(())
@@ -226,17 +235,25 @@ pub async fn render_fp_proposal(
 
             let html_path = work_dir_for_task.join("proposal.html");
             let pdf_path = work_dir_for_task.join("proposal.pdf");
-            let built = build_proposal_pdf_gated(&config, &manifest_path, &html_path, &pdf_path)?;
+            let renderer = select_renderer(&config);
+            let built = build_proposal_pdf_gated_with(
+                &config,
+                renderer.as_ref(),
+                &manifest_path,
+                &html_path,
+                &pdf_path,
+            )?;
             let bytes = std::fs::read(&pdf_path)
                 .map_err(|e| GatedRenderError::Render(FpRenderError::Io(e)))?;
-            Ok((bytes, built.gates))
-        })
-        .await;
+            Ok((bytes, built.gates, built.backend))
+        },
+    )
+    .await;
 
     // Always clean up, whatever happened.
     let _ = std::fs::remove_dir_all(&work_dir);
 
-    let (pdf, gates) = match render {
+    let (pdf, gates, backend) = match render {
         Ok(Ok(ok)) => ok,
         Ok(Err(e)) => {
             warn!("fp proposal refused for fee {key}: {e}");
@@ -251,8 +268,8 @@ pub async fn render_fp_proposal(
     };
 
     info!(
-        "rendered fp proposal for fee {key} ({} bytes, {residual_count} residual(s), \
-         {} advisory issue-check hit(s))",
+        "rendered fp proposal for fee {key} via {backend} ({} bytes, \
+         {residual_count} residual(s), {} advisory issue-check hit(s))",
         pdf.len(),
         gates.issue_hits
     );
@@ -278,6 +295,11 @@ pub async fn render_fp_proposal(
     if let Ok(value) = HeaderValue::from_str(&gates.issue_hits.to_string()) {
         response.headers_mut().insert("x-fp-issue-hits", value);
     }
+    // Which backend produced this PDF, so a caller (or a support session) can
+    // tell a locally rendered document from a gotenberg one without guessing.
+    if let Ok(value) = HeaderValue::from_str(backend) {
+        response.headers_mut().insert("x-fp-render-backend", value);
+    }
     Ok(response)
 }
 
@@ -287,6 +309,12 @@ pub async fn render_fp_proposal(
 /// or invalid template checkout is 503, because it is this host's configuration
 /// and not the caller's request. Everything else (a fill failure, which is
 /// fp-template's manifest-check report) is 422 with the report verbatim.
+///
+/// Gotenberg splits the same way, and the split is measured rather than
+/// assumed (2026-09-06, gotenberg 8.36.0): a bundle it cannot accept answers
+/// `400 Invalid form data: ...`, which is OUR malformed request and therefore
+/// 422; a connection failure, a timeout, or any other non-2xx means the
+/// service is unavailable and is 503, exactly like an unconfigured backend.
 pub(crate) fn render_error_to_api(e: GatedRenderError) -> ApiError {
     match e {
         GatedRenderError::Gate(block) => match block {
@@ -297,6 +325,13 @@ pub(crate) fn render_error_to_api(e: GatedRenderError) -> ApiError {
         GatedRenderError::Render(
             err @ (FpRenderError::NotConfigured | FpRenderError::TemplateRootInvalid { .. }),
         ) => ApiError::service_unavailable(err.to_string()),
+        GatedRenderError::Render(FpRenderError::Gotenberg(g)) => {
+            if g.is_caller_fault() {
+                ApiError::unprocessable(g.to_string())
+            } else {
+                ApiError::service_unavailable(g.to_string())
+            }
+        }
         GatedRenderError::Render(other) => ApiError::unprocessable(other.to_string()),
     }
 }
@@ -318,6 +353,7 @@ mod tests {
     use super::*;
     use e_fees_core::export::fp_manifest::INCOMPLETE_MARKER;
     use e_fees_core::export::fp_render::{classify_gates, GateBlock};
+    use e_fees_core::export::gotenberg::GotenbergError;
 
     fn issue_failure(stdout: &str) -> FpRenderError {
         FpRenderError::Failed {
@@ -426,6 +462,98 @@ mod tests {
         }));
         assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert!(err.message.contains("no '## areas' body block"));
+    }
+
+    // ---- gotenberg backend mapping ----
+
+    #[test]
+    fn a_gotenberg_rejection_is_422_because_our_bundle_was_wrong() {
+        // Measured shape: gotenberg answers 400 with this exact text when the
+        // upload carries no index.html member.
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::BadRequest {
+                status: 400,
+                body: "Invalid form data: form file 'index.html' is required".into(),
+            },
+        )));
+        assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(err.message.contains("index.html"), "{}", err.message);
+    }
+
+    #[test]
+    fn an_unreachable_gotenberg_is_503_not_422() {
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::Transport {
+                url: "http://10.0.23.31:3000/forms/chromium/convert/html".into(),
+                message: "connection refused".into(),
+            },
+        )));
+        assert_eq!(err.status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(err.message.contains("did not answer"), "{}", err.message);
+    }
+
+    #[test]
+    fn a_gotenberg_server_error_is_503() {
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::Status {
+                status: 500,
+                body: "chromium failed".into(),
+            },
+        )));
+        assert_eq!(err.status, StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn a_missing_asset_is_422_naming_the_reference() {
+        // The document is unrenderable as written; the caller sees which
+        // reference could not be resolved, never a silent blank page.
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::AssetMissing {
+                referrer: "/tmp/efees-fp-26-97109/proposal.html".into(),
+                reference: "../../assets/logo white.svg".into(),
+            },
+        )));
+        assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(err.message.contains("logo white.svg"), "{}", err.message);
+    }
+
+    #[test]
+    fn a_reference_escaping_the_allowed_roots_is_422_and_names_no_host_path() {
+        // The document asked for a file outside the template and working
+        // directories. It is refused before the file is read, and the caller
+        // sees the reference, never the container's directory layout.
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::EscapesRoot {
+                referrer: "proposal.html".into(),
+                reference: "../../../../etc/hosts".into(),
+            },
+        )));
+        assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(
+            err.message.contains("../../../../etc/hosts"),
+            "{}",
+            err.message
+        );
+        assert!(err.message.contains("refused"), "{}", err.message);
+        assert!(
+            !err.message.contains("/tmp/") && !err.message.contains("/var/folders"),
+            "no absolute host path may reach the caller: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn an_oversized_bundle_is_422_not_503() {
+        // Our document is too big to send; that is the request's problem, not
+        // the service's.
+        let err = render_error_to_api(GatedRenderError::Render(FpRenderError::Gotenberg(
+            GotenbergError::BundleTooLarge {
+                bytes: 40_000_000,
+                limit: 26_214_400,
+            },
+        )));
+        assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(err.message.contains("nothing was sent"), "{}", err.message);
     }
 
     #[test]
