@@ -39,27 +39,14 @@ jobs:
       - name: Install Docker CLI
         run: apt-get update -qq && apt-get install -y -qq docker.io > /dev/null 2>&1 && docker info --format '{{.ServerVersion}}'
 
-      # e-fees-api's image bakes in fp-template (the proposal fill engine and
-      # its three pre-issue gates) at the commit pinned in
-      # e-fees-api/fp-template.ref. It lives in the PRIVATE emittiv/gtm repo,
-      # so the clone happens here with a token rather than inside the
-      # Dockerfile, where a build ARG would survive in the image history.
-      #
-      # FORGEJO_TOKEN needs read access to emittiv/gtm. If the secret is
-      # absent this step fails with that message rather than producing an
-      # image whose proposal route is silently unavailable.
-      - name: Vendor fp-template
-        if: matrix.service == 'e-fees-api'
-        env:
-          FORGEJO_TOKEN: ${{ secrets.GTM_READ_TOKEN }}
-        run: |
-          set -e
-          apt-get install -y -qq git > /dev/null 2>&1 || true
-          if [ -z "${FORGEJO_TOKEN}" ]; then
-            echo "ERROR: secret GTM_READ_TOKEN is not set; it needs read access to emittiv/gtm" >&2
-            exit 1
-          fi
-          bash scripts/vendor-fp-template.sh
+      # e-fees-api no longer bakes fp-template into its image (removed
+      # 2026-09-06, docbuilder client): production proposal rendering goes to
+      # the remote fp-docbuilder service via DOCBUILDER_URL, so this build
+      # needs no python3, no vendored template checkout, and no read access to
+      # the private emittiv/gtm repo. The GTM_READ_TOKEN secret this step used
+      # to require is therefore unused by this workflow; it is left registered
+      # in Forgejo in case a future local/gotenberg-mode image build needs it
+      # again (scripts/vendor-fp-template.sh still exists for that).
 
       - name: Login to registry
         if: github.ref == 'refs/heads/main'

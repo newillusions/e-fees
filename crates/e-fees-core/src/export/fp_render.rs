@@ -40,11 +40,22 @@
 //! remote or cached mode, and raises rather than guessing. So an image built
 //! with python3 and no browser can serve the manifest route and run the gates,
 //! but `fill.py` will fail — see `docs/development/FP-TEMPLATE-INTEGRATION.md`.
+//!
+//! # A third option: skip this driver entirely
+//!
+//! Everything above is the LOCAL pipeline: this process runs `fill.py`, the
+//! three gates, and a PDF renderer, in that order. [`ProposalBuilder`] and its
+//! only implementation, [`DocbuilderRenderer`], are a wholly separate seam for
+//! a REMOTE pipeline: the fp-docbuilder service owns fill, gate, and render
+//! together, so a caller using it never touches [`FpRenderConfig`],
+//! `fill.py`, or a browser at all. [`select_proposal_backend`] is the single
+//! decision point between the two, keyed on `DOCBUILDER_URL`.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::export::docbuilder::{DocbuilderClient, DocbuilderConfig};
 use crate::export::gotenberg::{GotenbergConfig, GotenbergError, GotenbergRenderer};
 
 /// Environment variable naming the fp-template checkout to render with.
@@ -387,6 +398,136 @@ pub fn select_renderer(config: &FpRenderConfig) -> Box<dyn ProposalPdfRenderer> 
     }
 }
 
+// ============================================================================
+// REMOTE PROPOSAL BUILD (docbuilder) — a second, independent seam
+// ============================================================================
+
+/// Builds a full, gated proposal PDF directly from manifest markdown.
+///
+/// Unlike [`ProposalPdfRenderer`] (HTML in, PDF out — fill and gate stay in
+/// THIS process), a [`ProposalBuilder`] owns fill, gate, and render together.
+/// [`DocbuilderRenderer`] is the only implementation: the fp-docbuilder
+/// service does all three steps remotely, so a caller using it needs no
+/// `FP_TEMPLATE_ROOT`, no python3, and no local browser.
+pub trait ProposalBuilder: Send + Sync {
+    /// `vars_filename` MUST match the manifest frontmatter's `vars_source`
+    /// exactly — the only current implementation ([`DocbuilderRenderer`])
+    /// sends it as a second multipart part under that name.
+    fn build(
+        &self,
+        manifest_markdown: &str,
+        vars_json: &str,
+        vars_filename: &str,
+        output_filename: Option<&str>,
+    ) -> Result<ProposalBuildOutput, ProposalBuildError>;
+    /// Short name for logs and the `x-fp-render-backend` response header.
+    fn backend(&self) -> &'static str;
+}
+
+/// What a successful remote proposal build produced.
+#[derive(Debug, Clone)]
+pub struct ProposalBuildOutput {
+    pub pdf: Vec<u8>,
+    pub backend: &'static str,
+    /// Advisory issue-check hit count, mirroring [`GateReport::issue_hits`] —
+    /// 0 when the gate ran clean or the backend reports none.
+    pub issue_hits: usize,
+}
+
+/// Why a remote proposal build failed, deliberately as narrow as
+/// [`GatedRenderError`]'s two cases so a caller maps both the same way.
+#[derive(Debug)]
+pub enum ProposalBuildError {
+    /// The document must not be issued. Carries the service's own report.
+    Blocked(String),
+    /// The service is unavailable, misconfigured, or failed to render.
+    Unavailable(String),
+}
+
+impl std::fmt::Display for ProposalBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProposalBuildError::Blocked(msg) => write!(f, "{msg}"),
+            ProposalBuildError::Unavailable(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+impl std::error::Error for ProposalBuildError {}
+
+/// Renders a proposal end to end via a remote fp-docbuilder service.
+#[derive(Debug, Clone)]
+pub struct DocbuilderRenderer {
+    client: DocbuilderClient,
+}
+
+impl DocbuilderRenderer {
+    pub fn new(config: DocbuilderConfig) -> Self {
+        Self {
+            client: DocbuilderClient::new(config),
+        }
+    }
+}
+
+impl ProposalBuilder for DocbuilderRenderer {
+    fn build(
+        &self,
+        manifest_markdown: &str,
+        vars_json: &str,
+        vars_filename: &str,
+        output_filename: Option<&str>,
+    ) -> Result<ProposalBuildOutput, ProposalBuildError> {
+        match self.client.render_proposal(
+            manifest_markdown,
+            vars_json,
+            vars_filename,
+            output_filename,
+            Some(self.client.config().tagged),
+        ) {
+            Ok(out) => {
+                let issue_hits = out.issue_hits();
+                Ok(ProposalBuildOutput {
+                    pdf: out.pdf,
+                    backend: "docbuilder",
+                    issue_hits,
+                })
+            }
+            Err(e) if e.is_caller_fault() => Err(ProposalBuildError::Blocked(e.to_string())),
+            Err(e) => Err(ProposalBuildError::Unavailable(e.to_string())),
+        }
+    }
+
+    fn backend(&self) -> &'static str {
+        "docbuilder"
+    }
+}
+
+/// Either backend a caller may build a proposal through, chosen once by
+/// [`select_proposal_backend`].
+pub enum ProposalBackend {
+    /// The remote fp-docbuilder service — production. Owns fill, gate, and
+    /// render; the caller supplies only manifest markdown.
+    Docbuilder(DocbuilderRenderer),
+    /// The local fill+gate+render pipeline in this module — development-only,
+    /// or any host that has `FP_TEMPLATE_ROOT` and (for `LocalChromiumRenderer`)
+    /// a browser.
+    Local(FpRenderConfig),
+}
+
+/// Choose how a caller should build a proposal PDF: the remote docbuilder
+/// service when `DOCBUILDER_URL` is set, else the local pipeline when
+/// `FP_TEMPLATE_ROOT` is set, else `None` ("not configured").
+///
+/// `DOCBUILDER_URL` takes priority: it names the production path, and when it
+/// is set the caller need not have `FP_TEMPLATE_ROOT` at all (see
+/// `e-fees-api`'s Dockerfile and `docs/development/FP-TEMPLATE-INTEGRATION.md`).
+pub fn select_proposal_backend() -> Option<ProposalBackend> {
+    if let Some(config) = DocbuilderConfig::from_env() {
+        return Some(ProposalBackend::Docbuilder(DocbuilderRenderer::new(config)));
+    }
+    FpRenderConfig::from_env().map(ProposalBackend::Local)
+}
+
 /// One of fp-template's read-only pre-issue gates.
 #[derive(Debug, Clone, Copy)]
 pub enum FpGate {
@@ -705,6 +846,87 @@ pub fn build_proposal_pdf_gated_with(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    /// A minimal one-shot HTTP server for exercising [`DocbuilderRenderer`]
+    /// without a live service: binds an ephemeral port, accepts one
+    /// connection, and replies with a fixed response.
+    fn one_shot_server(response: Vec<u8>) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 8192];
+                let _ = stream.read(&mut buf);
+                let _ = stream.write_all(&response);
+                let _ = stream.flush();
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    fn json_response(status_line: &str, body: &[u8]) -> Vec<u8> {
+        let mut resp = format!(
+            "{status_line}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n",
+            body.len()
+        )
+        .into_bytes();
+        resp.extend_from_slice(body);
+        resp
+    }
+
+    #[test]
+    fn docbuilder_renderer_maps_a_blocked_stage_to_proposal_build_error_blocked() {
+        let addr = one_shot_server(json_response(
+            "HTTP/1.1 422 Unprocessable Entity",
+            br#"{"stage":"gate","blocked":true,"report":["quote-check failed"]}"#,
+        ));
+        let renderer = DocbuilderRenderer::new(DocbuilderConfig::new(addr));
+        let err = renderer
+            .build("# manifest", "{}", "vars.json", None)
+            .unwrap_err();
+        match err {
+            ProposalBuildError::Blocked(msg) => {
+                assert!(msg.contains("gate"), "{msg}");
+                assert!(msg.contains("quote-check failed"), "{msg}");
+            }
+            other => panic!("expected Blocked, got {other}"),
+        }
+    }
+
+    #[test]
+    fn docbuilder_renderer_maps_a_render_failure_to_proposal_build_error_unavailable() {
+        let addr = one_shot_server(json_response(
+            "HTTP/1.1 503 Service Unavailable",
+            br#"{"stage":"render","error":"chromium crashed"}"#,
+        ));
+        let renderer = DocbuilderRenderer::new(DocbuilderConfig::new(addr));
+        let err = renderer
+            .build("# manifest", "{}", "vars.json", None)
+            .unwrap_err();
+        match err {
+            ProposalBuildError::Unavailable(msg) => assert!(msg.contains("chromium crashed")),
+            other => panic!("expected Unavailable, got {other}"),
+        }
+    }
+
+    #[test]
+    fn docbuilder_renderer_build_propagates_pdf_backend_and_issue_hits() {
+        let mut resp = b"HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\n\
+            X-Docbuilder-Gates: advisory:2\r\nContent-Length: 9\r\n\r\n"
+            .to_vec();
+        resp.extend_from_slice(b"%PDF-fake");
+        let addr = one_shot_server(resp);
+        let renderer = DocbuilderRenderer::new(DocbuilderConfig::new(addr));
+        let output = renderer
+            .build("# manifest", "{}", "vars.json", Some("job-FP.pdf"))
+            .unwrap();
+        assert_eq!(output.pdf, b"%PDF-fake");
+        assert_eq!(output.backend, "docbuilder");
+        assert_eq!(output.issue_hits, 2);
+        assert_eq!(renderer.backend(), "docbuilder");
+    }
 
     #[test]
     fn missing_root_is_reported_not_guessed() {
@@ -929,5 +1151,62 @@ mod tests {
         assert_eq!(FpGate::Issue.flag(), "--issue-check");
         assert_eq!(FpGate::Column.flag(), "--column-check");
         assert_eq!(FpGate::Quote.flag(), "--quote-check");
+    }
+
+    // ---- select_proposal_backend: env precedence ----
+
+    /// Guards the three env-mutating assertions below. No other test in this
+    /// crate reads or writes `DOCBUILDER_URL`/`FP_TEMPLATE_ROOT`, but a mutex
+    /// makes that an enforced invariant of THIS test rather than a
+    /// coincidence that a future test could silently break under parallel
+    /// execution.
+    static BACKEND_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn select_proposal_backend_prefers_docbuilder_over_local() {
+        use crate::export::docbuilder::DOCBUILDER_URL_ENV;
+
+        let _guard = BACKEND_ENV_LOCK.lock().unwrap();
+        // SAFETY: serialised by BACKEND_ENV_LOCK above; no other test touches
+        // these two variables.
+        unsafe {
+            std::env::remove_var(DOCBUILDER_URL_ENV);
+            std::env::remove_var(FP_TEMPLATE_ROOT_ENV);
+        }
+        assert!(
+            select_proposal_backend().is_none(),
+            "neither env var set must be None (\"not configured\")"
+        );
+
+        unsafe {
+            std::env::set_var(FP_TEMPLATE_ROOT_ENV, "/tmp/efees-test-fp-template-root");
+        }
+        assert!(
+            matches!(select_proposal_backend(), Some(ProposalBackend::Local(_))),
+            "FP_TEMPLATE_ROOT alone must select the local pipeline"
+        );
+
+        unsafe {
+            std::env::set_var(DOCBUILDER_URL_ENV, "http://127.0.0.1:1");
+        }
+        assert!(
+            matches!(
+                select_proposal_backend(),
+                Some(ProposalBackend::Docbuilder(_))
+            ),
+            "DOCBUILDER_URL must take priority when both are set"
+        );
+
+        unsafe {
+            std::env::remove_var(DOCBUILDER_URL_ENV);
+        }
+        assert!(
+            matches!(select_proposal_backend(), Some(ProposalBackend::Local(_))),
+            "clearing DOCBUILDER_URL must fall back to the still-set FP_TEMPLATE_ROOT"
+        );
+
+        unsafe {
+            std::env::remove_var(FP_TEMPLATE_ROOT_ENV);
+        }
     }
 }

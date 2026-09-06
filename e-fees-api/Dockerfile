@@ -32,32 +32,25 @@ RUN cargo build --release -p e-fees-api
 # Runtime stage
 FROM debian:trixie-slim
 
-# python3 + pyyaml + beautifulsoup4 are fp-template's own toolchain: fill.py
-# builds the proposal HTML, and issue-check/column-check/quote-check are the
-# three pre-issue gates. All four are pure HTML/DOM python and need no browser.
+# NO python3, NO fp-template checkout, NO browser in this image (dropped
+# 2026-09-06 with the docbuilder client). Proposal rendering in production
+# goes to the remote fp-docbuilder service via DOCBUILDER_URL
+# (see crates/e-fees-core/src/export/docbuilder.rs): that service owns
+# fill.py, the three pre-issue gates, and the renderer end to end, so this
+# host needs none of fp-template's own toolchain.
 #
-# There is deliberately NO Chromium here. PDF rendering goes to the gotenberg
-# service named by GOTENBERG_URL (see e_fees_core::export::gotenberg), which is
-# the whole point of this image: no 400 MB browser, no per-container Chromium
-# to patch. The consequence is named in FP-TEMPLATE-INTEGRATION.md rather than
-# hidden: fp-template's engine/measure.py still launches a local Chromium via
-# Playwright during the FILL step, so until that gains a remote backend the
-# render route in THIS image answers 422 with the fill failure. The manifest
-# route, and every other route, is unaffected.
+# The local fill+gate+render pipeline (e_fees_core::export::fp_render,
+# FP_TEMPLATE_ROOT, GOTENBERG_URL) is unchanged in the code and still exercised
+# by tests, but is DEV-ONLY as of this image: without python3 or a vendored
+# fp-template checkout here, FP_TEMPLATE_ROOT can never be set on this
+# container, so `select_proposal_backend` always resolves to the docbuilder
+# path when DOCBUILDER_URL is set, and to "not configured" (503) otherwise.
+# See docs/development/FP-TEMPLATE-INTEGRATION.md.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates openssh-client \
-      python3 python3-yaml python3-bs4 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/e-fees-api /usr/local/bin/
-
-# fp-template, vendored at the commit pinned in e-fees-api/fp-template.ref.
-# The build context must already carry it: run scripts/vendor-fp-template.sh
-# first (CI does this in .forgejo/workflows/build-containers.yml). A missing
-# directory fails the build here, which is the intended loud failure - an image
-# without the template would 503 on every proposal render for no visible reason.
-COPY .vendor/fp-template /opt/fp-template
-ENV FP_TEMPLATE_ROOT=/opt/fp-template
 
 WORKDIR /data
 

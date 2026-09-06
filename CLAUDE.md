@@ -92,27 +92,33 @@ Follow [WORKSPACE_STANDARDS.md](/Volumes/base/dev/.claude/WORKSPACE_STANDARDS.md
 | Smoke tests | `/smoke-test` (Tauri MCP, app must be running) |
 | Ship pipeline | `/sendit` (review → test → bump → tag → CI → verify) |
 
-## Proposal rendering (fp-template)
+## Proposal rendering (fp-docbuilder / fp-template)
 
-A fee record becomes a proposal PDF through fp-template. The PDF step has two
-backends and the environment picks one:
+A fee record becomes a proposal PDF through one of two backends, chosen once
+by `export::fp_render::select_proposal_backend`:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `FP_TEMPLATE_ROOT` | none | fp-template checkout. Required by BOTH backends (`fill.py` and the three gates live there). Unset gives 503. |
-| `GOTENBERG_URL` | none | Set = render through gotenberg over HTTP. Unset = local `render.sh` and a local headless Chrome. No host default. Production value: `http://10.0.21.83:3000`. |
+| `DOCBUILDER_URL` | none | Set = **production path**: POST the manifest to the remote fp-docbuilder service, which owns fill, gate, and render end to end. No `FP_TEMPLATE_ROOT`, python3, or browser needed on this host. Value once deployed: `http://10.0.21.85:8080`. |
+| `DOCBUILDER_TOKEN` | none | Bearer token sent with every docbuilder request, when set. |
+| `FP_TEMPLATE_ROOT` | none | **Local pipeline only** (ignored when `DOCBUILDER_URL` is set). fp-template checkout; `fill.py` and the three gates live there. Both unset gives 503. |
+| `GOTENBERG_URL` | none | **Local pipeline only.** Set = render through gotenberg over HTTP. Unset = local `render.sh` and a local headless Chrome. No host default. Value: `http://10.0.21.83:3000`. |
 | `GOTENBERG_TIMEOUT_SECS` | `60` | Per-request budget. |
 | `GOTENBERG_TAGGED_PDF` | `true` | Send `generateTaggedPdf`, matching local Chromium. |
 
 `POST /fees/{id}/fp-proposal` answers 422 when the document itself cannot be
 issued or rendered as written (a blocked gate, a manifest failure, a missing or
-colliding asset, a bundle gotenberg rejects) and 503 when the backend is
-unconfigured or unavailable. The gates run on the HTML BEFORE the render, so a
-blocked document never reaches a renderer.
+colliding asset, a bundle the backend rejects) and 503 when the backend is
+unconfigured or unavailable. Gating always happens before rendering, so a
+blocked document never becomes a PDF.
 
-The image bakes fp-template in at the commit pinned in
-`e-fees-api/fp-template.ref`; run `scripts/vendor-fp-template.sh` before
-`docker build`. Full detail, including the browser the FILL step still needs:
+As of 2026-09-06 the `e-fees-api` image carries no python3, no vendored
+fp-template checkout, and no browser — the local pipeline (`FP_TEMPLATE_ROOT`,
+`GOTENBERG_URL`) is code-complete and tested but development-only now.
+`scripts/vendor-fp-template.sh` / `e-fees-api/fp-template.ref` still work for
+that dev path; they are no longer part of the image build. Full detail,
+including the docbuilder contract and the browser the local pipeline's FILL
+step still needs:
 [FP-TEMPLATE-INTEGRATION.md](./docs/development/FP-TEMPLATE-INTEGRATION.md).
 
 ## Known Scalability Limits
@@ -120,5 +126,5 @@ The image bakes fp-template in at the commit pinned in
 2. **Client-side joins** - `src/lib/stores.ts` joins company names in the frontend (O(1) Map lookups today; revisit at larger datasets).
 
 ---
-**Last Updated**: 2026-09-04 (docs review - fee revisions, historical backfill (P0-P2) and win-ratio report all merged and prod-verified; PR #47 fp-template rendering integration open)
+**Last Updated**: 2026-09-06 (docbuilder client - production proposal rendering moved to the remote fp-docbuilder service via DOCBUILDER_URL; local fill+gate+render pipeline kept as a dev-only fallback; e-fees-api image no longer bakes in python3/fp-template)
 **Version**: 0.18.1

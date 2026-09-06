@@ -4,7 +4,29 @@
 
 How a fee record becomes a rendered proposal, without InDesign.
 
-## The pipeline
+## Two proposal backends: the remote service, and the local pipeline
+
+As of 2026-09-06, `POST /fees/{id}/fp-proposal` builds through ONE of two
+backends, chosen once by `export::fp_render::select_proposal_backend`:
+
+| `DOCBUILDER_URL` | Backend | This host needs |
+|---|---|---|
+| set | the remote **fp-docbuilder service** | a reachable docbuilder service only — no `FP_TEMPLATE_ROOT`, no python3, no browser |
+| unset | the **local pipeline** below (`FP_TEMPLATE_ROOT` required) | `FP_TEMPLATE_ROOT`, python3, and (unless `GOTENBERG_URL` is also set) a local headless Chrome |
+
+`DOCBUILDER_URL` takes priority and is the **production path**: the
+fp-docbuilder service (gtm repo) owns fill, the three pre-issue gates, and
+rendering end to end, so `e-fees-api` builds only the manifest
+(`export::fp_manifest`, pure Rust — no I/O) and POSTs it. The `e-fees-api`
+image no longer carries python3 or a vendored fp-template checkout at all
+(dropped with the docbuilder client) — see "Building the image" below.
+
+The **local pipeline** (this file's original subject, `GOTENBERG_URL` set or
+not) remains in the code, still compiled and tested, as the **development-only**
+fallback for a host that has `FP_TEMPLATE_ROOT` (and, without `GOTENBERG_URL`,
+a browser). It is documented in full below.
+
+## The local pipeline
 
 ```
 fee + project + company + contact
@@ -19,10 +41,11 @@ The first two files must sit in the same directory: fp-template resolves the
 manifest's `vars_source` relative to the manifest itself.
 
 The gates run BEFORE the render, not after. A document that must not be issued
-therefore never reaches a renderer, and with the remote backend it never leaves
-this host.
+therefore never reaches a renderer, and with the remote gotenberg backend it
+never leaves this host. (The docbuilder path above gates on the SERVICE side,
+before it ever answers — see the docbuilder contract further down.)
 
-## Render backends
+## Render backends (local pipeline)
 
 | `GOTENBERG_URL` | Backend | Needs |
 |---|---|---|
@@ -38,8 +61,12 @@ some address".
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `FP_TEMPLATE_ROOT` | none | fp-template checkout. Required by BOTH backends: `fill.py` and the gates live there. Unset gives 503. |
-| `GOTENBERG_URL` | none | Base URL. Set = use gotenberg. **Production value: `http://10.0.21.83:3000`** (gotenberg-ai, on the AI host). |
+| `DOCBUILDER_URL` | none | Base URL of the remote fp-docbuilder service. Set = production path, everything below this row is unused. **Production value: `http://10.0.21.85:8080`** (once deployed). |
+| `DOCBUILDER_TOKEN` | none | Bearer token sent with every docbuilder request, when set. |
+| `DOCBUILDER_TIMEOUT_SECS` | `120` | Per-request budget for the docbuilder client. |
+| `DOCBUILDER_TAGGED_PDF` | `true` | Sent as the `tagged` query parameter on every request, matching the local pipeline's `GOTENBERG_TAGGED_PDF` default. |
+| `FP_TEMPLATE_ROOT` | none | fp-template checkout, LOCAL PIPELINE ONLY (ignored when `DOCBUILDER_URL` is set). Required by both local backends: `fill.py` and the gates live there. Unset (with `DOCBUILDER_URL` also unset) gives 503. |
+| `GOTENBERG_URL` | none | Base URL, LOCAL PIPELINE ONLY. Set = use gotenberg. **Value: `http://10.0.21.83:3000`** (gotenberg-ai, on the AI host). |
 | `GOTENBERG_TIMEOUT_SECS` | `60` | Per-request budget. |
 | `GOTENBERG_TAGGED_PDF` | `true` | Send `generateTaggedPdf`, matching local Chromium's tagged output. |
 | `GOTENBERG_MAX_BUNDLE_BYTES` | `26214400` (25 MiB) | Refuse to upload a flattened bundle larger than this. |
@@ -101,13 +128,16 @@ A successful response carries `x-fp-render-backend: gotenberg` (or
 | Piece | Where |
 |---|---|
 | Manifest builder (pure, tested) | `crates/e-fees-core/src/export/fp_manifest.rs` |
-| Render driver, backend selection, gates | `crates/e-fees-core/src/export/fp_render.rs` |
-| Gotenberg client + asset flattening | `crates/e-fees-core/src/export/gotenberg.rs` |
-| Live end-to-end test (env gated) | `crates/e-fees-core/tests/fp_gotenberg_live.rs` |
+| Docbuilder client (production backend) | `crates/e-fees-core/src/export/docbuilder.rs` |
+| Live end-to-end test against docbuilder (env gated) | `crates/e-fees-core/tests/fp_docbuilder_live.rs` |
+| Render driver, backend selection, gates (local pipeline) | `crates/e-fees-core/src/export/fp_render.rs` |
+| Gotenberg client + asset flattening (local pipeline) | `crates/e-fees-core/src/export/gotenberg.rs` |
+| Live end-to-end test against gotenberg (env gated) | `crates/e-fees-core/tests/fp_gotenberg_live.rs` |
 | CLI (read-only, DB to PDF) | `crates/e-fees-core/src/bin/fp_export.rs` |
 | API routes | `e-fees-api/src/routes/fp_proposal.rs` |
-| Template + fill engine | gtm repo, `fp-template/` (also packaged as `emittiv/fp-template`) |
-| Image vendoring script + pinned commit | `scripts/vendor-fp-template.sh`, `e-fees-api/fp-template.ref` |
+| fp-docbuilder service | gtm repo, `fp-docbuilder-service/` |
+| Template + fill engine (local pipeline only) | gtm repo, `fp-template/` (also packaged as `emittiv/fp-template`) |
+| Local-pipeline vendoring script + pinned commit (dev-only, no longer used by the image build) | `scripts/vendor-fp-template.sh`, `e-fees-api/fp-template.ref` |
 | Vendored section-ID contract | `crates/e-fees-core/src/resources/fp_section_inventory.json` |
 
 ## Using it
@@ -129,10 +159,10 @@ API: `GET /fees/{id}/fp-manifest` (always available) and
 
 | Status | When |
 |---|---|
-| `200 application/pdf` | rendered AND passed the release gate |
-| `422` | the gate blocked it, or the manifest failed fp-template's own check. Body carries the gate's report verbatim. Never a PDF. |
+| `200 application/pdf` | rendered AND passed the release gate (either backend) |
+| `422` | the gate blocked it, or the manifest failed fp-template's own check. Body carries the gate's (or docbuilder's) report verbatim. Never a PDF. |
 | `404` | fee or a linked project/company/contact missing |
-| `503` | `FP_TEMPLATE_ROOT` unset or not an fp-template checkout, or the gotenberg backend is unreachable or failing |
+| `503` | neither `DOCBUILDER_URL` nor `FP_TEMPLATE_ROOT` is set; `FP_TEMPLATE_ROOT` is set but not an fp-template checkout; or the selected backend (docbuilder or gotenberg) is unreachable or failing |
 
 To render through gotenberg from the CLI, set the same variables:
 
@@ -144,24 +174,28 @@ FP_TEMPLATE_ROOT=/path/to/gtm/fp-template GOTENBERG_URL=http://10.0.21.83:3000 \
 
 ## Building the image
 
-The `e-fees-api` image bakes fp-template in at the commit pinned in
-`e-fees-api/fp-template.ref`. Vendor it into the build context first:
+As of 2026-09-06 the `e-fees-api` image carries **no** python3, no vendored
+fp-template checkout, and no browser — production rendering goes to the
+remote fp-docbuilder service via `DOCBUILDER_URL`. Building the image is now
+plain `docker build`, with no vendoring step and no `emittiv/gtm` access
+needed:
 
 ```bash
-scripts/vendor-fp-template.sh          # writes .vendor/fp-template (gitignored)
 docker build -f e-fees-api/Dockerfile -t e-fees-api .
 ```
 
-CI runs the same script (`.forgejo/workflows/build-containers.yml`). It needs
-the `GTM_READ_TOKEN` secret, because `emittiv/gtm` is private; the token
-stays in the build environment and never reaches an image layer. A submodule
-is not an option (fp-template is a subdirectory of another repository) and an
-in-Dockerfile clone is not either (the credential would survive in the image
-history).
+CI (`.forgejo/workflows/build-containers.yml`) dropped its "Vendor
+fp-template" step accordingly. The `GTM_READ_TOKEN` secret that step used is
+therefore **unused by this workflow now**; it is left registered in case a
+future local/gotenberg-mode image build needs it again.
 
-To move the pin: put a new full 40-character `emittiv/gtm` commit sha in
-`e-fees-api/fp-template.ref`, re-run the script, and re-run the live test
-below against the vendored tree.
+`scripts/vendor-fp-template.sh` and `e-fees-api/fp-template.ref` are unchanged
+and still work exactly as before — they are just no longer part of the image
+build. They remain useful for exercising the LOCAL pipeline: populate
+`.vendor/fp-template` and point `FP_TEMPLATE_ROOT` at it to run
+`fp_gotenberg_live.rs`, the `fp_export` CLI with `--render --gates`, or a
+locally-built image that still needs the old toolchain baked in (not the
+default `Dockerfile` any more — build a dev variant if this is needed).
 
 ## The release gate
 
@@ -183,6 +217,45 @@ never does, `INCOMPLETE_MARKER` ("TO BE COMPLETED"), found in the issue-check
 report. The full report travels with the decision either way, so a human can
 judge the remaining hits as `render.sh` intends. A gate we could not run counts
 as a block, never a pass.
+
+## The docbuilder client (production path)
+
+### The request is multipart, not a bare markdown body
+
+The manifest's YAML frontmatter carries `vars_source: {number}-var Default
+Values.json`, and both the local pipeline's `fill.py` and the docbuilder
+service resolve that path **relative to the manifest file itself** — a
+manifest sent alone can never resolve it, so a bare `text/markdown` body
+always 422s at stage `"manifest"`. The request is therefore
+`multipart/form-data` with exactly two file parts:
+
+| Part | Filename | Content |
+|---|---|---|
+| `manifest` | any (`manifest.md`) | the manifest markdown (`export::fp_manifest`) |
+| `vars` | MUST match the manifest frontmatter's `vars_source` exactly | the variables JSON (`export::build_fee_json`) |
+
+The service writes both into one temporary directory under their given
+filenames, so `vars_source` resolves the same way it does in the local
+pipeline's own scratch directory. Query params (`tagged`, `filename`),
+headers, and response codes are otherwise unchanged from the original design.
+`crates/e-fees-core/src/export/docbuilder.rs`'s module docs carry the full,
+current contract — this section is a summary, not the source of truth.
+
+### What is proven, and what is not
+
+Proven this session (2026-09-06), against a mock HTTP server, not a live
+docbuilder deployment (`fp-docbuilder-service` was being built in the gtm
+repo concurrently and was not yet reachable): the client sends the multipart
+request above with the right field names and filenames, `Authorization:
+Bearer` only when a token is configured, parses a `200` into PDF bytes plus
+its three headers, passes a `422` body's `stage` and `report` through
+verbatim, maps a `503` body's `error` through, times out on its own budget
+rather than hanging, and the same route-level wiring
+(`ProposalBuildError::Blocked` → 422, `::Unavailable` → 503) that the existing
+gotenberg path uses. `crates/e-fees-core/tests/fp_docbuilder_live.rs` exists
+for the real end-to-end check and is skipped (not failed) until
+`DOCBUILDER_URL` names a running instance — run it once the service is
+deployed, the same way `fp_gotenberg_live.rs` was proven on 2026-09-06.
 
 ## What is proven, and what is not
 

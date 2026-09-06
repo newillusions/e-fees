@@ -5,23 +5,25 @@
 //! | Route | Needs | Returns |
 //! |---|---|---|
 //! | `GET /fees/{id}/fp-manifest` | database only | the manifest markdown |
-//! | `POST /fees/{id}/fp-proposal` | database + a local fp-template checkout | `application/pdf` |
+//! | `POST /fees/{id}/fp-proposal` | database + a proposal backend | `application/pdf` |
 //!
 //! The manifest route is pure computation over records this API already
-//! serves, so it is always available. The render route shells out to
-//! fp-template's own `fill.py` (python3) and then produces the PDF through
-//! whichever backend the environment selects:
+//! serves (`export::fp_manifest`, no I/O), so it is always available. The
+//! render route builds the same manifest and hands it to whichever backend
+//! [`select_proposal_backend`] chose:
 //!
-//! | `GOTENBERG_URL` | Backend | Needs |
+//! | `DOCBUILDER_URL` | Backend | Needs |
 //! |---|---|---|
-//! | set | gotenberg over HTTP | a reachable gotenberg service |
-//! | unset | fp-template's `render.sh` | a local headless Chrome |
+//! | set | the remote fp-docbuilder service | a reachable docbuilder service; no `FP_TEMPLATE_ROOT`, no python3, no browser |
+//! | unset | the local fill+gate+render pipeline | `FP_TEMPLATE_ROOT`, python3, and (unless `GOTENBERG_URL` is also set) a local headless Chrome |
 //!
-//! `FP_TEMPLATE_ROOT` is required either way — it is where `fill.py` and the
-//! three pre-issue gates live. When it is unset the route answers `503
-//! Service Unavailable` with that reason rather than failing obscurely; see
-//! `e_fees_core::export::fp_render`'s module docs for the remaining
-//! browser dependency in the fill step.
+//! `DOCBUILDER_URL` is the production path: the service owns fill, the three
+//! pre-issue gates, and rendering end to end, so this deployment needs none of
+//! fp-template's own toolchain. The local pipeline (`GOTENBERG_URL` set or
+//! not) remains for development. When neither `DOCBUILDER_URL` nor
+//! `FP_TEMPLATE_ROOT` is set the route answers `503 Service Unavailable`
+//! rather than failing obscurely; see `e_fees_core::export::fp_render`'s
+//! module docs for the remaining local-browser dependency in the fill step.
 //!
 //! Neither route writes to the database, and neither writes into the Nextcloud
 //! project folder — that is `fee_export.rs`'s job and stays there.
@@ -40,8 +42,8 @@ use tracing::{info, warn};
 
 use e_fees_core::export::fp_manifest::{build_fp_manifest, FpManifestOptions, FpNarrative};
 use e_fees_core::export::fp_render::{
-    build_proposal_pdf_gated_with, select_renderer, FpRenderConfig, FpRenderError, GateBlock,
-    GateReport, GatedRenderError, FP_TEMPLATE_ROOT_ENV,
+    build_proposal_pdf_gated_with, select_proposal_backend, select_renderer, FpRenderError,
+    GateBlock, GatedRenderError, ProposalBackend, ProposalBuildError, ProposalBuilder,
 };
 use e_fees_core::export::{build_fee_json, clean_number_for_path};
 
@@ -171,15 +173,22 @@ pub async fn render_fp_proposal(
     let key = id.strip_prefix("fee:").unwrap_or(&id);
     validate_id(key)?;
 
-    let config = FpRenderConfig::from_env().ok_or_else(|| {
-        ApiError::service_unavailable(format!(
-            "Proposal rendering not configured ({FP_TEMPLATE_ROOT_ENV} not set). \
-             The manifest is still available at /fees/{{id}}/fp-manifest."
-        ))
+    let backend = select_proposal_backend().ok_or_else(|| {
+        ApiError::service_unavailable(
+            "Proposal rendering not configured (set DOCBUILDER_URL for the remote service, \
+             or FP_TEMPLATE_ROOT for local rendering). The manifest is still available at \
+             /fees/{id}/fp-manifest."
+                .to_string(),
+        )
     })?;
-    config
-        .validate()
-        .map_err(|e| ApiError::service_unavailable(e.to_string()))?;
+    // Only the local pipeline needs a checkout to validate; the docbuilder
+    // path needs nothing from this host beyond the manifest it is about to
+    // build below.
+    if let ProposalBackend::Local(config) = &backend {
+        config
+            .validate()
+            .map_err(|e| ApiError::service_unavailable(e.to_string()))?;
+    }
 
     let (fee, project, company, contact) = fetch_fee_with_links(&state, key).await?;
 
@@ -195,69 +204,98 @@ pub async fn render_fp_proposal(
             ApiError::unprocessable(e.to_string())
         })?;
     let variables = build_fee_json(&fee, &project, &company, &contact);
-
-    // Per-request scratch directory. The manifest and its vars file MUST share
-    // a directory - fp-template resolves vars_source relative to the manifest.
-    let work_dir = std::env::temp_dir().join(format!(
-        "efees-fp-{}-{}",
-        number,
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or_default()
-    ));
-
-    let vars_source = options.vars_source.clone();
-    let markdown = manifest.markdown.clone();
     let residual_count = manifest.residuals.len();
-    let work_dir_for_task = work_dir.clone();
+    let filename = format!("{}-FP.pdf", number);
 
-    // fill.py and the render (a local browser, or a blocking HTTP call to
-    // gotenberg) are slow; keep them off the async runtime's worker threads.
-    // The gate runs inside the same task and BEFORE the render, so a document
-    // that must not be issued never becomes a response body — and never
-    // leaves this host when the backend is remote.
-    let render = tokio::task::spawn_blocking(
-        move || -> Result<(Vec<u8>, GateReport, &'static str), GatedRenderError> {
-            let write = |path: std::path::PathBuf, body: String| -> Result<(), FpRenderError> {
-                std::fs::write(path, body)?;
-                Ok(())
-            };
-            std::fs::create_dir_all(&work_dir_for_task)
-                .map_err(|e| GatedRenderError::Render(FpRenderError::Io(e)))?;
-            write(
-                work_dir_for_task.join(&vars_source),
-                serde_json::to_string_pretty(&variables).unwrap_or_default(),
-            )
-            .map_err(GatedRenderError::Render)?;
-            let manifest_path = work_dir_for_task.join("manifest.md");
-            write(manifest_path.clone(), markdown).map_err(GatedRenderError::Render)?;
+    // Building the PDF is slow either way — one blocking HTTP call to
+    // docbuilder, or the local fill+gate+render pipeline — so it stays off
+    // the async runtime's worker threads. Both paths gate BEFORE returning a
+    // PDF, so a document that must not be issued never becomes a response
+    // body, and with a remote backend it never leaves this host.
+    let render: Result<ProposalRenderResult, tokio::task::JoinError> = match backend {
+        ProposalBackend::Docbuilder(builder) => {
+            let markdown = manifest.markdown.clone();
+            // vars_filename MUST match the manifest frontmatter's
+            // `vars_source` exactly - the service resolves that path
+            // relative to the manifest's own directory, same as the local
+            // pipeline resolves it relative to a real file on disk.
+            let vars_json = serde_json::to_string_pretty(&variables).unwrap_or_default();
+            let vars_filename = options.vars_source.clone();
+            let filename_for_task = filename.clone();
+            tokio::task::spawn_blocking(move || {
+                builder
+                    .build(
+                        &markdown,
+                        &vars_json,
+                        &vars_filename,
+                        Some(&filename_for_task),
+                    )
+                    .map(|out| (out.pdf, out.issue_hits, out.backend))
+                    .map_err(ProposalRenderError::Build)
+            })
+            .await
+        }
+        ProposalBackend::Local(config) => {
+            // Per-request scratch directory. The manifest and its vars
+            // file MUST share a directory - fp-template resolves
+            // vars_source relative to the manifest.
+            let work_dir = std::env::temp_dir().join(format!(
+                "efees-fp-{}-{}",
+                number,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or_default()
+            ));
+            let vars_source = options.vars_source.clone();
+            let markdown = manifest.markdown.clone();
+            let work_dir_for_task = work_dir.clone();
 
-            let html_path = work_dir_for_task.join("proposal.html");
-            let pdf_path = work_dir_for_task.join("proposal.pdf");
-            let renderer = select_renderer(&config);
-            let built = build_proposal_pdf_gated_with(
-                &config,
-                renderer.as_ref(),
-                &manifest_path,
-                &html_path,
-                &pdf_path,
-            )?;
-            let bytes = std::fs::read(&pdf_path)
-                .map_err(|e| GatedRenderError::Render(FpRenderError::Io(e)))?;
-            Ok((bytes, built.gates, built.backend))
-        },
-    )
-    .await;
+            let result = tokio::task::spawn_blocking(move || -> ProposalRenderResult {
+                let write = |path: std::path::PathBuf, body: String| -> Result<(), FpRenderError> {
+                    std::fs::write(path, body)?;
+                    Ok(())
+                };
+                std::fs::create_dir_all(&work_dir_for_task).map_err(|e| {
+                    ProposalRenderError::Gated(GatedRenderError::Render(FpRenderError::Io(e)))
+                })?;
+                write(
+                    work_dir_for_task.join(&vars_source),
+                    serde_json::to_string_pretty(&variables).unwrap_or_default(),
+                )
+                .map_err(|e| ProposalRenderError::Gated(GatedRenderError::Render(e)))?;
+                let manifest_path = work_dir_for_task.join("manifest.md");
+                write(manifest_path.clone(), markdown)
+                    .map_err(|e| ProposalRenderError::Gated(GatedRenderError::Render(e)))?;
 
-    // Always clean up, whatever happened.
-    let _ = std::fs::remove_dir_all(&work_dir);
+                let html_path = work_dir_for_task.join("proposal.html");
+                let pdf_path = work_dir_for_task.join("proposal.pdf");
+                let renderer = select_renderer(&config);
+                let built = build_proposal_pdf_gated_with(
+                    &config,
+                    renderer.as_ref(),
+                    &manifest_path,
+                    &html_path,
+                    &pdf_path,
+                )
+                .map_err(ProposalRenderError::Gated)?;
+                let bytes = std::fs::read(&pdf_path).map_err(|e| {
+                    ProposalRenderError::Gated(GatedRenderError::Render(FpRenderError::Io(e)))
+                })?;
+                Ok((bytes, built.gates.issue_hits, built.backend))
+            })
+            .await;
+            // Always clean up, whatever happened.
+            let _ = std::fs::remove_dir_all(&work_dir);
+            result
+        }
+    };
 
-    let (pdf, gates, backend) = match render {
+    let (pdf, issue_hits, backend) = match render {
         Ok(Ok(ok)) => ok,
         Ok(Err(e)) => {
             warn!("fp proposal refused for fee {key}: {e}");
-            return Err(render_error_to_api(e));
+            return Err(proposal_render_error_to_api(e));
         }
         Err(join_err) => {
             warn!("fp render task panicked for fee {key}: {join_err}");
@@ -269,12 +307,10 @@ pub async fn render_fp_proposal(
 
     info!(
         "rendered fp proposal for fee {key} via {backend} ({} bytes, \
-         {residual_count} residual(s), {} advisory issue-check hit(s))",
+         {residual_count} residual(s), {issue_hits} advisory issue-check hit(s))",
         pdf.len(),
-        gates.issue_hits
     );
 
-    let filename = format!("{}-FP.pdf", number);
     let mut response = (StatusCode::OK, Body::from(pdf)).into_response();
     response.headers_mut().insert(
         header::CONTENT_TYPE,
@@ -292,7 +328,7 @@ pub async fn render_fp_proposal(
     }
     // Advisory: issue-check hits belonging to the template's own boilerplate,
     // which a human may still want to judge. Blocking hits never reach here.
-    if let Ok(value) = HeaderValue::from_str(&gates.issue_hits.to_string()) {
+    if let Ok(value) = HeaderValue::from_str(&issue_hits.to_string()) {
         response.headers_mut().insert("x-fp-issue-hits", value);
     }
     // Which backend produced this PDF, so a caller (or a support session) can
@@ -336,6 +372,47 @@ pub(crate) fn render_error_to_api(e: GatedRenderError) -> ApiError {
     }
 }
 
+/// A successful build: PDF bytes, advisory issue-check hit count, and the
+/// backend name — the shape both of [`render_fp_proposal`]'s branches produce.
+type ProposalRenderResult = Result<(Vec<u8>, usize, &'static str), ProposalRenderError>;
+
+/// Backend-independent render failure. Exists only to let
+/// [`render_fp_proposal`]'s two backend branches share one `match` and one
+/// error-to-status mapping; it is never constructed anywhere else.
+enum ProposalRenderError {
+    /// The local fill+gate+render pipeline failed.
+    Gated(GatedRenderError),
+    /// The remote docbuilder service refused or failed to build the document.
+    Build(ProposalBuildError),
+}
+
+impl std::fmt::Display for ProposalRenderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProposalRenderError::Gated(e) => write!(f, "{e}"),
+            ProposalRenderError::Build(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+/// Map either backend's failure onto the right HTTP status.
+///
+/// [`ProposalBuildError::Blocked`] (a docbuilder `422`) is the document's own
+/// fault, exactly like a local [`GateBlock`] — 422 carrying the report.
+/// [`ProposalBuildError::Unavailable`] (a docbuilder `503`, or a transport
+/// failure) is this deployment's, exactly like an unreachable gotenberg — 503.
+fn proposal_render_error_to_api(e: ProposalRenderError) -> ApiError {
+    match e {
+        ProposalRenderError::Gated(gated) => render_error_to_api(gated),
+        ProposalRenderError::Build(ProposalBuildError::Blocked(msg)) => {
+            ApiError::unprocessable(msg)
+        }
+        ProposalRenderError::Build(ProposalBuildError::Unavailable(msg)) => {
+            ApiError::service_unavailable(msg)
+        }
+    }
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -352,7 +429,7 @@ pub(crate) fn render_error_to_api(e: GatedRenderError) -> ApiError {
 mod tests {
     use super::*;
     use e_fees_core::export::fp_manifest::INCOMPLETE_MARKER;
-    use e_fees_core::export::fp_render::{classify_gates, GateBlock};
+    use e_fees_core::export::fp_render::{classify_gates, GateBlock, FP_TEMPLATE_ROOT_ENV};
     use e_fees_core::export::gotenberg::GotenbergError;
 
     fn issue_failure(stdout: &str) -> FpRenderError {
@@ -581,5 +658,39 @@ mod tests {
         );
         assert_eq!(narrative.areas.as_deref(), Some("- All building facades"));
         assert!(narrative.project_details.is_none());
+    }
+
+    // ---- proposal_render_error_to_api: the docbuilder/local split ----
+
+    #[test]
+    fn proposal_render_error_gated_variant_delegates_to_render_error_to_api() {
+        // A representative case from render_error_to_api's own suite above,
+        // proving the Local branch's mapping is shared, not reimplemented.
+        let err = proposal_render_error_to_api(ProposalRenderError::Gated(
+            GatedRenderError::Render(FpRenderError::NotConfigured),
+        ));
+        assert_eq!(err.status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(err.message.contains(FP_TEMPLATE_ROOT_ENV));
+    }
+
+    #[test]
+    fn proposal_render_error_build_blocked_is_422_carrying_the_message() {
+        let err =
+            proposal_render_error_to_api(ProposalRenderError::Build(ProposalBuildError::Blocked(
+                "fp-docbuilder refused the document at the gate stage".into(),
+            )));
+        assert_eq!(err.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(err.message.contains("gate stage"), "{}", err.message);
+    }
+
+    #[test]
+    fn proposal_render_error_build_unavailable_is_503_carrying_the_message() {
+        let err = proposal_render_error_to_api(ProposalRenderError::Build(
+            ProposalBuildError::Unavailable(
+                "fp-docbuilder at http://10.0.21.85:8080 did not answer: refused".into(),
+            ),
+        ));
+        assert_eq!(err.status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(err.message.contains("did not answer"), "{}", err.message);
     }
 }
