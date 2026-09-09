@@ -1,8 +1,14 @@
 # Pinned emittiv/gtm commit whose fp-template/ directory is vendored into the
 # e-fees-api image by scripts/vendor-fp-template.sh.
 #
-# 24b7845 = "fix(fp-template): bundle Montserrat Regular/Bold, bundled fonts
-# authoritative (#6)" - the first commit whose template.css carries @font-face
-# rules for Montserrat, so a render on a host without that font installed no
-# longer silently reflows every text frame.
-24b784592d692c2eb87d4218647404faff4fbc33
+# 42ac7c84 = merge of "feat(terms): invoices submitted with each stage's
+# deliverables (owner ruling 2026-09-09)" (gtm PR #9) - adds the owner-ruled
+# payment-terms line to the Payment Terms page's payment-terms-header block.
+# fp-template/ carried no other change between the prior pin (24b7845) and
+# this one (verified: `git diff --stat 24b7845..42ac7c84 -- fp-template/`
+# is exactly this one line), so this bump is content-scoped to that fix.
+# This ref only feeds the LOCAL fill+gate+render pipeline
+# (FP_TEMPLATE_ROOT/scripts/vendor-fp-template.sh), which is dev-only as of
+# 2026-09-06 - production proposals render via the remote fp-docbuilder
+# service (DOCBUILDER_URL), redeployed separately from this pin.
+42ac7c84de2ff44f8e25d29ec77c7693ce33dbe8
