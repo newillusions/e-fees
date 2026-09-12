@@ -510,6 +510,58 @@ async fn test_fees_payment_terms_uses_14_day_window() {
     );
 }
 
+/// Owner ruling 2026-09-09 (obs:sywwvnme9eb8dyqhct24): every new proposal's Payment
+/// Terms must state that invoices go out with the deliverables, not after client
+/// approval. Library ID `clause:f4z5ib331d3bnca1y7mw` (docs/clause-corpus/LIBRARY-AUDIT.md
+/// #6) is the live source rendered into every new proposal (verbatim content model,
+/// crates/e-fees-core/src/resources/fp_section_inventory.json id "payment-terms-header").
+/// RED until the clause row itself is updated via PATCH /clauses/{id} - this is a
+/// dev-DB content change, not a code change, and needs the editorial sign-off gate
+/// documented in .claude/rules/judgment.md before promotion to prod.
+#[tokio::test]
+async fn test_fees_payment_terms_states_invoices_submitted_with_deliverables() {
+    let c = client();
+    let clause = find_clause_by_title(&c, "Fees / Payment Terms")
+        .await
+        .expect("Fees / Payment Terms clause must exist in the active library");
+
+    let body = clause["body"].as_str().expect("body must be a string");
+
+    let submitted_marker = "Invoices shall be submitted with each stage's deliverables.";
+    let submitted_pos = body.find(submitted_marker);
+
+    assert!(
+        submitted_pos.is_some(),
+        "Fees / Payment Terms must state that invoices go out with the deliverables \
+         (owner ruling 2026-09-09, obs:sywwvnme9eb8dyqhct24). Current body: {body:.400}"
+    );
+    let submitted_pos = submitted_pos.unwrap();
+
+    // Placement, corrected 2026-09-12 (owner correction, obs:sywwvnme9eb8dyqhct24):
+    // the sentence sits directly after the mobilisation/receipt-of-invoice sentence
+    // and before whatever monthly/ongoing invoicing-cadence sentence follows it - not
+    // after it. Matches the live rendered template order in emittiv/gtm PR #9
+    // (fp-template/index.html lines ~1019-1023): Mobilisation/Other payments ->
+    // Invoices shall be submitted -> Post Contract Fees -> Back to back -> Retention.
+    if let Some(receipt_pos) = body.find("receipt of invoice.") {
+        assert!(
+            submitted_pos > receipt_pos,
+            "Invoices-submitted sentence must come AFTER the receipt-of-invoice sentence. \
+             Current body: {body:.400}"
+        );
+    }
+
+    if let Some(monthly_pos) = body.find("invoiced monthly") {
+        assert!(
+            submitted_pos < monthly_pos,
+            "Invoices-submitted sentence must come BEFORE the monthly-invoicing sentence \
+             (owner correction 2026-09-12 moved it from after to before - see \
+             emittiv/gtm PR #9, fp-template/index.html, for the authoritative rendered \
+             order). Current body: {body:.400}"
+        );
+    }
+}
+
 // ── FIX 3: Proposal Validity ──────────────────────────────────────────────────
 
 /// Proposal Validity must use the historical canonical wording with "sixty [60] days".

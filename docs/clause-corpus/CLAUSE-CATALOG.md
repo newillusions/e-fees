@@ -2466,6 +2466,8 @@ Notes for standardisation: prefer the noun **"Post Contract Fees"** over "Post D
 
 The Payment Terms clause is the most heavily reused clause family in the corpus. Almost every proposal opens with the same "currency / VAT / mobilisation / payment window / back-to-back / retention" preamble, then optionally appends an "Additional Payment Terms" block (responsibility, bank account, stable-coin discount, daily billing rate, additional expenses, stage gating). Variants below are grouped by the meaningful structural pattern; trivial differences (bullet glyphs, line-break spacing, "Please let us know..." trailer, discount percentage, daily rate amount) are noted but not split out separately.
 
+**Owner ruling (2026-09-09, placement corrected 2026-09-12):** every core preamble below now includes "Invoices shall be submitted with each stage's deliverables." directly after the "Mobilisation... Other payments... after receipt of invoice." sentence and before the Post Contract Fees / monthly-invoicing sentence (or immediately before "Back to back payments are not acceptable." when no such invoicing-cadence sentence exists) - invoices go out with the deliverables, not after client approval. This matches the live rendered template order (`emittiv/gtm` PR #9, `fp-template/index.html` lines ~1019-1023, merged 2026-09-09): Mobilisation/Other payments → Invoices shall be submitted → Post Contract Fees → Back to back → Retention. See obs:sywwvnme9eb8dyqhct24. Applied to variants 1-12 and 15, and the Recommended standard wording baseline. Variant 14 (back-to-back-accepted, project-specific) and variant 16 (Additional-Payment-Terms-only fragments, no core preamble) are deliberately left unchanged.
+
 ---
 
 ### 1. Short core preamble — 14-day terms, Post Contract Fees monthly
@@ -2476,6 +2478,7 @@ The base clause with monthly Post Contract Fee invoicing and time-sheets on requ
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Post Contract Fees will be invoiced monthly. Internal time sheets will be provided on request.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
@@ -2492,6 +2495,7 @@ Same as variant 1 but omitting the "Post Contract Fees will be invoiced monthly"
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 
@@ -2507,6 +2511,7 @@ Identical to variant 2 except the payment window is 30 calendar days instead of 
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 30 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 
@@ -2522,6 +2527,7 @@ The dominant "complete" pattern: the 14-day core preamble followed by the standa
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 >
@@ -2552,6 +2558,7 @@ Same complete pattern as variant 4 but with a 30-day payment window. Some instan
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 30 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 >
@@ -2580,6 +2587,7 @@ Variant 4/5 pattern plus a suspension-of-works clause and "Post Contract Fees wi
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 30 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Post Contract Fees will be invoiced at the end of each month. Internal time sheets can be provided on request.
 > Late or non-payment of invoices may result in the suspension of works, at the sole discretion of the Consultant.
 > Back to back payments are not acceptable.
@@ -2608,7 +2616,7 @@ The JOH proposals use the full clause with "Ongoing Management Fees will be invo
 
 > All prices shown are in AED. All rates are exclusive of VAT and expenses. VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate. Mobilisation payments are to be received prior to any works commencing.
 >
-> Other payments will be required within 14 calendar days after receipt of invoice. Ongoing Management Fees will be invoiced monthly. Internal time sheets will be provided on request. Back to back payments are not acceptable. Retention is not acceptable.
+> Other payments will be required within 14 calendar days after receipt of invoice. Invoices shall be submitted with each stage's deliverables. Ongoing Management Fees will be invoiced monthly. Internal time sheets will be provided on request. Back to back payments are not acceptable. Retention is not acceptable.
 >
 > Additional Payment Terms:
 >
@@ -2634,6 +2642,7 @@ For European clients: prices in EUR, "UAE VAT is NOT applicable" (or "VAT is NOT
 > All prices shown are in EUR.
 > UAE VAT is NOT applicable to this proposal.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 
@@ -2649,6 +2658,7 @@ Saudi-Arabia proposals swap UAE VAT for KSA Withholding Tax (or a "VAT / Saudi W
 > All rates are exclusive of taxes and expenses.
 > KSA Withholding tax is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
 >
@@ -2676,6 +2686,7 @@ Wynn proposals open with conditional VAT wording and reference an appendix-drive
 >
 > Mobilisation payments are to be received prior to any works commencing.
 > Other payments will be required within 30 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Fees will be invoiced monthly against work completed. Internal time sheets will be provided on request as required.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
@@ -2703,7 +2714,7 @@ Several proposals replace the "Mobilisation + other payments" cadence with month
 
 > All prices shown are in AED. All rates are exclusive of VAT and expenses. VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 >
-> Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 30 calendar days after receipt of invoice.
+> Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 30 calendar days after receipt of invoice. Invoices shall be submitted with each stage's deliverables.
 >
 > Invoices shall be issued monthly, based on pro rata completion of each stage and department. Back to back payments are not acceptable. Retention is not acceptable.
 >
@@ -2721,6 +2732,7 @@ Invoicing/payment is triggered by submittal of stage deliverables rather than a 
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Submittal of stage deliverables shall be the trigger invoicing and payment for the relevant works.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
@@ -2765,6 +2777,7 @@ The MAF MOE FEC proposals keep the 14-day core but drop the back-to-back line an
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Retention is not acceptable.
 >
 > Note: Based on the previous project, monthly pro-rata payments will be open for discussion.
@@ -2795,6 +2808,7 @@ The clear canonical version is the **full clause with the 14-day core preamble +
 > All rates are exclusive of VAT and expenses.
 > VAT is applicable to this proposal and shall be added to all invoices at the prevailing rate.
 > Mobilisation payments are to be received prior to any works commencing. Other payments will be required within 14 calendar days after receipt of invoice.
+> Invoices shall be submitted with each stage's deliverables.
 > Post Contract Fees will be invoiced monthly. Internal time sheets will be provided on request.
 > Back to back payments are not acceptable.
 > Retention is not acceptable.
