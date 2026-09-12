@@ -34,6 +34,16 @@ Generate API key: openssl rand -hex 16</Overview>
   <CPUset/>
   <Requires>surrealdb-ailx ollama Docling-Serve StirlingPDF</Requires>
 
+  <Config Name="PUID" Target="PUID" Default="99"
+    Description="User ID the e-fees-scope process runs as (Unraid best practice, docs.unraid.net 'Managing and Customizing Containers': PUID/PGID set the user and group IDs for file permissions). The container starts as root and drops to this uid before running, remapping ownership of the Appdata mount below to match. Default 99 is Unraid's nobody user - leave as-is unless that appdata path is owned by a different uid on the host."
+    Type="Variable" Display="always" Required="false"
+    Mask="false">99</Config>
+
+  <Config Name="PGID" Target="PGID" Default="100"
+    Description="Group ID the e-fees-scope process runs as (Unraid best practice, docs.unraid.net 'Managing and Customizing Containers'). Paired with PUID above - same remap-and-chown behaviour. Default 100 is Unraid's users group - leave as-is unless that appdata path is owned by a different gid on the host."
+    Type="Variable" Display="always" Required="false"
+    Mask="false">100</Config>
+
   <!-- Infrastructure Config (Tier 1) -->
   <Config Name="Port" Target="3201" Default="3201" Mode="tcp"
     Description="Scope service port" Type="Port" Display="always"

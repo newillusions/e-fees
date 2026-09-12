@@ -121,6 +121,46 @@ including the docbuilder contract and the browser the local pipeline's FILL
 step still needs:
 [FP-TEMPLATE-INTEGRATION.md](./docs/development/FP-TEMPLATE-INTEGRATION.md).
 
+## PUID/PGID (2026-09-12)
+
+Both `e-fees-api` and `e-fees-scope` images follow Unraid's own convention
+(docs.unraid.net "Managing and Customizing Containers") - same shape as
+linuxserver.io images, `martin/pa` PR #275, and `martin/anchor` PR #16. Each
+container starts as root, `docker-entrypoint.sh` remaps its baked-in
+`efeesapi`/`efeesscope` user/group to the `PUID`/`PGID` env vars (default
+`99:100`, Unraid's `nobody:users`), chowns the writable mount, then drops
+privileges via `gosu` before running the app. Both templates ship both
+variables with those defaults - leave them as-is unless the appdata path is
+meant to be owned by a different uid/gid on the host.
+
+| Image | Chowned (writable) | Skipped (read-only, never chowned) |
+|---|---|---|
+| e-fees-api | `/config` (excl. nested `/config/app.env`) | `/config/app.env`, `/root/.ssh`, `/app/source` |
+| e-fees-scope | `/config` (excl. nested `/config/app.env`) | `/config/app.env`, `/data/rfps`, `/app/source` |
+
+**Nextcloud SSH key (e-fees-api only):** the optional "SSH Keys" mount
+(`/root/.ssh`, typically the host's own `/root/.ssh`) is READ-ONLY and
+host-root-owned, so it can never be chowned to the runtime PUID/PGID - once
+privileges drop, the folder-export pipeline's `ssh` subprocess (`src/ssh.rs`)
+could no longer open a uid-0-owned mode-600 key. Fix, same pattern as
+`martin/pa` PR #275: `docker-entrypoint.sh` copies `id_ed25519` (+
+`known_hosts` if present) out to a PUID/PGID-owned scratch dir at
+`/run/efees-ssh` before the `gosu` exec (see `e-fees-api/copy-ssh-key.sh` /
+`copy-ssh-key.test.sh`). `FolderConfig::ssh_key`'s default (`src/config.rs`)
+now points at `/run/efees-ssh/id_ed25519` instead of the raw mount - an
+explicit `NC_SSH_KEY` env var override is still honoured.
+
+**Pre-existing, unrelated to this change:** `templates/e-fees-api.xml`
+defines the template variable as `NC_SSH_KEY_PATH`, but `src/config.rs` reads
+`NC_SSH_KEY` - the two names don't match, so the template's SSH-key-path
+field has never actually overridden the code's hardcoded default. Not fixed
+here (out of scope for PUID/PGID); flagged as a follow-up.
+
+There is no `HEALTHCHECK` instruction in either Dockerfile today - the
+Unraid template's WebUI probe is external, so this doesn't interact with the
+PUID/PGID change (a future `HEALTHCHECK` would run as the image `USER`, i.e.
+root, since neither Dockerfile sets a `USER` line).
+
 ## Known Scalability Limits
 1. **Database mutex** - `src-tauri/src/db/mod.rs` serializes DB operations (RwLock today; revisit if concurrency grows).
 2. **Client-side joins** - `src/lib/stores.ts` joins company names in the frontend (O(1) Map lookups today; revisit at larger datasets).

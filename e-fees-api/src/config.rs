@@ -130,7 +130,13 @@ impl Config {
         let folder_config = env::var("NC_SSH_HOST").ok().map(|ssh_host| FolderConfig {
             ssh_host,
             ssh_user: env::var("NC_SSH_USER").unwrap_or_else(|_| "root".into()),
-            ssh_key: env::var("NC_SSH_KEY").unwrap_or_else(|_| "/root/.ssh/id_ed25519".into()),
+            // Default matches docker-entrypoint.sh's copy-ssh-key.sh scratch destination
+            // (PUID/PGID wave 2, 2026-09-12): the mounted /root/.ssh is read-only and
+            // typically host-root-owned, so it's copied to /run/efees-ssh at container
+            // start for the dropped-privilege process to read. NC_SSH_KEY can still
+            // override this explicitly if needed. Same pattern as pa-core's
+            // NextcloudConfig::from_config (services/nextcloud.rs, martin/pa PR #275).
+            ssh_key: env::var("NC_SSH_KEY").unwrap_or_else(|_| "/run/efees-ssh/id_ed25519".into()),
             script_path: env::var("NC_SCRIPT_PATH")
                 .unwrap_or_else(|_| "/mnt/user/appdata/scripts/nc-project-create.sh".into()),
             nc_base_path: env::var("NC_BASE_PATH")

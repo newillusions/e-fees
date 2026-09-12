@@ -34,6 +34,16 @@ Generate API key: openssl rand -hex 16</Overview>
   <CPUset/>
   <Requires>surrealdb-ailx</Requires>
 
+  <Config Name="PUID" Target="PUID" Default="99"
+    Description="User ID the e-fees-api process runs as (Unraid best practice, docs.unraid.net 'Managing and Customizing Containers': PUID/PGID set the user and group IDs for file permissions). The container starts as root and drops to this uid before running, remapping ownership of the Appdata mount below to match. Default 99 is Unraid's nobody user - leave as-is unless that appdata path is owned by a different uid on the host."
+    Type="Variable" Display="always" Required="false"
+    Mask="false">99</Config>
+
+  <Config Name="PGID" Target="PGID" Default="100"
+    Description="Group ID the e-fees-api process runs as (Unraid best practice, docs.unraid.net 'Managing and Customizing Containers'). Paired with PUID above - same remap-and-chown behaviour. Default 100 is Unraid's users group - leave as-is unless that appdata path is owned by a different gid on the host."
+    Type="Variable" Display="always" Required="false"
+    Mask="false">100</Config>
+
   <!-- Infrastructure Config (Tier 1) -->
   <Config Name="Port" Target="3200" Default="3200" Mode="tcp"
     Description="REST API port" Type="Port" Display="always"
@@ -97,7 +107,7 @@ Generate API key: openssl rand -hex 16</Overview>
 
   <!-- SSH key mount for Nextcloud folder creation -->
   <Config Name="SSH Keys" Target="/root/.ssh" Default="/mnt/user/appdata/e-fees-api/ssh"
-    Mode="ro" Description="SSH keys for Nextcloud folder creation on Primary server"
+    Mode="ro" Description="SSH keys for Nextcloud folder creation on Primary server. Read-only and typically host-root-owned - the entrypoint copies id_ed25519 (+ known_hosts if present) to a PUID/PGID-owned scratch dir (/run/efees-ssh) at container start so the dropped-privilege process can still read it (see docker-entrypoint.sh / copy-ssh-key.sh)."
     Type="Path" Display="advanced" Required="false"
     Mask="false">/mnt/user/appdata/e-fees-api/ssh</Config>
 

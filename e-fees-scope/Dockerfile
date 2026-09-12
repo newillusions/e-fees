@@ -26,10 +26,30 @@ RUN cargo build --release -p e-fees-scope
 
 # Runtime
 FROM debian:trixie-slim
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# PUID/PGID (Unraid best practice, docs.unraid.net "Managing and Customizing
+# Containers"; same shape as linuxserver.io images, martin/pa PR #275,
+# martin/anchor PR #16, and this repo's e-fees-api image): the container
+# starts as root and docker-entrypoint.sh drops to PUID:PGID (default 99:100,
+# nobody:users) via `gosu` before exec'ing the e-fees-scope binary. `gosu` is
+# the only extra package needed; usermod/groupmod/chown/stat are already part
+# of Debian's base (passwd + coreutils, Priority: required).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r efeesscope && useradd -r -g efeesscope -s /usr/sbin/nologin efeesscope
 
 COPY --from=builder /app/target/release/e-fees-scope /usr/local/bin/
+COPY e-fees-scope/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3201
 
+# No USER line here (deliberate): the container must start as root so
+# docker-entrypoint.sh can remap the efeesscope user/group to PUID/PGID and
+# chown /config, then drop privileges itself via gosu before exec'ing the app
+# - see docker-entrypoint.sh. Docker runs HEALTHCHECK (if one is ever added)
+# as this image's USER, i.e. root - there is no HEALTHCHECK instruction
+# today; the Unraid template's WebUI probe is external.
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["e-fees-scope"]
