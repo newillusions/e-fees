@@ -15,7 +15,7 @@ jobs:
     name: Frontend (check + vitest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install dependencies
         run: npm ci
@@ -37,7 +37,7 @@ jobs:
     name: Rust (cargo test, non-Tauri crates)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # This runner's ubuntu-latest resolves to a minimal node:22-slim image with
       # no C toolchain, no curl, and no Rust preinstalled (obs:63n2ct12y9l2201h97m8).
