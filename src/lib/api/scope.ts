@@ -26,8 +26,17 @@ import type {
   ClauseSuggestionsResponse
 } from '$lib/types/scope';
 
-const SCOPE_API_URL = import.meta.env.VITE_SCOPE_API_URL || 'http://10.0.21.81:3201';
-const SCOPE_API_KEY = import.meta.env.VITE_SCOPE_API_KEY || 'efees-scope-2026-s7k2m9xp';
+// No fallback here on purpose: these used to default to a baked-in internal
+// IP and a hardcoded API key, which shipped in every build (this repo has no
+// CI step that ever set the VITE_ vars, so the fallback was never overridden -
+// it was the only value ANY release build ever carried) and landed on the
+// public GitHub mirror in plaintext. Vite bakes import.meta.env into the
+// bundle at build time, so these must be supplied at build time (CI, from a
+// secret store) or at `npm run tauri dev` time (local env) - see
+// docs/development/SCOPE_API_CONFIG.md. Failing loudly beats silently
+// re-introducing a shipped secret.
+const SCOPE_API_URL = import.meta.env.VITE_SCOPE_API_URL;
+const SCOPE_API_KEY = import.meta.env.VITE_SCOPE_API_KEY;
 
 /**
  * Authenticated request helper for the scope service.
@@ -36,6 +45,13 @@ const SCOPE_API_KEY = import.meta.env.VITE_SCOPE_API_KEY || 'efees-scope-2026-s7
  * wrap their payload in a `{ data: ... }` envelope.
  */
 async function scopeRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  if (!SCOPE_API_URL || !SCOPE_API_KEY) {
+    throw new Error(
+      'Scope service is not configured: VITE_SCOPE_API_URL / VITE_SCOPE_API_KEY were not set ' +
+        'at build time. This build cannot reach the scope service until it is rebuilt with ' +
+        'those values supplied (see docs/development/SCOPE_API_CONFIG.md).'
+    );
+  }
   const response = await fetch(`${SCOPE_API_URL}${path}`, {
     ...options,
     headers: {

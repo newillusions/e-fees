@@ -6,17 +6,25 @@ mod llm;
 mod models;
 mod routes;
 mod schemas;
+mod validation;
 
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-use axum::{middleware, response::Json, routing::get, routing::post, Router};
+use axum::{
+    http::{header, HeaderValue, Method},
+    middleware,
+    response::Json,
+    routing::get,
+    routing::post,
+    Router,
+};
 use serde_json::Value;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tracing::info;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -155,10 +163,34 @@ async fn main() {
         started_at: Instant::now(),
     });
 
+    // This service IS fetched directly from the desktop webview
+    // (src/lib/api/scope.ts uses fetch(), not Tauri invoke), so `Any` here
+    // let any web page's script call the scope API using a stolen or
+    // guessed key. Restrict to the origins the packaged app's own webview
+    // can present: the custom-scheme origin on macOS/Linux, WebView2's
+    // virtual host on Windows, and the Vite dev server origin from
+    // tauri.conf.json's devUrl.
+    let allowed_origins: Vec<HeaderValue> = [
+        "tauri://localhost",
+        "https://tauri.localhost",
+        "http://localhost:1420",
+    ]
+    .into_iter()
+    .map(HeaderValue::from_static)
+    .collect();
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(allowed_origins)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::HeaderName::from_static("x-api-key"),
+        ]);
 
     let protected = Router::new()
         .route(

@@ -51,6 +51,27 @@ describe('Agent API Client', () => {
       const slashClient = new AgentApiClient('http://localhost:3100/');
       expect(slashClient.baseUrl).toBe('http://localhost:3100');
     });
+
+    it('should send X-API-Key when a key is provided', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', version: '1', db_connected: true, uptime_seconds: 1 })
+      });
+      const keyedClient = new AgentApiClient('http://localhost:3100', 'secret-key');
+      await keyedClient.health();
+      const [, init] = mockFetch.mock.calls[0];
+      expect((init.headers as Record<string, string>)['X-API-Key']).toBe('secret-key');
+    });
+
+    it('should omit X-API-Key when no key is provided (unauthenticated dev default)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', version: '1', db_connected: true, uptime_seconds: 1 })
+      });
+      await client.health();
+      const [, init] = mockFetch.mock.calls[0];
+      expect((init.headers as Record<string, string>)['X-API-Key']).toBeUndefined();
+    });
   });
 
   describe('health', () => {

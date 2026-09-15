@@ -45,6 +45,15 @@ export default defineConfig({
       }
     },
     include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
+    // src/lib/api/scope.ts throws at call time if VITE_SCOPE_API_URL/KEY are
+    // unset (2026-09-15 security pass - removed a hardcoded fallback secret
+    // that had been shipping in every release build). scope.test.ts mocks
+    // fetch() and never hits the network, so these are dummy values purely
+    // to satisfy the "is it configured" guard - not real credentials.
+    env: {
+      VITE_SCOPE_API_URL: 'http://scope-service.test.invalid:3201',
+      VITE_SCOPE_API_KEY: 'test-only-dummy-scope-key'
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],

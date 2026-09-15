@@ -10,6 +10,7 @@ use e_fees_core::models::{dbvalue_to_json, json_to_dbvalue, record_key_string};
 
 use crate::error::ApiError;
 use crate::models::{Deliverable, NewDeliverable, UpdateDeliverable};
+use crate::validation::validate_id;
 use crate::AppState;
 
 /// Query parameters for listing deliverables.
@@ -162,6 +163,7 @@ pub async fn get_deliverable(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("deliverable:").unwrap_or(&id);
+    validate_id(key)?;
 
     let deliverable: Option<Deliverable> = state.db.select(("deliverable", key)).await?;
 
@@ -304,6 +306,7 @@ pub async fn update_deliverable(
     Json(body): Json<UpdateDeliverable>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("deliverable:").unwrap_or(&id);
+    validate_id(key)?;
 
     // Build dynamic SET clauses for provided fields
     let mut sets: Vec<String> = Vec::new();
@@ -425,6 +428,7 @@ pub async fn delete_deliverable(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("deliverable:").unwrap_or(&id);
+    validate_id(key)?;
 
     let query = format!(
         "UPDATE deliverable:{key} SET status = 'archived', updated_at = time::now(); \

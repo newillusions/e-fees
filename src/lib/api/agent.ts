@@ -119,9 +119,19 @@ export interface AgentFeeCreate {
 
 export class AgentApiClient {
   public readonly baseUrl: string;
+  private readonly apiKey?: string;
 
-  constructor(baseUrl: string = 'http://localhost:3100') {
+  /**
+   * @param baseUrl Agent server base URL (default: loopback, port 3100).
+   * @param apiKey  Value to send as `X-API-Key`. The agent server
+   *   (src-tauri/src/agent_server.rs) enforces this whenever
+   *   `EFEES_AGENT_API_KEY` is set on the desktop process - omit only when
+   *   talking to an instance that intentionally has no key configured
+   *   (loopback-only dev default).
+   */
+  constructor(baseUrl: string = 'http://localhost:3100', apiKey?: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.apiKey = apiKey;
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -130,6 +140,7 @@ export class AgentApiClient {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {}),
         ...options.headers
       }
     });

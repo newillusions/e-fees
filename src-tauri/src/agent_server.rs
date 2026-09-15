@@ -1083,8 +1083,19 @@ async fn api_key_auth(State(state): State<AgentState>, request: Request, next: N
         .get("X-API-Key")
         .and_then(|v| v.to_str().ok());
 
+    // Constant-time compare: a plain `==` on &str short-circuits on the first
+    // mismatched byte, leaking a timing signal proportional to how many
+    // leading bytes of a guess are correct. Irrelevant for a loopback-only
+    // caller, but this check also guards the LAN-exposed path (EFEES_AGENT_BIND
+    // override) - see the non-loopback-requires-a-key gate in
+    // start_agent_server below.
+    let key_matches = |value: &str| -> bool {
+        use subtle::ConstantTimeEq;
+        value.as_bytes().ct_eq(api_key.as_bytes()).into()
+    };
+
     match provided {
-        Some(value) if value == api_key => next.run(request).await,
+        Some(value) if key_matches(value) => next.run(request).await,
         _ => {
             let body = Json(ErrorResponse {
                 error: "Unauthorized: missing or invalid X-API-Key".to_string(),
@@ -1369,6 +1380,33 @@ mod tests {
             "0.0.0.0:3100"
         );
     }
+
+    #[test]
+    fn is_loopback_bind_recognizes_loopback_forms() {
+        assert!(is_loopback_bind("127.0.0.1:3100"));
+        assert!(is_loopback_bind("localhost:3100"));
+        assert!(is_loopback_bind("[::1]:3100"));
+    }
+
+    #[test]
+    fn is_loopback_bind_rejects_lan_and_wildcard() {
+        assert!(!is_loopback_bind("0.0.0.0:3100"));
+        assert!(!is_loopback_bind("10.0.30.12:3100"));
+    }
+
+    #[test]
+    fn refuses_unauthenticated_start_only_when_exposed_without_a_key() {
+        // The one dangerous combination: no key, bound beyond loopback.
+        assert!(should_refuse_unauthenticated_start(None, "0.0.0.0:3100"));
+        // Loopback + no key is today's existing (warned-about) dev default -
+        // unchanged by this fix.
+        assert!(!should_refuse_unauthenticated_start(None, "127.0.0.1:3100"));
+        // A configured key makes any bind address fine.
+        assert!(!should_refuse_unauthenticated_start(
+            Some("secret"),
+            "0.0.0.0:3100"
+        ));
+    }
 }
 
 /// Resolves the bind address for the agent API server.
@@ -1379,6 +1417,25 @@ mod tests {
 /// takes precedence for anyone who genuinely needs remote access.
 fn resolve_bind_addr(port: u16, override_addr: Option<String>) -> String {
     override_addr.unwrap_or_else(|| format!("127.0.0.1:{}", port))
+}
+
+/// Whether a resolved bind address (`host:port`) is loopback-only.
+/// Used to gate the no-key-allowed default: see start_agent_server.
+fn is_loopback_bind(addr: &str) -> bool {
+    let host = addr.rsplit_once(':').map(|(host, _)| host).unwrap_or(addr);
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => ip.is_loopback(),
+        // "localhost" resolves to loopback everywhere this app ships on;
+        // anything else unparsable is treated as non-loopback (fail closed).
+        Err(_) => host.eq_ignore_ascii_case("localhost"),
+    }
+}
+
+/// Pure decision function for the default-deny startup gate, factored out of
+/// start_agent_server so it's unit-testable without binding a real socket.
+fn should_refuse_unauthenticated_start(api_key: Option<&str>, addr: &str) -> bool {
+    api_key.is_none() && !is_loopback_bind(addr)
 }
 
 /// Start the agent API HTTP server.
@@ -1393,6 +1450,24 @@ fn resolve_bind_addr(port: u16, override_addr: Option<String>) -> String {
 ///   this value in the `X-API-Key` header. If unset, no auth is enforced.
 pub async fn start_agent_server(db_state: AppState, port: u16) {
     let api_key = std::env::var("EFEES_AGENT_API_KEY").ok();
+    let addr = resolve_bind_addr(port, std::env::var("EFEES_AGENT_BIND").ok());
+
+    // Default-deny for the one combination that's actually dangerous: no key
+    // AND not loopback-only. Loopback-with-no-key is today's documented dev
+    // convenience (any local process can reach it, which is the existing,
+    // already-warned-about posture) - unchanged here. But EFEES_AGENT_BIND is
+    // an explicit opt-in to expose this full-CRUD API on the LAN, and pairing
+    // that with "no auth enforced" would let anyone on the network read/write
+    // fee data with no credential at all. Refuse to start rather than serve
+    // that silently.
+    if should_refuse_unauthenticated_start(api_key.as_deref(), &addr) {
+        error!(
+            "Agent API: refusing to start on non-loopback address {} without EFEES_AGENT_API_KEY set. \
+             Set EFEES_AGENT_API_KEY before using EFEES_AGENT_BIND to expose this API beyond localhost.",
+            addr
+        );
+        return;
+    }
     if api_key.is_none() {
         warn!("Agent API: EFEES_AGENT_API_KEY is not set — all requests will be allowed without authentication");
     }
@@ -1405,7 +1480,6 @@ pub async fn start_agent_server(db_state: AppState, port: u16) {
 
     let app = build_router(state);
 
-    let addr = resolve_bind_addr(port, std::env::var("EFEES_AGENT_BIND").ok());
     info!("Agent API server starting on http://{}", addr);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {

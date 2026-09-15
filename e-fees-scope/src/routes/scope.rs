@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use crate::error::ApiError;
 use crate::llm;
 use crate::models::{Clause, GenerateScopeRequest, ScopeAssembly, UpdateScopeRequest};
+use crate::validation::validate_id;
 use crate::AppState;
 
 use e_fees_core::models::{dbvalue_to_json, record_key_string};
@@ -250,6 +251,11 @@ pub async fn generate_scope(
     if fee_key.is_empty() {
         return Err(ApiError::bad_request("fee_id must not be empty"));
     }
+    // fee_key is interpolated below (and via fetch_corpus_examples) into
+    // backtick-quoted SurrealQL record ids (`` fee:`{fee_key}` ``) - validate
+    // before either use so a backtick/semicolon in the client-supplied
+    // body.fee_id can't break out of the quoting.
+    validate_id(fee_key)?;
 
     // 1. Fetch fee for project context (OMIT id because SurrealDB v3 WebSocket SDK
     //    can't deserialize record types to serde_json::Value; traverse record links inline)
@@ -598,6 +604,10 @@ pub async fn regenerate_scope(
     Path(fee_id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let fee_key = strip_fee_prefix(&fee_id);
+    // Same backtick-quoted-record-id interpolation risk as generate_scope
+    // above (fee:`{fee_key}`), sourced here from the Path param instead of
+    // a body field.
+    validate_id(fee_key)?;
 
     // Fetch existing assembly
     let mut res = state

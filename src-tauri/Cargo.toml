@@ -42,6 +42,7 @@ tauri-plugin-process = "2"
 argon2 = "0.5"
 rand = "0.8"
 base64 = "0.22"
+subtle = "2"
 # Cross-platform file system operations
 fs_extra = "1.3"
 # Folder-reconcile: recursive directory walking + content hashing for

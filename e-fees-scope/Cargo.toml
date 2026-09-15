@@ -26,6 +26,7 @@ uuid = { version = "1", features = ["v4"] }
 regex = "1"
 zip = "2"
 base64 = "0.22"
+subtle = "2"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }

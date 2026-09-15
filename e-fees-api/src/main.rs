@@ -12,12 +12,18 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-use axum::{middleware, response::Json, routing::get, Router};
+use axum::{
+    http::{header, HeaderValue, Method},
+    middleware,
+    response::Json,
+    routing::get,
+    Router,
+};
 use serde_json::Value;
 use surrealdb::engine::remote::ws::Ws;
 use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tracing::info;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -170,11 +176,36 @@ async fn main() {
         started_at: Instant::now(),
     });
 
-    // Configure CORS
+    // Configure CORS. This API has no known browser consumer today (every
+    // fetch()-based client is server-to-server or the Tauri IPC layer, not
+    // subject to CORS at all - see e-fees-scope's main.rs for the service
+    // that IS fetched directly from the desktop webview), but `Any` on
+    // origin+methods+headers let ANY web page's script read/write fee data
+    // using a stolen or guessed API key. Restrict to the origins this app's
+    // own webview can actually present: the packaged app's custom-scheme
+    // origin on macOS/Linux, WebView2's virtual host on Windows, and the
+    // Vite dev server origin from tauri.conf.json's devUrl.
+    let allowed_origins: Vec<HeaderValue> = [
+        "tauri://localhost",
+        "https://tauri.localhost",
+        "http://localhost:1420",
+    ]
+    .into_iter()
+    .map(HeaderValue::from_static)
+    .collect();
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(allowed_origins)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::HeaderName::from_static("x-api-key"),
+        ]);
 
     // Protected routes require API key authentication
     let protected = Router::new()

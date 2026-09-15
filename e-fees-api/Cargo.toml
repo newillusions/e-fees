@@ -22,6 +22,7 @@ tracing-subscriber = "0.3"
 chrono = "0.4"
 utoipa = "5"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
+subtle = "2"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }

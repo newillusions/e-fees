@@ -10,6 +10,7 @@ use e_fees_core::models::{dbvalue_to_json, json_to_dbvalue, record_key_string};
 
 use crate::error::ApiError;
 use crate::models::{Clause, NewClause, UpdateClause};
+use crate::validation::validate_id;
 use crate::AppState;
 
 /// Query parameters for listing clauses.
@@ -128,6 +129,7 @@ pub async fn get_clause(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("clause:").unwrap_or(&id);
+    validate_id(key)?;
 
     let clause: Option<Clause> = state.db.select(("clause", key)).await?;
 
@@ -238,6 +240,7 @@ pub async fn update_clause(
     Json(body): Json<UpdateClause>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("clause:").unwrap_or(&id);
+    validate_id(key)?;
 
     // Build dynamic SET clauses for provided fields
     let mut sets: Vec<String> = Vec::new();
@@ -341,6 +344,7 @@ pub async fn delete_clause(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let key = id.strip_prefix("clause:").unwrap_or(&id);
+    validate_id(key)?;
 
     let query = format!(
         "UPDATE clause:{key} SET status = 'archived', updated_at = time::now(); \

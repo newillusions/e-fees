@@ -255,6 +255,11 @@ pub async fn create_project(
     };
 
     let record_key = number.id.replace('-', "_");
+    // number.id may come straight from the client (body.number, when the caller
+    // supplies its own project number instead of using auto-numbering) and is
+    // interpolated below as a bare SurrealQL record-id segment - validate its
+    // character set before it ever reaches query text.
+    validate_id(&record_key)?;
 
     let query = format!(
         "CREATE projects:{key} SET name = $name, name_short = $name_short, \

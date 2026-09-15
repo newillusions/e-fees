@@ -90,6 +90,12 @@ pub async fn create_fee(
     // must NOT be set to null — SurrealDB v3 rejects NULL for option<T>. Only
     // include them in the SET clause when they have values.
     let project_key = body.project_id.replace('-', "_");
+    // project_key is client-controlled (body.project_id) and is interpolated
+    // below both as a bare record-id segment (CREATE fee:{fee_id}) and inside
+    // a single-quoted SurrealQL string literal (type::record('projects', '{}')) -
+    // validate its character set before either use so a quote/backtick/semicolon
+    // can't break out of either context.
+    validate_id(&project_key)?;
     let fee_id = format!("{}_{}", project_key, body.rev);
 
     // Build optional field SET clauses only when present

@@ -145,10 +145,17 @@ export interface DuplicateCheckParams {
 // CLIENT
 // ============================================================================
 
+// Unlike scope.ts's VITE_SCOPE_API_KEY, this is an internal-network address,
+// not a credential - the workspace's IP allocation scheme is already
+// documented (KB: "Home Network Ip Allocation Scheme"), so baking it in
+// carries none of the exposure a secret would. Still made env-overridable
+// for consistency: `import.meta.env.VITE_AILX_API_URL` wins when set.
+const DEFAULT_AILX_API_URL = 'http://10.0.21.11:3000';
+
 export class AilxApiClient {
   public readonly baseUrl: string;
 
-  constructor(baseUrl: string = 'http://10.0.21.11:3000') {
+  constructor(baseUrl: string = import.meta.env.VITE_AILX_API_URL || DEFAULT_AILX_API_URL) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 

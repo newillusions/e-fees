@@ -91,6 +91,13 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # 2026-09-15 security pass: scope.ts no longer has a hardcoded
+          # fallback for these - see docs/development/SCOPE_API_CONFIG.md.
+          # Repo secrets, not Forgejo (this workflow is GitHub Actions only,
+          # the tagged-release path - the Forgejo PR/push CI never runs
+          # npm run tauri:build).
+          VITE_SCOPE_API_URL: ${{ secrets.VITE_SCOPE_API_URL }}
+          VITE_SCOPE_API_KEY: ${{ secrets.VITE_SCOPE_API_KEY }}
         run: npm run tauri:build -- --target ${{ matrix.target }}
 
       - name: Fix code signature
@@ -314,6 +321,9 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # See the macOS job's Build Tauri app step above for why.
+          VITE_SCOPE_API_URL: ${{ secrets.VITE_SCOPE_API_URL }}
+          VITE_SCOPE_API_KEY: ${{ secrets.VITE_SCOPE_API_KEY }}
         run: npm run tauri:build
 
       - name: Find installers
