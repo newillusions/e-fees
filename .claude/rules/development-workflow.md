@@ -20,7 +20,7 @@ const testData = {
 cargo test -p app --lib                  # Rust unit tests
 npm run test:unit                        # Frontend unit tests
 cargo test --test integration_*         # If backend changed
-npm run test:e2e                         # If critical paths changed (Tauri MCP only)
+npm run test:e2e:mcp                     # If critical paths changed (Tauri MCP only - e2e-mcp/)
 npm run test:e2e:verify-clean            # No test data left behind
 cargo clippy --all-targets --all-features
 npm run lint

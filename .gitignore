@@ -27,7 +27,12 @@ e-fees.config.local
 .env.production
 .env.production.local
 # Allow example and template files
-!e-fees.config.example
+# e-fees.config.example and e-fees.config.local.example were removed
+# 2026-09-15 (security pass, PR-2) - both had diverged from what
+# src-tauri/src/commands/settings.rs actually reads (SURREALDB_URL/NS/DB/USER/PASS
+# + TLS flags + STAFF_*/PROJECT_FOLDER_PATH), one of them describing config keys
+# and an embedded-file DB URL this app has never supported. e-fees.config.template
+# is the one kept in sync with settings.rs and README.md's own `cp` instruction.
 !e-fees.config.template
 !.env.example
 !.env.*.example
