@@ -340,7 +340,7 @@ Expected: No errors (warnings OK).
 ```bash
 curl -s -X POST "http://localhost:3201/scope/generate" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: efees-scope-2026-s7k2m9xp" \
+  -H "X-API-Key: <scope-api-key-rotated-2026-09-16>" \
   -d '{"fee_id":"22_97111_1","polish":false,"stages":[{"name":"Schematic Design","code":"SD","is_post_contract":false,"order":1}]}'
 ```
 

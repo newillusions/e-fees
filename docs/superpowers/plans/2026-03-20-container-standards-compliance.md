@@ -588,7 +588,7 @@ async fn test_health_has_dependencies() {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-API_BASE_URL=http://10.0.21.81:3201 API_KEY=efees-scope-2026-s7k2m9xp cargo test -p e-fees-scope --test clause_tests test_health_has -- --test-threads=1
+API_BASE_URL=http://10.0.21.81:3201 API_KEY=<scope-api-key-rotated-2026-09-16> cargo test -p e-fees-scope --test clause_tests test_health_has -- --test-threads=1
 ```
 Expected: 3 FAIL.
 

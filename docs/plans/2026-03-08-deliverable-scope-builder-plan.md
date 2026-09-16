@@ -526,7 +526,7 @@ Follow existing test patterns. Use `reqwest` with `X-API-Key` header.
 
 **Step 2: Run tests**
 
-Run: `API_BASE_URL=http://10.0.21.81:3201 API_KEY=efees-scope-2026-s7k2m9xp cargo test -p e-fees-scope -- --test-threads=1`
+Run: `API_BASE_URL=http://10.0.21.81:3201 API_KEY=<scope-api-key-rotated-2026-09-16> cargo test -p e-fees-scope -- --test-threads=1`
 Expected: All tests pass
 
 **Step 3: Commit**
@@ -593,7 +593,7 @@ ssh root@10.0.20.11 "docker stop e-fees-scope && docker rm e-fees-scope && docke
   --restart unless-stopped \
   -e SURREAL_URL=ws://10.0.23.11:8000 \
   -e SURREAL_USER=root -e SURREAL_PASS=root \
-  -e API_KEY=efees-scope-2026-s7k2m9xp \
+  -e API_KEY=<scope-api-key-rotated-2026-09-16> \
   -e OLLAMA_URL=http://10.0.21.20:11434 \
   e-fees-scope:v0.3.0"
 ```
@@ -605,7 +605,7 @@ Expected: `{"status":"ok",...}`
 
 **Step 4: Verify new endpoints**
 
-Run: `curl -H "X-API-Key: efees-scope-2026-s7k2m9xp" http://10.0.21.81:3201/stages`
+Run: `curl -H "X-API-Key: <scope-api-key-rotated-2026-09-16>" http://10.0.21.81:3201/stages`
 Expected: 8 stage configs
 
 ---

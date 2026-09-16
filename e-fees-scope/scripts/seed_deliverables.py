@@ -13,12 +13,13 @@ Usage:
 """
 
 import argparse
+import os
 import json
 import sys
 import urllib.request
 
 DEFAULT_API_URL = "http://10.0.21.81:3201"
-DEFAULT_API_KEY = "efees-scope-2026-s7k2m9xp"
+DEFAULT_API_KEY = os.environ.get("API_KEY", "")  # set API_KEY in the environment; no baked default
 
 
 def api_post(url, api_key, path, data):

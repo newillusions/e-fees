@@ -207,7 +207,7 @@ OLLAMA_MODEL=qwen3:4b
 
 DOCLING_URL=http://10.0.21.42:5001
 
-API_KEY=efees-scope-2026-...
+API_KEY=<scope-api-key-rotated-2026-09-16>...
 
 # Optional: corpus source path (for batch ingest)
 CORPUS_PATH=/data/rfps

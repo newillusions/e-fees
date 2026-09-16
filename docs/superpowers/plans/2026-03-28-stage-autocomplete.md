@@ -93,7 +93,7 @@ Append to `src-tauri/.env`:
 ```
 # Scope Service
 SCOPE_API_URL="http://10.0.21.81:3201"
-SCOPE_API_KEY="efees-scope-2026-s7k2m9xp"
+SCOPE_API_KEY="<scope-api-key-rotated-2026-09-16>"
 ```
 
 - [ ] **Step 6: Verify build**

@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import os
 import json
 import re
 import sys
@@ -17,7 +18,7 @@ from difflib import SequenceMatcher
 import urllib.request
 
 DEFAULT_API_URL = "http://10.0.21.81:3201"
-DEFAULT_API_KEY = "efees-scope-2026-s7k2m9xp"
+DEFAULT_API_KEY = os.environ.get("API_KEY", "")  # set API_KEY in the environment; no baked default
 
 # Canonical stage mapping — maps various stage names to our 8 canonical stages
 STAGE_MAP = {

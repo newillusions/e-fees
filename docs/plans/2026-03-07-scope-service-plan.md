@@ -1604,7 +1604,7 @@ SURREAL_PASS=changeme
 SURREAL_NS=emittiv
 SURREAL_DB=projects
 
-API_KEY=efees-scope-2026-changeme
+API_KEY=<scope-api-key-rotated-2026-09-16>
 API_PORT=3201
 
 OLLAMA_URL=http://10.0.21.20:11434
@@ -1647,7 +1647,7 @@ SURREAL_USER=root
 SURREAL_PASS=<actual password>
 SURREAL_NS=emittiv
 SURREAL_DB=projects
-API_KEY=efees-scope-2026-<generate>
+API_KEY=<scope-api-key-rotated-2026-09-16><generate>
 API_PORT=3201
 OLLAMA_URL=http://10.0.21.20:11434
 OLLAMA_MODEL=qwen3:4b
@@ -1693,7 +1693,7 @@ Open `http://10.0.21.81:3201/docs/` — should show OpenAPI docs with Clauses en
 **Step 6: Run integration tests against deployed service**
 
 ```bash
-API_BASE_URL=http://10.0.21.81:3201 API_KEY=efees-scope-2026-... cargo test -p e-fees-scope --test clause_tests -- --test-threads=1
+API_BASE_URL=http://10.0.21.81:3201 API_KEY=<scope-api-key-rotated-2026-09-16>... cargo test -p e-fees-scope --test clause_tests -- --test-threads=1
 ```
 
 Expected: All tests pass.

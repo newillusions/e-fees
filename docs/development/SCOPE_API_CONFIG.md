@@ -10,7 +10,7 @@ secret into the shipped bundle).
 
 Vite's `import.meta.env.VITE_*` values are resolved and inlined into the
 JavaScript bundle **at build time**, not read at runtime. Until this PR,
-`scope.ts` had a hardcoded fallback (`efees-scope-2026-s7k2m9xp` and
+`scope.ts` had a hardcoded fallback (`<scope-api-key-rotated-2026-09-16>` and
 `http://10.0.21.81:3201`) used whenever the env vars were unset - and no build
 in this repo (`.github/workflows/build-releases.yml`, the only workflow that
 runs `npm run tauri:build`) ever set them. That means the fallback was not a
