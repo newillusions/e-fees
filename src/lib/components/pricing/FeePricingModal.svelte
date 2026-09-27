@@ -20,6 +20,7 @@
   } from '../../../types/database';
   import { updateFeePricing, type PricingUpdate } from '$lib/api/fees';
   import { logApiError } from '$lib/services/logger';
+  import { feeLogger } from '$lib/services/activityLogger';
   import BaseModal from '../BaseModal.svelte';
   import Button from '../Button.svelte';
   import PricingCalculatorPanel from './PricingCalculatorPanel.svelte';
@@ -209,7 +210,20 @@
         payment_schedule: paymentSchedule
       };
 
-      await updateFeePricing(feeId, pricingUpdate);
+      const updatedFee = await updateFeePricing(feeId, pricingUpdate);
+
+      // This modal calls updateFeePricing() directly instead of going
+      // through feesActions.update() (a separate, pricing-specific Tauri
+      // command), so it never picked up feesActions' activity logging -
+      // added explicitly here (obs: dispatched 2026-09-27 activity-feed
+      // task; pricing edits are one of the most frequent fee writes and
+      // were entirely unlogged).
+      feeLogger.onUpdate(updatedFee, [
+        'pricing',
+        'post_contract_items',
+        'reimbursable_costs',
+        'payment_schedule'
+      ]);
 
       message = 'Pricing saved successfully';
 

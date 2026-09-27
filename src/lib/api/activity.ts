@@ -41,21 +41,33 @@ export async function createActivityLog(log: ActivityLogCreate): Promise<Activit
  * @param limit - Maximum number of logs to return (default: 50)
  * @param entityType - Optional filter by entity type
  * @param offset - Optional offset for pagination
+ * @param includeBackfill - Include rows written by a `backfill:`-prefixed
+ *   user (audit-trail noise, e.g. the 2026-08-19 P2 backfill). Default
+ *   `false` - hidden from the normal feed, still reachable for
+ *   troubleshooting via an explicit `true` (owner ruling 2026-09-27).
  * @returns Array of activity logs
  */
 export async function getActivityLogs(
   limit?: number,
   entityType?: 'project' | 'fee' | 'company' | 'contact',
-  offset?: number
+  offset?: number,
+  includeBackfill?: boolean
 ): Promise<ActivityLog[]> {
   try {
     return await invoke<ActivityLog[]>('get_activity_logs', {
       limit,
       entityType,
-      offset
+      offset,
+      includeBackfill
     });
   } catch (error) {
-    activityLogger.error('Failed to get activity logs', { limit, entityType, offset, error });
+    activityLogger.error('Failed to get activity logs', {
+      limit,
+      entityType,
+      offset,
+      includeBackfill,
+      error
+    });
     return [];
   }
 }

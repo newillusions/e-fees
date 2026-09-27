@@ -894,30 +894,54 @@ impl DatabaseManager {
         limit: Option<usize>,
         entity_type: Option<String>,
         offset: Option<usize>,
+        include_backfill: bool,
     ) -> Result<Vec<ActivityLog>, Error> {
         let client = self.get_client()?;
 
         let limit_val = limit.unwrap_or(50);
         let offset_val = offset.unwrap_or(0);
         info!(
-            "Fetching activity logs (limit: {}, entity_type: {:?}, offset: {})",
-            limit_val, entity_type, offset_val
+            "Fetching activity logs (limit: {}, entity_type: {:?}, offset: {}, include_backfill: {})",
+            limit_val, entity_type, offset_val, include_backfill
         );
 
+        // Backfill/import rows (user prefixed "backfill:", e.g. the 2026-08-19
+        // P2 stage/outcome backfill) are audit trail, not user-facing recent
+        // activity - excluded by default at the query level so pagination/
+        // limit counts stay correct for real entries, not just hidden in the
+        // UI (obs: dispatched 2026-09-27 activity-feed task). Owner ruling
+        // same day: hidden by default, but still reachable via an explicit
+        // `include_backfill: true` opt-in for troubleshooting - never a
+        // second query path. `string::starts_with` takes a literal, not a
+        // bound param - no injection risk.
+        //
         // LIMIT and START are safe to interpolate as integers (no SQL injection risk)
         // Parameterized bindings with nested tuples don't work reliably in SurrealDB SDK
+        let mut conditions: Vec<String> = Vec::new();
+        if entity_type.is_some() {
+            conditions.push("entity_type = $entity_type".to_string());
+        }
+        if !include_backfill {
+            conditions.push("!string::starts_with(user, 'backfill:')".to_string());
+        }
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
         let mut response = if let Some(et) = &entity_type {
             let query = format!(
-                "SELECT * FROM activity_log WHERE entity_type = $entity_type ORDER BY timestamp DESC LIMIT {} START {}",
-                limit_val, offset_val
+                "SELECT * FROM activity_log {} ORDER BY timestamp DESC LIMIT {} START {}",
+                where_clause, limit_val, offset_val
             );
             client
                 .query_bind(&query, ("entity_type", et.clone()))
                 .await?
         } else {
             let query = format!(
-                "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT {} START {}",
-                limit_val, offset_val
+                "SELECT * FROM activity_log {} ORDER BY timestamp DESC LIMIT {} START {}",
+                where_clause, limit_val, offset_val
             );
             client.query(&query).await?
         };

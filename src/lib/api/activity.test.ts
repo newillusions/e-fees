@@ -68,7 +68,8 @@ describe('Activity Log API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('get_activity_logs', {
         limit: undefined,
         entityType: undefined,
-        offset: undefined
+        offset: undefined,
+        includeBackfill: undefined
       });
       expect(result).toEqual([mockActivityLog]);
     });
@@ -81,7 +82,8 @@ describe('Activity Log API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('get_activity_logs', {
         limit: 20,
         entityType: undefined,
-        offset: undefined
+        offset: undefined,
+        includeBackfill: undefined
       });
     });
 
@@ -93,7 +95,8 @@ describe('Activity Log API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('get_activity_logs', {
         limit: 50,
         entityType: 'project',
-        offset: undefined
+        offset: undefined,
+        includeBackfill: undefined
       });
     });
 
@@ -105,7 +108,21 @@ describe('Activity Log API Module', () => {
       expect(mockInvoke).toHaveBeenCalledWith('get_activity_logs', {
         limit: 20,
         entityType: undefined,
-        offset: 40
+        offset: 40,
+        includeBackfill: undefined
+      });
+    });
+
+    it('should call invoke with includeBackfill for the troubleshooting view', async () => {
+      mockInvoke.mockResolvedValueOnce([mockActivityLog]);
+
+      await getActivityLogs(50, undefined, undefined, true);
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_activity_logs', {
+        limit: 50,
+        entityType: undefined,
+        offset: undefined,
+        includeBackfill: true
       });
     });
 

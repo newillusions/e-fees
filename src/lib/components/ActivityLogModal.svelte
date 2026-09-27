@@ -21,6 +21,12 @@
   let entityFilter: 'all' | 'project' | 'fee' | 'company' | 'contact' = $state('all');
   let actionFilter: 'all' | 'create' | 'update' | 'delete' | 'status_change' = $state('all');
 
+  // Troubleshooting-only opt-in (owner ruling 2026-09-27): backfill/import
+  // rows (user prefixed "backfill:") are hidden by default and only needed
+  // occasionally for troubleshooting - deliberately session-only (never
+  // persisted), so it always reopens hidden.
+  let showBackfill = $state(false);
+
   // Load initial activities
   async function loadActivities(reset = true) {
     if (reset) {
@@ -36,7 +42,7 @@
       const entityType = entityFilter === 'all' ? undefined : entityFilter;
       // Load more than needed to enable pagination
       const limit = pageSize * currentPage;
-      let results = await getActivityLogs(limit + 1, entityType);
+      let results = await getActivityLogs(limit + 1, entityType, undefined, showBackfill);
 
       // Apply action filter client-side (API doesn't support it yet)
       if (actionFilter !== 'all') {
@@ -252,6 +258,11 @@
                 <option value={option.value}>{option.label}</option>
               {/each}
             </select>
+
+            <label class="backfill-toggle" title="Include backfill/import rows (troubleshooting)">
+              <input type="checkbox" bind:checked={showBackfill} on:change={handleFilterChange} />
+              Show system/backfill entries
+            </label>
           </div>
 
           <!-- Close button -->
@@ -316,6 +327,9 @@
                     <span class="action-badge {getActionColor(activity.action)}"
                       >{activity.action.replace('_', ' ')}</span
                     >
+                    {#if activity.user.startsWith('backfill:')}
+                      <span class="backfill-badge" title={activity.user}>backfill</span>
+                    {/if}
                   </div>
 
                   <div class="activity-description">
@@ -477,6 +491,34 @@
   .filter-select:focus {
     outline: none;
     border-color: var(--emittiv-splash);
+  }
+
+  /* Low-key by design (owner ruling 2026-09-27): a troubleshooting-only
+     toggle, not a primary filter - smaller, muted, no border/background
+     competing with the entity/action selects next to it. */
+  .backfill-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--emittiv-light);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .backfill-toggle input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  .backfill-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--emittiv-dark);
+    color: var(--emittiv-light);
+    text-transform: lowercase;
+    font-style: italic;
   }
 
   .close-button {

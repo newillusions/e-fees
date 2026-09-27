@@ -27,6 +27,7 @@
   import WarningModal from './WarningModal.svelte';
   import NewRevisionModal from './NewRevisionModal.svelte';
   import { logger, logApiError } from '$lib/services/logger';
+  import { feeLogger } from '$lib/services/activityLogger';
   import type { Fee, Project, Company, Contact } from '../../types';
 
   let {
@@ -349,12 +350,20 @@
     }
     try {
       const feeId = extractId(proposal.id);
+      const priorStatus = proposal.status;
       const newFee = await cloneFeeRevision(
         feeId,
         details.authorEmail,
         details.authorName,
         details.notes
       );
+      // clone_fee_revision both creates the new fee row AND flips the
+      // source (this `proposal`) to Superseded server-side in one
+      // transactional command - neither write went through feesActions,
+      // so both need logging here explicitly (obs: dispatched 2026-09-27
+      // activity-feed task - this path never logged either half before).
+      feeLogger.onCreate(newFee);
+      feeLogger.onStatusChange(proposal, priorStatus, 'Superseded');
       showNewRevisionModal = false;
       warningModal = {
         isOpen: true,

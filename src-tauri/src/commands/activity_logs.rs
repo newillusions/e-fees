@@ -70,6 +70,12 @@ pub async fn create_activity_log(
 /// # Parameters
 /// - `limit`: Maximum number of logs to return (default: 50)
 /// - `entity_type`: Optional filter by entity type (project, fee, company, contact)
+/// - `include_backfill`: Include rows whose `user` is prefixed `backfill:` (e.g.
+///   the 2026-08-19 P2 stage/outcome backfill). Default `false` - these are
+///   audit-trail noise, not user-facing recent activity, and are excluded by
+///   default so the feed and its pagination/limit counts reflect real usage.
+///   Owner ruling (2026-09-27): still needed occasionally for troubleshooting,
+///   so it stays a low-key opt-in rather than being dropped or always shown.
 ///
 /// # Returns
 /// - `Ok(Vec<ActivityLog>)`: List of activity logs
@@ -77,7 +83,7 @@ pub async fn create_activity_log(
 ///
 /// # Frontend Usage
 /// ```typescript
-/// // Get last 20 activities
+/// // Get last 20 activities (backfill/import rows excluded by default)
 /// const logs = await invoke('get_activity_logs', { limit: 20 });
 ///
 /// // Get only project-related activities
@@ -85,17 +91,22 @@ pub async fn create_activity_log(
 ///   limit: 50,
 ///   entityType: 'project'
 /// });
+///
+/// // Troubleshooting view: include backfill/import rows too
+/// const allLogs = await invoke('get_activity_logs', { limit: 50, includeBackfill: true });
 /// ```
 #[tauri::command]
 pub async fn get_activity_logs(
     limit: Option<usize>,
     entity_type: Option<String>,
     offset: Option<usize>,
+    include_backfill: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<Vec<ActivityLog>, String> {
+    let include_backfill = include_backfill.unwrap_or(false);
     info!(
-        "Fetching activity logs (limit: {:?}, entity_type: {:?}, offset: {:?})",
-        limit, entity_type, offset
+        "Fetching activity logs (limit: {:?}, entity_type: {:?}, offset: {:?}, include_backfill: {})",
+        limit, entity_type, offset, include_backfill
     );
 
     let manager_clone = {
@@ -104,7 +115,7 @@ pub async fn get_activity_logs(
     };
 
     manager_clone
-        .get_activity_logs(limit, entity_type, offset)
+        .get_activity_logs(limit, entity_type, offset, include_backfill)
         .await
         .map_err(|e| format!("Failed to get activity logs: {}", e))
 }

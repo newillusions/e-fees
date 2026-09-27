@@ -338,8 +338,8 @@ export interface PaginationState {
 export interface ActivityLog {
   /** Database record ID (e.g., 'activity_log:abc123') */
   id?: string | SurrealThing;
-  /** Action type: create, update, delete, status_change */
-  action: 'create' | 'update' | 'delete' | 'status_change';
+  /** Action type: create, update, delete, status_change, merge */
+  action: 'create' | 'update' | 'delete' | 'status_change' | 'merge';
   /** Entity type: project, fee, company, contact */
   entity_type: 'project' | 'fee' | 'company' | 'contact';
   /** Entity ID (e.g., 'projects:25-97105') */

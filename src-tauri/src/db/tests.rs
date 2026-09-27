@@ -1326,6 +1326,161 @@ mod tests {
         println!("Created activity_log id: {:?}", created.id);
     }
 
+    // ============================================================================
+    // ACTIVITY-FEED LOGGING-GAP REGRESSION TESTS (2026-09-27 dispatch)
+    //
+    // Found live against prod (10.0.23.11, ns emittiv): activity_log holds 74
+    // rows total - 70 from the 2026-08-19 P2 backfill (user
+    // 'backfill:ingestion-P2-stage-outcome') and 4 'system' rows from
+    // 2025-12-09/10 (a one-off dev smoke test) - zero real desktop-app writes
+    // since. Two independent gaps closed:
+    //   1. get_activity_logs() never filtered out backfill/import noise, so
+    //      the "recent activity" feed would be swamped by 70 P2 rows the
+    //      moment any real writes started landing again. Owner ruling
+    //      2026-09-27 (relayed after this fix's first round): hide by
+    //      default but keep it reachable for troubleshooting - an
+    //      `include_backfill` param (default false) on the SAME command,
+    //      not a second query path.
+    //   2. logMerge() (activityLogger.ts) has written action:'merge' since
+    //      project-merge shipped (PR #35), but the schema's own ASSERT only
+    //      allowed ['create','update','delete','status_change'] - every merge
+    //      log write has silently failed validation since day one. Fixed by
+    //      migration v008_activity_log_action_merge.surql (applied to DEV
+    //      this session, proven below; prod apply is orchestrator-owned).
+    // ============================================================================
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_get_activity_logs_backfill_filter_both_states() {
+        use crate::db::ActivityLogCreate;
+
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let backfill_entity_id = format!("DELETE-ME-backfill-{}", stamp);
+        let real_entity_id = format!("DELETE-ME-real-{}", stamp);
+
+        let backfill_log = ActivityLogCreate {
+            action: "status_change".to_string(),
+            entity_type: "project".to_string(),
+            entity_id: backfill_entity_id.clone(),
+            entity_name: format!("DELETE ME - backfill noise test {}", stamp),
+            description: "DELETE ME - should be filtered from the recent-activity feed".to_string(),
+            old_value: None,
+            new_value: Some("DELETE ME".to_string()),
+            user: Some(format!("backfill:DELETE-ME-source-{}", stamp)),
+            metadata: None,
+        };
+        let real_log = ActivityLogCreate {
+            action: "update".to_string(),
+            entity_type: "project".to_string(),
+            entity_id: real_entity_id.clone(),
+            entity_name: format!("DELETE ME - real user activity test {}", stamp),
+            description: "DELETE ME - should remain visible in the recent-activity feed"
+                .to_string(),
+            old_value: None,
+            new_value: Some("DELETE ME".to_string()),
+            user: Some(format!("DELETE-ME-tester-{}", stamp)),
+            metadata: None,
+        };
+
+        manager
+            .create_activity_log(backfill_log)
+            .await
+            .expect("failed to seed backfill-user test row");
+        manager
+            .create_activity_log(real_log)
+            .await
+            .expect("failed to seed real-user test row");
+
+        // Limit high enough to reach both freshly-inserted rows even with
+        // dev's existing activity_log volume (double-digit rows at time of
+        // writing) sitting ahead of them in DESC timestamp order.
+
+        // Default (include_backfill: false) - the feed's normal state.
+        let logs_default = manager
+            .get_activity_logs(Some(500), None, None, false)
+            .await
+            .expect("get_activity_logs (default) should succeed");
+
+        assert!(
+            !logs_default
+                .iter()
+                .any(|l| l.entity_id == backfill_entity_id),
+            "backfill-prefixed user's row must be excluded by default"
+        );
+        assert!(
+            logs_default.iter().any(|l| l.entity_id == real_entity_id),
+            "a real (non-backfill) user's row must still be returned by default"
+        );
+
+        // include_backfill: true - the owner's opt-in troubleshooting view
+        // (2026-09-27 scope addition: hidden by default, still findable).
+        let logs_included = manager
+            .get_activity_logs(Some(500), None, None, true)
+            .await
+            .expect("get_activity_logs (include_backfill: true) should succeed");
+
+        assert!(
+            logs_included
+                .iter()
+                .any(|l| l.entity_id == backfill_entity_id),
+            "backfill-prefixed user's row must be returned when include_backfill is true"
+        );
+        assert!(
+            logs_included.iter().any(|l| l.entity_id == real_entity_id),
+            "a real (non-backfill) user's row must still be returned when include_backfill is true"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_create_activity_log_merge_action_round_trips() {
+        // Requires v008_activity_log_action_merge.surql applied to the target
+        // (widens the `action` ASSERT to admit 'merge') - already applied to
+        // dev this session; see the migration file for the prod-apply note.
+        use crate::db::ActivityLogCreate;
+
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        let log = ActivityLogCreate {
+            action: "merge".to_string(),
+            entity_type: "project".to_string(),
+            entity_id: format!("DELETE-ME-merge-{}", stamp),
+            entity_name: format!("DELETE ME - merge action test {}", stamp),
+            description: "DELETE ME - proves logMerge()'s action:'merge' is schema-valid"
+                .to_string(),
+            old_value: Some("DELETE ME - source".to_string()),
+            new_value: Some("DELETE ME - target".to_string()),
+            user: Some("tdd-test".to_string()),
+            metadata: None,
+        };
+
+        let result = manager.create_activity_log(log).await;
+        assert!(
+            result.is_ok(),
+            "create_activity_log with action:'merge' should succeed once the ASSERT is \
+             widened; got: {:?}",
+            result.err()
+        );
+        assert_eq!(result.unwrap().action, "merge");
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_partial_company_update_preserves_unset_fields() {
