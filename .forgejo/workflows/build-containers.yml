@@ -14,7 +14,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only cancel a superseded PR run. Never cancel a push run on main/v*: two merges
+  # landing seconds apart killed mindmulch's main build silently (run 380 vs 381,
+  # 2026-09-14) - no image built, no failure signal. mindmulch#121.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
