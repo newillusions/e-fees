@@ -10,6 +10,7 @@ use e_fees_core::models::{dbvalue_to_json, record_key_string};
 
 use crate::error::ApiError;
 use crate::models::{AssembleRequest, Deliverable, SaveScopeBuilderRequest, StageConfig};
+use crate::scope_store::{self, BuilderState};
 use crate::AppState;
 
 /// Helper to strip "fee:" prefix from a fee ID string.
@@ -273,59 +274,19 @@ pub async fn save_scope_builder(
         }));
     }
 
-    // Build optional SET fragments
-    let mut optional_sets = String::new();
-    if body.stage_labels.is_some() {
-        optional_sets.push_str(", stage_labels = $stage_labels");
-    }
-    if body.manual_items.is_some() {
-        optional_sets.push_str(", manual_items = $manual_items");
-    }
-
-    let deliverables_json: Value = json!(deliverables_used);
-
-    // Execute DELETE + CREATE as separate queries to isolate errors.
-    // Multi-statement queries with the WebSocket SDK silently drop CREATE errors.
-    state
-        .db
-        .query("DELETE scope_assembly WHERE fee_id = type::record('fee', $fee_key)")
-        .bind(("fee_key", fee_key.to_string()))
-        .await?;
-
-    let create_query = format!(
-        "CREATE scope_assembly SET \
-         fee_id = type::record('fee', $fee_key), \
-         deliverables_used = $deliverables_used, \
-         clauses = [], \
-         generated_text = '', \
-         llm_polished = false, \
-         updated_at = time::now(), \
-         created_at = time::now(){optional_sets};"
-    );
-
-    let mut create_q = state
-        .db
-        .query(&create_query)
-        .bind(("fee_key", fee_key.to_string()))
-        .bind(("deliverables_used", deliverables_json));
-
-    if let Some(ref labels) = body.stage_labels {
-        create_q = create_q.bind(("stage_labels", json!(labels)));
-    }
-    if let Some(ref manual) = body.manual_items {
-        create_q = create_q.bind(("manual_items", json!(manual)));
-    }
-
-    let create_response = create_q.await?;
-    // .check() validates the statement succeeded without deserializing datetime fields
-    create_response.check().map_err(|e| {
-        tracing::error!(
-            "save_scope_builder: CREATE failed for fee_key={}: {}",
-            fee_key,
-            e
-        );
-        ApiError::internal(&format!("Failed to save scope assembly: {}", e))
-    })?;
+    // Update the assembly in place: deliverables_used is replaced; stage_labels and
+    // manual_items only when sent; generated text, clauses, clause selection and the
+    // revision counter are preserved (see scope_store for the field-ownership table).
+    scope_store::save_builder(
+        &state.db,
+        fee_key,
+        BuilderState {
+            deliverables_used: json!(deliverables_used),
+            stage_labels: body.stage_labels.as_ref().map(|l| json!(l)),
+            manual_items: body.manual_items.as_ref().map(|m| json!(m)),
+        },
+    )
+    .await?;
 
     tracing::info!(
         "save_scope_builder: saved {} deliverables for fee_key={}",

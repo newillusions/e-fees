@@ -6,6 +6,7 @@ mod llm;
 mod models;
 mod routes;
 mod schemas;
+mod scope_store;
 mod validation;
 
 use std::collections::HashSet;

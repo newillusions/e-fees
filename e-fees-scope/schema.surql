@@ -129,7 +129,12 @@ DEFINE FIELD stages_at_time ON scope_revision TYPE option<array<string>>;
 DEFINE FIELD saved_at       ON scope_revision TYPE datetime DEFAULT time::now();
 DEFINE FIELD trigger        ON scope_revision TYPE string;
 
-DEFINE INDEX idx_scope_rev_fee ON scope_revision FIELDS fee_id, revision;
+DEFINE FIELD renumbered_from ON scope_revision TYPE option<int>;  -- audit: original number if v009 renumbered a duplicate
+
+-- UNIQUE since v009 (scripts/migration/v009_scope_revision_unique.surql):
+-- one row per (fee, revision number). Existing databases get this via the
+-- migration, which renumbers pre-existing duplicates before enforcing it.
+DEFINE INDEX idx_scope_rev_fee ON scope_revision FIELDS fee_id, revision UNIQUE;
 
 -- ============================================================
 -- Extend scope_assembly for revision tracking and stage snapshot
