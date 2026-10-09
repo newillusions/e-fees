@@ -42,6 +42,8 @@
   let showClausePicker = $state(false);
   let error: string | null = $state(null);
   let message: string | null = $state(null);
+  // Non-fatal problem the user must see (e.g. markdown export failed); stays until the next save
+  let warning: string | null = $state(null);
 
   async function loadScope() {
     loading = true;
@@ -128,6 +130,7 @@
   async function handleSave() {
     saving = true;
     error = null;
+    warning = null;
 
     try {
       const generatedText = formatSectionsAsText(sections);
@@ -142,7 +145,10 @@
             'get_project_folder_location',
             { projectNumber }
           );
-          if (folderInfo.exists) {
+          if (!folderInfo.exists) {
+            warning =
+              'Scope saved, but the project folder was not found, so the markdown file was not exported.';
+          } else {
             const revision = scope?.current_revision ?? 1;
             const stageNames = stages.map(s => s.name);
             const result = await invoke<string | null>('export_scope_markdown', {
@@ -158,8 +164,10 @@
             }
           }
         } catch (exportErr: any) {
-          // Don't fail the save — export is best-effort
+          // Don't fail the save — export is best-effort, but tell the user it did not happen
           logApiError('ScopeViewer export markdown', exportErr as Error);
+          message = null;
+          warning = `Scope saved, but the markdown export to the project folder failed: ${exportErr?.message || exportErr}`;
         }
       }
 
@@ -264,9 +272,18 @@
         <ClausePicker {feeId} onSaved={() => (message = 'Clause selection saved')} />
       {/if}
 
-      <button class="emittiv-btn emittiv-btn--primary emittiv-btn--sm" onclick={handleGenerate}>
+      <button
+        class="emittiv-btn emittiv-btn--primary emittiv-btn--sm"
+        onclick={handleGenerate}
+        disabled={stages.length === 0}
+      >
         Generate Scope
       </button>
+      {#if stages.length === 0}
+        <p class="text-emittiv-light text-sm">
+          Define stages in Fee Pricing first. Scope is generated from the pricing stages.
+        </p>
+      {/if}
 
       <button
         class="emittiv-scope-viewer__advanced-toggle"
@@ -289,6 +306,12 @@
     {#if message}
       <div class="emittiv-alert emittiv-alert--success emittiv-alert--sm">
         {message}
+      </div>
+    {/if}
+
+    {#if warning}
+      <div class="emittiv-alert emittiv-alert--warning emittiv-alert--sm" role="alert">
+        {warning}
       </div>
     {/if}
 

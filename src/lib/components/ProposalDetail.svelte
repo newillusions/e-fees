@@ -8,6 +8,8 @@
     contactsActions
   } from '$lib/stores';
   import { onMount } from 'svelte';
+  import { push } from 'svelte-spa-router';
+  import { formatDate } from '$lib/utils/format';
   import { extractId, findEntityById } from '$lib/utils';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
   import {
@@ -98,16 +100,7 @@
   }
 
   function formatIssueDate(dateStr: string): string {
-    if (dateStr.length === 6) {
-      return new Date(
-        `20${dateStr.substring(0, 2)}-${dateStr.substring(2, 4)}-${dateStr.substring(4, 6)}`
-      ).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return formatDate(dateStr);
   }
 
   // Load all revisions for the current proposal's project
@@ -475,21 +468,22 @@
       handler: handleExportToJson,
       label: 'Export to JSON',
       tooltip: 'Export proposal data to project JSON file with safety checks',
-      icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      // Code brackets: distinct from the pricing spreadsheet export icons
+      icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
       disabled: !proposal
     },
     {
       handler: handleUpdatePricing,
-      label: 'Save Pricing',
+      label: 'Export Pricing (.xlsx)',
       tooltip: proposal?.pricing
-        ? 'Save new PRI version to project folder'
+        ? 'Write a new pricing (.xlsx) version to the project folder'
         : 'No pricing data — configure pricing first',
       icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       disabled: !proposal || !proposal.pricing
     },
     {
       handler: handleExportTemplateAs,
-      label: 'Export Pricing As...',
+      label: 'Export Pricing (.xlsx) As...',
       tooltip: proposal?.pricing
         ? 'Export pricing template to a chosen location'
         : 'No pricing data — configure pricing first',
@@ -563,12 +557,16 @@
           <h2 class="emittiv-section-title">Revision History</h2>
           <div class="bg-emittiv-black/50 rounded-xl border border-emittiv-dark/50 overflow-hidden">
             {#each projectRevisions as rev}
-              <div
-                class="flex items-center justify-between px-4 py-2 border-b border-emittiv-dark/30 last:border-b-0 {extractId(
+              <button
+                type="button"
+                class="flex items-center justify-between w-full text-left px-4 py-2 border-b border-emittiv-dark/30 last:border-b-0 {extractId(
                   rev.id
                 ) === extractId(proposal.id)
                   ? 'bg-emittiv-splash/10 border-l-2 border-l-emittiv-splash'
-                  : 'hover:bg-emittiv-darker/50'}"
+                  : 'hover:bg-emittiv-darker/50 cursor-pointer'}"
+                disabled={extractId(rev.id) === extractId(proposal.id)}
+                aria-label="Open revision FP-{String(rev.rev ?? 0).padStart(2, '0')}"
+                onclick={() => push(`/proposals/${extractId(rev.id)}`)}
               >
                 <div class="flex items-center gap-3">
                   <span class="text-xs font-mono text-emittiv-lighter"
@@ -584,7 +582,7 @@
                     <span class="text-xxs text-emittiv-splash font-medium">Current</span>
                   {/if}
                 </div>
-              </div>
+              </button>
             {/each}
           </div>
         </section>

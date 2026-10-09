@@ -9,7 +9,7 @@
   import { generatePricingId } from '../../../types/database';
   import { formatNumber, formatPercent, formatDate } from '$lib/utils/format';
   import { roundWithConfig, whtTooltip as whtTooltipFn } from '$lib/utils/pricingUtils';
-  import { buildPaymentSchedule } from '$lib/utils/paymentSchedule';
+  import { buildPaymentSchedule, isScheduleStale } from '$lib/utils/paymentSchedule';
   import { formattedNumber } from '$lib/actions/formattedNumber';
   import IconButton from '../IconButton.svelte';
   import PanelCard from '../PanelCard.svelte';
@@ -228,6 +228,15 @@
   const scheduledTotal = $derived(schedule.entries.reduce((sum, e) => sum + e.amount, 0));
   const scheduleDifference = $derived(scheduledTotal - designTotal);
   const scheduleValid = $derived(Math.abs(scheduleDifference) < 1);
+
+  // Pricing changed after the schedule was generated (or payments no longer add up)
+  const scheduleStale = $derived(
+    isScheduleStale(
+      schedule.entries,
+      Object.fromEntries(designStages.map(stage => [stage.id, getRoundedStageTotal(stage.id)])),
+      designTotal
+    )
+  );
 </script>
 
 <PanelCard title="Payment Schedule">
@@ -241,6 +250,22 @@
       </div>
     {/if}
   {/snippet}
+
+  {#if scheduleStale}
+    <div class="emittiv-alert emittiv-alert--sm emittiv-alert--warning" role="alert">
+      <p class="emittiv-alert__title">Schedule is out of date</p>
+      <p class="emittiv-alert__subtitle">
+        Pricing has changed since this schedule was generated, or the payments no longer add up to
+        the design total.
+        {#if !readonly}Regenerating replaces any manual edits.{/if}
+      </p>
+      {#if !readonly}
+        <button type="button" class="emittiv-text-btn" onclick={generateFromPricing}>
+          Regenerate from Pricing
+        </button>
+      {/if}
+    </div>
+  {/if}
 
   <!-- Payments Table -->
   {#if schedule.entries.length === 0}
@@ -259,8 +284,8 @@
   {:else}
     <!-- Header row -->
     <div class="emittiv-sortable-header emittiv-sortable-header--compact">
-      <div class="emittiv-sortable-col--grow">Payment</div>
-      <div class="emittiv-sortable-col--number">Quoted</div>
+      <div class="emittiv-sortable-col--grow">Milestone</div>
+      <div class="emittiv-sortable-col--number">Fee</div>
       <div class="emittiv-sortable-col--number">Payment</div>
       <div class="emittiv-sortable-col--status">Status</div>
       {#if !readonly}<div class="emittiv-sortable-col--action"></div>{/if}

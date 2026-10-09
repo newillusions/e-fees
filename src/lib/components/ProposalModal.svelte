@@ -4,6 +4,8 @@
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { push } from 'svelte-spa-router';
+  import { flash, setFlash, type FlashTone } from '$lib/stores/flash';
   import type { ProjectStatus } from '../../types';
   import {
     feesStore,
@@ -223,6 +225,9 @@
       : allCompanyOptions
   );
 
+  // Scope generation reads the pricing stages
+  const hasStages = $derived((proposal?.pricing?.stages?.length ?? 0) > 0);
+
   // Fix reactivity by explicitly depending on formData.company_id
   const filteredContactOptions = $derived(
     formData.company_id
@@ -314,12 +319,18 @@
     return `${year}${month}${day}`;
   }
 
+  // One proposal-number format everywhere: <project>-FP-NN (matches revision labels and pricing file names)
+  function formatProposalNumber(projectNumber: string, rev: string | number): string {
+    const n = parseInt(String(rev), 10);
+    return `${projectNumber}-FP-${String(Number.isFinite(n) && n > 0 ? n : 1).padStart(2, '0')}`;
+  }
+
   // Auto-generate proposal number
   function generateProposalNumber() {
     if (!formData.number && formData.project_id) {
       const project = projectStoreMap.get(formData.project_id);
       if (project?.number?.id) {
-        formData.number = `${project.number.id}-FP-${formData.rev}`;
+        formData.number = formatProposalNumber(project.number.id, formData.rev);
       }
     }
   }
@@ -416,6 +427,8 @@
         };
 
         const result = await feesActions.create(proposalData);
+        let createMessage = 'Proposal created successfully';
+        let createTone: FlashTone = 'success';
 
         // Auto-export to JSON if enabled
         if (autoExportToJson && result?.id) {
@@ -428,7 +441,7 @@
                 const lines = exportResult.split('\n');
                 const filePath = lines[0].replace('Successfully wrote fee proposal data to: ', '');
 
-                let message = 'Proposal created successfully and exported to JSON!';
+                createMessage = 'Proposal created successfully and exported to JSON!';
 
                 // Add safety actions if present
                 const safetyIndex = lines.findIndex(line => line.includes('Safety actions taken:'));
@@ -437,36 +450,37 @@
                     .slice(safetyIndex + 1)
                     .filter(line => line.trim().startsWith('•'));
                   if (safetyActions.length > 0) {
-                    message += '\n\nJSON Export Details:';
+                    createMessage += '\n\nJSON Export Details:';
                     safetyActions.forEach(action => {
-                      message += `\n${action.trim()}`;
+                      createMessage += `\n${action.trim()}`;
                     });
                   }
                 }
-
-                operationActions.setMessage(message);
               } else {
-                operationActions.setMessage(
-                  'Proposal created successfully, but JSON export failed'
-                );
+                createMessage = 'Proposal created successfully, but JSON export failed';
+                createTone = 'warning';
               }
             } else {
-              operationActions.setMessage(
-                'Proposal created successfully, but could not extract ID for JSON export'
-              );
+              createMessage =
+                'Proposal created successfully, but could not extract ID for JSON export';
+              createTone = 'warning';
             }
           } catch (error) {
             logApiError('auto-export proposal', error as Error);
-            operationActions.setMessage(
-              `Proposal created successfully, but JSON export failed: ${error}`
-            );
+            createMessage = `Proposal created successfully, but JSON export failed: ${error}`;
+            createTone = 'warning';
           }
         } else {
-          operationActions.setMessage('Proposal created successfully');
+          createMessage = 'Proposal created successfully';
         }
 
+        // The modal's own message is wiped on close, so hand the result to the page we land on.
+        const newId = result?.id ? getEntityId(result) : '';
+        // Without an id there is no page to land on, so no flash (it would show on an unrelated page)
+        if (newId) setFlash({ text: createMessage, tone: createTone, openEditForId: newId });
         resetForm();
         doClose();
+        if (newId) push(`/proposals/${newId}`);
         return result;
       },
       operationActions,
@@ -779,6 +793,21 @@
     formData.project_id = data.id;
     projectSearchText = data.option.name as string; // Keep search text in sync
     generateProposalNumber();
+    prefillCompanyFromProject(data.id);
+  }
+
+  // Prefill the client company from the project when none is chosen yet
+  function prefillCompanyFromProject(projectId: string) {
+    if (formData.company_id) return;
+    const client = projectStoreMap.get(projectId)?.client_company;
+    if (!client) return;
+    const match = allCompanyOptions.find(c => c.id === client || c.name === client);
+    if (match) {
+      formData.company_id = match.id;
+      companySearchText = match.name;
+      formData.contact_id = '';
+      contactSearchText = '';
+    }
   }
 
   function handleProjectClear() {
@@ -1055,7 +1084,7 @@
     if (formData.project_id && formData.rev && mode === 'create') {
       const project = projectStoreMap.get(formData.project_id);
       if (project?.number?.id) {
-        formData.number = `${project.number.id}-FP-${formData.rev}`;
+        formData.number = formatProposalNumber(project.number.id, formData.rev);
       }
     }
   });
@@ -1190,7 +1219,7 @@
           <FormInput
             label="Proposal Number"
             bind:value={formData.number}
-            placeholder="25-97105-FP-1"
+            placeholder="25-97105-FP-01"
             required
             error={formErrors.number}
           />
@@ -1209,14 +1238,14 @@
           <FormInput
             label="Issue Date"
             bind:value={formData.issue_date}
-            placeholder="YYMMDD format"
+            placeholder="YYMMDD, e.g. 261010"
             maxlength={6}
             inputmode="numeric"
             required
             error={formErrors.issue_date}
             onblur={() => {
               if (formData.issue_date && !/^\d{6}$/.test(formData.issue_date)) {
-                formErrors = { ...formErrors, issue_date: 'Must be 6 digits (YYYYMM)' };
+                formErrors = { ...formErrors, issue_date: 'Issue date must be 6 digits (YYMMDD)' };
               } else {
                 const { issue_date: _, ...rest } = formErrors;
                 formErrors = rest;
@@ -1224,7 +1253,7 @@
             }}
           />
 
-          <FormInput label="Release" bind:value={formData.rev} placeholder="1" min={1} />
+          <FormInput label="Revision" bind:value={formData.rev} placeholder="1" min={1} />
         </div>
 
         <!-- Status and Package -->
@@ -1324,8 +1353,19 @@
       <div class="emittiv-form-section">
         <h3 class="emittiv-form-section__title">Proposal Scope</h3>
         <div class="flex items-center justify-between">
-          <p class="text-emittiv-light text-sm">Generate and edit scope text for this proposal</p>
-          <Button variant="secondary" size="sm" on:click={() => (showScopeModal = true)}>
+          <p class="text-emittiv-light text-sm">
+            {#if hasStages}
+              Generate and edit scope text for this proposal
+            {:else}
+              Define stages in Fee Pricing first. Scope is generated from the pricing stages.
+            {/if}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!hasStages}
+            on:click={() => (showScopeModal = true)}
+          >
             Generate Scope
           </Button>
         </div>
@@ -1385,6 +1425,12 @@
     {#if $operationState.error}
       <div class="emittiv-alert emittiv-alert--error">
         {$operationState.error}
+      </div>
+    {/if}
+
+    {#if mode === 'edit' && $flash}
+      <div class="emittiv-alert emittiv-alert--{$flash.tone}" style="white-space: pre-line;">
+        {$flash.text}
       </div>
     {/if}
 

@@ -154,7 +154,7 @@
   // Format timestamp
   function formatTimestamp(timestamp: string): string {
     const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-GB', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -177,7 +177,7 @@
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
   }
 
   // Handle click to navigate to entity

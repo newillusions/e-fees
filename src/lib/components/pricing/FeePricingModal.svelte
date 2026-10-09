@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick, untrack } from 'svelte';
   import type { Fee } from '../../../types';
   import type {
     PricingBreakdown,
@@ -68,7 +69,9 @@
   // Initialize pricing data when modal opens
   $effect(() => {
     if (isOpen && fee) {
-      initializePricingData();
+      // Track only isOpen/fee. Initialisation writes (and reads) all pricing state,
+      // which would otherwise re-trigger this effect in a loop.
+      untrack(initializePricingData);
     }
   });
 
@@ -113,7 +116,32 @@
     // Clear any previous messages
     error = '';
     message = '';
+
+    // Baseline for the unsaved-changes guard, taken once children have mounted
+    // so any normalisation they do on mount is not counted as an edit. Until
+    // then the guard is off (empty baseline).
+    baseline = '';
+    showDiscardConfirm = false;
+    tick().then(() => {
+      baseline = untrack(snapshotState);
+    });
   }
+
+  function snapshotState(): string {
+    return JSON.stringify({
+      config,
+      disciplines,
+      stages,
+      cells,
+      postContractItems,
+      reimbursableCosts,
+      paymentSchedule
+    });
+  }
+
+  let baseline = $state('');
+  let showDiscardConfirm = $state(false);
+  const isDirty = $derived(baseline !== '' && snapshotState() !== baseline);
 
   // Calculate totals reactively
   const totals = $derived(
@@ -226,6 +254,7 @@
       ]);
 
       message = 'Pricing saved successfully';
+      baseline = snapshotState();
 
       // Close modal after a brief delay to show success message
       setTimeout(() => {
@@ -241,8 +270,33 @@
   }
 
   function closeModal() {
+    showDiscardConfirm = false;
     isOpen = false;
     onclose?.();
+  }
+
+  // Panels mount lazily and may recompute derived values (e.g. the calculator's
+  // quoted fee and cells) on first mount. If nothing was edited before the switch,
+  // re-baseline once the new panel has settled so that is not counted as an edit.
+  function switchTab(id: typeof activeTab) {
+    const wasClean = baseline !== '' && !isDirty;
+    activeTab = id;
+    if (wasClean) {
+      tick()
+        .then(() => tick())
+        .then(() => {
+          baseline = untrack(snapshotState);
+        });
+    }
+  }
+
+  // Cancel, Escape, the close button and the backdrop all land here
+  function requestClose() {
+    if (isDirty && !saving) {
+      showDiscardConfirm = true;
+      return;
+    }
+    closeModal();
   }
 
   // Tab configuration - Order: Disciplines → Stages → Costs → Calculator → Payments
@@ -279,7 +333,7 @@
   {isOpen}
   title="Fee Pricing: {fee?.number || 'Unknown'}"
   maxWidth="1100px"
-  onclose={closeModal}
+  onclose={requestClose}
 >
   <div class="flex flex-col h-full">
     <!-- Summary Bar (always visible) -->
@@ -296,7 +350,7 @@
           type="button"
           class="emittiv-tab"
           class:emittiv-tab--active={activeTab === tab.id}
-          onclick={() => (activeTab = tab.id)}
+          onclick={() => switchTab(tab.id)}
         >
           <svg class="emittiv-tab__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={tab.icon} />
@@ -350,9 +404,33 @@
       </div>
     {/if}
 
+    {#if showDiscardConfirm}
+      <div class="emittiv-alert emittiv-alert--warning mt-2">
+        <p class="emittiv-alert__title">Discard unsaved pricing changes?</p>
+        <p class="emittiv-alert__subtitle">Your changes have not been saved.</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            onclick={closeModal}
+            class="emittiv-confirm-btn emittiv-confirm-btn--primary"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            onclick={() => (showDiscardConfirm = false)}
+            class="emittiv-confirm-btn emittiv-confirm-btn--outline emittiv-confirm-btn--outline-orange"
+          >
+            Keep Editing
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <!-- Actions -->
     <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-emittiv-dark">
-      <Button variant="secondary" size="md" on:click={closeModal} disabled={saving}>Cancel</Button>
+      <Button variant="secondary" size="md" on:click={requestClose} disabled={saving}>Cancel</Button
+      >
       <Button variant="primary" size="md" on:click={handleSave} disabled={saving}>
         {#if saving}
           <div class="emittiv-spinner-sm"></div>

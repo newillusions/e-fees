@@ -122,7 +122,7 @@
               </div>
               <div class="proposal-date">
                 {new Date(fee.time!.updated_at || fee.time!.created_at).toLocaleDateString(
-                  'en-US',
+                  'en-GB',
                   {
                     month: 'short',
                     day: 'numeric'

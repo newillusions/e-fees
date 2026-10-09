@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { loadAllData } from '$lib/stores';
   import { findEntityById } from '$lib/utils';
+  import { flash, clearFlash } from '$lib/stores/flash';
   import { logApiError } from '$lib/services/logger';
   import { push } from 'svelte-spa-router';
   import { fly, fade } from 'svelte/transition';
@@ -99,6 +100,24 @@
     }
   }
 
+  // A flash belongs to the page it was raised for: drop it when leaving the page
+  // or when the route switches to a different entity.
+  let flashEntityId: string | null = null;
+  $effect(() => {
+    const id = entityId;
+    if (flashEntityId !== null && flashEntityId !== id) clearFlash();
+    flashEntityId = id;
+  });
+  onDestroy(clearFlash);
+
+  // A freshly created entity opens straight into its edit modal (pricing, scope)
+  $effect(() => {
+    if (entity && $flash?.openEditForId && $flash.openEditForId === entityId && !showModal) {
+      showModal = true;
+      flash.update(f => (f ? { ...f, openEditForId: undefined } : f));
+    }
+  });
+
   function handleEdit() {
     showModal = true;
   }
@@ -143,6 +162,17 @@
       </div>
     </div>
   {:else if entity}
+    {#if $flash && !showModal}
+      <div
+        class="emittiv-alert emittiv-alert--{$flash.tone} flash-banner"
+        role={$flash.tone === 'success' ? 'status' : 'alert'}
+      >
+        <span class="flash-text">{$flash.text}</span>
+        <button class="flash-dismiss" onclick={clearFlash} aria-label="Dismiss message">
+          Dismiss
+        </button>
+      </div>
+    {/if}
     <svelte:component
       this={DetailComponent}
       {...detailProps(entity, { onedit: handleEdit, onclose: handleClose })}
@@ -156,6 +186,27 @@
 {/if}
 
 <style>
+  .flash-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-sm) var(--spacing-md) 0;
+  }
+
+  .flash-text {
+    white-space: pre-line;
+  }
+
+  .flash-dismiss {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
   .generic-detail-page {
     min-height: 100vh;
     background: var(--emittiv-black);

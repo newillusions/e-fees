@@ -59,3 +59,34 @@ export function buildPaymentSchedule(
     design_subtotal: designSubtotal
   };
 }
+
+export interface ScheduleStalenessEntry {
+  amount: number;
+  stage_id?: string;
+  quoted_stage_amount?: number;
+}
+
+/**
+ * True when a payment schedule no longer reflects the current pricing:
+ * the entries do not sum to the design total, or a milestone's recorded
+ * stage fee differs from that stage's current fee. An empty schedule is
+ * never stale (there is nothing to refresh yet).
+ */
+export function isScheduleStale(
+  entries: ScheduleStalenessEntry[],
+  currentStageTotals: Record<string, number>,
+  designTotal: number,
+  tolerance = 1
+): boolean {
+  if (entries.length === 0) return false;
+
+  const scheduled = entries.reduce((sum, e) => sum + e.amount, 0);
+  if (Math.abs(scheduled - designTotal) >= tolerance) return true;
+
+  return entries.some(e => {
+    if (!e.stage_id || e.quoted_stage_amount === undefined) return false;
+    const current = currentStageTotals[e.stage_id];
+    // Stage removed from pricing, or its fee changed
+    return current === undefined || Math.abs(current - e.quoted_stage_amount) >= tolerance;
+  });
+}

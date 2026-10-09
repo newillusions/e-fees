@@ -208,4 +208,18 @@ describe('BaseModal Component', () => {
       expect(closeButton).toHaveAttribute('aria-label', 'Close modal');
     });
   });
+
+  it('should close only the topmost modal on Escape', async () => {
+    const user = userEvent.setup();
+    const closeBottom = vi.fn();
+    const closeTop = vi.fn();
+
+    render(BaseModal, { isOpen: true, title: 'Bottom', onclose: closeBottom });
+    render(BaseModal, { isOpen: true, title: 'Top', onclose: closeTop });
+
+    await user.keyboard('{Escape}');
+
+    expect(closeTop).toHaveBeenCalledTimes(1);
+    expect(closeBottom).not.toHaveBeenCalled();
+  });
 });

@@ -8,6 +8,7 @@
     projectsActions
   } from '$lib/stores';
   import { onMount } from 'svelte';
+  import { formatDate } from '$lib/utils/format';
   import { extractId, compareIds, findEntityById } from '$lib/utils';
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
@@ -207,15 +208,7 @@
                         <span>Staff: {fee.staff_name}</span>
                       {/if}
                       <span>
-                        {new Date(
-                          fee.issue_date.length === 6
-                            ? `20${fee.issue_date.substring(0, 2)}-${fee.issue_date.substring(2, 4)}-${fee.issue_date.substring(4, 6)}`
-                            : fee.issue_date
-                        ).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
+                        {formatDate(fee.issue_date)}
                       </span>
                     </div>
                   </div>

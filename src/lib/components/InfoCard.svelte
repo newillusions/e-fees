@@ -29,7 +29,7 @@
 
     switch (type) {
       case 'date':
-        return new Date(value).toLocaleDateString('en-US', {
+        return new Date(value).toLocaleDateString('en-GB', {
           month: 'short',
           day: 'numeric',
           year: 'numeric'

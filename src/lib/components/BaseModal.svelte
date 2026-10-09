@@ -1,3 +1,8 @@
+<script module lang="ts">
+  // Stack of currently open modal ids (last = topmost). Escape closes only the topmost.
+  const openModalStack: string[] = [];
+</script>
+
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -24,6 +29,15 @@
 
   const modalId = `modal-${Math.random().toString(36).substr(2, 9)}`;
 
+  $effect(() => {
+    if (!isOpen) return;
+    openModalStack.push(modalId);
+    return () => {
+      const idx = openModalStack.lastIndexOf(modalId);
+      if (idx !== -1) openModalStack.splice(idx, 1);
+    };
+  });
+
   function closeModal() {
     onclose?.();
   }
@@ -37,6 +51,8 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.defaultPrevented) return;
     if (event.key === 'Escape') {
+      if (openModalStack[openModalStack.length - 1] !== modalId) return;
+      event.preventDefault();
       closeModal();
     }
   }

@@ -98,7 +98,7 @@
     // (`pricing.config.currency` is free text, not validated against a
     // fixed list - see PricingConfig).
     return amounts
-      .map(({ currency, amount }) => `${currency} ${Math.round(amount).toLocaleString('en-US')}`)
+      .map(({ currency, amount }) => `${currency} ${Math.round(amount).toLocaleString('en-GB')}`)
       .join(' · ');
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPaymentSchedule, type ScheduleStageInput } from './paymentSchedule';
+import { buildPaymentSchedule, isScheduleStale, type ScheduleStageInput } from './paymentSchedule';
 
 describe('buildPaymentSchedule', () => {
   // ailx hub message:9a3hw83prc2gt5rqpat2 — exact business rule from Martin (2026-04-21):
@@ -74,5 +74,44 @@ describe('buildPaymentSchedule', () => {
     const cdAmount = result.stages.find(s => s.stage_id === 'cd')!.amount;
     expect(cdAmount).not.toBe(25200);
     expect(cdAmount).toBe(24000);
+  });
+});
+
+describe('isScheduleStale', () => {
+  const stageTotals = { cd: 36000, sd: 36000 };
+  const fresh = buildPaymentSchedule(
+    [
+      { id: 'cd', name: 'CD', total: 36000 },
+      { id: 'sd', name: 'SD', total: 36000 }
+    ],
+    30
+  );
+  const entries = [
+    { amount: fresh.mobilisation },
+    ...fresh.stages.map(s => ({
+      amount: s.amount,
+      stage_id: s.stage_id,
+      quoted_stage_amount: s.quoted_stage_amount
+    }))
+  ];
+
+  it('is not stale when the schedule matches pricing', () => {
+    expect(isScheduleStale(entries, stageTotals, 72000)).toBe(false);
+  });
+
+  it('is never stale when empty', () => {
+    expect(isScheduleStale([], stageTotals, 72000)).toBe(false);
+  });
+
+  it('is stale when a stage fee changed after generation', () => {
+    expect(isScheduleStale(entries, { cd: 40000, sd: 36000 }, 76000)).toBe(true);
+  });
+
+  it('is stale when entries no longer sum to the design total', () => {
+    expect(isScheduleStale(entries, stageTotals, 80000)).toBe(true);
+  });
+
+  it('is stale when a scheduled stage was removed from pricing', () => {
+    expect(isScheduleStale(entries, { cd: 36000 }, 72000)).toBe(true);
   });
 });

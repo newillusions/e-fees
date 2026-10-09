@@ -9,6 +9,7 @@
     paginatedProjectsStore
   } from '$lib/stores';
   import { onMount } from 'svelte';
+  import { formatDate } from '$lib/utils/format';
   import { extractId, compareIds } from '$lib/utils';
   import { extractIdFromRelation } from '$lib/utils/surrealdb';
   import { createCompanyLookup } from '$lib/utils/companyLookup';
@@ -25,6 +26,7 @@
   import DetailPanel from './DetailPanel.svelte';
   import DetailHeader from './DetailHeader.svelte';
   import InfoCard from './InfoCard.svelte';
+  import { push } from 'svelte-spa-router';
   import ListCard from './ListCard.svelte';
   import StatusBadge from './StatusBadge.svelte';
   import WarningModal from './WarningModal.svelte';
@@ -523,7 +525,7 @@
         {:else}
           <div class="grid gap-2">
             {#each projectFees as fee}
-              <ListCard clickable={false}>
+              <ListCard onclick={() => push(`/proposals/${extractId(fee.id)}`)}>
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex-1 min-w-0">
                     <div>
@@ -553,15 +555,7 @@
                       <div class="emittiv-card-meta">
                         <span>Rev: {fee.rev}</span>
                         <span>
-                          {new Date(
-                            fee.issue_date.length === 6
-                              ? `20${fee.issue_date.substring(0, 2)}-${fee.issue_date.substring(2, 4)}-${fee.issue_date.substring(4, 6)}`
-                              : fee.issue_date
-                          ).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
+                          {formatDate(fee.issue_date)}
                         </span>
                       </div>
                     </div>
