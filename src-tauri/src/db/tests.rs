@@ -2061,6 +2061,198 @@ mod tests {
         );
     }
 
+    // ========================================================================
+    // REVISION CLONE COMMERCIAL FIELDS (Codex review R1, 2026-10-17)
+    //
+    // `create_fee`'s CREATE SET omitted pricing / post_contract_items /
+    // reimbursable_costs, so `clone_fee_as_revision` (which builds them on the
+    // FeeCreate) silently dropped them on the new revision.
+    // ========================================================================
+
+    fn commercial_fee_create(rev: i64) -> crate::db::FeeCreate {
+        use crate::db::types::{PostContractItem, ReimbursableCost};
+        let mut fee = delete_me_fee("proj_commercial", "co1", "ct1", rev);
+        fee.pricing = Some(crate::db::PricingBreakdown {
+            design_phase_total: 1000.0,
+            post_contract_total: 250.0,
+            costs_total: 60.0,
+            subtotal: 1310.0,
+            vat_amount: 65.5,
+            grand_total: 1375.5,
+            ..Default::default()
+        });
+        fee.post_contract_items = Some(vec![PostContractItem {
+            id: "pc1".to_string(),
+            stage_id: "s1".to_string(),
+            description: "Site visit".to_string(),
+            quantity: 2.0,
+            unit: "day".to_string(),
+            rate: 125.0,
+            amount: 250.0,
+        }]);
+        fee.reimbursable_costs = Some(vec![ReimbursableCost {
+            id: "rc1".to_string(),
+            description: "Travel".to_string(),
+            stage_id: "s1".to_string(),
+            discipline_id: None,
+            base_cost: 50.0,
+            markup_percent: 20.0,
+            cost_to_client: 60.0,
+            date_incurred: "260101".to_string(),
+            notes: Some("flight".to_string()),
+        }]);
+        fee
+    }
+
+    #[test]
+    fn test_create_fee_query_persists_commercial_fields_when_present() {
+        let fee = commercial_fee_create(1);
+        let expected_pricing = serde_json::to_value(fee.pricing.as_ref().unwrap()).unwrap();
+        let expected_items =
+            serde_json::to_value(fee.post_contract_items.as_ref().unwrap()).unwrap();
+        let expected_costs =
+            serde_json::to_value(fee.reimbursable_costs.as_ref().unwrap()).unwrap();
+
+        let (query, bindings) = crate::db::client::build_create_fee_query(fee).unwrap();
+
+        assert!(query.contains("pricing = $pricing"), "query: {query}");
+        assert!(
+            query.contains("post_contract_items = $post_contract_items"),
+            "query: {query}"
+        );
+        assert!(
+            query.contains("reimbursable_costs = $reimbursable_costs"),
+            "query: {query}"
+        );
+        assert_eq!(bindings.get("pricing"), Some(&expected_pricing));
+        assert_eq!(bindings.get("post_contract_items"), Some(&expected_items));
+        assert_eq!(bindings.get("reimbursable_costs"), Some(&expected_costs));
+    }
+
+    #[test]
+    fn test_create_fee_query_omits_commercial_fields_when_absent() {
+        // SurrealDB v3 rejects NULL for option<T>: None must not be bound.
+        let fee = delete_me_fee("proj_commercial", "co1", "ct1", 1);
+        let (query, bindings) = crate::db::client::build_create_fee_query(fee).unwrap();
+
+        for field in ["pricing", "post_contract_items", "reimbursable_costs"] {
+            assert!(
+                !query.contains(&format!("{field} = ")),
+                "{field} in: {query}"
+            );
+            assert!(!bindings.contains_key(field), "{field} bound");
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_clone_fee_as_revision_carries_commercial_fields() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let project = manager
+            .create_new_project(delete_me_project_number(7, stamp))
+            .await
+            .expect("create project should succeed");
+        let project_key = crate::db::types::record_key_string(&project.id.as_ref().unwrap().key);
+        let company = manager
+            .create_company(delete_me_company(stamp))
+            .await
+            .expect("create company should succeed");
+        let company_key = crate::db::types::record_key_string(&company.id.as_ref().unwrap().key);
+        let contact = manager
+            .create_contact(delete_me_contact(&company_key, stamp))
+            .await
+            .expect("create contact should succeed");
+        let contact_key = crate::db::types::record_key_string(&contact.id.as_ref().unwrap().key);
+
+        let mut seed = commercial_fee_create(1);
+        seed.project_id = project_key.clone();
+        seed.company_id = company_key.clone();
+        seed.contact_id = contact_key.clone();
+        let expected_pricing = serde_json::to_value(seed.pricing.as_ref().unwrap()).unwrap();
+        let expected_items =
+            serde_json::to_value(seed.post_contract_items.as_ref().unwrap()).unwrap();
+        let expected_costs =
+            serde_json::to_value(seed.reimbursable_costs.as_ref().unwrap()).unwrap();
+
+        let fee1 = manager.create_fee(seed).await;
+        let mut fee2_key: Option<String> = None;
+        let mut fee1_key: Option<String> = None;
+
+        let outcome = async {
+            let fee1 = fee1.map_err(|e| format!("create fee1 failed: {e}"))?;
+            let k1 = crate::db::types::record_key_string(&fee1.id.as_ref().unwrap().key);
+            fee1_key = Some(k1.clone());
+
+            let created = manager
+                .clone_fee_as_revision(&k1, "reviewer@emittiv.com", "Reviewer", "clone")
+                .await
+                .map_err(|e| format!("clone failed: {e}"))?;
+            let k2 = crate::db::types::record_key_string(&created.id.as_ref().unwrap().key);
+            fee2_key = Some(k2.clone());
+
+            // Read back from the DB, not from the create response.
+            let fee2 = manager
+                .get_fee_by_id(&k2)
+                .await
+                .map_err(|e| format!("read back failed: {e}"))?
+                .ok_or("fee2 missing on read back")?;
+
+            let got_pricing = fee2
+                .pricing_typed()
+                .map(|p| serde_json::to_value(p).unwrap());
+            if got_pricing.as_ref() != Some(&expected_pricing) {
+                return Err(format!(
+                    "pricing mismatch: {got_pricing:?} != {expected_pricing:?}"
+                ));
+            }
+            let got_items = fee2
+                .post_contract_items
+                .as_ref()
+                .map(|v| serde_json::to_value(v).unwrap());
+            if got_items.as_ref() != Some(&expected_items) {
+                return Err(format!("post_contract_items mismatch: {got_items:?}"));
+            }
+            let got_costs = fee2
+                .reimbursable_costs
+                .as_ref()
+                .map(|v| serde_json::to_value(v).unwrap());
+            if got_costs.as_ref() != Some(&expected_costs) {
+                return Err(format!("reimbursable_costs mismatch: {got_costs:?}"));
+            }
+            if fee2.payment_schedule.is_some() {
+                return Err("payment_schedule must stay reset on a new revision".to_string());
+            }
+            Ok::<(), String>(())
+        }
+        .await;
+
+        if let Some(k) = &fee2_key {
+            let _ = manager.delete_fee(k).await;
+        }
+        if let Some(k) = &fee1_key {
+            let _ = manager.delete_fee(k).await;
+        }
+        let _ = manager.delete_project(&project_key).await;
+        let _ = manager
+            .batch_delete("company", std::slice::from_ref(&company_key))
+            .await;
+        let _ = manager
+            .batch_delete("contacts", std::slice::from_ref(&contact_key))
+            .await;
+
+        outcome.expect("clone must carry commercial fields");
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_delete_project_cascade_removes_dependent_fees() {

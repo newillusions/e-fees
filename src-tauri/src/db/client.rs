@@ -11,6 +11,130 @@ use super::types::{
 };
 use crate::commands::{CompanyUpdate, ContactUpdate, ProjectUpdate};
 
+/// Serialize a commercial field for binding; a failure is an error, never a
+/// silent drop (a write that claims success must have written the data).
+fn to_binding<T: serde::Serialize>(value: &T, field: &str) -> Result<serde_json::Value, Error> {
+    serde_json::to_value(value)
+        .map_err(|e| Error::thrown(format!("Failed to serialize {}: {}", field, e)))
+}
+
+/// Build the single-statement `CREATE fee:{id}` query and its bindings.
+///
+/// Optional commercial fields (`pricing`, `post_contract_items`,
+/// `reimbursable_costs`) are included in the SET clause only when present:
+/// SurrealDB v3 rejects NULL for `option<T>` fields, so a `None` must be
+/// omitted rather than bound as null (same rule as the REST transport in
+/// `e-fees-api/src/routes/fees.rs`).
+pub(crate) fn build_create_fee_query(
+    fee: FeeCreate,
+) -> Result<(String, serde_json::Map<String, serde_json::Value>), Error> {
+    let fee_id = format!("{}_{}", fee.project_id.replace("-", "_"), fee.rev);
+
+    // Validate all IDs (alphanumeric + underscores only)
+    validate_record_id(&fee_id, "fee_id")?;
+    validate_record_id(&fee.project_id.replace("-", "_"), "project_id")?;
+    validate_record_id(&fee.company_id, "company_id")?;
+    validate_record_id(&fee.contact_id, "contact_id")?;
+
+    let mut bindings = serde_json::Map::new();
+
+    // Each present optional field adds a `name = $name, ` clause (trailing
+    // comma, so it slots between `revisions` and the record links).
+    let mut optional_sets = String::new();
+    if let Some(pricing) = &fee.pricing {
+        optional_sets.push_str("pricing = $pricing, ");
+        bindings.insert("pricing".into(), to_binding(pricing, "pricing")?);
+    }
+    if let Some(items) = &fee.post_contract_items {
+        optional_sets.push_str("post_contract_items = $post_contract_items, ");
+        bindings.insert(
+            "post_contract_items".into(),
+            to_binding(items, "post_contract_items")?,
+        );
+    }
+    if let Some(costs) = &fee.reimbursable_costs {
+        optional_sets.push_str("reimbursable_costs = $reimbursable_costs, ");
+        bindings.insert(
+            "reimbursable_costs".into(),
+            to_binding(costs, "reimbursable_costs")?,
+        );
+    }
+
+    // Single-statement CREATE SET with all fields inline.
+    // SurrealDB v3 strict schema rejects NONE for record<T> fields,
+    // so record links must be in the same CREATE, not a separate UPDATE.
+    let project_key = fee.project_id.replace("-", "_");
+    let query = format!(
+        "CREATE fee:{fee_id} SET \
+         name = $name, \
+         number = $number, \
+         rev = $rev, \
+         status = $status, \
+         issue_date = $issue_date, \
+         activity = $activity, \
+         package = $package, \
+         strap_line = $strap_line, \
+         staff_name = $staff_name, \
+         staff_email = $staff_email, \
+         staff_phone = $staff_phone, \
+         staff_position = $staff_position, \
+         revisions = $revisions, \
+         {optional_sets}\
+         project_id = type::record('projects', $project_key), \
+         company_id = type::record('company', $company_id), \
+         contact_id = type::record('contacts', $contact_id), \
+         time = {{ created_at: time::now(), updated_at: time::now() }};",
+        fee_id = fee_id,
+        optional_sets = optional_sets,
+    );
+
+    bindings.insert("name".into(), serde_json::Value::String(fee.name));
+    bindings.insert("number".into(), serde_json::Value::String(fee.number));
+    bindings.insert("rev".into(), serde_json::json!(fee.rev));
+    bindings.insert("status".into(), serde_json::Value::String(fee.status));
+    bindings.insert(
+        "issue_date".into(),
+        serde_json::Value::String(fee.issue_date),
+    );
+    bindings.insert("activity".into(), serde_json::Value::String(fee.activity));
+    bindings.insert("package".into(), serde_json::Value::String(fee.package));
+    bindings.insert(
+        "strap_line".into(),
+        serde_json::Value::String(fee.strap_line),
+    );
+    bindings.insert(
+        "staff_name".into(),
+        serde_json::Value::String(fee.staff_name),
+    );
+    bindings.insert(
+        "staff_email".into(),
+        serde_json::Value::String(fee.staff_email),
+    );
+    bindings.insert(
+        "staff_phone".into(),
+        serde_json::Value::String(fee.staff_phone),
+    );
+    bindings.insert(
+        "staff_position".into(),
+        serde_json::Value::String(fee.staff_position),
+    );
+    bindings.insert(
+        "revisions".into(),
+        serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])),
+    );
+    bindings.insert("project_key".into(), serde_json::Value::String(project_key));
+    bindings.insert(
+        "company_id".into(),
+        serde_json::Value::String(fee.company_id),
+    );
+    bindings.insert(
+        "contact_id".into(),
+        serde_json::Value::String(fee.contact_id),
+    );
+
+    Ok((query, bindings))
+}
+
 /// Normalize a SurrealDB WebSocket URL to ensure it ends with `/rpc`.
 /// SurrealDB SDK v3 requires the `/rpc` endpoint; without it, connections
 /// silently fail to execute queries.
@@ -657,84 +781,7 @@ impl DatabaseClient {
     // ==================== Fee Operations ====================
 
     pub async fn create_fee(&self, fee: FeeCreate) -> Result<Option<Fee>, Error> {
-        let fee_id = format!("{}_{}", fee.project_id.replace("-", "_"), fee.rev);
-
-        // Validate all IDs (alphanumeric + underscores only)
-        validate_record_id(&fee_id, "fee_id")?;
-        validate_record_id(&fee.project_id.replace("-", "_"), "project_id")?;
-        validate_record_id(&fee.company_id, "company_id")?;
-        validate_record_id(&fee.contact_id, "contact_id")?;
-
-        // Single-statement CREATE SET with all fields inline.
-        // SurrealDB v3 strict schema rejects NONE for record<T> fields,
-        // so record links must be in the same CREATE, not a separate UPDATE.
-        let project_key = fee.project_id.replace("-", "_");
-        let query = format!(
-            "CREATE fee:{fee_id} SET \
-             name = $name, \
-             number = $number, \
-             rev = $rev, \
-             status = $status, \
-             issue_date = $issue_date, \
-             activity = $activity, \
-             package = $package, \
-             strap_line = $strap_line, \
-             staff_name = $staff_name, \
-             staff_email = $staff_email, \
-             staff_phone = $staff_phone, \
-             staff_position = $staff_position, \
-             revisions = $revisions, \
-             project_id = type::record('projects', $project_key), \
-             company_id = type::record('company', $company_id), \
-             contact_id = type::record('contacts', $contact_id), \
-             time = {{ created_at: time::now(), updated_at: time::now() }};",
-            fee_id = fee_id,
-        );
-
-        let mut bindings = serde_json::Map::new();
-        bindings.insert("name".into(), serde_json::Value::String(fee.name));
-        bindings.insert("number".into(), serde_json::Value::String(fee.number));
-        bindings.insert("rev".into(), serde_json::json!(fee.rev));
-        bindings.insert("status".into(), serde_json::Value::String(fee.status));
-        bindings.insert(
-            "issue_date".into(),
-            serde_json::Value::String(fee.issue_date),
-        );
-        bindings.insert("activity".into(), serde_json::Value::String(fee.activity));
-        bindings.insert("package".into(), serde_json::Value::String(fee.package));
-        bindings.insert(
-            "strap_line".into(),
-            serde_json::Value::String(fee.strap_line),
-        );
-        bindings.insert(
-            "staff_name".into(),
-            serde_json::Value::String(fee.staff_name),
-        );
-        bindings.insert(
-            "staff_email".into(),
-            serde_json::Value::String(fee.staff_email),
-        );
-        bindings.insert(
-            "staff_phone".into(),
-            serde_json::Value::String(fee.staff_phone),
-        );
-        bindings.insert(
-            "staff_position".into(),
-            serde_json::Value::String(fee.staff_position),
-        );
-        bindings.insert(
-            "revisions".into(),
-            serde_json::to_value(&fee.revisions).unwrap_or(serde_json::json!([])),
-        );
-        bindings.insert("project_key".into(), serde_json::Value::String(project_key));
-        bindings.insert(
-            "company_id".into(),
-            serde_json::Value::String(fee.company_id),
-        );
-        bindings.insert(
-            "contact_id".into(),
-            serde_json::Value::String(fee.contact_id),
-        );
+        let (query, bindings) = build_create_fee_query(fee)?;
 
         info!("Executing Fee creation query (parameterized)");
 
