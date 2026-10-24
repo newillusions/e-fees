@@ -2253,6 +2253,131 @@ mod tests {
         outcome.expect("clone must carry commercial fields");
     }
 
+    // ========================================================================
+    // REVISION CLONE ATOMICITY (Codex review R3, 2026-10-24)
+    //
+    // clone_fee_as_revision created the new revision and then flipped the
+    // source to Superseded as a second, separate write whose failure was only
+    // logged, leaving two live revisions. Both writes must be one transaction.
+    // ========================================================================
+
+    #[test]
+    fn test_create_and_supersede_query_is_one_transaction() {
+        let fee = delete_me_fee("proj_atomic", "co1", "ct1", 2);
+        let (query, bindings) =
+            crate::db::client::build_create_and_supersede_query(fee, "proj_atomic_1").unwrap();
+
+        assert!(query.starts_with("BEGIN TRANSACTION;"), "query: {query}");
+        assert!(
+            query.trim_end().ends_with("COMMIT TRANSACTION;"),
+            "query: {query}"
+        );
+        let guard = query.find("THROW").expect("missing-source guard");
+        let create = query.find("CREATE fee:proj_atomic_2").expect("create");
+        let update = query
+            .find("UPDATE fee:proj_atomic_1 SET status = 'Superseded'")
+            .expect("supersede");
+        assert!(guard < create && create < update, "order: {query}");
+        assert!(bindings.contains_key("name"));
+    }
+
+    #[test]
+    fn test_create_and_supersede_query_rejects_bad_source_key() {
+        let fee = delete_me_fee("proj_atomic", "co1", "ct1", 2);
+        assert!(
+            crate::db::client::build_create_and_supersede_query(fee, "x; DELETE fee;--").is_err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_revision_create_and_supersede_are_atomic() {
+        let mut manager = crate::db::DatabaseManager::from_config(dev_db_config());
+        manager
+            .initialize()
+            .await
+            .expect("Failed to initialize dev DB connection");
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let project = manager
+            .create_new_project(delete_me_project_number(8, stamp))
+            .await
+            .expect("create project should succeed");
+        let project_key = crate::db::types::record_key_string(&project.id.as_ref().unwrap().key);
+        let company = manager
+            .create_company(delete_me_company(stamp))
+            .await
+            .expect("create company should succeed");
+        let company_key = crate::db::types::record_key_string(&company.id.as_ref().unwrap().key);
+        let contact = manager
+            .create_contact(delete_me_contact(&company_key, stamp))
+            .await
+            .expect("create contact should succeed");
+        let contact_key = crate::db::types::record_key_string(&contact.id.as_ref().unwrap().key);
+
+        let fee1 = manager
+            .create_fee(delete_me_fee(&project_key, &company_key, &contact_key, 1))
+            .await;
+
+        let outcome = async {
+            let fee1 = fee1.map_err(|e| format!("create fee1 failed: {e}"))?;
+            let k1 = crate::db::types::record_key_string(&fee1.id.as_ref().unwrap().key);
+
+            // The supersede target does not exist, so its UPDATE statement
+            // fails the schema (required record links). The CREATE before it
+            // must roll back with it.
+            let missing_source = format!("no_such_fee_{stamp}");
+            let rev2 = delete_me_fee(&project_key, &company_key, &contact_key, 2);
+            let client = manager.get_client().map_err(|e| format!("{e}"))?;
+            let res = client.create_fee_superseding(rev2, &missing_source).await;
+            if res.is_ok() {
+                return Err("expected an error when the supersede statement fails".to_string());
+            }
+
+            let fees = manager
+                .get_fees_for_project(&project_key)
+                .await
+                .map_err(|e| format!("list fees failed: {e}"))?;
+            let revs: Vec<i64> = fees.iter().map(|f| f.rev).collect();
+            if revs != vec![1] {
+                return Err(format!(
+                    "failed supersede left a partial write: revs now {revs:?}, expected [1]"
+                ));
+            }
+            let src = manager
+                .get_fee_by_id(&k1)
+                .await
+                .map_err(|e| format!("{e}"))?
+                .ok_or("source missing")?;
+            if src.status == "Superseded" {
+                return Err("source must not be Superseded after a failed clone".to_string());
+            }
+            Ok::<(), String>(())
+        }
+        .await;
+
+        // Cleanup: every fee under the throwaway project, then the project.
+        if let Ok(fees) = manager.get_fees_for_project(&project_key).await {
+            for f in fees {
+                let k = crate::db::types::record_key_string(&f.id.as_ref().unwrap().key);
+                let _ = manager.delete_fee(&k).await;
+            }
+        }
+        let _ = manager.delete_project(&project_key).await;
+        let _ = manager
+            .batch_delete("company", std::slice::from_ref(&company_key))
+            .await;
+        let _ = manager
+            .batch_delete("contacts", std::slice::from_ref(&contact_key))
+            .await;
+
+        outcome.expect("create + supersede must be atomic");
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_delete_project_cascade_removes_dependent_fees() {

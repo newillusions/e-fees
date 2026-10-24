@@ -329,7 +329,7 @@ impl DatabaseManager {
     /// collide on the live `fee_project_rev` unique index (audited 2026-08-28
     /// after the historical-backfill P1 loader found and worked around the
     /// same defect - see `crates/e-fees-core/src/backfill/p1_index_load.rs`).
-    /// Also flips the source fee to `Superseded`, per the design spec
+    /// Also flips the source fee to `Superseded` in the same transaction, per the design spec
     /// ("Create new revision when terms agreed / Old revision auto-set to
     /// 'Superseded'", docs/plans/2026-02-24-domain-model-restructure-design.md).
     pub async fn clone_fee_as_revision(
@@ -404,44 +404,13 @@ impl DatabaseManager {
             import_source: None,
         };
 
-        let created = self.create_fee(new_fee).await?;
-
-        // 5. Flip the source fee to Superseded now that a real revision
-        // exists on top of it. Best-effort: the new revision is already
-        // committed and is the source of truth, so a failure here is logged
-        // rather than turned into an error that would make the caller think
-        // the revision itself failed to create.
-        let status_update = FeeUpdate {
-            name: source.name.clone(),
-            number: source.number.clone(),
-            rev: source.rev,
-            status: "Superseded".to_string(),
-            issue_date: source.issue_date.clone(),
-            activity: Some(source.activity.clone()),
-            package: Some(source.package.clone()),
-            project_id: record_key_string(&source.project_id.key),
-            company_id: record_key_string(&source.company_id.key),
-            contact_id: record_key_string(&source.contact_id.key),
-            staff_name: Some(source.staff_name.clone()),
-            staff_email: Some(source.staff_email.clone()),
-            staff_phone: Some(source.staff_phone.clone()),
-            staff_position: Some(source.staff_position.clone()),
-            strap_line: Some(source.strap_line.clone()),
-            revisions: source.revisions.clone(),
-            pricing: None,
-            post_contract_items: None,
-            reimbursable_costs: None,
-            payment_schedule: None,
-            pricing_revisions: None,
-            current_revision_number: None,
-            current_release_number: None,
-        };
-        if let Err(e) = self.update_fee(source_fee_id, status_update).await {
-            log::warn!(
-                "clone_fee_as_revision: created revision {} for project {} but failed to flip source {} to Superseded: {}",
-                new_rev, project_id_val, source_fee_id, e
-            );
-        }
+        // 5. Create the new revision and flip the source to Superseded in one
+        // transaction (Codex R3): a failure in either write rolls back both, so
+        // the project never ends up with two live revisions or a half-made one.
+        let created = client
+            .create_fee_superseding(new_fee, source_fee_id)
+            .await?
+            .ok_or_else(|| self.not_found_error("create fee revision"))?;
 
         Ok(created)
     }

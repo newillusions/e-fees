@@ -135,6 +135,27 @@ pub(crate) fn build_create_fee_query(
     Ok((query, bindings))
 }
 
+/// Build the single-transaction query for a new fee revision: CREATE the new
+/// fee, then flip `source_key` to `Superseded`. A leading guard THROWs when the
+/// source is missing (explicit rather than relying on a schema failure), which
+/// rolls the whole transaction back. Result slots (verified live): 0 BEGIN,
+/// 1 guard, 2 CREATE, 3 UPDATE, 4 COMMIT.
+pub(crate) fn build_create_and_supersede_query(
+    fee: FeeCreate,
+    source_key: &str,
+) -> Result<(String, serde_json::Map<String, serde_json::Value>), Error> {
+    validate_record_id(source_key, "source_fee_id")?;
+    let (create, bindings) = build_create_fee_query(fee)?;
+    let query = format!(
+        "BEGIN TRANSACTION; \
+         IF array::len(SELECT VALUE id FROM fee:{source_key}) = 0 {{ THROW 'supersede target fee:{source_key} not found'; }}; \
+         {create} \
+         UPDATE fee:{source_key} SET status = 'Superseded', time.updated_at = time::now() RETURN AFTER; \
+         COMMIT TRANSACTION;"
+    );
+    Ok((query, bindings))
+}
+
 /// Normalize a SurrealDB WebSocket URL to ensure it ends with `/rpc`.
 /// SurrealDB SDK v3 requires the `/rpc` endpoint; without it, connections
 /// silently fail to execute queries.
@@ -504,7 +525,10 @@ impl DatabaseClient {
         validate_record_id(id, "record id")?;
 
         let mut binds = serde_json::Map::new();
-        binds.insert("__id".to_string(), serde_json::Value::String(id.to_string()));
+        binds.insert(
+            "__id".to_string(),
+            serde_json::Value::String(id.to_string()),
+        );
 
         let query = if fields.is_empty() {
             // Nothing to change — return the record as-is rather than clobbering it.
@@ -791,6 +815,37 @@ impl DatabaseClient {
             Ok(mut fees) => Ok(fees.pop()),
             Err(e) => Err(e),
         }
+    }
+
+    /// Create a new fee revision and flip `source_key` to `Superseded` in ONE
+    /// transaction: either both writes land or neither does.
+    pub async fn create_fee_superseding(
+        &self,
+        fee: FeeCreate,
+        source_key: &str,
+    ) -> Result<Option<Fee>, Error> {
+        let (query, bindings) = build_create_and_supersede_query(fee, source_key)?;
+
+        info!("Executing fee revision create + supersede transaction");
+
+        let mut response = self.query_bind_map(&query, bindings).await?;
+        // A failed statement rolls the transaction back; every other
+        // statement (and COMMIT) then reports a generic cancelled / not-executed
+        // error. Surface the statement that actually failed, not the echo.
+        let mut errors: Vec<(usize, Error)> = response.take_errors().into_iter().collect();
+        if !errors.is_empty() {
+            errors.sort_by_key(|(i, _)| *i);
+            let root = errors
+                .iter()
+                .position(|(_, e)| {
+                    let m = e.to_string();
+                    !m.contains("cancelled transaction") && !m.contains("Cannot COMMIT")
+                })
+                .unwrap_or(0);
+            return Err(errors.swap_remove(root).1);
+        }
+        let mut created: Vec<Fee> = response.take(2)?;
+        Ok(created.pop())
     }
 
     pub async fn update_fee(&self, id: &str, fee: FeeUpdate) -> Result<Option<Fee>, Error> {
