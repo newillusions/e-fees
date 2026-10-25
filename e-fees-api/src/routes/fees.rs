@@ -11,6 +11,7 @@ use serde_json::{json, Value};
 use e_fees_core::models::{record_id_string, Fee, FeeCreate};
 
 use crate::error::ApiError;
+use crate::fee_update::{apply_fee_update, prepare_fee_update};
 use crate::pagination::{db_paginate, paginated_json, PaginationParams};
 use crate::schemas;
 use crate::validation::{require_non_empty, validate_id, validate_status, FEE_STATUSES};
@@ -185,18 +186,8 @@ pub async fn update_fee(
     let key = id.strip_prefix("fee:").unwrap_or(&id);
     validate_id(key)?;
 
-    if let Some(status) = body.get("status").and_then(|s| s.as_str()) {
-        validate_status(status, FEE_STATUSES, "fee")?;
-    }
-
-    let query = format!(
-        "UPDATE fee:{key} MERGE $data RETURN NONE; \
-         UPDATE fee:{key} SET time.updated_at = time::now() RETURN NONE; \
-         SELECT * FROM fee:{key};",
-        key = key
-    );
-    let mut response = state.db.query(&query).bind(("data", body)).await?;
-    let updated: Option<Fee> = response.take(2)?;
+    let plan = prepare_fee_update(body)?;
+    let updated = apply_fee_update(&state.db, key, plan).await?;
 
     match updated {
         Some(f) => Ok(Json(json!({ "data": fee_to_detail_json(&f) }))),

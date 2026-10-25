@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod fee_update;
 mod health;
 mod pagination;
 mod routes;
