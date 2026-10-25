@@ -1,15 +1,15 @@
 {
-  "version": "0.18.4",
-  "notes": "Release v0.18.4",
-  "pub_date": "2026-10-25T05:03:31Z",
+  "version": "0.18.5",
+  "notes": "Release v0.18.5",
+  "pub_date": "2026-10-25T15:12:42Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2o0bUNpRG5sZVczd1NkWlRZN2FWUzVVeGc1TUtvaG1GK0kyS0VXeWdBZExXSVNzL3lLRi9DRytGb2lWQVNDTGlxazV1VUhFRG9INXVlRW9kNG9xWGd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTA0MjcyCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKOWpKUnpscGkrN2xXa0FsdzRlMmZqZkJnVERFZVhrUVF2WnJEaGVuc3YrNG16ZEhLZnFQeEdBZ2J4UVUvNG5LOGJzZ2RReWY3elBySSswYXdsdFJVRFE9PQo=",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.18.4/E-Fees_0.18.4_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2tyM0FjK0Mwbitxd3NEVFlwUlQ5NUVDQlNrRjNpQjNnMTNSZ09QOXQ4NEpzVzNjbldyZnhJYjB3bTZ3ODhSWU1sNGlwL2lWRFhBZUt3ZFkraFdzbUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTQxMDMyCWZpbGU6RS1GZWVzLmFwcC50YXIuZ3oKcFlKU1BkYW5DN1ludkNCcUZQcEdGaWp4U3VqRUUwZ1BwWjNGSGJtdUtnN3pGWHd4Sm9Nczc5cDd3ZFlLekN1NGVKZTNIRU5wSDRCODB4RU5jWFFZQ1E9PQo=",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.18.5/E-Fees_0.18.5_aarch64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd3Z5SnpQVEhmT210cjlCamRaVUVES0pWT0x3QXQvM3c5RFRyY2ZOUG9nNTFNRWJTVHBSd0xGdkdleVMwREJtVHp1eVBLa3FkTFJOZ3l3S0p0VmhqWkFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTA0NTkzCWZpbGU6RS1GZWVzXzAuMTguNF94NjQtc2V0dXAuZXhlCnhzeSt4djBXSnNNK2dLZlNld1pQQXZHKzVFT0Znc2xFNjRFQ2VySUR4UFArTENoVU1CVEdWZ0F5bk9JKy9paXptRkZFdms4YVI3RTI0K0owYmhGMEJ3PT0K",
-      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.18.4/E-Fees_0.18.4_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVScXlDUVlPUlNVd2c4dVBiR2tXcThZbXRQbjNaRnlLWjNFdHNESjJLNXk2WFBtZlg0Ymx1RWFvcVNDWEduVGUyUWVhbllUcUh6M0JEcmlYSmtwSWdaL0YyT3hjYk0vL3dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyOTQxMTQyCWZpbGU6RS1GZWVzXzAuMTguNV94NjQtc2V0dXAuZXhlCkV2YkYzOEVObG83bi9hMEJzUS96TkJnWDhxaTlnUThqSUl4OERZMHQ2aU04bFU2Sk12Nkt6NEFxUEd0ZTBzZ2o3NHgvNXdLamltTXRDd0kxT0FZWkNnPT0K",
+      "url": "https://forge.mms.name/emittiv/fee-prop/releases/download/v0.18.5/E-Fees_0.18.5_x64-setup.exe"
     }
   }
 }
