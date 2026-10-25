@@ -270,6 +270,10 @@ pub struct ScopeDeliverableEntry {
     pub sort_order: i64,
     /// If set, this overrides the master wording for this proposal only.
     pub wording_override: Option<String>,
+    /// Display name for a row whose library deliverable no longer exists. Only
+    /// used together with `wording_override` to keep a snapshot-only row.
+    #[serde(default)]
+    pub short_name: Option<String>,
 }
 
 /// A manually added deliverable (not from library).

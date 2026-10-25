@@ -17,7 +17,7 @@ import type {
   GenerateScopeRequest,
   UpdateScopeRequest,
   ScopeAssembly,
-  ScopeDeliverableEntry,
+  SavedScopeState,
   PaginatedResponse,
   DeliverableAnalytics,
   Clause,
@@ -166,8 +166,8 @@ export async function saveScopeBuilder(data: SaveScopeBuilderRequest): Promise<S
 }
 
 /** Get saved scope deliverables for a fee proposal. */
-export async function getScopeDeliverables(feeId: string): Promise<ScopeDeliverableEntry[]> {
-  return scopeRequest<ScopeDeliverableEntry[]>(`/scope/${feeId}/deliverables`);
+export async function getScopeDeliverables(feeId: string): Promise<SavedScopeState> {
+  return scopeRequest<SavedScopeState>(`/scope/${feeId}/deliverables`);
 }
 
 // =============================================================================

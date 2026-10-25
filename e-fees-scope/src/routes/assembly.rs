@@ -13,6 +13,60 @@ use crate::models::{AssembleRequest, Deliverable, SaveScopeBuilderRequest, Stage
 use crate::scope_store::{self, BuilderState};
 use crate::AppState;
 
+/// One saved-scope row resolved against the library.
+#[derive(Debug, PartialEq)]
+pub(crate) struct ResolvedEntry {
+    pub short_name: String,
+    pub wording_snapshot: String,
+    /// True only when the master deliverable exists. A usage_history stamp on a
+    /// missing record would UPDATE-create a ghost deliverable, so snapshot-only
+    /// rows are never stamped.
+    pub stamp_usage: bool,
+}
+
+/// Resolve one saved-scope row.
+///
+/// `master` is the library deliverable's `(short_name, body)`, or `None` when
+/// it no longer exists. A row whose library item is gone is still saved when
+/// it carries its own wording and name (a snapshot-only row), so removing a
+/// library item never makes the proposal's saved scope unsavable or loses the
+/// wording. Its wording must be non-blank (400 otherwise: a blank snapshot
+/// would be a row with nothing in it). Without a name it is a 404.
+pub(crate) fn resolve_entry(
+    master: Option<(&str, &str)>,
+    entry: &crate::models::ScopeDeliverableEntry,
+) -> Result<ResolvedEntry, ApiError> {
+    match (master, entry.wording_override.as_ref()) {
+        (Some((short_name, _)), Some(text)) => Ok(ResolvedEntry {
+            short_name: short_name.to_string(),
+            wording_snapshot: text.clone(),
+            stamp_usage: true,
+        }),
+        (Some((short_name, body)), None) => Ok(ResolvedEntry {
+            short_name: short_name.to_string(),
+            wording_snapshot: body.to_string(),
+            stamp_usage: true,
+        }),
+        (None, Some(text)) => {
+            if text.trim().is_empty() {
+                return Err(ApiError::bad_request(format!(
+                    "Deliverable '{}' is no longer in the library; its saved wording must not be empty",
+                    entry.deliverable_id
+                )));
+            }
+            match entry.short_name.as_ref().filter(|n| !n.is_empty()) {
+                Some(name) => Ok(ResolvedEntry {
+                    short_name: name.clone(),
+                    wording_snapshot: text.clone(),
+                    stamp_usage: false,
+                }),
+                None => Err(ApiError::not_found("Deliverable", &entry.deliverable_id)),
+            }
+        }
+        (None, None) => Err(ApiError::not_found("Deliverable", &entry.deliverable_id)),
+    }
+}
+
 /// Helper to strip "fee:" prefix from a fee ID string.
 fn strip_fee_prefix(fee_id: &str) -> &str {
     fee_id.strip_prefix("fee:").unwrap_or(fee_id)
@@ -237,6 +291,8 @@ pub async fn save_scope_builder(
 
     // Build deliverables_used array by fetching master body for each entry
     let mut deliverables_used: Vec<Value> = Vec::new();
+    // Deliverables that exist in the library (snapshot-only rows are excluded).
+    let mut stamp_keys: Vec<String> = Vec::new();
 
     for entry in &body.deliverables {
         let del_key = entry
@@ -247,23 +303,17 @@ pub async fn save_scope_builder(
         // Fetch the master deliverable for its body text
         let del: Option<Deliverable> = state.db.select(("deliverable", del_key)).await?;
 
-        let wording_snapshot = if let Some(ref override_text) = entry.wording_override {
-            override_text.clone()
-        } else {
-            match &del {
-                Some(d) => d.body.clone(),
-                None => {
-                    return Err(ApiError::not_found("Deliverable", &entry.deliverable_id));
-                }
-            }
-        };
-
-        let short_name = match &del {
-            Some(d) => d.short_name.clone(),
-            None => {
-                return Err(ApiError::not_found("Deliverable", &entry.deliverable_id));
-            }
-        };
+        let master = del
+            .as_ref()
+            .map(|d| (d.short_name.as_str(), d.body.as_str()));
+        let ResolvedEntry {
+            short_name,
+            wording_snapshot,
+            stamp_usage,
+        } = resolve_entry(master, entry)?;
+        if stamp_usage {
+            stamp_keys.push(del_key.to_string());
+        }
 
         deliverables_used.push(json!({
             "deliverable_id": del_key,
@@ -294,13 +344,9 @@ pub async fn save_scope_builder(
         fee_key
     );
 
-    // Stamp usage_history on each deliverable used
-    for entry in &body.deliverables {
-        let del_key = entry
-            .deliverable_id
-            .strip_prefix("deliverable:")
-            .unwrap_or(&entry.deliverable_id);
-
+    // Stamp usage_history on each library deliverable used. Never on a missing
+    // one: UPDATE of an unknown id would create a ghost deliverable record.
+    for del_key in &stamp_keys {
         let usage_entry = json!({
             "fee_id": fee_key,
             "date": chrono::Utc::now().to_rfc3339(),
@@ -312,7 +358,7 @@ pub async fn save_scope_builder(
                 "UPDATE type::record('deliverable', $did) SET \
                  usage_history = array::union(usage_history OR [], [$entry])",
             )
-            .bind(("did", del_key.to_string()))
+            .bind(("did", del_key.clone()))
             .bind(("entry", usage_entry))
             .await;
     }
@@ -371,5 +417,65 @@ pub async fn get_scope_deliverables(
             "stage_labels": null,
             "manual_items": [],
         }))),
+    }
+}
+
+#[cfg(test)]
+mod resolve_entry_tests {
+    use super::*;
+    use crate::models::ScopeDeliverableEntry;
+
+    fn entry(over: Option<&str>, name: Option<&str>) -> ScopeDeliverableEntry {
+        ScopeDeliverableEntry {
+            deliverable_id: "d1".into(),
+            stage: "Concept".into(),
+            sort_order: 1,
+            wording_override: over.map(String::from),
+            short_name: name.map(String::from),
+        }
+    }
+
+    fn resolved(name: &str, text: &str, stamp: bool) -> ResolvedEntry {
+        ResolvedEntry {
+            short_name: name.into(),
+            wording_snapshot: text.into(),
+            stamp_usage: stamp,
+        }
+    }
+
+    #[test]
+    fn master_body_is_used_without_an_override() {
+        let r = resolve_entry(Some(("Short", "Master body")), &entry(None, None)).unwrap();
+        assert_eq!(r, resolved("Short", "Master body", true));
+    }
+
+    #[test]
+    fn override_wins_over_master_body() {
+        let r = resolve_entry(Some(("Short", "Master body")), &entry(Some("Mine"), None)).unwrap();
+        assert_eq!(r, resolved("Short", "Mine", true));
+    }
+
+    #[test]
+    fn removed_library_item_is_kept_as_a_snapshot_only_row_and_never_stamped() {
+        let r = resolve_entry(None, &entry(Some("Saved wording"), Some("Old item"))).unwrap();
+        assert_eq!(r, resolved("Old item", "Saved wording", false));
+    }
+
+    #[test]
+    fn orphan_with_blank_wording_is_a_400() {
+        for blank in ["", "   ", "\n\t "] {
+            let e = resolve_entry(None, &entry(Some(blank), Some("Old item"))).unwrap_err();
+            assert_eq!(e.status, axum::http::StatusCode::BAD_REQUEST, "{blank:?}");
+        }
+        // A blank override on a deliverable that still exists is unchanged (master row).
+        assert!(resolve_entry(Some(("S", "B")), &entry(Some(""), None)).is_ok());
+    }
+
+    #[test]
+    fn orphan_without_name_or_wording_is_404() {
+        assert!(resolve_entry(None, &entry(None, None)).is_err());
+        assert!(resolve_entry(None, &entry(Some("w"), None)).is_err());
+        assert!(resolve_entry(None, &entry(Some("w"), Some(""))).is_err());
+        assert!(resolve_entry(None, &entry(None, Some("n"))).is_err());
     }
 }

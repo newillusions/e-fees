@@ -28,6 +28,8 @@ export interface Deliverable {
   version: number;
   created_at: string;
   updated_at: string;
+  /** Client-only: the library item behind a saved row no longer exists. */
+  orphan?: boolean;
 }
 
 export interface NewDeliverable {
@@ -90,6 +92,26 @@ export interface ScopeDeliverableEntry {
   stage: string;
   sort_order: number;
   wording_override: string | null;
+  /** Needed only for rows whose library item was removed (snapshot-only rows). */
+  short_name?: string;
+}
+
+/** One saved scope-builder row (scope_assembly.deliverables_used). */
+export interface SavedScopeEntry {
+  deliverable_id: string;
+  stage: string;
+  short_name?: string;
+  sort_order: number;
+  /** Wording that was saved for this deliverable (master body unless overridden). */
+  wording_snapshot?: string;
+}
+
+/** GET /scope/{fee_id}/deliverables. Empty `deliverables_used` = nothing saved yet. */
+export interface SavedScopeState {
+  fee_id: string;
+  deliverables_used: SavedScopeEntry[];
+  stage_labels: Record<string, string> | null;
+  manual_items: ManualDeliverableEntry[];
 }
 
 export interface ManualDeliverableEntry {

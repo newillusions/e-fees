@@ -39,6 +39,16 @@
 >
   <span class="layer-badge {deliverable.layer}">{layerLabel(deliverable.layer)}</span>
   <span style="flex: 1;">{deliverable.short_name}</span>
+  {#if deliverable.orphan}
+    <span
+      style="font-size: 10px; color: var(--color-warning, var(--emittiv-light));"
+      title="This deliverable is not in the active library (removed or deprecated); the saved wording is kept."
+      >not in active library</span
+    >
+    {#if !deliverable.body.trim()}
+      <span style="font-size: 10px; color: var(--color-error);">wording missing</span>
+    {/if}
+  {/if}
   {#if onRemove}
     <button
       class="emittiv-btn emittiv-btn--ghost emittiv-btn--sm"
