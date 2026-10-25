@@ -223,6 +223,9 @@
         let message = 'Project updated successfully';
         if (folderResult && folderResult.success) {
           message += ` and ${folderResult.message}`;
+        } else if (folderResult) {
+          // A failed folder move/award setup must never be silent.
+          message += `. WARNING - project folder: ${folderResult.message}`;
         }
         if (updatedCount > 0) {
           message += `. ${updatedCount} proposal(s) updated to ${suggestedFeeStatus}`;

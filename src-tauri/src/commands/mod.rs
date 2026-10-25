@@ -110,6 +110,9 @@ pub use db_connection::{check_db_connection, get_connection_status, reconnect_da
 // Fee JSON helpers (internal use)
 pub mod fee_json;
 
+// Award-time folder setup (pure fs logic)
+pub mod award_folder;
+
 // Folder management
 pub mod folder_management;
 pub use folder_management::{

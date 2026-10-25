@@ -20,6 +20,7 @@
   import { validateForm, hasValidationErrors } from '$lib/utils/validation';
   import { useOperationState, withLoadingState } from '$lib/utils/crud';
   import { writeFeeToJsonSafe } from '$lib/api';
+  import { getFolderForStatus, moveProjectFolder } from '$lib/api/folderManagement';
   import { exportIndesignWorkbook } from '$lib/api/revisions';
   import { logger, logApiError } from '$lib/services/logger';
   import { PROPOSAL_STATUS_OPTIONS, type ProposalStatus } from '$lib/constants';
@@ -582,6 +583,7 @@
           throw new Error('No proposal data available for update');
         }
 
+        let folderWarning = '';
         const proposalId = getEntityId(activeProposal);
         if (!proposalId) {
           logger.error('ProposalModal: Failed to extract proposal ID');
@@ -627,7 +629,26 @@
                 folder: currentProject.folder
               };
 
+              const previousStatus = currentProject.status;
               await projectsActions.update(projectId, fullUpdateData);
+
+              // Status sync must move the project folder too (and, for Awarded,
+              // set up the design folders) - same as the project status flow.
+              const projectNumber = currentProject.number?.id;
+              if (
+                projectNumber &&
+                previousStatus &&
+                getFolderForStatus(previousStatus) !== getFolderForStatus(projectStatus)
+              ) {
+                try {
+                  const folderResult = await moveProjectFolder(projectNumber, projectStatus);
+                  if (!folderResult.success) {
+                    folderWarning = folderResult.message;
+                  }
+                } catch (e) {
+                  folderWarning = e instanceof Error ? e.message : String(e);
+                }
+              }
             }
           }
         }
@@ -637,6 +658,15 @@
             ? 'Proposal and project status updated successfully!'
             : 'Proposal updated successfully!'
         );
+
+        // A folder move/award-setup failure is an error state, not part of the
+        // success message; the flash outlives the modal and stays until dismissed.
+        if (folderWarning) {
+          setFlash({
+            text: `Project status updated, but the project folder was not set up: ${folderWarning}`,
+            tone: 'error'
+          });
+        }
 
         doClose();
         return true;

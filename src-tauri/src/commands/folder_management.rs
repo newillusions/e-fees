@@ -13,6 +13,10 @@
 //! Paths are read from the app settings (`e-fees.config` / `e-fees.config.dev` file):
 //! - `PROJECT_FOLDER_PATH`: Base path for all project folders
 
+use crate::commands::award_folder::{
+    check_move_destination, find_in_base, resolve_template_dir, setup_awarded_folder,
+    validate_project_number,
+};
 use crate::commands::types::{AppSettingsPublic, ProjectUpdate};
 use crate::commands::{get_settings, AppState};
 use log::{error, info, warn};
@@ -204,45 +208,14 @@ pub(crate) async fn find_project_folder(
 ) -> Result<ProjectFolderInfo, String> {
     let base_path = get_projects_base_path(app_handle).await?;
 
-    let status_dirs = ["00 Inactive", "01 RFPs", "11 Current", "99 Completed"];
-
-    for status_dir in &status_dirs {
-        let search_path = base_path.join(status_dir);
-
-        if !search_path.exists() {
-            info!(
-                "Status directory does not exist, skipping: {:?}",
-                search_path
-            );
-            continue;
-        }
-
-        // Read directory contents
-        match fs::read_dir(&search_path) {
-            Ok(entries) => {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        let folder_name = entry.file_name();
-                        let folder_str = folder_name.to_string_lossy();
-
-                        // Check if folder starts with the project number
-                        if folder_str.starts_with(project_number) {
-                            info!("Found project folder: {:?} in {}", entry.path(), status_dir);
-                            return Ok(ProjectFolderInfo {
-                                project_number: project_number.to_string(),
-                                current_location: status_dir.to_string(),
-                                full_path: entry.path().to_string_lossy().to_string(),
-                                exists: true,
-                            });
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                warn!("Failed to read directory {}: {}", search_path.display(), e);
-                continue;
-            }
-        }
+    if let Some((status_dir, path)) = find_in_base(&base_path, project_number) {
+        info!("Found project folder: {:?} in {}", path, status_dir);
+        return Ok(ProjectFolderInfo {
+            project_number: project_number.to_string(),
+            current_location: status_dir,
+            full_path: path.to_string_lossy().to_string(),
+            exists: true,
+        });
     }
 
     info!("Project folder not found for: {}", project_number);
@@ -371,6 +344,8 @@ pub async fn move_project_folder(
         project_number, new_status
     );
 
+    validate_project_number(&project_number)?;
+
     // Find current location
     let current_info = find_project_folder(&app_handle, &project_number).await?;
 
@@ -401,9 +376,30 @@ pub async fn move_project_folder(
             sync_project_folder_db_field(&state, &project_number, actual_name).await;
         }
 
+        // An earlier award may have moved the folder but failed its setup
+        // (e.g. template missing). Setup is idempotent (merge skips existing
+        // files, rename skips conflicts), so re-run it here to make a retry
+        // actually complete the job.
+        let mut message = format!("Project {} is already in {}", project_number, dest_folder);
+        if dest_folder == "11 Current" {
+            let current_dir = get_projects_base_path(&app_handle).await?.join(dest_folder);
+            match setup_awarded_folder(&current_dir, Path::new(&current_info.full_path), &project_number) {
+                Ok(report) => message.push_str(&format!(". {}", report.summary())),
+                Err(e) => {
+                    error!("Award folder setup failed: {}", e);
+                    return Ok(FolderOperationResult {
+                        success: false,
+                        message: format!("{} - award folder setup FAILED: {}", message, e),
+                        old_path: Some(current_info.full_path.clone()),
+                        new_path: Some(current_info.full_path),
+                    });
+                }
+            }
+        }
+
         return Ok(FolderOperationResult {
             success: true,
-            message: format!("Project {} is already in {}", project_number, dest_folder),
+            message,
             old_path: Some(current_info.full_path.clone()),
             new_path: Some(current_info.full_path),
         });
@@ -413,32 +409,42 @@ pub async fn move_project_folder(
     let base_path = get_projects_base_path(&app_handle).await?;
     let dest_dir = base_path.join(dest_folder);
 
-    // Ensure destination directory exists
-    if !dest_dir.exists() {
-        error!("Destination directory does not exist: {:?}", dest_dir);
-        return Err(format!(
-            "Destination directory {} does not exist",
-            dest_dir.display()
-        ));
-    }
-
     // Get the folder name from current path
     let current_path = Path::new(&current_info.full_path);
     let folder_name = current_path
         .file_name()
         .ok_or("Could not get folder name")?;
 
-    let new_path = dest_dir.join(folder_name);
+    // Destination directory must exist and the folder must not already be there
+    let new_path = match check_move_destination(&dest_dir, folder_name) {
+        Ok(p) => p,
+        Err(msg) if msg.starts_with("Destination folder already exists") => {
+            warn!("{}", msg);
+            return Ok(FolderOperationResult {
+                success: false,
+                message: msg,
+                old_path: Some(current_info.full_path.clone()),
+                new_path: Some(dest_dir.join(folder_name).to_string_lossy().to_string()),
+            });
+        }
+        Err(msg) => {
+            error!("{}", msg);
+            return Err(msg);
+        }
+    };
 
-    // Check if destination already exists
-    if new_path.exists() {
-        warn!("Destination folder already exists: {:?}", new_path);
-        return Ok(FolderOperationResult {
-            success: false,
-            message: format!("Destination folder already exists: {}", new_path.display()),
-            old_path: Some(current_info.full_path),
-            new_path: Some(new_path.to_string_lossy().to_string()),
-        });
+    // Validate the Design Folders template BEFORE moving, so a missing
+    // template fails with the folder untouched.
+    if current_info.current_location != "11 Current" && dest_folder == "11 Current" {
+        if let Err(msg) = resolve_template_dir(&dest_dir) {
+            error!("{}", msg);
+            return Ok(FolderOperationResult {
+                success: false,
+                message: format!("{} - folder NOT moved", msg),
+                old_path: Some(current_info.full_path.clone()),
+                new_path: None,
+            });
+        }
     }
 
     // Perform the move operation using cross-platform function
@@ -449,16 +455,18 @@ pub async fn move_project_folder(
                 project_number, current_info.current_location, dest_folder
             );
 
-            // If moving to Current from any other folder, copy awarded project templates
+            // Awarded: merge "00 Design Folders" into the project (no overwrite)
+            // and rename yy-cccnn placeholder files. A failure here must be
+            // visible - the folder moved but the award setup is incomplete.
+            let mut award_error: Option<String> = None;
             if current_info.current_location != "11 Current" && dest_folder == "11 Current" {
-                match copy_awarded_templates(&app_handle, &new_path).await {
-                    Ok(_) => {
-                        success_message
-                            .push_str(". Awarded project templates copied successfully.");
+                match setup_awarded_folder(&dest_dir, &new_path, &project_number) {
+                    Ok(report) => {
+                        success_message.push_str(&format!(". {}", report.summary()));
                     }
                     Err(e) => {
-                        success_message
-                            .push_str(&format!(". Warning: Failed to copy some templates: {}", e));
+                        error!("Award folder setup failed: {}", e);
+                        award_error = Some(e);
                     }
                 }
             }
@@ -478,6 +486,18 @@ pub async fn move_project_folder(
             match get_settings(app_handle.clone()).await {
                 Ok(settings) => trigger_nc_rescan(&settings).await,
                 Err(e) => warn!("Skipping Nextcloud rescan - could not read settings: {}", e),
+            }
+
+            if let Some(e) = award_error {
+                return Ok(FolderOperationResult {
+                    success: false,
+                    message: format!(
+                        "{} - but award folder setup FAILED: {}",
+                        success_message, e
+                    ),
+                    old_path: Some(current_info.full_path),
+                    new_path: Some(new_path.to_string_lossy().to_string()),
+                });
             }
 
             Ok(FolderOperationResult {
@@ -578,57 +598,6 @@ pub async fn list_projects_in_folder(
 
     projects.sort();
     Ok(projects)
-}
-
-/// Copy awarded project template folders when moving from RFP to Current.
-///
-/// When a project is awarded (moved from "01 RFPs" to "11 Current"), this function
-/// copies additional template folders that are needed for active projects.
-async fn copy_awarded_templates(app_handle: &AppHandle, project_path: &Path) -> Result<(), String> {
-    let base_path = get_projects_base_path(app_handle).await?;
-    let template_path = base_path.join("11 Current").join("00 Additional Folders");
-
-    if !template_path.exists() {
-        warn!(
-            "Awarded project template folder not found: {:?}",
-            template_path
-        );
-        return Err("Awarded project template folder not found".to_string());
-    }
-
-    // Copy each template folder to the project
-    let template_folders = [
-        "03 Contract",
-        "04 Deliverables",
-        "05 Submittals",
-        "11 SubContractors",
-        "98 Outgoing",
-        "99 Temp",
-    ];
-
-    let options = fs_extra::dir::CopyOptions {
-        overwrite: false,
-        skip_exist: true, // Skip if already exists
-        buffer_size: 64000,
-        copy_inside: false,
-        content_only: false,
-        depth: 0,
-    };
-
-    for folder in &template_folders {
-        let src = template_path.join(folder);
-        let dest = project_path.join(folder);
-
-        if src.exists() && !dest.exists() {
-            info!("Copying template folder: {} to {:?}", folder, dest);
-            if let Err(e) = fs_extra::dir::copy(&src, project_path, &options) {
-                warn!("Failed to copy template folder {}: {}", folder, e);
-                // Continue with other folders even if one fails
-            }
-        }
-    }
-
-    Ok(())
 }
 
 /// Recursively copy a directory and its contents (fallback for simple cases).
